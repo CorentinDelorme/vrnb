@@ -1,8 +1,9 @@
 import { Button } from "@repo/ui/components/button"
+import { BureauList } from "@/components/bureau-list"
 
 export default function Page() {
   return (
-    <div className="flex min-h-svh p-6">
+    <div className="flex min-h-svh flex-col gap-6 p-6">
       <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
         <div>
           <h1 className="font-medium">Project ready!</h1>
@@ -13,6 +14,10 @@ export default function Page() {
         <div className="text-muted-foreground font-mono text-xs">
           (Press <kbd>d</kbd> to toggle dark mode)
         </div>
+      </div>
+
+      <div className="max-w-xl">
+        <BureauList />
       </div>
     </div>
   )

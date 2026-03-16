@@ -78,7 +78,7 @@ export type PostBureauxApiArg = {
 }
 export type GetBureauxByIdApiResponse = /** status 200 OK */ BureauResponse
 export type GetBureauxByIdApiArg = {
-  id: number
+  id: string | number
 }
 export type PutBureauxByIdApiResponse = /** status 200 OK */ BureauResponse
 export type PutBureauxByIdApiArg = {

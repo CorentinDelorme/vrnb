@@ -2,6 +2,7 @@ import { Geist, Geist_Mono, Figtree } from "next/font/google"
 
 import "@repo/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { StrapiApiProvider } from "@/components/strapi-api-provider"
 import { cn } from "@repo/ui/lib/utils";
 
 const figtree = Figtree({subsets:['latin'],variable:'--font-sans'})
@@ -23,7 +24,9 @@ export default function RootLayout({
       className={cn("antialiased", fontMono.variable, "font-sans", figtree.variable)}
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <StrapiApiProvider>
+          <ThemeProvider>{children}</ThemeProvider>
+        </StrapiApiProvider>
       </body>
     </html>
   )
