@@ -7,15 +7,16 @@
     "build": "strapi build",
     "console": "strapi console",
     "deploy": "strapi deploy",
+    "predev": "bun run generate:openapi",
     "dev": "strapi develop",
     "develop": "strapi develop",
     "start": "strapi start",
     "strapi": "strapi",
+    "generate:openapi": "strapi openapi generate --output ./docs/api-spec.json",
     "upgrade": "npx @strapi/upgrade latest",
     "upgrade:dry": "npx @strapi/upgrade latest --dry"
   },
   "dependencies": {
-    "@strapi/plugin-documentation": "^5.39.0",
     "@strapi/plugin-users-permissions": "5.39.0",
     "@strapi/strapi": "5.39.0",
     "better-sqlite3": "12.6.2",

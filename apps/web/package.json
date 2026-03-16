@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "predev": "bun run generate:strapi",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",

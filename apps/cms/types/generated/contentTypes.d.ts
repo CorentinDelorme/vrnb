@@ -459,6 +459,36 @@ export interface ApiBureauBureau extends Struct.CollectionTypeSchema {
   }
 }
 
+export interface ApiPartnerPartner extends Struct.CollectionTypeSchema {
+  collectionName: "partners"
+  info: {
+    displayName: "Partenaire"
+    pluralName: "partners"
+    singularName: "partner"
+  }
+  options: {
+    draftAndPublish: true
+  }
+  attributes: {
+    createdAt: Schema.Attribute.DateTime
+    createdBy: Schema.Attribute.Relation<"oneToOne", "admin::user"> &
+      Schema.Attribute.Private
+    locale: Schema.Attribute.String & Schema.Attribute.Private
+    localizations: Schema.Attribute.Relation<
+      "oneToMany",
+      "api::partner.partner"
+    > &
+      Schema.Attribute.Private
+    logo: Schema.Attribute.Media<"images"> & Schema.Attribute.Required
+    name: Schema.Attribute.String & Schema.Attribute.Required
+    publishedAt: Schema.Attribute.DateTime
+    updatedAt: Schema.Attribute.DateTime
+    updatedBy: Schema.Attribute.Relation<"oneToOne", "admin::user"> &
+      Schema.Attribute.Private
+    url: Schema.Attribute.String & Schema.Attribute.Required
+  }
+}
+
 export interface PluginContentReleasesRelease
   extends Struct.CollectionTypeSchema {
   collectionName: "strapi_releases"
@@ -971,6 +1001,7 @@ declare module "@strapi/strapi" {
       "admin::transfer-token-permission": AdminTransferTokenPermission
       "admin::user": AdminUser
       "api::bureau.bureau": ApiBureauBureau
+      "api::partner.partner": ApiPartnerPartner
       "plugin::content-releases.release": PluginContentReleasesRelease
       "plugin::content-releases.release-action": PluginContentReleasesReleaseAction
       "plugin::i18n.locale": PluginI18NLocale
