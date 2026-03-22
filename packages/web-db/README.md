@@ -1,4 +1,4 @@
-# vrnb-db
+# web-db
 
 MongoDB Docker service for the vrnb monorepo, used by PayloadCMS.
 
@@ -14,7 +14,7 @@ bun reset      # wipe local persisted data and restart
 bun logs       # follow mongo logs
 ```
 
-Mongo data is persisted on disk in `packages/vrnb-db/.data/`.
+Mongo data is persisted on disk in `packages/web-db/.data/`.
 This means data survives container shutdowns and `docker compose down`.
 
 From the monorepo root, `turbo dev` automatically starts this service alongside the web app.

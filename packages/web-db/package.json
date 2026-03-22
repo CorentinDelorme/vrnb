@@ -1,5 +1,5 @@
 {
-  "name": "vrnb-db",
+  "name": "web-db",
   "version": "1.0.0",
   "description": "MongoDB Docker service for vrnb (PayloadCMS)",
   "private": true,

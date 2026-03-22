@@ -7,7 +7,7 @@ Turborepo monorepo managed with **Bun** (`bun@1.3.10`). Tasks run via `turbo`.
 | Package / App                | Description                                      |
 | ---------------------------- | ------------------------------------------------ |
 | `apps/web`                   | Next.js 16 + Payload CMS 3 (MongoDB adapter)     |
-| `packages/vrnb-db`           | MongoDB 8 Docker service (persisted in `.data/`) |
+| `packages/web-db`            | MongoDB 8 Docker service (persisted in `.data/`) |
 | `packages/ui`                | Shared React component library (Storybook)       |
 | `packages/eslint-config`     | Shared ESLint configs                            |
 | `packages/typescript-config` | Shared `tsconfig.json` bases                     |
@@ -21,7 +21,7 @@ See [apps/web/AGENTS.md](apps/web/AGENTS.md) for Payload CMS–specific patterns
 bun install
 
 # Start MongoDB (required before running web)
-cd packages/vrnb-db && bun start   # detached; data persists in .data/
+cd packages/web-db && bun start   # detached; data persists in .data/
 
 # Dev (all apps in parallel)
 turbo dev
@@ -56,7 +56,7 @@ bun run test:e2e
 Copy `apps/web/.env.example` → `apps/web/.env` (or use `apps/web/test.env` as reference):
 
 ```env
-DATABASE_URL=mongodb://root:rootpassword@localhost:27017/vrnb?authSource=admin
+DATABASE_URL=mongodb://root:rootpassword@localhost:27017/web?authSource=admin
 PAYLOAD_SECRET=<any-random-string>
 PAYLOAD_USER_EMAIL=test@example.com
 PAYLOAD_USER_PASSWORD=password
@@ -75,5 +75,5 @@ PAYLOAD_USER_PASSWORD=password
 
 - [apps/web/src/payload.config.ts](apps/web/src/payload.config.ts) – Payload entry point
 - [apps/web/src/payload-types.ts](apps/web/src/payload-types.ts) – auto-generated, never edit manually
-- [packages/vrnb-db/docker-compose.yml](packages/vrnb-db/docker-compose.yml) – MongoDB service definition
+- [packages/web-db/docker-compose.yml](packages/web-db/docker-compose.yml) – MongoDB service definition
 - [turbo.json](turbo.json) – task pipeline

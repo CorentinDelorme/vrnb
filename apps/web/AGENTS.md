@@ -4,7 +4,7 @@
 
 ## Local Dev Checklist
 
-1. Start MongoDB: `cd packages/vrnb-db && bun start`
+1. Start MongoDB: `cd packages/web-db && bun start`
 2. Set env vars in `.env` (use `test.env` as reference)
 3. Run dev server: `bun dev` (or `turbo dev` from root)
 4. After schema changes: `bun run generate:types`
