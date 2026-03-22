@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     'bureau-roles': BureauRole;
     referents: Referent;
+    partenaires: Partenaire;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +83,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     'bureau-roles': BureauRolesSelect<false> | BureauRolesSelect<true>;
     referents: ReferentsSelect<false> | ReferentsSelect<true>;
+    partenaires: PartenairesSelect<false> | PartenairesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -213,6 +215,19 @@ export interface Referent {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "partenaires".
+ */
+export interface Partenaire {
+  id: string;
+  ordre: number;
+  nom: string;
+  lien: string;
+  logo?: (string | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -250,6 +265,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'referents';
         value: string | Referent;
+      } | null)
+    | ({
+        relationTo: 'partenaires';
+        value: string | Partenaire;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -350,6 +369,18 @@ export interface BureauRolesSelect<T extends boolean = true> {
 export interface ReferentsSelect<T extends boolean = true> {
   ordre?: T;
   referent?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "partenaires_select".
+ */
+export interface PartenairesSelect<T extends boolean = true> {
+  ordre?: T;
+  nom?: T;
+  lien?: T;
+  logo?: T;
   updatedAt?: T;
   createdAt?: T;
 }

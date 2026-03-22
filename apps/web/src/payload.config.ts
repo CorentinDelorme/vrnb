@@ -9,6 +9,7 @@ import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { BureauRoles } from './collections/BureauRoles'
 import { Referents } from './collections/Referents'
+import { Partenaires } from './collections/Partenaires'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -20,7 +21,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, BureauRoles, Referents],
+  collections: [Users, Media, BureauRoles, Referents, Partenaires],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
