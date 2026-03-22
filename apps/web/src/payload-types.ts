@@ -69,6 +69,8 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    'bureau-roles': BureauRole;
+    referents: Referent;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +80,8 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    'bureau-roles': BureauRolesSelect<false> | BureauRolesSelect<true>;
+    referents: ReferentsSelect<false> | ReferentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -163,6 +167,52 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bureau-roles".
+ */
+export interface BureauRole {
+  id: string;
+  ordre: number;
+  role:
+    | 'president'
+    | 'vice-president'
+    | 'referent-des-referents'
+    | 'secretaire'
+    | 'vice-secretaire'
+    | 'tresorier'
+    | 'vice-tresorier'
+    | 'secretaire-comptable'
+    | 'logistique'
+    | 'adherent';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referents".
+ */
+export interface Referent {
+  id: string;
+  ordre: number;
+  referent:
+    | 'site-web'
+    | 'logistique'
+    | 'photo-video'
+    | 'mecanique'
+    | 'navigation-gps'
+    | 'securite'
+    | 'secourisme'
+    | 'stagiaire'
+    | 'veille-documentaire'
+    | 'festivites'
+    | 'guide-conferencier'
+    | 'balade-du-mardi'
+    | 'equipement'
+    | 'maniabilite';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -192,6 +242,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: string | Media;
+      } | null)
+    | ({
+        relationTo: 'bureau-roles';
+        value: string | BureauRole;
+      } | null)
+    | ({
+        relationTo: 'referents';
+        value: string | Referent;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -274,6 +332,26 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bureau-roles_select".
+ */
+export interface BureauRolesSelect<T extends boolean = true> {
+  ordre?: T;
+  role?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referents_select".
+ */
+export interface ReferentsSelect<T extends boolean = true> {
+  ordre?: T;
+  referent?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
