@@ -93,8 +93,14 @@ export interface Config {
     defaultIDType: string;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    home: Home;
+    'randos-velo': RandosVelo;
+  };
+  globalsSelect: {
+    home: HomeSelect<false> | HomeSelect<true>;
+    'randos-velo': RandosVeloSelect<false> | RandosVeloSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -423,6 +429,100 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home".
+ */
+export interface Home {
+  id: string;
+  layout: PartenairesListBlock[];
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PartenairesListBlock".
+ */
+export interface PartenairesListBlock {
+  title: string;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'partenaires-list';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "randos-velo".
+ */
+export interface RandosVelo {
+  id: string;
+  title: string;
+  subtitle: string;
+  blocks: RandoVeloBlock[];
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "RandoVeloBlock".
+ */
+export interface RandoVeloBlock {
+  title: string;
+  text: string;
+  photo?: string | null;
+  id?: string | null;
+  blockName?: string | null;
+  blockType: 'rando-velo-block';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home_select".
+ */
+export interface HomeSelect<T extends boolean = true> {
+  layout?:
+    | T
+    | {
+        'partenaires-list'?: T | PartenairesListBlockSelect<T>;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "PartenairesListBlock_select".
+ */
+export interface PartenairesListBlockSelect<T extends boolean = true> {
+  title?: T;
+  id?: T;
+  blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "randos-velo_select".
+ */
+export interface RandosVeloSelect<T extends boolean = true> {
+  title?: T;
+  subtitle?: T;
+  blocks?:
+    | T
+    | {
+        'rando-velo-block'?: T | RandoVeloBlockSelect<T>;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "RandoVeloBlock_select".
+ */
+export interface RandoVeloBlockSelect<T extends boolean = true> {
+  title?: T;
+  text?: T;
+  photo?: T;
+  id?: T;
+  blockName?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

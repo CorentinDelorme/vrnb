@@ -1,0 +1,40 @@
+.randosVeloPage {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 45px;
+}
+
+.randosVeloPage header p {
+  margin-top: 0;
+}
+
+.randosVeloBlocks {
+  display: grid;
+  gap: 24px;
+}
+
+.randosVeloBlock {
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.randosVeloBlock h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 28px;
+  line-height: 1.2;
+}
+
+.randosVeloBlock p {
+  margin-top: 0;
+  white-space: pre-line;
+}
+
+.randosVeloBlock img {
+  margin-top: 12px;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  border-radius: 6px;
+}

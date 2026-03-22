@@ -1,59 +1,88 @@
-import { headers as getHeaders } from 'next/headers.js'
 import Image from 'next/image'
 import { getPayload } from 'payload'
 import React from 'react'
-import { fileURLToPath } from 'url'
 
 import config from '@/payload.config'
+import type { Media } from '@/payload-types'
 import './styles.css'
 
 export default async function HomePage() {
-  const headers = await getHeaders()
   const payloadConfig = await config
   const payload = await getPayload({ config: payloadConfig })
-  const { user } = await payload.auth({ headers })
 
-  const fileURL = `vscode://file/${fileURLToPath(import.meta.url)}`
+  const [home, partenaires] = await Promise.all([
+    payload.findGlobal({
+      slug: 'home',
+    }),
+    payload.find({
+      collection: 'partenaires',
+      depth: 1,
+      sort: 'ordre',
+      limit: 100,
+    }),
+  ])
+
+  const layout =
+    Array.isArray(home.layout) && home.layout.length > 0
+      ? home.layout
+      : [
+          {
+            blockType: 'partenaires-list' as const,
+            title: 'Nos partenaires',
+          },
+        ]
+
+  const getLogoFromPartenaire = (logo: string | Media | null | undefined) => {
+    if (!logo || typeof logo === 'string') {
+      return null
+    }
+
+    return logo.url
+      ? {
+          url: logo.url,
+          alt: logo.alt || 'Logo partenaire',
+        }
+      : null
+  }
 
   return (
-    <div className="home">
-      <div className="content">
-        <picture>
-          <source srcSet="https://raw.githubusercontent.com/payloadcms/payload/main/packages/ui/src/assets/payload-favicon.svg" />
-          <Image
-            alt="Payload Logo"
-            height={65}
-            src="https://raw.githubusercontent.com/payloadcms/payload/main/packages/ui/src/assets/payload-favicon.svg"
-            width={65}
-          />
-        </picture>
-        {!user && <h1>Welcome to your new project.</h1>}
-        {user && <h1>Welcome back, {user.email}</h1>}
-        <div className="links">
-          <a
-            className="admin"
-            href={payloadConfig.routes.admin}
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Go to admin panel
-          </a>
-          <a
-            className="docs"
-            href="https://payloadcms.com/docs"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            Documentation
-          </a>
-        </div>
-      </div>
-      <div className="footer">
-        <p>Update this page by editing</p>
-        <a className="codeLink" href={fileURL}>
-          <code>app/(frontend)/page.tsx</code>
-        </a>
-      </div>
-    </div>
+    <main className="home">
+      {layout.map((block) => {
+        if (block.blockType !== 'partenaires-list') {
+          return null
+        }
+
+        return (
+          <section className="partenaires" key={block.id || block.blockName || 'partenaires-list'}>
+            <h1>{block.title}</h1>
+            {partenaires.docs.length === 0 && <p>Aucun partenaire pour le moment.</p>}
+            {partenaires.docs.length > 0 && (
+              <ul className="partenairesList">
+                {partenaires.docs.map((partenaire) => {
+                  const logo = getLogoFromPartenaire(partenaire.logo)
+
+                  return (
+                    <li key={partenaire.id}>
+                      <a href={partenaire.lien} rel="noopener noreferrer" target="_blank">
+                        {logo && (
+                          <Image
+                            alt={logo.alt}
+                            className="partenaireLogo"
+                            height={80}
+                            src={logo.url}
+                            width={80}
+                          />
+                        )}
+                        <span>{partenaire.nom}</span>
+                      </a>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+        )
+      })}
+    </main>
   )
 }

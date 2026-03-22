@@ -90,75 +90,54 @@ svg {
 }
 
 .home {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  align-items: center;
-  height: 100vh;
+  min-height: 100vh;
   padding: 45px;
-  max-width: 1024px;
+  max-width: 960px;
   margin: 0 auto;
-  overflow: hidden;
+}
 
-  @media (max-width: 400px) {
-    padding: 24px;
+.partenaires {
+  width: 100%;
+
+  h1 {
+    margin-bottom: 24px;
+  }
+}
+
+.partenairesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+
+  li {
+    border: 1px solid currentColor;
+    border-radius: 8px;
   }
 
-  .content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex-grow: 1;
-
-    h1 {
-      text-align: center;
-    }
-  }
-
-  .links {
+  a {
+    text-decoration: none;
     display: flex;
     align-items: center;
     gap: 12px;
-
-    a {
-      text-decoration: none;
-      padding: 0.25rem 0.5rem;
-      border-radius: 4px;
-    }
-
-    .admin {
-      color: rgb(0, 0, 0);
-      background: rgb(1000, 1000, 1000);
-      border: 1px solid rgb(0, 0, 0);
-    }
-
-    .docs {
-      color: rgb(1000, 1000, 1000);
-      background: rgb(0, 0, 0);
-      border: 1px solid rgb(1000, 1000, 1000);
-    }
+    padding: 16px;
   }
 
-  .footer {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  span {
+    font-weight: 600;
+    line-height: 1.3;
+  }
+}
 
-    @media (max-width: 1024px) {
-      flex-direction: column;
-      gap: 6px;
-    }
+.partenaireLogo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
 
-    p {
-      margin: 0;
-    }
-
-    .codeLink {
-      text-decoration: none;
-      padding: 0 0.5rem;
-      background: rgb(60, 60, 60);
-      border-radius: 4px;
-    }
+  @media (max-width: 400px) {
+    width: 56px;
+    height: 56px;
   }
 }
