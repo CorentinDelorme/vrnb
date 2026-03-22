@@ -4,136 +4,671 @@ import path from 'path'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.js'
 
-// --- Logger setup ---
+type LogLevel = 'INFO' | 'WARN' | 'ERROR'
+type SQLPrimitive = string | number | boolean | null
+type SQLRow = SQLPrimitive[]
+type LegacyID = number
+type PayloadID = string | number
+
+const DEFAULT_USER_PASSWORD =
+  process.env.SEED_USER_PASSWORD || process.env.PAYLOAD_USER_PASSWORD || 'password'
+
 const logTimestamp = new Date().toISOString().replace(/[:.]/g, '-')
 const logDir = path.resolve(process.cwd(), 'logs')
 fs.mkdirSync(logDir, { recursive: true })
 const logFilePath = path.join(logDir, `seed-${logTimestamp}.log`)
 const logStream = fs.createWriteStream(logFilePath, { flags: 'a' })
 
-function log(level: 'INFO' | 'ERROR', ...args: any[]) {
-  const line = `[${new Date().toISOString()}] [${level}] ${args.map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a))).join(' ')}`
-  console[level === 'ERROR' ? 'error' : 'log'](line)
-  logStream.write(line + '\n')
+function log(level: LogLevel, ...args: unknown[]) {
+  const line = `[${new Date().toISOString()}] [${level}] ${args
+    .map((arg) => {
+      if (arg instanceof Error) {
+        return arg.stack || arg.message
+      }
+
+      if (typeof arg === 'object' && arg !== null) {
+        try {
+          return JSON.stringify(arg, null, 2)
+        } catch {
+          return String(arg)
+        }
+      }
+
+      return String(arg)
+    })
+    .join(' ')}`
+
+  console[level === 'ERROR' ? 'error' : level === 'WARN' ? 'warn' : 'log'](line)
+  logStream.write(`${line}\n`)
 }
 
 process.on('exit', () => logStream.end())
-// ---------------------
 
-/**
- * Parse SQL INSERT statements from SQL dump file
- */
-function parseSQLFile(filePath: string): Map<string, any[]> {
+function parseSQLFile(filePath: string): Map<string, SQLRow[]> {
   const content = fs.readFileSync(filePath, 'utf-8')
-  const dataMap = new Map<string, any[]>()
+  const dataMap = new Map<string, SQLRow[]>()
+  const insertRegex = /INSERT INTO `(\w+)` VALUES\s*(.+?);/gs
 
-  // Match INSERT INTO statements
-  const insertRegex = /INSERT INTO `(\w+)` VALUES\s*\((.*?)\);/gs
-
-  let match
-  while ((match = insertRegex.exec(content)) !== null) {
+  for (const match of content.matchAll(insertRegex)) {
     const tableName = match[1]
-    const valuesString = match[2]
+    const rows = splitInsertRows(match[2]).map(parseValues)
 
     if (!dataMap.has(tableName)) {
       dataMap.set(tableName, [])
     }
 
-    // Parse individual value rows
-    const rowRegex = /\((.*?)\)(?:,\s*\(|;)/g
-    let rowMatch
-    while ((rowMatch = rowRegex.exec(valuesString)) !== null) {
-      const valuesPart = rowMatch[1]
-      const values = parseValues(valuesPart)
-      dataMap.get(tableName)!.push(values)
-    }
+    dataMap.get(tableName)?.push(...rows)
   }
 
   return dataMap
 }
 
-/**
- * Parse a comma-separated list of SQL values
- */
-function parseValues(valueString: string): any[] {
-  const values: any[] = []
+function splitInsertRows(input: string): string[] {
+  const rows: string[] = []
+  let current = ''
+  let depth = 0
+  let inString = false
+  let quoteChar = ''
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i]
+    const previousChar = i > 0 ? input[i - 1] : ''
+
+    if (inString) {
+      current += char
+
+      if (char === quoteChar && previousChar !== '\\') {
+        inString = false
+        quoteChar = ''
+      }
+
+      continue
+    }
+
+    if ((char === "'" || char === '"') && previousChar !== '\\') {
+      inString = true
+      quoteChar = char
+      current += char
+      continue
+    }
+
+    if (char === '(') {
+      if (depth > 0) {
+        current += char
+      }
+      depth++
+      continue
+    }
+
+    if (char === ')') {
+      depth--
+
+      if (depth === 0) {
+        rows.push(current)
+        current = ''
+      } else {
+        current += char
+      }
+
+      continue
+    }
+
+    if (depth > 0) {
+      current += char
+    }
+  }
+
+  return rows
+}
+
+function parseValues(valueString: string): SQLRow {
+  const values: SQLRow = []
   let current = ''
   let inString = false
-  let stringChar = ''
+  let quoteChar = ''
 
   for (let i = 0; i < valueString.length; i++) {
     const char = valueString[i]
+    const previousChar = i > 0 ? valueString[i - 1] : ''
 
-    if ((char === '"' || char === "'") && (i === 0 || valueString[i - 1] !== '\\')) {
+    if ((char === "'" || char === '"') && previousChar !== '\\') {
       if (!inString) {
         inString = true
-        stringChar = char
-      } else if (char === stringChar) {
+        quoteChar = char
+      } else if (char === quoteChar) {
         inString = false
+        quoteChar = ''
       }
     }
 
     if (char === ',' && !inString) {
       values.push(parseValue(current.trim()))
       current = ''
-    } else {
-      current += char
+      continue
     }
+
+    current += char
   }
 
-  if (current.trim()) {
+  if (current.trim() !== '') {
     values.push(parseValue(current.trim()))
   }
 
   return values
 }
 
-/**
- * Parse a single SQL value
- */
-function parseValue(value: string): any {
+function parseValue(value: string): SQLPrimitive {
   if (value === 'NULL') return null
-  if (value === 'true' || value === '1') return true
-  if (value === 'false' || value === '0') return false
+  if (value === 'true') return true
+  if (value === 'false') return false
 
-  // Remove quotes
   if (
     (value.startsWith("'") && value.endsWith("'")) ||
     (value.startsWith('"') && value.endsWith('"'))
   ) {
-    return value.slice(1, -1).replace(/\\(.)/g, '$1')
+    return decodeSQLString(value.slice(1, -1))
   }
 
-  // Try to parse as number
-  const num = Number(value)
-  if (!isNaN(num) && value !== '') return num
+  if (/^-?\d+(\.\d+)?$/.test(value)) {
+    return Number(value)
+  }
 
   return value
 }
 
-/**
- * Seed the database with data from SQL file
- */
+function decodeSQLString(value: string): string {
+  return value
+    .replace(/\\r/g, '\r')
+    .replace(/\\n/g, '\n')
+    .replace(/\\t/g, '\t')
+    .replace(/\\0/g, '\0')
+    .replace(/\\'/g, "'")
+    .replace(/\\"/g, '"')
+    .replace(/\\\\/g, '\\')
+}
+
+function asString(value: SQLPrimitive): string | undefined {
+  if (value === null) return undefined
+  const result = String(value)
+  return result === '' ? undefined : result
+}
+
+function asNumber(value: SQLPrimitive): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+function asBoolean(value: SQLPrimitive): boolean | undefined {
+  if (typeof value === 'boolean') return value
+  if (typeof value === 'number') return value !== 0
+  return undefined
+}
+
+function asDate(value: SQLPrimitive): string | undefined {
+  const result = asString(value)
+  if (!result) return undefined
+  if (result === '0000-00-00' || result === '0000-00-00 00:00:00') return undefined
+  return result
+}
+
+function toRichText(value: SQLPrimitive) {
+  const text = asString(value)
+
+  return {
+    root: {
+      type: 'root',
+      children: [
+        {
+          type: 'paragraph',
+          children: text
+            ? [
+                {
+                  type: 'text',
+                  detail: 0,
+                  format: 0,
+                  mode: 'normal',
+                  style: '',
+                  text,
+                  version: 1,
+                },
+              ]
+            : [],
+          direction: 'ltr',
+          format: '',
+          indent: 0,
+          textFormat: 0,
+          textStyle: '',
+          version: 1,
+        },
+      ],
+      direction: 'ltr',
+      format: '',
+      indent: 0,
+      version: 1,
+    },
+  }
+}
+
+function getCollectionSlug(tableName: string): string | null {
+  const slugMap: Record<string, string> = {
+    activite: 'activite',
+    activite_content: 'activite-content',
+    actualite: 'actualite',
+    bureau: 'bureau',
+    categorie: 'categorie',
+    categorie_formation: 'categorie-formation',
+    commentaire: 'commentaire',
+    doc_pdf: 'doc-pdf',
+    documentation: 'documentation',
+    etiquette_content: 'etiquette-content',
+    etat: 'etat',
+    intro_photo: 'intro-photo',
+    lieu: 'lieu',
+    partenaire: 'partenaire',
+    photo: 'photo',
+    photo_album: 'photo-album',
+    photo_carousel: 'photo-carousel',
+    referent: 'referent',
+    user: 'users',
+  }
+
+  return slugMap[tableName] ?? null
+}
+
+function getLegacyId(row: SQLRow): LegacyID {
+  if (typeof row[0] !== 'number') {
+    throw new Error(`Invalid legacy ID: ${String(row[0])}`)
+  }
+
+  return row[0]
+}
+
+function rememberId(
+  indexes: Map<string, Map<LegacyID, PayloadID>>,
+  tableName: string,
+  row: SQLRow,
+  payloadId: PayloadID,
+) {
+  const legacyId = getLegacyId(row)
+
+  if (!indexes.has(tableName)) {
+    indexes.set(tableName, new Map())
+  }
+
+  indexes.get(tableName)?.set(legacyId, payloadId)
+}
+
+function resolveId(
+  indexes: Map<string, Map<LegacyID, PayloadID>>,
+  tableName: string,
+  legacyValue: SQLPrimitive,
+): PayloadID | undefined {
+  const legacyId = asNumber(legacyValue)
+  if (legacyId === undefined) return undefined
+  return indexes.get(tableName)?.get(legacyId)
+}
+
+function getUserEmail(row: SQLRow, legacyId: LegacyID): string {
+  return (asString(row[7]) || `legacy-user-${legacyId}@vrnb.local`).toLowerCase()
+}
+
+function mapRowToDocument(
+  tableName: string,
+  row: SQLRow,
+  indexes: Map<string, Map<LegacyID, PayloadID>>,
+  rowIndex: number,
+) {
+  switch (tableName) {
+    case 'etat':
+      return { libelle: asString(row[1]) }
+
+    case 'categorie':
+      return { libelle: asString(row[1]) }
+
+    case 'categorie_formation':
+      return { libelle: asString(row[1]) }
+
+    case 'bureau':
+      return { nom: asString(row[1]), ordre: asNumber(row[2]) }
+
+    case 'lieu':
+      return {
+        nom_ville: asString(row[1]),
+        cp_ville: asString(row[2]),
+        num_rue: asString(row[3]),
+        nom_rue: asString(row[4]),
+      }
+
+    case 'referent':
+      return { nom: asString(row[1]), ordre: asNumber(row[2]) }
+
+    case 'user': {
+      const legacyId = getLegacyId(row)
+      return {
+        username: asString(row[1]),
+        nom: asString(row[4]),
+        prenom: asString(row[5]),
+        email: getUserEmail(row, legacyId),
+        password: DEFAULT_USER_PASSWORD,
+        telephone: asString(row[6]),
+        date_naissance: asDate(row[8]),
+        bureau: resolveId(indexes, 'bureau', row[9]),
+      }
+    }
+
+    case 'partenaire':
+      return {
+        ordre: rowIndex + 1,
+        nom: asString(row[1]),
+        url: asString(row[3]),
+      }
+
+    case 'activite_content':
+      return {
+        balade_text: toRichText(row[1]),
+        escapade_text: toRichText(row[2]),
+        mecanique_text: toRichText(row[3]),
+        securite_text: toRichText(row[4]),
+        secourisme_text: toRichText(row[5]),
+        photo_video_text: toRichText(row[6]),
+        projection_film_text: toRichText(row[7]),
+        autre_text: toRichText(row[8]),
+        balade_photo: asString(row[9]),
+        escapade_photo: asString(row[10]),
+        mecanique_photo: asString(row[11]),
+        securite_photo: asString(row[12]),
+        secourisme_photo: asString(row[13]),
+        photo_video_photo: asString(row[14]),
+        projection_film_photo: asString(row[15]),
+        ecocitoyennete_text: toRichText(row[16]),
+        ecocitoyennete_photo: asString(row[17]),
+        autre_photo: asString(row[18]),
+        formation_text_intro: toRichText(row[19]),
+        randovelo_text_intro: toRichText(row[20]),
+        projectionfilm_text_intro: toRichText(row[21]),
+        ecocitoyennete_text_intro: toRichText(row[22]),
+        autres_text_intro: toRichText(row[23]),
+        balade_title: asString(row[24]),
+        escapade_title: asString(row[25]),
+        mecanique_title: asString(row[26]),
+        securite_title: asString(row[27]),
+        secourisme_title: asString(row[28]),
+        photo_video_title: asString(row[29]),
+        projection_film_title: asString(row[30]),
+        autre_title: asString(row[31]),
+        ecocitoyennete_title: asString(row[32]),
+      }
+
+    case 'activite':
+      return {
+        etat: resolveId(indexes, 'etat', row[1]),
+        lieu: resolveId(indexes, 'lieu', row[2]),
+        organisateur: resolveId(indexes, 'user', row[3]),
+        nom: asString(row[4]),
+        date_activite: asDate(row[5]),
+        duree: asNumber(row[6]),
+        distance: asNumber(row[7]),
+        infos_activite: asString(row[8]),
+        denivele: asNumber(row[9]),
+        difficulte: asNumber(row[10]),
+        categories_formation: resolveId(indexes, 'categorie_formation', row[11]),
+        url_album_photo: asString(row[12]),
+        url_album_photo_deux: asString(row[13]),
+        pdf: asString(row[14]),
+        pdf_modification: asString(row[15]),
+        total_participant: asNumber(row[16]),
+      }
+
+    case 'actualite':
+      return {
+        actu: asString(row[1]),
+        date_actu: asDate(row[2]),
+        affiche_actu: asBoolean(row[3]),
+        url: asString(row[4]),
+      }
+
+    case 'documentation':
+      return {
+        date_creation: asDate(row[1]),
+        auteur: asString(row[2]),
+        titre: asString(row[3]),
+        paragraphe1: toRichText(row[4]),
+        paragraphe2: toRichText(row[5]),
+        image: asString(row[6]),
+        url: asString(row[7]),
+        intro: toRichText(row[8]),
+        image2: asString(row[9]),
+        date_modifier: asDate(row[10]),
+        image_modification: asString(row[11]),
+        image_legende: asString(row[12]),
+        image_modification2: asString(row[13]),
+        image_legende2: asString(row[14]),
+        categorie: resolveId(indexes, 'categorie', row[15]),
+        pdf: asString(row[16]),
+        pdf_modification: asString(row[17]),
+      }
+
+    case 'commentaire':
+      return {
+        documentation: resolveId(indexes, 'documentation', row[1]),
+        user_name: asString(row[2]),
+        date_creation: asDate(row[3]),
+        date_modification: asDate(row[4]),
+        commentaire: toRichText(row[5]),
+      }
+
+    case 'doc_pdf':
+      return {
+        pdfactivite: resolveId(indexes, 'activite', row[1]),
+        nompdf: asString(row[2]),
+      }
+
+    case 'etiquette_content':
+      return {
+        first_etiquette_text: asString(row[1]),
+        first_etiquette_photo: asString(row[2]),
+        second_etiquette_text: asString(row[3]),
+        second_etiquette_photo: asString(row[4]),
+        third_etiquette_text: asString(row[5]),
+        third_etiquette_photo: asString(row[6]),
+        fourth_etiquette_text: asString(row[7]),
+        fourth_etiquette_photo: asString(row[8]),
+        first_etiquette_overlay: asString(row[9]),
+        second_etiquette_overlay: asString(row[10]),
+        third_etiquette_overlay: asString(row[11]),
+        fourth_etiquette_overlay: asString(row[12]),
+      }
+
+    case 'intro_photo':
+      return {
+        presentation_photo_intro: asString(row[1]),
+        organisation_photo_intro: asString(row[2]),
+        rando_velo_photo_intro: asString(row[3]),
+        formation_photo_intro: asString(row[4]),
+        projection_film_photo_intro: asString(row[5]),
+        ecocitoyennete_photo_intro: asString(row[6]),
+        autre_photo_intro: asString(row[7]),
+        programme_photo_intro: asString(row[8]),
+        album_photo_photo_intro: asString(row[9]),
+        trombi_photo_intro: asString(row[10]),
+        profil_photo_intro: asString(row[11]),
+        documentation_photo_intro: asString(row[12]),
+      }
+
+    case 'photo':
+      return {
+        adhherent: resolveId(indexes, 'user', row[1]),
+        name: asString(row[2]),
+      }
+
+    case 'photo_album':
+      return {
+        activite: resolveId(indexes, 'activite', row[1]),
+        image: asString(row[2]),
+        url: asString(row[3]),
+      }
+
+    case 'photo_carousel':
+      return {
+        image1: asString(row[1]),
+        image2: asString(row[2]),
+        image3: asString(row[3]),
+        image4: asString(row[4]),
+        image5: asString(row[5]),
+        image6: asString(row[6]),
+        image7: asString(row[7]),
+      }
+
+    default:
+      return null
+  }
+}
+
+async function clearCollection(payload: any, collection: string) {
+  let deleted = 0
+
+  while (true) {
+    const result = await payload.find({
+      collection,
+      depth: 0,
+      limit: 100,
+      overrideAccess: true,
+      page: 1,
+    })
+
+    if (!result.docs.length) {
+      break
+    }
+
+    for (const doc of result.docs) {
+      await payload.delete({
+        collection,
+        overrideAccess: true,
+        where: {
+          id: {
+            equals: doc.id,
+          },
+        },
+      })
+
+      deleted++
+    }
+  }
+
+  if (deleted > 0) {
+    log('INFO', `Cleared ${deleted} existing documents from ${collection}`)
+  }
+}
+
+async function clearImportedCollections(payload: any, tableOrder: string[]) {
+  const collections = [
+    ...new Set(
+      tableOrder.map(getCollectionSlug).filter((value): value is string => Boolean(value)),
+    ),
+  ].reverse()
+
+  for (const collection of collections) {
+    await clearCollection(payload, collection)
+  }
+}
+
+async function applyUserReferents(
+  payload: any,
+  rows: SQLRow[],
+  indexes: Map<string, Map<LegacyID, PayloadID>>,
+) {
+  const referentsByUser = new Map<PayloadID, Set<PayloadID>>()
+
+  for (const row of rows) {
+    const userId = resolveId(indexes, 'user', row[0])
+    const referentId = resolveId(indexes, 'referent', row[1])
+
+    if (!userId || !referentId) {
+      log('WARN', 'Skipping user_referent row because one relation is missing', row)
+      continue
+    }
+
+    if (!referentsByUser.has(userId)) {
+      referentsByUser.set(userId, new Set())
+    }
+
+    referentsByUser.get(userId)?.add(referentId)
+  }
+
+  for (const [userId, referents] of referentsByUser) {
+    await payload.update({
+      collection: 'users',
+      data: { referents: [...referents] },
+      overrideAccess: true,
+      where: {
+        id: {
+          equals: userId,
+        },
+      },
+    })
+  }
+}
+
+async function applyActivityParticipants(
+  payload: any,
+  rows: SQLRow[],
+  indexes: Map<string, Map<LegacyID, PayloadID>>,
+) {
+  const participantsByActivity = new Map<PayloadID, Set<PayloadID>>()
+
+  for (const row of rows) {
+    const userId = resolveId(indexes, 'user', row[0])
+    const activiteId = resolveId(indexes, 'activite', row[1])
+
+    if (!userId || !activiteId) {
+      log('WARN', 'Skipping user_activite row because one relation is missing', row)
+      continue
+    }
+
+    if (!participantsByActivity.has(activiteId)) {
+      participantsByActivity.set(activiteId, new Set())
+    }
+
+    participantsByActivity.get(activiteId)?.add(userId)
+  }
+
+  for (const [activiteId, participants] of participantsByActivity) {
+    await payload.update({
+      collection: 'activite',
+      data: { participants: [...participants] },
+      overrideAccess: true,
+      where: {
+        id: {
+          equals: activiteId,
+        },
+      },
+    })
+  }
+}
+
 async function seedDatabase() {
   const sqlFileArg = process.argv[2]
+
   if (!sqlFileArg) {
     log('ERROR', 'Usage: bun run seed:sql <path-to-sql-file>')
     process.exit(1)
   }
+
   log('INFO', `Log file: ${logFilePath}`)
 
   try {
     const payloadConfig = await config
     const payload = await getPayload({ config: payloadConfig })
-
     const sqlFilePath = path.isAbsolute(sqlFileArg)
       ? sqlFileArg
       : path.resolve(process.cwd(), sqlFileArg)
+
+    if (!fs.existsSync(sqlFilePath)) {
+      throw new Error(`SQL file not found: ${sqlFilePath}`)
+    }
+
     log('INFO', `Reading SQL file from: ${sqlFilePath}`)
 
     const dataMap = parseSQLFile(sqlFilePath)
-
-    // Define the order of inserts to respect foreign keys
     const tableOrder = [
       'etat',
       'categorie',
@@ -143,218 +678,77 @@ async function seedDatabase() {
       'referent',
       'user',
       'partenaire',
-      'activite',
+      'activite_content',
       'actualite',
-      'categorie',
-      'commentaire',
-      'doc_pdf',
-      'documentation',
       'etiquette_content',
       'intro_photo',
+      'photo_carousel',
+      'documentation',
+      'activite',
+      'doc_pdf',
       'photo',
       'photo_album',
-      'photo_carousel',
-      'user_activite',
-      'user_referent',
+      'commentaire',
     ]
+    const indexes = new Map<string, Map<LegacyID, PayloadID>>()
+    let createdCount = 0
+
+    await clearImportedCollections(payload, tableOrder)
+
+    const unsupportedTables = [...dataMap.keys()].filter(
+      (tableName) =>
+        !tableOrder.includes(tableName) && !['user_activite', 'user_referent'].includes(tableName),
+    )
+
+    if (unsupportedTables.length > 0) {
+      log('WARN', `Unsupported SQL tables skipped: ${unsupportedTables.join(', ')}`)
+    }
 
     for (const tableName of tableOrder) {
-      if (!dataMap.has(tableName)) continue
+      const collection = getCollectionSlug(tableName)
+      const rows = dataMap.get(tableName) ?? []
 
-      const rows = dataMap.get(tableName) || []
+      if (!collection || rows.length === 0) {
+        continue
+      }
+
       log('INFO', `Processing ${tableName}: ${rows.length} rows`)
 
-      for (const row of rows) {
+      for (const [rowIndex, row] of rows.entries()) {
         try {
-          const doc = mapRowToDocument(tableName, row)
-          if (doc) {
-            await payload.create({
-              collection: getCollectionSlug(tableName) as any,
-              data: doc,
-            })
+          const data = mapRowToDocument(tableName, row, indexes, rowIndex)
+
+          if (!data) {
+            log('WARN', `No mapper available for ${tableName}, skipping row`, row)
+            continue
           }
+
+          const created = await payload.create({
+            collection: collection as any,
+            data,
+            overrideAccess: true,
+          })
+
+          rememberId(indexes, tableName, row, created.id)
+          createdCount++
         } catch (error) {
-          log('ERROR', `Error processing row in ${tableName}:`, error)
+          log('ERROR', `Error processing row ${rowIndex + 1} in ${tableName}:`, { row, error })
+          throw error
         }
       }
     }
 
-    log('INFO', 'Database seeding completed successfully!')
+    await applyActivityParticipants(payload, dataMap.get('user_activite') ?? [], indexes)
+    await applyUserReferents(payload, dataMap.get('user_referent') ?? [], indexes)
+
+    log('INFO', `Database seeding completed successfully. Created ${createdCount} documents.`)
   } catch (error) {
     log('ERROR', 'Error seeding database:', error)
     process.exit(1)
   }
 }
 
-/**
- * Map SQL table names to Payload collection slugs
- */
-function getCollectionSlug(tableName: string): string {
-  const slugMap: { [key: string]: string } = {
-    etat: 'etat',
-    categorie: 'categorie',
-    categorie_formation: 'categorie-formation',
-    bureau: 'bureau',
-    lieu: 'lieu',
-    referent: 'referent',
-    user: 'users',
-    partenaire: 'partenaire',
-    activite: 'activite',
-    actualite: 'actualite',
-    commentaire: 'commentaire',
-    doc_pdf: 'doc-pdf',
-    documentation: 'documentation',
-    etiquette_content: 'etiquette-content',
-    intro_photo: 'intro-photo',
-    photo: 'photo',
-    photo_album: 'photo-album',
-    photo_carousel: 'photo-carousel',
-    activite_content: 'activite-content',
-  }
-  return slugMap[tableName] || tableName
-}
-
-/**
- * Map SQL row data to Payload document structure
- */
-function mapRowToDocument(tableName: string, row: any[]): any {
-  const mapping: { [key: string]: (row: any[]) => any } = {
-    etat: (row) => ({ libelle: row[1] }),
-    categorie: (row) => ({ libelle: row[1] }),
-    categorie_formation: (row) => ({ libelle: row[1] }),
-    bureau: (row) => ({ nom: row[1], ordre: row[2] }),
-    lieu: (row) => ({
-      nom_ville: row[1],
-      cp_ville: row[2],
-      num_rue: row[3],
-      nom_rue: row[4],
-    }),
-    referent: (row) => ({ nom: row[1], ordre: row[2] }),
-    user: (row) => {
-      const doc: any = {
-        username: row[1],
-        nom: row[4],
-        prenom: row[5],
-        email: row[7],
-      }
-      if (row[6]) doc.telephone = row[6]
-      if (row[8]) doc.date_naissance = row[8]
-      if (row[9]) doc.bureau = row[9]
-      return doc
-    },
-    partenaire: (row) => ({
-      ordre: row[1],
-      nom: row[2],
-      lien: row[3],
-    }),
-    activite: (row) => ({
-      etat: row[2],
-      lieu: row[3],
-      organisateur: row[4],
-      nom: row[5],
-      date_activite: row[6],
-      duree: row[7],
-      distance: row[8],
-      infos_activite: row[9],
-      denivele: row[10],
-      difficulte: row[11],
-      categories_formation: row[12],
-      url_album_photo: row[13],
-      url_album_photo_deux: row[14],
-      pdf: row[15],
-      pdf_modification: row[16],
-      total_participant: row[17],
-    }),
-    actualite: (row) => ({
-      actu: row[1],
-      date_actu: row[2],
-      affiche_actu: row[3],
-      url: row[4],
-    }),
-    commentaire: (row) => ({
-      documentation: row[2],
-      user_name: row[3],
-      date_creation: row[4],
-      date_modification: row[5],
-      commentaire: row[6],
-    }),
-    doc_pdf: (row) => ({
-      pdfactivite: row[2],
-      nompdf: row[3],
-    }),
-    documentation: (row) => ({
-      date_creation: row[2],
-      auteur: row[3],
-      titre: row[4],
-      paragraphe1: row[5],
-      paragraphe2: row[6],
-      image: row[7],
-      url: row[8],
-      intro: row[9],
-      image2: row[10],
-      date_modifier: row[11],
-      image_modification: row[12],
-      image_legende: row[13],
-      image_modification2: row[14],
-      image_legende2: row[15],
-      categorie: row[16],
-      pdf: row[17],
-      pdf_modification: row[18],
-    }),
-    etiquette_content: (row) => ({
-      first_etiquette_text: row[2],
-      first_etiquette_photo: row[3],
-      second_etiquette_text: row[4],
-      second_etiquette_photo: row[5],
-      third_etiquette_text: row[6],
-      third_etiquette_photo: row[7],
-      fourth_etiquette_text: row[8],
-      fourth_etiquette_photo: row[9],
-      first_etiquette_overlay: row[10],
-      second_etiquette_overlay: row[11],
-      third_etiquette_overlay: row[12],
-      fourth_etiquette_overlay: row[13],
-    }),
-    intro_photo: (row) => ({
-      presentation_photo_intro: row[2],
-      organisation_photo_intro: row[3],
-      rando_velo_photo_intro: row[4],
-      formation_photo_intro: row[5],
-      projection_film_photo_intro: row[6],
-      ecocitoyennete_photo_intro: row[7],
-      autre_photo_intro: row[8],
-      programme_photo_intro: row[9],
-      album_photo_photo_intro: row[10],
-      trombi_photo_intro: row[11],
-      profil_photo_intro: row[12],
-      documentation_photo_intro: row[13],
-    }),
-    photo: (row) => ({
-      adhherent: row[2],
-      name: row[3],
-    }),
-    photo_album: (row) => ({
-      activite: row[2],
-      image: row[3],
-      url: row[4],
-    }),
-    photo_carousel: (row) => ({
-      image1: row[2],
-      image2: row[3],
-      image3: row[4],
-      image4: row[5],
-      image5: row[6],
-      image6: row[7],
-      image7: row[8],
-    }),
-  }
-
-  const mapper = mapping[tableName]
-  return mapper ? mapper(row) : null
-}
-
-// Run the seed function
 seedDatabase().catch((error) => {
-  console.error('Failed to seed database:', error)
+  log('ERROR', 'Failed to seed database:', error)
   process.exit(1)
 })
