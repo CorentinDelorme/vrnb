@@ -10,64 +10,81 @@ This document describes all the collections that have been added to the Payload 
    - Manages the status of activities (ouverte, finie, annulée, modifiée)
    - Fields: `libelle` (status name)
 
-2. **Categorie** (`categorie`)
+2. **Bureau** (`bureau`)
+   - Organization roles and positions (Président, Trésorier, Secrétaire, etc.)
+   - Fields: `ordre` (sort order), `nom` (role name)
+
+3. **Referent** (`referent`)
+   - Role referents (Site Web, Logistique, Photo-Vidéo, Mécanique, Navigation GPS, etc.)
+   - Fields: `ordre` (sort order), `nom` (referent name)
+
+4. **Partenaire** (`partenaire`)
+   - Organization partners and sponsors
+   - Fields: `ordre` (sort order), `nom` (partner name), `lien` (website link), `logo` (upload field for logo)
+
+5. **Categorie** (`categorie`)
    - Activity categories
    - Fields: `libelle` (category name)
 
-3. **CategorieFormation** (`categorie-formation`)
+6. **CategorieFormation** (`categorie-formation`)
    - Formation/training categories
    - Fields: `libelle` (category name)
 
-4. **Lieu** (`lieu`)
+7. **Lieu** (`lieu`)
    - Locations/event venues
    - Fields: `nom_ville`, `cp_ville`, `num_rue`, `nom_rue`
 
-5. **Actualite** (`actualite`)
+8. **Actualite** (`actualite`)
    - News and updates
    - Fields: `actu`, `date_actu`, `affiche_actu`, `url`
 
-6. **Commentaire** (`commentaire`)
+9. **Commentaire** (`commentaire`)
    - Comments on documentation
    - Fields: `documentation` (relationship), `user_name`, `date_creation`, `date_modification`, `commentaire`
 
-7. **DocPdf** (`doc-pdf`)
-   - PDF documents linked to activities
-   - Fields: `pdfactivite` (relationship), `nompdf`
+10. **DocPdf** (`doc-pdf`)
+    - PDF documents linked to activities
+    - Fields: `pdfactivite` (relationship), `nompdf`
 
-8. **ActiviteContent** (`activite-content`)
-   - Content repository for activity descriptions and titles
-   - Multiple text and title fields for different activity types
+11. **ActiviteContent** (`activite-content`)
+    - Content repository for activity descriptions and titles
+    - Multiple text and title fields for different activity types
 
-9. **Activite** (`activite`)
-   - Main activities/events collection
-   - Fields: `nom`, `date_activite`, `duree`, `distance`, `denivele`, `difficulte`, `infos_activite`, `total_participant`
-   - Relationships: `etat`, `lieu`, `organisateur` (user), `categories_formation`
-   - Many-to-many: `participants` (users)
+12. **Activite** (`activite`)
+    - Main activities/events collection
+    - Fields: `nom`, `date_activite`, `duree`, `distance`, `denivele`, `difficulte`, `infos_activite`, `total_participant`
+    - Relationships: `etat`, `lieu`, `organisateur` (user), `categories_formation`
+    - Many-to-many: `participants` (users)
 
-10. **Photo** (`photo`)
+13. **Photo** (`photo`)
     - User photos
     - Fields: `name`, `adhherent` (relationship to users)
 
-11. **PhotoAlbum** (`photo-album`)
+14. **PhotoAlbum** (`photo-album`)
     - Photo albums linked to activities
     - Fields: `image`, `url`, `activite` (relationship)
 
-12. **PhotoCarousel** (`photo-carousel`)
+15. **PhotoCarousel** (`photo-carousel`)
     - Homepage carousel images
     - Fields: `image1` through `image7`
 
-13. **EtiquetteContent** (`etiquette-content`)
+16. **EtiquetteContent** (`etiquette-content`)
     - Label/tag content for homepage sections
     - Fields: 4 sets of etiquette text, photos, and overlays
 
-14. **IntroPhoto** (`intro-photo`)
+17. **IntroPhoto** (`intro-photo`)
     - Introduction images for different sections
     - Fields: Various intro photo paths for different sections
 
-15. **Documentation** (`documentation`)
+18. **Documentation** (`documentation`)
     - Knowledge base/documentation articles
     - Fields: `titre`, `auteur`, `date_creation`, `paragraphe1`, `paragraphe2`, `image`, `url`, `intro`, `categorie` (relationship)
     - Supports PDF attachments
+
+19. **Users** (`users`)
+    - User authentication and profile management
+    - Fields: `email` (unique, required), `username` (unique, required), `nom` (required), `prenom` (required), `telephone` (optional), `date_naissance` (optional)
+    - Relationships: `bureau` (single), `referents` (many)
 
 ### Global Configurations
 
@@ -82,8 +99,9 @@ This document describes all the collections that have been added to the Payload 
 ## Database Schema Relationships
 
 - **Users** → Activities (organizateurs, participants)
-- **Users** → Referents (many-to-many)
-- **Activities** → État (status lookup)
+- **Users** → Referent (many-to-many)
+- **Users** → Bureau (single relationship)
+- **Activities** → Etat (status lookup)
 - **Activities** → Lieu (location lookup)
 - **Activities** → CategorieFormation (formation category lookup)
 - **Activities** → PhotoAlbum (one-to-many)
@@ -172,8 +190,11 @@ Payload uses URL-friendly "slugs" for collection identifiers. The mappings are:
 | etat                | etat                | Etat.ts               |
 | categorie           | categorie           | Categorie.ts          |
 | categorie_formation | categorie-formation | CategorieFormation.ts |
+| bureau              | bureau              | Bureau.ts             |
 | lieu                | lieu                | Lieu.ts               |
+| referent            | referent            | Referent.ts           |
 | actualite           | actualite           | Actualite.ts          |
+| partenaire          | partenaire          | Partenaire.ts         |
 | commentaire         | commentaire         | Commentaire.ts        |
 | doc_pdf             | doc-pdf             | DocPdf.ts             |
 | activite_content    | activite-content    | ActiviteContent.ts    |
@@ -218,8 +239,11 @@ apps/web/
 │   │   ├── Etat.ts
 │   │   ├── Categorie.ts
 │   │   ├── CategorieFormation.ts
+│   │   ├── Bureau.ts
 │   │   ├── Lieu.ts
+│   │   ├── Referent.ts
 │   │   ├── Actualite.ts
+│   │   ├── Partenaire.ts
 │   │   ├── Commentaire.ts
 │   │   ├── DocPdf.ts
 │   │   ├── ActiviteContent.ts
@@ -230,8 +254,11 @@ apps/web/
 │   │   ├── EtiquetteContent.ts
 │   │   ├── IntroPhoto.ts
 │   │   ├── Documentation.ts
+│   │   ├── Users.ts
+│   │   ├── Media.ts
 │   ├── globals/
 │   └── payload.config.ts
 ├── scripts/
-│   ├── seedFromSQL.ts (new)
+│   ├── seedFromSQL.ts
+│   └── seedOrderedCollections.ts
 ```
