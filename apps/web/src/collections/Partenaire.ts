@@ -1,10 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
-export const Partenaires: CollectionConfig = {
-  slug: 'partenaires',
+export const Partenaire: CollectionConfig = {
+  slug: 'partenaire',
   admin: {
     useAsTitle: 'nom',
-    defaultColumns: ['ordre', 'nom', 'lien', 'updatedAt'],
+    defaultColumns: ['ordre', 'nom', 'url', 'updatedAt'],
   },
   defaultSort: 'ordre',
   fields: [
@@ -19,7 +19,7 @@ export const Partenaires: CollectionConfig = {
       required: true,
     },
     {
-      name: 'lien',
+      name: 'url',
       type: 'text',
       required: true,
     },

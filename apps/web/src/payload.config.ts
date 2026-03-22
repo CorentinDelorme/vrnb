@@ -7,9 +7,24 @@ import sharp from 'sharp'
 
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
-import { BureauRoles } from './collections/BureauRoles'
-import { Referents } from './collections/Referents'
-import { Partenaires } from './collections/Partenaires'
+import { Bureau } from './collections/Bureau'
+import { Referent } from './collections/Referent'
+import { Partenaire } from './collections/Partenaire'
+import { Etat } from './collections/Etat'
+import { Categorie } from './collections/Categorie'
+import { CategorieFormation } from './collections/CategorieFormation'
+import { Lieu } from './collections/Lieu'
+import { Actualite } from './collections/Actualite'
+import { Commentaire } from './collections/Commentaire'
+import { DocPdf } from './collections/DocPdf'
+import { ActiviteContent } from './collections/ActiviteContent'
+import { Activite } from './collections/Activite'
+import { Photo } from './collections/Photo'
+import { PhotoAlbum } from './collections/PhotoAlbum'
+import { PhotoCarousel } from './collections/PhotoCarousel'
+import { EtiquetteContent } from './collections/EtiquetteContent'
+import { IntroPhoto } from './collections/IntroPhoto'
+import { Documentation } from './collections/Documentation'
 import { Home } from './globals/Home'
 import { RandosVelo } from './globals/RandosVelo'
 
@@ -34,7 +49,28 @@ export default buildConfig({
       globals: ['home', 'randos-velo'],
     },
   },
-  collections: [Users, Media, BureauRoles, Referents, Partenaires],
+  collections: [
+    Users,
+    Media,
+    Bureau,
+    Referent,
+    Partenaire,
+    Etat,
+    Categorie,
+    CategorieFormation,
+    Lieu,
+    Actualite,
+    Commentaire,
+    DocPdf,
+    ActiviteContent,
+    Activite,
+    Photo,
+    PhotoAlbum,
+    PhotoCarousel,
+    EtiquetteContent,
+    IntroPhoto,
+    Documentation,
+  ],
   globals: [Home, RandosVelo],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',

@@ -69,9 +69,24 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
-    'bureau-roles': BureauRole;
-    referents: Referent;
-    partenaires: Partenaire;
+    bureau: Bureau;
+    referent: Referent;
+    partenaire: Partenaire;
+    etat: Etat;
+    categorie: Categorie;
+    'categorie-formation': CategorieFormation;
+    lieu: Lieu;
+    actualite: Actualite;
+    commentaire: Commentaire;
+    'doc-pdf': DocPdf;
+    'activite-content': ActiviteContent;
+    activite: Activite;
+    photo: Photo;
+    'photo-album': PhotoAlbum;
+    'photo-carousel': PhotoCarousel;
+    'etiquette-content': EtiquetteContent;
+    'intro-photo': IntroPhoto;
+    documentation: Documentation;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -81,9 +96,24 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    'bureau-roles': BureauRolesSelect<false> | BureauRolesSelect<true>;
-    referents: ReferentsSelect<false> | ReferentsSelect<true>;
-    partenaires: PartenairesSelect<false> | PartenairesSelect<true>;
+    bureau: BureauSelect<false> | BureauSelect<true>;
+    referent: ReferentSelect<false> | ReferentSelect<true>;
+    partenaire: PartenaireSelect<false> | PartenaireSelect<true>;
+    etat: EtatSelect<false> | EtatSelect<true>;
+    categorie: CategorieSelect<false> | CategorieSelect<true>;
+    'categorie-formation': CategorieFormationSelect<false> | CategorieFormationSelect<true>;
+    lieu: LieuSelect<false> | LieuSelect<true>;
+    actualite: ActualiteSelect<false> | ActualiteSelect<true>;
+    commentaire: CommentaireSelect<false> | CommentaireSelect<true>;
+    'doc-pdf': DocPdfSelect<false> | DocPdfSelect<true>;
+    'activite-content': ActiviteContentSelect<false> | ActiviteContentSelect<true>;
+    activite: ActiviteSelect<false> | ActiviteSelect<true>;
+    photo: PhotoSelect<false> | PhotoSelect<true>;
+    'photo-album': PhotoAlbumSelect<false> | PhotoAlbumSelect<true>;
+    'photo-carousel': PhotoCarouselSelect<false> | PhotoCarouselSelect<true>;
+    'etiquette-content': EtiquetteContentSelect<false> | EtiquetteContentSelect<true>;
+    'intro-photo': IntroPhotoSelect<false> | IntroPhotoSelect<true>;
+    documentation: DocumentationSelect<false> | DocumentationSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -135,6 +165,13 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
+  username: string;
+  nom: string;
+  prenom: string;
+  telephone?: string | null;
+  date_naissance?: string | null;
+  bureau?: (string | null) | Bureau;
+  referents?: (string | Referent)[] | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -153,6 +190,28 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "bureau".
+ */
+export interface Bureau {
+  id: string;
+  ordre: number;
+  nom: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referent".
+ */
+export interface Referent {
+  id: string;
+  ordre: number;
+  nom: string;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -175,60 +234,521 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bureau-roles".
- */
-export interface BureauRole {
-  id: string;
-  ordre: number;
-  role:
-    | 'president'
-    | 'vice-president'
-    | 'referent-des-referents'
-    | 'secretaire'
-    | 'vice-secretaire'
-    | 'tresorier'
-    | 'vice-tresorier'
-    | 'secretaire-comptable'
-    | 'logistique'
-    | 'adherent';
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "referents".
- */
-export interface Referent {
-  id: string;
-  ordre: number;
-  referent:
-    | 'site-web'
-    | 'logistique'
-    | 'photo-video'
-    | 'mecanique'
-    | 'navigation-gps'
-    | 'securite'
-    | 'secourisme'
-    | 'stagiaire'
-    | 'veille-documentaire'
-    | 'festivites'
-    | 'guide-conferencier'
-    | 'balade-du-mardi'
-    | 'equipement'
-    | 'maniabilite';
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "partenaires".
+ * via the `definition` "partenaire".
  */
 export interface Partenaire {
   id: string;
   ordre: number;
   nom: string;
-  lien: string;
+  url: string;
   logo?: (string | null) | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "etat".
+ */
+export interface Etat {
+  id: string;
+  libelle: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categorie".
+ */
+export interface Categorie {
+  id: string;
+  libelle: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categorie-formation".
+ */
+export interface CategorieFormation {
+  id: string;
+  libelle: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lieu".
+ */
+export interface Lieu {
+  id: string;
+  nom_ville: string;
+  cp_ville?: string | null;
+  num_rue?: string | null;
+  nom_rue: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "actualite".
+ */
+export interface Actualite {
+  id: string;
+  actu: string;
+  date_actu: string;
+  affiche_actu?: boolean | null;
+  url?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "commentaire".
+ */
+export interface Commentaire {
+  id: string;
+  documentation?: (string | null) | Documentation;
+  user_name: string;
+  date_creation: string;
+  date_modification?: string | null;
+  commentaire: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "documentation".
+ */
+export interface Documentation {
+  id: string;
+  date_creation: string;
+  auteur: string;
+  titre: string;
+  paragraphe1?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  paragraphe2?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  image?: string | null;
+  url?: string | null;
+  intro: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  };
+  image2?: string | null;
+  date_modifier?: string | null;
+  image_modification?: string | null;
+  image_legende?: string | null;
+  image_modification2?: string | null;
+  image_legende2?: string | null;
+  categorie?: (string | null) | Categorie;
+  pdf?: string | null;
+  pdf_modification?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "doc-pdf".
+ */
+export interface DocPdf {
+  id: string;
+  pdfactivite?: (string | null) | Activite;
+  nompdf: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activite".
+ */
+export interface Activite {
+  id: string;
+  etat?: (string | null) | Etat;
+  lieu?: (string | null) | Lieu;
+  organisateur?: (string | null) | User;
+  nom: string;
+  date_activite: string;
+  duree?: number | null;
+  distance?: number | null;
+  infos_activite?: string | null;
+  denivele?: number | null;
+  difficulte?: number | null;
+  categories_formation: string | CategorieFormation;
+  url_album_photo?: string | null;
+  url_album_photo_deux?: string | null;
+  pdf?: string | null;
+  pdf_modification?: string | null;
+  total_participant?: number | null;
+  participants?: (string | User)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activite-content".
+ */
+export interface ActiviteContent {
+  id: string;
+  balade_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  escapade_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  mecanique_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  securite_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  secourisme_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  photo_video_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  projection_film_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  autre_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  ecocitoyennete_text?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  balade_photo?: string | null;
+  escapade_photo?: string | null;
+  mecanique_photo?: string | null;
+  securite_photo?: string | null;
+  secourisme_photo?: string | null;
+  photo_video_photo?: string | null;
+  projection_film_photo?: string | null;
+  ecocitoyennete_photo?: string | null;
+  autre_photo?: string | null;
+  formation_text_intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  randovelo_text_intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  projectionfilm_text_intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  ecocitoyennete_text_intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  autres_text_intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  balade_title?: string | null;
+  escapade_title?: string | null;
+  mecanique_title?: string | null;
+  securite_title?: string | null;
+  secourisme_title?: string | null;
+  photo_video_title?: string | null;
+  projection_film_title?: string | null;
+  autre_title?: string | null;
+  ecocitoyennete_title?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photo".
+ */
+export interface Photo {
+  id: string;
+  adhherent?: (string | null) | User;
+  name: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photo-album".
+ */
+export interface PhotoAlbum {
+  id: string;
+  activite?: (string | null) | Activite;
+  image?: string | null;
+  url?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photo-carousel".
+ */
+export interface PhotoCarousel {
+  id: string;
+  image1?: string | null;
+  image2?: string | null;
+  image3?: string | null;
+  image4?: string | null;
+  image5?: string | null;
+  image6?: string | null;
+  image7?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "etiquette-content".
+ */
+export interface EtiquetteContent {
+  id: string;
+  first_etiquette_text?: string | null;
+  first_etiquette_photo?: string | null;
+  second_etiquette_text?: string | null;
+  second_etiquette_photo?: string | null;
+  third_etiquette_text?: string | null;
+  third_etiquette_photo?: string | null;
+  fourth_etiquette_text?: string | null;
+  fourth_etiquette_photo?: string | null;
+  first_etiquette_overlay?: string | null;
+  second_etiquette_overlay?: string | null;
+  third_etiquette_overlay?: string | null;
+  fourth_etiquette_overlay?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "intro-photo".
+ */
+export interface IntroPhoto {
+  id: string;
+  presentation_photo_intro?: string | null;
+  organisation_photo_intro?: string | null;
+  rando_velo_photo_intro?: string | null;
+  formation_photo_intro?: string | null;
+  projection_film_photo_intro?: string | null;
+  ecocitoyennete_photo_intro?: string | null;
+  autre_photo_intro?: string | null;
+  programme_photo_intro?: string | null;
+  album_photo_photo_intro?: string | null;
+  trombi_photo_intro?: string | null;
+  profil_photo_intro?: string | null;
+  documentation_photo_intro?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -265,16 +785,76 @@ export interface PayloadLockedDocument {
         value: string | Media;
       } | null)
     | ({
-        relationTo: 'bureau-roles';
-        value: string | BureauRole;
+        relationTo: 'bureau';
+        value: string | Bureau;
       } | null)
     | ({
-        relationTo: 'referents';
+        relationTo: 'referent';
         value: string | Referent;
       } | null)
     | ({
-        relationTo: 'partenaires';
+        relationTo: 'partenaire';
         value: string | Partenaire;
+      } | null)
+    | ({
+        relationTo: 'etat';
+        value: string | Etat;
+      } | null)
+    | ({
+        relationTo: 'categorie';
+        value: string | Categorie;
+      } | null)
+    | ({
+        relationTo: 'categorie-formation';
+        value: string | CategorieFormation;
+      } | null)
+    | ({
+        relationTo: 'lieu';
+        value: string | Lieu;
+      } | null)
+    | ({
+        relationTo: 'actualite';
+        value: string | Actualite;
+      } | null)
+    | ({
+        relationTo: 'commentaire';
+        value: string | Commentaire;
+      } | null)
+    | ({
+        relationTo: 'doc-pdf';
+        value: string | DocPdf;
+      } | null)
+    | ({
+        relationTo: 'activite-content';
+        value: string | ActiviteContent;
+      } | null)
+    | ({
+        relationTo: 'activite';
+        value: string | Activite;
+      } | null)
+    | ({
+        relationTo: 'photo';
+        value: string | Photo;
+      } | null)
+    | ({
+        relationTo: 'photo-album';
+        value: string | PhotoAlbum;
+      } | null)
+    | ({
+        relationTo: 'photo-carousel';
+        value: string | PhotoCarousel;
+      } | null)
+    | ({
+        relationTo: 'etiquette-content';
+        value: string | EtiquetteContent;
+      } | null)
+    | ({
+        relationTo: 'intro-photo';
+        value: string | IntroPhoto;
+      } | null)
+    | ({
+        relationTo: 'documentation';
+        value: string | Documentation;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -323,6 +903,13 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  username?: T;
+  nom?: T;
+  prenom?: T;
+  telephone?: T;
+  date_naissance?: T;
+  bureau?: T;
+  referents?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -360,33 +947,273 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bureau-roles_select".
+ * via the `definition` "bureau_select".
  */
-export interface BureauRolesSelect<T extends boolean = true> {
-  ordre?: T;
-  role?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "referents_select".
- */
-export interface ReferentsSelect<T extends boolean = true> {
-  ordre?: T;
-  referent?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "partenaires_select".
- */
-export interface PartenairesSelect<T extends boolean = true> {
+export interface BureauSelect<T extends boolean = true> {
   ordre?: T;
   nom?: T;
-  lien?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "referent_select".
+ */
+export interface ReferentSelect<T extends boolean = true> {
+  ordre?: T;
+  nom?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "partenaire_select".
+ */
+export interface PartenaireSelect<T extends boolean = true> {
+  ordre?: T;
+  nom?: T;
+  url?: T;
   logo?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "etat_select".
+ */
+export interface EtatSelect<T extends boolean = true> {
+  libelle?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categorie_select".
+ */
+export interface CategorieSelect<T extends boolean = true> {
+  libelle?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "categorie-formation_select".
+ */
+export interface CategorieFormationSelect<T extends boolean = true> {
+  libelle?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "lieu_select".
+ */
+export interface LieuSelect<T extends boolean = true> {
+  nom_ville?: T;
+  cp_ville?: T;
+  num_rue?: T;
+  nom_rue?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "actualite_select".
+ */
+export interface ActualiteSelect<T extends boolean = true> {
+  actu?: T;
+  date_actu?: T;
+  affiche_actu?: T;
+  url?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "commentaire_select".
+ */
+export interface CommentaireSelect<T extends boolean = true> {
+  documentation?: T;
+  user_name?: T;
+  date_creation?: T;
+  date_modification?: T;
+  commentaire?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "doc-pdf_select".
+ */
+export interface DocPdfSelect<T extends boolean = true> {
+  pdfactivite?: T;
+  nompdf?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activite-content_select".
+ */
+export interface ActiviteContentSelect<T extends boolean = true> {
+  balade_text?: T;
+  escapade_text?: T;
+  mecanique_text?: T;
+  securite_text?: T;
+  secourisme_text?: T;
+  photo_video_text?: T;
+  projection_film_text?: T;
+  autre_text?: T;
+  ecocitoyennete_text?: T;
+  balade_photo?: T;
+  escapade_photo?: T;
+  mecanique_photo?: T;
+  securite_photo?: T;
+  secourisme_photo?: T;
+  photo_video_photo?: T;
+  projection_film_photo?: T;
+  ecocitoyennete_photo?: T;
+  autre_photo?: T;
+  formation_text_intro?: T;
+  randovelo_text_intro?: T;
+  projectionfilm_text_intro?: T;
+  ecocitoyennete_text_intro?: T;
+  autres_text_intro?: T;
+  balade_title?: T;
+  escapade_title?: T;
+  mecanique_title?: T;
+  securite_title?: T;
+  secourisme_title?: T;
+  photo_video_title?: T;
+  projection_film_title?: T;
+  autre_title?: T;
+  ecocitoyennete_title?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "activite_select".
+ */
+export interface ActiviteSelect<T extends boolean = true> {
+  etat?: T;
+  lieu?: T;
+  organisateur?: T;
+  nom?: T;
+  date_activite?: T;
+  duree?: T;
+  distance?: T;
+  infos_activite?: T;
+  denivele?: T;
+  difficulte?: T;
+  categories_formation?: T;
+  url_album_photo?: T;
+  url_album_photo_deux?: T;
+  pdf?: T;
+  pdf_modification?: T;
+  total_participant?: T;
+  participants?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photo_select".
+ */
+export interface PhotoSelect<T extends boolean = true> {
+  adhherent?: T;
+  name?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photo-album_select".
+ */
+export interface PhotoAlbumSelect<T extends boolean = true> {
+  activite?: T;
+  image?: T;
+  url?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "photo-carousel_select".
+ */
+export interface PhotoCarouselSelect<T extends boolean = true> {
+  image1?: T;
+  image2?: T;
+  image3?: T;
+  image4?: T;
+  image5?: T;
+  image6?: T;
+  image7?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "etiquette-content_select".
+ */
+export interface EtiquetteContentSelect<T extends boolean = true> {
+  first_etiquette_text?: T;
+  first_etiquette_photo?: T;
+  second_etiquette_text?: T;
+  second_etiquette_photo?: T;
+  third_etiquette_text?: T;
+  third_etiquette_photo?: T;
+  fourth_etiquette_text?: T;
+  fourth_etiquette_photo?: T;
+  first_etiquette_overlay?: T;
+  second_etiquette_overlay?: T;
+  third_etiquette_overlay?: T;
+  fourth_etiquette_overlay?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "intro-photo_select".
+ */
+export interface IntroPhotoSelect<T extends boolean = true> {
+  presentation_photo_intro?: T;
+  organisation_photo_intro?: T;
+  rando_velo_photo_intro?: T;
+  formation_photo_intro?: T;
+  projection_film_photo_intro?: T;
+  ecocitoyennete_photo_intro?: T;
+  autre_photo_intro?: T;
+  programme_photo_intro?: T;
+  album_photo_photo_intro?: T;
+  trombi_photo_intro?: T;
+  profil_photo_intro?: T;
+  documentation_photo_intro?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "documentation_select".
+ */
+export interface DocumentationSelect<T extends boolean = true> {
+  date_creation?: T;
+  auteur?: T;
+  titre?: T;
+  paragraphe1?: T;
+  paragraphe2?: T;
+  image?: T;
+  url?: T;
+  intro?: T;
+  image2?: T;
+  date_modifier?: T;
+  image_modification?: T;
+  image_legende?: T;
+  image_modification2?: T;
+  image_legende2?: T;
+  categorie?: T;
+  pdf?: T;
+  pdf_modification?: T;
   updatedAt?: T;
   createdAt?: T;
 }

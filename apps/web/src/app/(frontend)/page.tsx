@@ -15,7 +15,7 @@ export default async function HomePage() {
       draft: true,
     }),
     payload.find({
-      collection: 'partenaires',
+      collection: 'partenaire',
       depth: 1,
       sort: 'ordre',
       limit: 100,
