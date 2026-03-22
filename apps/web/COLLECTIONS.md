@@ -114,7 +114,7 @@ This document describes all the collections that have been added to the Payload 
 
 1. Ensure MongoDB is running and accessible at the DATABASE_URL specified in `.env`
 2. Ensure the development server has started with `bun dev` or the database is accessible via Payload
-3. Have the SQL dump file at: `apps/web/dbs1369285_2026-03-13.sql`
+3. Have a MySQL SQL dump file ready
 
 ### Running the Seed Script
 
@@ -122,8 +122,12 @@ This document describes all the collections that have been added to the Payload 
 # From the app directory
 cd apps/web
 
-# Run the seed script
-bun run seed:sql
+# Run the seed script, passing the path to your SQL dump file
+bun run seed:sql <path-to-sql-file>
+
+# Examples:
+bun run seed:sql ./dump.sql
+bun run seed:sql /absolute/path/to/dump.sql
 ```
 
 ### What the Script Does

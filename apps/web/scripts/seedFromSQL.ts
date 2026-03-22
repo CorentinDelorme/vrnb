@@ -1,17 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.js'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
-
-interface SQLInsertData {
-  table: string
-  columns: string[]
-  values: any[][]
-}
 
 /**
  * Parse SQL INSERT statements from SQL dump file
@@ -108,11 +98,19 @@ function parseValue(value: string): any {
  * Seed the database with data from SQL file
  */
 async function seedDatabase() {
+  const sqlFileArg = process.argv[2]
+  if (!sqlFileArg) {
+    console.error('Usage: bun run seed:sql <path-to-sql-file>')
+    process.exit(1)
+  }
+
   try {
     const payloadConfig = await config
     const payload = await getPayload({ config: payloadConfig })
 
-    const sqlFilePath = path.join(dirname, '../dbs1369285_2026-03-13.sql')
+    const sqlFilePath = path.isAbsolute(sqlFileArg)
+      ? sqlFileArg
+      : path.resolve(process.cwd(), sqlFileArg)
     console.log(`Reading SQL file from: ${sqlFilePath}`)
 
     const dataMap = parseSQLFile(sqlFilePath)
