@@ -1,6 +1,7 @@
 'use client'
 
 import { useLivePreview } from '@payloadcms/live-preview-react'
+import Image from 'next/image'
 import React from 'react'
 
 import type { RandosVelo } from '@/payload-types'
@@ -36,7 +37,7 @@ export const RandosVeloPageClient: React.FC<RandosVeloPageClientProps> = ({
             <article className="randosVeloBlock" key={block.id || block.blockName || block.title}>
               <h2>{block.title}</h2>
               <p>{block.text}</p>
-              {block.photo ? <img alt={block.title} src={block.photo} /> : null}
+              {block.photo ? <Image alt={block.title || ''} src={block.photo} width={800} height={600} /> : null}
             </article>
           )
         })}

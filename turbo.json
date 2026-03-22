@@ -1,6 +1,13 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalEnv": [
+    "CI",
+    "DATABASE_URL",
+    "PAYLOAD_SECRET",
+    "PAYLOAD_USER_EMAIL",
+    "PAYLOAD_USER_PASSWORD"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

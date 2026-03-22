@@ -2,6 +2,7 @@ import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
 import { getPayload } from 'payload'
+import type { BasePayload, CollectionSlug } from 'payload'
 import config from '../src/payload.config.js'
 
 type LogLevel = 'INFO' | 'WARN' | 'ERROR'
@@ -10,8 +11,7 @@ type SQLRow = SQLPrimitive[]
 type LegacyID = number
 type PayloadID = string | number
 
-const DEFAULT_USER_PASSWORD =
-  process.env.SEED_USER_PASSWORD || process.env.PAYLOAD_USER_PASSWORD || 'password'
+const DEFAULT_USER_PASSWORD = process.env.PAYLOAD_USER_PASSWORD || 'password'
 
 const logTimestamp = new Date().toISOString().replace(/[:.]/g, '-')
 const logDir = path.resolve(process.cwd(), 'logs')
@@ -523,7 +523,7 @@ function mapRowToDocument(
   }
 }
 
-async function clearCollection(payload: any, collection: string) {
+async function clearCollection(payload: BasePayload, collection: CollectionSlug) {
   let deleted = 0
 
   while (true) {
@@ -559,7 +559,7 @@ async function clearCollection(payload: any, collection: string) {
   }
 }
 
-async function clearImportedCollections(payload: any, tableOrder: string[]) {
+async function clearImportedCollections(payload: BasePayload, tableOrder: string[]) {
   const collections = [
     ...new Set(
       tableOrder.map(getCollectionSlug).filter((value): value is string => Boolean(value)),
@@ -567,12 +567,12 @@ async function clearImportedCollections(payload: any, tableOrder: string[]) {
   ].reverse()
 
   for (const collection of collections) {
-    await clearCollection(payload, collection)
+    await clearCollection(payload, collection as CollectionSlug)
   }
 }
 
 async function applyUserReferents(
-  payload: any,
+  payload: BasePayload,
   rows: SQLRow[],
   indexes: Map<string, Map<LegacyID, PayloadID>>,
 ) {
@@ -597,6 +597,7 @@ async function applyUserReferents(
   for (const [userId, referents] of referentsByUser) {
     await payload.update({
       collection: 'users',
+      // @ts-expect-error -- Payload types don't allow updating a relation with an array of IDs, but it works at runtime
       data: { referents: [...referents] },
       overrideAccess: true,
       where: {
@@ -609,7 +610,7 @@ async function applyUserReferents(
 }
 
 async function applyActivityParticipants(
-  payload: any,
+  payload: BasePayload,
   rows: SQLRow[],
   indexes: Map<string, Map<LegacyID, PayloadID>>,
 ) {
@@ -634,6 +635,7 @@ async function applyActivityParticipants(
   for (const [activiteId, participants] of participantsByActivity) {
     await payload.update({
       collection: 'activite',
+      // @ts-expect-error -- Payload types don't allow updating a relation with an array of IDs, but it works at runtime
       data: { participants: [...participants] },
       overrideAccess: true,
       where: {
@@ -724,7 +726,7 @@ async function seedDatabase() {
           }
 
           const created = await payload.create({
-            collection: collection as any,
+            collection: collection as CollectionSlug,
             data,
             overrideAccess: true,
           })
