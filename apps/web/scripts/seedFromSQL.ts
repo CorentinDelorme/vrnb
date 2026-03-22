@@ -1,7 +1,24 @@
+import 'dotenv/config'
 import fs from 'fs'
 import path from 'path'
 import { getPayload } from 'payload'
 import config from '../src/payload.config.js'
+
+// --- Logger setup ---
+const logTimestamp = new Date().toISOString().replace(/[:.]/g, '-')
+const logDir = path.resolve(process.cwd(), 'logs')
+fs.mkdirSync(logDir, { recursive: true })
+const logFilePath = path.join(logDir, `seed-${logTimestamp}.log`)
+const logStream = fs.createWriteStream(logFilePath, { flags: 'a' })
+
+function log(level: 'INFO' | 'ERROR', ...args: any[]) {
+  const line = `[${new Date().toISOString()}] [${level}] ${args.map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a))).join(' ')}`
+  console[level === 'ERROR' ? 'error' : 'log'](line)
+  logStream.write(line + '\n')
+}
+
+process.on('exit', () => logStream.end())
+// ---------------------
 
 /**
  * Parse SQL INSERT statements from SQL dump file
@@ -100,9 +117,10 @@ function parseValue(value: string): any {
 async function seedDatabase() {
   const sqlFileArg = process.argv[2]
   if (!sqlFileArg) {
-    console.error('Usage: bun run seed:sql <path-to-sql-file>')
+    log('ERROR', 'Usage: bun run seed:sql <path-to-sql-file>')
     process.exit(1)
   }
+  log('INFO', `Log file: ${logFilePath}`)
 
   try {
     const payloadConfig = await config
@@ -111,7 +129,7 @@ async function seedDatabase() {
     const sqlFilePath = path.isAbsolute(sqlFileArg)
       ? sqlFileArg
       : path.resolve(process.cwd(), sqlFileArg)
-    console.log(`Reading SQL file from: ${sqlFilePath}`)
+    log('INFO', `Reading SQL file from: ${sqlFilePath}`)
 
     const dataMap = parseSQLFile(sqlFilePath)
 
@@ -144,7 +162,7 @@ async function seedDatabase() {
       if (!dataMap.has(tableName)) continue
 
       const rows = dataMap.get(tableName) || []
-      console.log(`Processing ${tableName}: ${rows.length} rows`)
+      log('INFO', `Processing ${tableName}: ${rows.length} rows`)
 
       for (const row of rows) {
         try {
@@ -156,14 +174,14 @@ async function seedDatabase() {
             })
           }
         } catch (error) {
-          console.error(`Error processing row in ${tableName}:`, error)
+          log('ERROR', `Error processing row in ${tableName}:`, error)
         }
       }
     }
 
-    console.log('Database seeding completed successfully!')
+    log('INFO', 'Database seeding completed successfully!')
   } catch (error) {
-    console.error('Error seeding database:', error)
+    log('ERROR', 'Error seeding database:', error)
     process.exit(1)
   }
 }
