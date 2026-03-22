@@ -58,7 +58,7 @@ export const HomePageClient: React.FC<HomePageClientProps> = ({ home: initialHom
 
                   return (
                     <li key={partenaire.id}>
-                      <a href={partenaire.lien} rel="noopener noreferrer" target="_blank">
+                      <a href={partenaire.url} rel="noopener noreferrer" target="_blank">
                         {logo && (
                           <Image
                             alt={logo.alt}
