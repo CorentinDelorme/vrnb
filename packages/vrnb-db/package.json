@@ -1,0 +1,13 @@
+{
+  "name": "vrnb-db",
+  "version": "1.0.0",
+  "description": "MongoDB Docker service for vrnb (PayloadCMS)",
+  "private": true,
+  "scripts": {
+    "dev": "docker compose up",
+    "start": "docker compose up -d",
+    "stop": "docker compose down",
+    "reset": "docker compose down && rm -rf ./.data && docker compose up -d",
+    "logs": "docker compose logs -f mongo"
+  }
+}

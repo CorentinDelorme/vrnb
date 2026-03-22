@@ -1,0 +1,26 @@
+services:
+  mongo:
+    image: mongo:8.2.6
+    container_name: vrnb-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:-rootpassword}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE:-vrnb}
+    volumes:
+      - ./.data/db:/data/db
+      - ./.data/configdb:/data/configdb
+    command: mongod --storageEngine wiredTiger
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
