@@ -10,6 +10,14 @@
 4. After schema changes: `bun run generate:types`
 5. After adding Payload components: `bun run generate:importmap`
 
+## Admin Login (UI, DevTools, Playwright)
+
+- URL: `http://localhost:3000/admin`
+- Email: `test@example.com`
+- Password: `password`
+
+Use these values in Playwright tests or Chrome DevTools scripts to login, then inspect/admin actions.
+
 ## Test Commands (run from `apps/web/`)
 
 ```sh

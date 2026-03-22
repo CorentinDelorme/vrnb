@@ -58,6 +58,8 @@ Copy `apps/web/.env.example` → `apps/web/.env` (or use `apps/web/test.env` as 
 ```env
 DATABASE_URL=mongodb://root:rootpassword@localhost:27017/vrnb?authSource=admin
 PAYLOAD_SECRET=<any-random-string>
+PAYLOAD_USER_EMAIL=test@example.com
+PAYLOAD_USER_PASSWORD=password
 ```
 
 ## Project Conventions
