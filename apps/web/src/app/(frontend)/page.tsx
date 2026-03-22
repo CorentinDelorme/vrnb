@@ -4,6 +4,7 @@ import React from 'react'
 
 import config from '@/payload.config'
 import type { Media } from '@/payload-types'
+import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
 import './styles.css'
 
 export default async function HomePage() {
@@ -13,6 +14,7 @@ export default async function HomePage() {
   const [home, partenaires] = await Promise.all([
     payload.findGlobal({
       slug: 'home',
+      draft: true,
     }),
     payload.find({
       collection: 'partenaires',
@@ -47,6 +49,7 @@ export default async function HomePage() {
 
   return (
     <main className="home">
+      <RefreshRouteOnSave />
       {layout.map((block) => {
         if (block.blockType !== 'partenaires-list') {
           return null

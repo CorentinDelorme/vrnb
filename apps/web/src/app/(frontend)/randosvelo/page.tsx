@@ -3,6 +3,7 @@ import React from 'react'
 import { getPayload } from 'payload'
 
 import config from '@/payload.config'
+import { RefreshRouteOnSave } from '@/components/RefreshRouteOnSave'
 
 import './styles.css'
 
@@ -12,12 +13,14 @@ export default async function RandosVeloPage() {
 
   const randosVelo = await payload.findGlobal({
     slug: 'randos-velo',
+    draft: true,
   })
 
   const blocks = Array.isArray(randosVelo.blocks) ? randosVelo.blocks : []
 
   return (
     <main className="randosVeloPage">
+      <RefreshRouteOnSave />
       <header>
         <h1>{randosVelo.title}</h1>
         <p>{randosVelo.subtitle}</p>

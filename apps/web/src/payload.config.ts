@@ -22,6 +22,17 @@ export default buildConfig({
     importMap: {
       baseDir: path.resolve(dirname),
     },
+    livePreview: {
+      url: ({ globalConfig }) => {
+        const globalUrlMap: Record<string, string> = {
+          home: '/',
+          'randos-velo': '/randosvelo',
+        }
+        const path = globalConfig?.slug ? (globalUrlMap[globalConfig.slug] ?? '/') : '/'
+        return `${process.env.NEXT_PUBLIC_SERVER_URL ?? 'http://localhost:3000'}${path}`
+      },
+      globals: ['home', 'randos-velo'],
+    },
   },
   collections: [Users, Media, BureauRoles, Referents, Partenaires],
   globals: [Home, RandosVelo],
