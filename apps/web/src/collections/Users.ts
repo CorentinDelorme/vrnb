@@ -1,7 +1,11 @@
 import type { CollectionConfig } from 'payload'
+import { canAccessAdmin } from '../access/canAccessAdmin'
 
 export const Users: CollectionConfig = {
   slug: 'users',
+  access: {
+    admin: canAccessAdmin,
+  },
   admin: {
     useAsTitle: 'email',
     defaultColumns: ['email', 'nom', 'prenom', 'telephone', 'bureau'],
