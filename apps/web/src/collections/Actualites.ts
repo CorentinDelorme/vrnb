@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const Actualite: CollectionConfig = {
-  slug: 'actualite',
+  slug: 'actualites',
   admin: {
     useAsTitle: 'actu',
     defaultColumns: ['actu', 'date_actu', 'affiche_actu'],

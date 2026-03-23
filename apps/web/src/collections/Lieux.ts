@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const Lieu: CollectionConfig = {
-  slug: 'lieu',
+  slug: 'lieux',
   admin: {
     useAsTitle: 'nom_ville',
     defaultColumns: ['nom_ville', 'nom_rue', 'cp_ville'],

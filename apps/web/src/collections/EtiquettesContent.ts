@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const EtiquetteContent: CollectionConfig = {
-  slug: 'etiquette-content',
+  slug: 'etiquettes-content',
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['first_etiquette_text', 'second_etiquette_text'],

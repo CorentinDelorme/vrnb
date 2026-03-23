@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const Documentation: CollectionConfig = {
-  slug: 'documentation',
+  slug: 'documentations',
   admin: {
     useAsTitle: 'titre',
     defaultColumns: ['titre', 'auteur', 'date_creation', 'categorie'],
@@ -70,7 +70,7 @@ export const Documentation: CollectionConfig = {
     {
       name: 'categorie',
       type: 'relationship',
-      relationTo: 'categorie',
+      relationTo: 'categories',
     },
     {
       name: 'pdf',

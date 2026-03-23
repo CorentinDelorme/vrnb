@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const PhotoCarousel: CollectionConfig = {
-  slug: 'photo-carousel',
+  slug: 'photos-carousels',
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['image1', 'image2', 'image3'],

@@ -250,24 +250,24 @@ function toRichText(value: SQLPrimitive) {
 
 function getCollectionSlug(tableName: string): string | null {
   const slugMap: Record<string, string> = {
-    activite: 'activite',
-    activite_content: 'activite-content',
-    actualite: 'actualite',
-    bureau: 'bureau',
-    categorie: 'categorie',
-    categorie_formation: 'categorie-formation',
-    commentaire: 'commentaire',
-    doc_pdf: 'doc-pdf',
-    documentation: 'documentation',
-    etiquette_content: 'etiquette-content',
-    etat: 'etat',
-    intro_photo: 'intro-photo',
-    lieu: 'lieu',
-    partenaire: 'partenaire',
-    photo: 'photo',
-    photo_album: 'photo-album',
-    photo_carousel: 'photo-carousel',
-    referent: 'referent',
+    activite: 'activites',
+    activite_content: 'activites-content',
+    actualite: 'actualites',
+    bureau: 'bureaux',
+    categorie: 'categories',
+    categorie_formation: 'categories-formations',
+    commentaire: 'commentaires',
+    doc_pdf: 'docs-pdf',
+    documentation: 'documentations',
+    etiquette_content: 'etiquettes-content',
+    etat: 'etats',
+    intro_photo: 'intro-photos',
+    lieu: 'lieux',
+    partenaire: 'partenaires',
+    photo: 'photos',
+    photo_album: 'photos-albums',
+    photo_carousel: 'photos-carousels',
+    referent: 'referents',
     user: 'users',
   }
 
@@ -634,7 +634,7 @@ async function applyActivityParticipants(
 
   for (const [activiteId, participants] of participantsByActivity) {
     await payload.update({
-      collection: 'activite',
+      collection: 'activites',
       // @ts-expect-error -- Payload types don't allow updating a relation with an array of IDs, but it works at runtime
       data: { participants: [...participants] },
       overrideAccess: true,

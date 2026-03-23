@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const Activite: CollectionConfig = {
-  slug: 'activite',
+  slug: 'activites',
   admin: {
     useAsTitle: 'nom',
     defaultColumns: ['nom', 'date_activite', 'distance', 'etat', 'categories_formation'],
@@ -10,12 +10,12 @@ export const Activite: CollectionConfig = {
     {
       name: 'etat',
       type: 'relationship',
-      relationTo: 'etat',
+      relationTo: 'etats',
     },
     {
       name: 'lieu',
       type: 'relationship',
-      relationTo: 'lieu',
+      relationTo: 'lieux',
     },
     {
       name: 'organisateur',
@@ -55,7 +55,7 @@ export const Activite: CollectionConfig = {
     {
       name: 'categories_formation',
       type: 'relationship',
-      relationTo: 'categorie-formation',
+      relationTo: 'categories-formations',
       required: true,
     },
     {

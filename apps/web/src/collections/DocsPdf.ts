@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const DocPdf: CollectionConfig = {
-  slug: 'doc-pdf',
+  slug: 'docs-pdf',
   admin: {
     useAsTitle: 'nompdf',
     defaultColumns: ['nompdf', 'pdfactivite'],
@@ -10,7 +10,7 @@ export const DocPdf: CollectionConfig = {
     {
       name: 'pdfactivite',
       type: 'relationship',
-      relationTo: 'activite',
+      relationTo: 'activites',
     },
     {
       name: 'nompdf',

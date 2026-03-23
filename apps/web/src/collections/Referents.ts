@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
-export const Bureau: CollectionConfig = {
-  slug: 'bureau',
+export const Referent: CollectionConfig = {
+  slug: 'referents',
   admin: {
     useAsTitle: 'nom',
     defaultColumns: ['ordre', 'nom', 'updatedAt'],

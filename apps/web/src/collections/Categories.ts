@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
-export const CategorieFormation: CollectionConfig = {
-  slug: 'categorie-formation',
+export const Categorie: CollectionConfig = {
+  slug: 'categories',
   admin: {
     useAsTitle: 'libelle',
     defaultColumns: ['libelle'],

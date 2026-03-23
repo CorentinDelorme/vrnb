@@ -69,24 +69,24 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
-    bureau: Bureau;
-    referent: Referent;
-    partenaire: Partenaire;
-    etat: Etat;
-    categorie: Categorie;
-    'categorie-formation': CategorieFormation;
-    lieu: Lieu;
-    actualite: Actualite;
-    commentaire: Commentaire;
-    'doc-pdf': DocPdf;
-    'activite-content': ActiviteContent;
-    activite: Activite;
-    photo: Photo;
-    'photo-album': PhotoAlbum;
-    'photo-carousel': PhotoCarousel;
-    'etiquette-content': EtiquetteContent;
-    'intro-photo': IntroPhoto;
-    documentation: Documentation;
+    bureaux: Bureau;
+    referents: Referent;
+    partenaires: Partenaire;
+    etats: Etat;
+    categories: Category;
+    'categories-formations': CategoriesFormation;
+    lieux: Lieux;
+    actualites: Actualite;
+    commentaires: Commentaire;
+    'docs-pdf': DocsPdf;
+    'activites-content': ActivitesContent;
+    activites: Activite;
+    photos: Photo;
+    'photos-albums': PhotosAlbum;
+    'photos-carousels': PhotosCarousel;
+    'etiquettes-content': EtiquettesContent;
+    'intro-photos': IntroPhoto;
+    documentations: Documentation;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -96,24 +96,24 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
-    bureau: BureauSelect<false> | BureauSelect<true>;
-    referent: ReferentSelect<false> | ReferentSelect<true>;
-    partenaire: PartenaireSelect<false> | PartenaireSelect<true>;
-    etat: EtatSelect<false> | EtatSelect<true>;
-    categorie: CategorieSelect<false> | CategorieSelect<true>;
-    'categorie-formation': CategorieFormationSelect<false> | CategorieFormationSelect<true>;
-    lieu: LieuSelect<false> | LieuSelect<true>;
-    actualite: ActualiteSelect<false> | ActualiteSelect<true>;
-    commentaire: CommentaireSelect<false> | CommentaireSelect<true>;
-    'doc-pdf': DocPdfSelect<false> | DocPdfSelect<true>;
-    'activite-content': ActiviteContentSelect<false> | ActiviteContentSelect<true>;
-    activite: ActiviteSelect<false> | ActiviteSelect<true>;
-    photo: PhotoSelect<false> | PhotoSelect<true>;
-    'photo-album': PhotoAlbumSelect<false> | PhotoAlbumSelect<true>;
-    'photo-carousel': PhotoCarouselSelect<false> | PhotoCarouselSelect<true>;
-    'etiquette-content': EtiquetteContentSelect<false> | EtiquetteContentSelect<true>;
-    'intro-photo': IntroPhotoSelect<false> | IntroPhotoSelect<true>;
-    documentation: DocumentationSelect<false> | DocumentationSelect<true>;
+    bureaux: BureauxSelect<false> | BureauxSelect<true>;
+    referents: ReferentsSelect<false> | ReferentsSelect<true>;
+    partenaires: PartenairesSelect<false> | PartenairesSelect<true>;
+    etats: EtatsSelect<false> | EtatsSelect<true>;
+    categories: CategoriesSelect<false> | CategoriesSelect<true>;
+    'categories-formations': CategoriesFormationsSelect<false> | CategoriesFormationsSelect<true>;
+    lieux: LieuxSelect<false> | LieuxSelect<true>;
+    actualites: ActualitesSelect<false> | ActualitesSelect<true>;
+    commentaires: CommentairesSelect<false> | CommentairesSelect<true>;
+    'docs-pdf': DocsPdfSelect<false> | DocsPdfSelect<true>;
+    'activites-content': ActivitesContentSelect<false> | ActivitesContentSelect<true>;
+    activites: ActivitesSelect<false> | ActivitesSelect<true>;
+    photos: PhotosSelect<false> | PhotosSelect<true>;
+    'photos-albums': PhotosAlbumsSelect<false> | PhotosAlbumsSelect<true>;
+    'photos-carousels': PhotosCarouselsSelect<false> | PhotosCarouselsSelect<true>;
+    'etiquettes-content': EtiquettesContentSelect<false> | EtiquettesContentSelect<true>;
+    'intro-photos': IntroPhotosSelect<false> | IntroPhotosSelect<true>;
+    documentations: DocumentationsSelect<false> | DocumentationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -193,7 +193,7 @@ export interface User {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bureau".
+ * via the `definition` "bureaux".
  */
 export interface Bureau {
   id: string;
@@ -204,7 +204,7 @@ export interface Bureau {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "referent".
+ * via the `definition` "referents".
  */
 export interface Referent {
   id: string;
@@ -234,7 +234,7 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "partenaire".
+ * via the `definition` "partenaires".
  */
 export interface Partenaire {
   id: string;
@@ -247,7 +247,7 @@ export interface Partenaire {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "etat".
+ * via the `definition` "etats".
  */
 export interface Etat {
   id: string;
@@ -257,9 +257,9 @@ export interface Etat {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categorie".
+ * via the `definition` "categories".
  */
-export interface Categorie {
+export interface Category {
   id: string;
   libelle: string;
   updatedAt: string;
@@ -267,9 +267,9 @@ export interface Categorie {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categorie-formation".
+ * via the `definition` "categories-formations".
  */
-export interface CategorieFormation {
+export interface CategoriesFormation {
   id: string;
   libelle: string;
   updatedAt: string;
@@ -277,9 +277,9 @@ export interface CategorieFormation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "lieu".
+ * via the `definition` "lieux".
  */
-export interface Lieu {
+export interface Lieux {
   id: string;
   nom_ville: string;
   cp_ville?: string | null;
@@ -290,7 +290,7 @@ export interface Lieu {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "actualite".
+ * via the `definition` "actualites".
  */
 export interface Actualite {
   id: string;
@@ -303,7 +303,7 @@ export interface Actualite {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "commentaire".
+ * via the `definition` "commentaires".
  */
 export interface Commentaire {
   id: string;
@@ -331,7 +331,7 @@ export interface Commentaire {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "documentation".
+ * via the `definition` "documentations".
  */
 export interface Documentation {
   id: string;
@@ -391,7 +391,7 @@ export interface Documentation {
   image_legende?: string | null;
   image_modification2?: string | null;
   image_legende2?: string | null;
-  categorie?: (string | null) | Categorie;
+  categorie?: (string | null) | Category;
   pdf?: string | null;
   pdf_modification?: string | null;
   updatedAt: string;
@@ -399,9 +399,9 @@ export interface Documentation {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "doc-pdf".
+ * via the `definition` "docs-pdf".
  */
-export interface DocPdf {
+export interface DocsPdf {
   id: string;
   pdfactivite?: (string | null) | Activite;
   nompdf: string;
@@ -410,12 +410,12 @@ export interface DocPdf {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "activite".
+ * via the `definition` "activites".
  */
 export interface Activite {
   id: string;
   etat?: (string | null) | Etat;
-  lieu?: (string | null) | Lieu;
+  lieu?: (string | null) | Lieux;
   organisateur?: (string | null) | User;
   nom: string;
   date_activite: string;
@@ -424,7 +424,7 @@ export interface Activite {
   infos_activite?: string | null;
   denivele?: number | null;
   difficulte?: number | null;
-  categories_formation: string | CategorieFormation;
+  categories_formation: string | CategoriesFormation;
   url_album_photo?: string | null;
   url_album_photo_deux?: string | null;
   pdf?: string | null;
@@ -436,9 +436,9 @@ export interface Activite {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "activite-content".
+ * via the `definition` "activites-content".
  */
-export interface ActiviteContent {
+export interface ActivitesContent {
   id: string;
   balade_text?: {
     root: {
@@ -673,7 +673,7 @@ export interface ActiviteContent {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "photo".
+ * via the `definition` "photos".
  */
 export interface Photo {
   id: string;
@@ -684,9 +684,9 @@ export interface Photo {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "photo-album".
+ * via the `definition` "photos-albums".
  */
-export interface PhotoAlbum {
+export interface PhotosAlbum {
   id: string;
   activite?: (string | null) | Activite;
   image?: string | null;
@@ -696,9 +696,9 @@ export interface PhotoAlbum {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "photo-carousel".
+ * via the `definition` "photos-carousels".
  */
-export interface PhotoCarousel {
+export interface PhotosCarousel {
   id: string;
   image1?: string | null;
   image2?: string | null;
@@ -712,9 +712,9 @@ export interface PhotoCarousel {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "etiquette-content".
+ * via the `definition` "etiquettes-content".
  */
-export interface EtiquetteContent {
+export interface EtiquettesContent {
   id: string;
   first_etiquette_text?: string | null;
   first_etiquette_photo?: string | null;
@@ -733,7 +733,7 @@ export interface EtiquetteContent {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "intro-photo".
+ * via the `definition` "intro-photos".
  */
 export interface IntroPhoto {
   id: string;
@@ -785,75 +785,75 @@ export interface PayloadLockedDocument {
         value: string | Media;
       } | null)
     | ({
-        relationTo: 'bureau';
+        relationTo: 'bureaux';
         value: string | Bureau;
       } | null)
     | ({
-        relationTo: 'referent';
+        relationTo: 'referents';
         value: string | Referent;
       } | null)
     | ({
-        relationTo: 'partenaire';
+        relationTo: 'partenaires';
         value: string | Partenaire;
       } | null)
     | ({
-        relationTo: 'etat';
+        relationTo: 'etats';
         value: string | Etat;
       } | null)
     | ({
-        relationTo: 'categorie';
-        value: string | Categorie;
+        relationTo: 'categories';
+        value: string | Category;
       } | null)
     | ({
-        relationTo: 'categorie-formation';
-        value: string | CategorieFormation;
+        relationTo: 'categories-formations';
+        value: string | CategoriesFormation;
       } | null)
     | ({
-        relationTo: 'lieu';
-        value: string | Lieu;
+        relationTo: 'lieux';
+        value: string | Lieux;
       } | null)
     | ({
-        relationTo: 'actualite';
+        relationTo: 'actualites';
         value: string | Actualite;
       } | null)
     | ({
-        relationTo: 'commentaire';
+        relationTo: 'commentaires';
         value: string | Commentaire;
       } | null)
     | ({
-        relationTo: 'doc-pdf';
-        value: string | DocPdf;
+        relationTo: 'docs-pdf';
+        value: string | DocsPdf;
       } | null)
     | ({
-        relationTo: 'activite-content';
-        value: string | ActiviteContent;
+        relationTo: 'activites-content';
+        value: string | ActivitesContent;
       } | null)
     | ({
-        relationTo: 'activite';
+        relationTo: 'activites';
         value: string | Activite;
       } | null)
     | ({
-        relationTo: 'photo';
+        relationTo: 'photos';
         value: string | Photo;
       } | null)
     | ({
-        relationTo: 'photo-album';
-        value: string | PhotoAlbum;
+        relationTo: 'photos-albums';
+        value: string | PhotosAlbum;
       } | null)
     | ({
-        relationTo: 'photo-carousel';
-        value: string | PhotoCarousel;
+        relationTo: 'photos-carousels';
+        value: string | PhotosCarousel;
       } | null)
     | ({
-        relationTo: 'etiquette-content';
-        value: string | EtiquetteContent;
+        relationTo: 'etiquettes-content';
+        value: string | EtiquettesContent;
       } | null)
     | ({
-        relationTo: 'intro-photo';
+        relationTo: 'intro-photos';
         value: string | IntroPhoto;
       } | null)
     | ({
-        relationTo: 'documentation';
+        relationTo: 'documentations';
         value: string | Documentation;
       } | null);
   globalSlug?: string | null;
@@ -947,9 +947,9 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "bureau_select".
+ * via the `definition` "bureaux_select".
  */
-export interface BureauSelect<T extends boolean = true> {
+export interface BureauxSelect<T extends boolean = true> {
   ordre?: T;
   nom?: T;
   updatedAt?: T;
@@ -957,9 +957,9 @@ export interface BureauSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "referent_select".
+ * via the `definition` "referents_select".
  */
-export interface ReferentSelect<T extends boolean = true> {
+export interface ReferentsSelect<T extends boolean = true> {
   ordre?: T;
   nom?: T;
   updatedAt?: T;
@@ -967,9 +967,9 @@ export interface ReferentSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "partenaire_select".
+ * via the `definition` "partenaires_select".
  */
-export interface PartenaireSelect<T extends boolean = true> {
+export interface PartenairesSelect<T extends boolean = true> {
   ordre?: T;
   nom?: T;
   url?: T;
@@ -979,36 +979,36 @@ export interface PartenaireSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "etat_select".
+ * via the `definition` "etats_select".
  */
-export interface EtatSelect<T extends boolean = true> {
+export interface EtatsSelect<T extends boolean = true> {
   libelle?: T;
   updatedAt?: T;
   createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categorie_select".
+ * via the `definition` "categories_select".
  */
-export interface CategorieSelect<T extends boolean = true> {
+export interface CategoriesSelect<T extends boolean = true> {
   libelle?: T;
   updatedAt?: T;
   createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "categorie-formation_select".
+ * via the `definition` "categories-formations_select".
  */
-export interface CategorieFormationSelect<T extends boolean = true> {
+export interface CategoriesFormationsSelect<T extends boolean = true> {
   libelle?: T;
   updatedAt?: T;
   createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "lieu_select".
+ * via the `definition` "lieux_select".
  */
-export interface LieuSelect<T extends boolean = true> {
+export interface LieuxSelect<T extends boolean = true> {
   nom_ville?: T;
   cp_ville?: T;
   num_rue?: T;
@@ -1018,9 +1018,9 @@ export interface LieuSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "actualite_select".
+ * via the `definition` "actualites_select".
  */
-export interface ActualiteSelect<T extends boolean = true> {
+export interface ActualitesSelect<T extends boolean = true> {
   actu?: T;
   date_actu?: T;
   affiche_actu?: T;
@@ -1030,9 +1030,9 @@ export interface ActualiteSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "commentaire_select".
+ * via the `definition` "commentaires_select".
  */
-export interface CommentaireSelect<T extends boolean = true> {
+export interface CommentairesSelect<T extends boolean = true> {
   documentation?: T;
   user_name?: T;
   date_creation?: T;
@@ -1043,9 +1043,9 @@ export interface CommentaireSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "doc-pdf_select".
+ * via the `definition` "docs-pdf_select".
  */
-export interface DocPdfSelect<T extends boolean = true> {
+export interface DocsPdfSelect<T extends boolean = true> {
   pdfactivite?: T;
   nompdf?: T;
   updatedAt?: T;
@@ -1053,9 +1053,9 @@ export interface DocPdfSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "activite-content_select".
+ * via the `definition` "activites-content_select".
  */
-export interface ActiviteContentSelect<T extends boolean = true> {
+export interface ActivitesContentSelect<T extends boolean = true> {
   balade_text?: T;
   escapade_text?: T;
   mecanique_text?: T;
@@ -1093,9 +1093,9 @@ export interface ActiviteContentSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "activite_select".
+ * via the `definition` "activites_select".
  */
-export interface ActiviteSelect<T extends boolean = true> {
+export interface ActivitesSelect<T extends boolean = true> {
   etat?: T;
   lieu?: T;
   organisateur?: T;
@@ -1118,9 +1118,9 @@ export interface ActiviteSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "photo_select".
+ * via the `definition` "photos_select".
  */
-export interface PhotoSelect<T extends boolean = true> {
+export interface PhotosSelect<T extends boolean = true> {
   adhherent?: T;
   name?: T;
   updatedAt?: T;
@@ -1128,9 +1128,9 @@ export interface PhotoSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "photo-album_select".
+ * via the `definition` "photos-albums_select".
  */
-export interface PhotoAlbumSelect<T extends boolean = true> {
+export interface PhotosAlbumsSelect<T extends boolean = true> {
   activite?: T;
   image?: T;
   url?: T;
@@ -1139,9 +1139,9 @@ export interface PhotoAlbumSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "photo-carousel_select".
+ * via the `definition` "photos-carousels_select".
  */
-export interface PhotoCarouselSelect<T extends boolean = true> {
+export interface PhotosCarouselsSelect<T extends boolean = true> {
   image1?: T;
   image2?: T;
   image3?: T;
@@ -1154,9 +1154,9 @@ export interface PhotoCarouselSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "etiquette-content_select".
+ * via the `definition` "etiquettes-content_select".
  */
-export interface EtiquetteContentSelect<T extends boolean = true> {
+export interface EtiquettesContentSelect<T extends boolean = true> {
   first_etiquette_text?: T;
   first_etiquette_photo?: T;
   second_etiquette_text?: T;
@@ -1174,9 +1174,9 @@ export interface EtiquetteContentSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "intro-photo_select".
+ * via the `definition` "intro-photos_select".
  */
-export interface IntroPhotoSelect<T extends boolean = true> {
+export interface IntroPhotosSelect<T extends boolean = true> {
   presentation_photo_intro?: T;
   organisation_photo_intro?: T;
   rando_velo_photo_intro?: T;
@@ -1194,9 +1194,9 @@ export interface IntroPhotoSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "documentation_select".
+ * via the `definition` "documentations_select".
  */
-export interface DocumentationSelect<T extends boolean = true> {
+export interface DocumentationsSelect<T extends boolean = true> {
   date_creation?: T;
   auteur?: T;
   titre?: T;

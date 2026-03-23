@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const Commentaire: CollectionConfig = {
-  slug: 'commentaire',
+  slug: 'commentaires',
   admin: {
     useAsTitle: 'user_name',
     defaultColumns: ['user_name', 'date_creation', 'documentation'],
@@ -10,7 +10,7 @@ export const Commentaire: CollectionConfig = {
     {
       name: 'documentation',
       type: 'relationship',
-      relationTo: 'documentation',
+      relationTo: 'documentations',
     },
     {
       name: 'user_name',

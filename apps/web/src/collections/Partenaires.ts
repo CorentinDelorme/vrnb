@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const Partenaire: CollectionConfig = {
-  slug: 'partenaire',
+  slug: 'partenaires',
   admin: {
     useAsTitle: 'nom',
     defaultColumns: ['ordre', 'nom', 'url', 'updatedAt'],

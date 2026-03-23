@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const IntroPhoto: CollectionConfig = {
-  slug: 'intro-photo',
+  slug: 'intro-photos',
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['presentation_photo_intro', 'organisation_photo_intro'],

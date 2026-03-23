@@ -39,12 +39,12 @@ export const Users: CollectionConfig = {
     {
       name: 'bureau',
       type: 'relationship',
-      relationTo: 'bureau',
+      relationTo: 'bureaux',
     },
     {
       name: 'referents',
       type: 'relationship',
-      relationTo: 'referent',
+      relationTo: 'referents',
       hasMany: true,
     },
   ],

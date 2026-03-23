@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const ActiviteContent: CollectionConfig = {
-  slug: 'activite-content',
+  slug: 'activites-content',
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['balade_title', 'escapade_title'],

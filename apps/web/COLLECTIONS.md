@@ -6,85 +6,85 @@ This document describes all the collections that have been added to the Payload 
 
 ### Core Collections
 
-1. **Etat** (`etat`)
+1. **Etats** (`etats`)
    - Manages the status of activities (ouverte, finie, annulée, modifiée)
    - Fields: `libelle` (status name)
 
-2. **Bureau** (`bureau`)
+2. **Bureaux** (`bureaux`)
    - Organization roles and positions (Président, Trésorier, Secrétaire, etc.)
    - Fields: `ordre` (sort order), `nom` (role name)
 
-3. **Referent** (`referent`)
+3. **Referents** (`referents`)
    - Role referents (Site Web, Logistique, Photo-Vidéo, Mécanique, Navigation GPS, etc.)
    - Fields: `ordre` (sort order), `nom` (referent name)
 
-4. **Partenaire** (`partenaire`)
+4. **Partenaires** (`partenaires`)
    - Organization partners and sponsors
    - Fields: `ordre` (sort order), `nom` (partner name), `lien` (website link), `logo` (upload field for logo)
 
-5. **Categorie** (`categorie`)
+5. **Categories** (`categories`)
    - Activity categories
    - Fields: `libelle` (category name)
 
-6. **CategorieFormation** (`categorie-formation`)
+6. **CategoriesFormation** (`categories-formations`)
    - Formation/training categories
    - Fields: `libelle` (category name)
 
-7. **Lieu** (`lieu`)
+7. **Lieux** (`lieux`)
    - Locations/event venues
    - Fields: `nom_ville`, `cp_ville`, `num_rue`, `nom_rue`
 
-8. **Actualite** (`actualite`)
+8. **Actualites** (`actualites`)
    - News and updates
    - Fields: `actu`, `date_actu`, `affiche_actu`, `url`
 
-9. **Commentaire** (`commentaire`)
+9. **Commentaires** (`commentaires`)
    - Comments on documentation
    - Fields: `documentation` (relationship), `user_name`, `date_creation`, `date_modification`, `commentaire`
 
-10. **DocPdf** (`doc-pdf`)
+10. **DocsPdf** (`docs-pdf`)
     - PDF documents linked to activities
     - Fields: `pdfactivite` (relationship), `nompdf`
 
-11. **ActiviteContent** (`activite-content`)
+11. **ActivitesContent** (`activites-content`)
     - Content repository for activity descriptions and titles
     - Multiple text and title fields for different activity types
 
-12. **Activite** (`activite`)
+12. **Activites** (`activites`)
     - Main activities/events collection
     - Fields: `nom`, `date_activite`, `duree`, `distance`, `denivele`, `difficulte`, `infos_activite`, `total_participant`
-    - Relationships: `etat`, `lieu`, `organisateur` (user), `categories_formation`
+   - Relationships: `etats`, `lieux`, `organisateur` (user), `categories_formation`
     - Many-to-many: `participants` (users)
 
-13. **Photo** (`photo`)
+13. **Photos** (`photos`)
     - User photos
     - Fields: `name`, `adhherent` (relationship to users)
 
-14. **PhotoAlbum** (`photo-album`)
+14. **PhotosAlbums** (`photos-albums`)
     - Photo albums linked to activities
     - Fields: `image`, `url`, `activite` (relationship)
 
-15. **PhotoCarousel** (`photo-carousel`)
+15. **PhotosCarousels** (`photos-carousels`)
     - Homepage carousel images
     - Fields: `image1` through `image7`
 
-16. **EtiquetteContent** (`etiquette-content`)
+16. **EtiquettesContent** (`etiquettes-content`)
     - Label/tag content for homepage sections
     - Fields: 4 sets of etiquette text, photos, and overlays
 
-17. **IntroPhoto** (`intro-photo`)
+17. **IntroPhotos** (`intro-photos`)
     - Introduction images for different sections
     - Fields: Various intro photo paths for different sections
 
-18. **Documentation** (`documentation`)
+18. **Documentations** (`documentations`)
     - Knowledge base/documentation articles
-    - Fields: `titre`, `auteur`, `date_creation`, `paragraphe1`, `paragraphe2`, `image`, `url`, `intro`, `categorie` (relationship)
+   - Fields: `titre`, `auteur`, `date_creation`, `paragraphe1`, `paragraphe2`, `image`, `url`, `intro`, `categorie` (relationship vers `categories`)
     - Supports PDF attachments
 
 19. **Users** (`users`)
     - User authentication and profile management
     - Fields: `email` (unique, required), `username` (unique, required), `nom` (required), `prenom` (required), `telephone` (optional), `date_naissance` (optional)
-    - Relationships: `bureau` (single), `referents` (many)
+   - Relationships: `bureaux` (single), `referents` (many)
 
 ### Global Configurations
 
@@ -99,14 +99,14 @@ This document describes all the collections that have been added to the Payload 
 ## Database Schema Relationships
 
 - **Users** → Activities (organizateurs, participants)
-- **Users** → Referent (many-to-many)
-- **Users** → Bureau (single relationship)
-- **Activities** → Etat (status lookup)
-- **Activities** → Lieu (location lookup)
-- **Activities** → CategorieFormation (formation category lookup)
-- **Activities** → PhotoAlbum (one-to-many)
-- **Documentation** → Categorie (documentation category)
-- **Documentation** → Commentaire (one-to-many)
+- **Users** → Referents (many-to-many)
+- **Users** → Bureaux (single relationship)
+- **Activities** → Etats (status lookup)
+- **Activities** → Lieux (location lookup)
+- **Activities** → CategoriesFormation (formation category lookup)
+- **Activities** → PhotosAlbums (one-to-many)
+- **Documentations** → Categories (documentation category)
+- **Documentations** → Commentaires (one-to-many)
 
 ## Seeding Data from SQL
 
@@ -191,24 +191,24 @@ Payload uses URL-friendly "slugs" for collection identifiers. The mappings are:
 
 | SQL Table           | Payload Slug        | Collection TSX File   |
 | ------------------- | ------------------- | --------------------- |
-| etat                | etat                | Etat.ts               |
-| categorie           | categorie           | Categorie.ts          |
-| categorie_formation | categorie-formation | CategorieFormation.ts |
-| bureau              | bureau              | Bureau.ts             |
-| lieu                | lieu                | Lieu.ts               |
-| referent            | referent            | Referent.ts           |
-| actualite           | actualite           | Actualite.ts          |
-| partenaire          | partenaire          | Partenaire.ts         |
-| commentaire         | commentaire         | Commentaire.ts        |
-| doc_pdf             | doc-pdf             | DocPdf.ts             |
-| activite_content    | activite-content    | ActiviteContent.ts    |
-| activite            | activite            | Activite.ts           |
-| photo               | photo               | Photo.ts              |
-| photo_album         | photo-album         | PhotoAlbum.ts         |
-| photo_carousel      | photo-carousel      | PhotoCarousel.ts      |
-| etiquette_content   | etiquette-content   | EtiquetteContent.ts   |
-| intro_photo         | intro-photo         | IntroPhoto.ts         |
-| documentation       | documentation       | Documentation.ts      |
+| etat                | etats               | Etats.ts                |
+| categorie           | categories          | Categories.ts           |
+| categorie_formation | categories-formations | CategoriesFormations.ts |
+| bureau              | bureaux             | Bureaux.ts              |
+| lieu                | lieux               | Lieux.ts                |
+| referent            | referents           | Referents.ts            |
+| actualite           | actualites          | Actualites.ts           |
+| partenaire          | partenaires         | Partenaires.ts          |
+| commentaire         | commentaires        | Commentaires.ts         |
+| doc_pdf             | docs-pdf            | DocsPdf.ts              |
+| activite_content    | activites-content   | ActivitesContent.ts     |
+| activite            | activites           | Activites.ts            |
+| photo               | photos              | Photos.ts               |
+| photo_album         | photos-albums       | PhotosAlbums.ts         |
+| photo_carousel      | photos-carousels    | PhotosCarousels.ts      |
+| etiquette_content   | etiquettes-content  | EtiquettesContent.ts    |
+| intro_photo         | intro-photos        | IntroPhotos.ts          |
+| documentation       | documentations      | Documentations.ts       |
 
 ## Troubleshooting
 
@@ -240,24 +240,24 @@ After seeding:
 apps/web/
 ├── src/
 │   ├── collections/
-│   │   ├── Etat.ts
-│   │   ├── Categorie.ts
-│   │   ├── CategorieFormation.ts
-│   │   ├── Bureau.ts
-│   │   ├── Lieu.ts
-│   │   ├── Referent.ts
-│   │   ├── Actualite.ts
-│   │   ├── Partenaire.ts
-│   │   ├── Commentaire.ts
-│   │   ├── DocPdf.ts
-│   │   ├── ActiviteContent.ts
-│   │   ├── Activite.ts
-│   │   ├── Photo.ts
-│   │   ├── PhotoAlbum.ts
-│   │   ├── PhotoCarousel.ts
-│   │   ├── EtiquetteContent.ts
-│   │   ├── IntroPhoto.ts
-│   │   ├── Documentation.ts
+│   │   ├── Etats.ts
+│   │   ├── Categories.ts
+│   │   ├── CategoriesFormations.ts
+│   │   ├── Bureaux.ts
+│   │   ├── Lieux.ts
+│   │   ├── Referents.ts
+│   │   ├── Actualites.ts
+│   │   ├── Partenaires.ts
+│   │   ├── Commentaires.ts
+│   │   ├── DocsPdf.ts
+│   │   ├── ActivitesContent.ts
+│   │   ├── Activites.ts
+│   │   ├── Photos.ts
+│   │   ├── PhotosAlbums.ts
+│   │   ├── PhotosCarousels.ts
+│   │   ├── EtiquettesContent.ts
+│   │   ├── IntroPhotos.ts
+│   │   ├── Documentations.ts
 │   │   ├── Users.ts
 │   │   ├── Media.ts
 │   ├── globals/

@@ -1,7 +1,7 @@
 import type { CollectionConfig } from 'payload'
 
 export const PhotoAlbum: CollectionConfig = {
-  slug: 'photo-album',
+  slug: 'photos-albums',
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['activite', 'image', 'url'],
@@ -10,7 +10,7 @@ export const PhotoAlbum: CollectionConfig = {
     {
       name: 'activite',
       type: 'relationship',
-      relationTo: 'activite',
+      relationTo: 'activites',
     },
     {
       name: 'image',
