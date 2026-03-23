@@ -1,79 +1,50 @@
-# vrnb – Monorepo Agent Instructions
+# Project Guidelines
+
+## Code Style
+- TypeScript-first monorepo; `apps/web` is strict and ESM (`"type": "module"`).
+- Linting uses shared config from `packages/eslint-config` via `apps/web/eslint.config.js`.
+- Formatting is Prettier from root (`bun run format`).
+- Prefer Bun commands at repo root; `pnpm` appears in `apps/web` mainly for Playwright `webServer` compatibility.
 
 ## Architecture
+- Turborepo monorepo (`workspaces: apps/*, packages/*`) with Bun `bun@1.3.10`.
+- Main app is `apps/web`: Next.js 16 + Payload 3 + MongoDB adapter.
+- MongoDB service is `packages/web-db` (Docker Compose, persisted under `.data/`).
+- Shared packages: `packages/eslint-config`, `packages/typescript-config`, `packages/ui`.
+- For Payload-specific implementation patterns, follow `apps/web/AGENTS.md` (closest-file instructions win).
 
-Turborepo monorepo managed with **Bun** (`bun@1.3.10`). Tasks run via `turbo`.
-
-| Package / App                | Description                                      |
-| ---------------------------- | ------------------------------------------------ |
-| `apps/web`                   | Next.js 16 + Payload CMS 3 (MongoDB adapter)     |
-| `packages/web-db`            | MongoDB 8 Docker service (persisted in `.data/`) |
-| `packages/ui`                | Shared React component library (Storybook)       |
-| `packages/eslint-config`     | Shared ESLint configs                            |
-| `packages/typescript-config` | Shared `tsconfig.json` bases                     |
-
-See [apps/web/AGENTS.md](apps/web/AGENTS.md) for Payload CMS–specific patterns.
-
-## Build & Test
-
-```sh
-# Install deps (from root)
-bun install
-
-# Start MongoDB (required before running web)
-cd packages/web-db && bun start   # detached; data persists in .data/
-
-# Dev (all apps in parallel)
-turbo dev
-
-# Build all
-turbo build
-
-# Type-check all
-turbo check-types
-
-# Lint all
-turbo lint
-
-# Format
-bun run format
-```
-
-### apps/web tests
-
-```sh
-cd apps/web
-
-# Integration tests (Vitest, jsdom, hits real MongoDB)
-bun run test:int
-
-# E2E tests (Playwright, Chromium – requires running dev server)
-bun run test:e2e
-```
-
-## Environment Setup
-
-Copy `apps/web/.env.example` → `apps/web/.env` (or use `apps/web/test.env` as reference):
-
-```env
-DATABASE_URL=mongodb://root:rootpassword@localhost:27017/web?authSource=admin
-PAYLOAD_SECRET=<any-random-string>
-PAYLOAD_USER_EMAIL=test@example.com
-PAYLOAD_USER_PASSWORD=password
-```
+## Build and Test
+- Install deps: `bun install`
+- Start DB (required for web app/tests): `cd packages/web-db && bun start`
+- Dev all workspaces: `bun run dev` (alias of `turbo run dev`)
+- Build all: `bun run build`
+- Lint all (required before handoff): `turbo lint`
+- Type-check all (required before handoff): `turbo check-types`
+- Web integration tests: `cd apps/web && bun run test:int`
+- Web E2E tests: `cd apps/web && bun run test:e2e` (expects dev server)
 
 ## Project Conventions
+- Use `apps/web/.env.example` as env template; `apps/web/test.env` is only Node options.
+- Typical local `DATABASE_URL`: `mongodb://root:rootpassword@127.0.0.1:27017/web?authSource=admin`.
+- After Payload schema changes, run `cd apps/web && bun run generate:types`.
+- After adding/changing Payload admin components, run `cd apps/web && bun run generate:importmap`.
+- Never manually edit generated `apps/web/src/payload-types.ts`.
+- Always use Context7 (`ctx7`) when I need library/API documentation, code generation, setup or configuration steps without me having to explicitly ask.
 
-- **Package manager**: Bun at the root; `pnpm` engine declared in `apps/web` (legacy). Use `bun` at the root.
-- **TypeScript**: strict, `"type": "module"` in `apps/web`. Run `tsc --noEmit` to validate.
-- **After schema changes**: run `bun run generate:types` inside `apps/web` to regenerate `src/payload-types.ts`.
-- **After adding components** to Payload config: run `bun run generate:importmap` inside `apps/web`.
-- **Integration tests** bootstrap a real Payload instance against MongoDB – keep the DB running.
-- **E2E tests** (`playwright.config.ts`) use `pnpm dev` as `webServer`; change to `bun dev` if using Bun directly.
+## Integration Points
+- Payload entrypoint: `apps/web/src/payload.config.ts`.
+- Turbo pipeline/env wiring: `turbo.json` (`globalEnv` includes DB/auth vars).
+- Mongo service config: `packages/web-db/docker-compose.yml`.
+- E2E login + seed helpers: `apps/web/tests/helpers/login.ts`, `apps/web/tests/helpers/seedUser.ts`.
+
+## Security
+- Admin access is controlled by referent membership (`site web`) via `apps/web/src/access/canAccessAdmin.ts`, not by role fields.
+- In Payload Local API calls that should enforce user permissions, pass `overrideAccess: false`.
+- In hooks, pass `req` to nested Payload operations to keep transaction context.
 
 ## Key Files
-
-- [apps/web/src/payload.config.ts](apps/web/src/payload.config.ts) – Payload entry point
-- [apps/web/src/payload-types.ts](apps/web/src/payload-types.ts) – auto-generated, never edit manually
-- [packages/web-db/docker-compose.yml](packages/web-db/docker-compose.yml) – MongoDB service definition
-- [turbo.json](turbo.json) – task pipeline
+- `apps/web/src/payload.config.ts`
+- `apps/web/src/collections/Users.ts`
+- `apps/web/src/access/canAccessAdmin.ts`
+- `packages/web-db/docker-compose.yml`
+- `turbo.json`
