@@ -27,7 +27,7 @@
   // "forwardPorts": []
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  // "postCreateCommand": "yarn install",
+  "postCreateCommand": "bun install -g ctx7"
 
   // Configure tool-specific properties.
   // "customizations": {},
