@@ -2,7 +2,7 @@
 
 ### Requirement: Header avec navigation principale
 
-Le système DOIT afficher un header persistant sur toutes les pages du site avec les menus de navigation suivants : « Accueil », « Association » et « Documentation ».
+Le système DOIT afficher un header persistant sur toutes les pages du site avec les menus de navigation suivants : « Accueil », « Association », « Activités », « Programme » et « Documentation ».
 
 #### Scenario: Affichage du header sur chaque page
 
@@ -38,6 +38,49 @@ Le menu « Association » DOIT contenir trois sous-menus : « Présentation », 
 - **WHEN** un visiteur clique sur « Référents » dans le sous-menu
 - **THEN** le système navigue vers `/association/referents`
 
+### Requirement: Sous-menu Activités
+
+Le menu « Activités » DOIT contenir cinq sous-menus : « Randonnées à vélo », « Formations », « Projections de films », « Éco citoyenneté » et « Autres activités de plein air ». Le sous-menu DOIT s'afficher au survol ou au clic sur « Activités ».
+
+#### Scenario: Affichage du sous-menu Activités
+
+- **WHEN** un visiteur survole ou clique sur le menu « Activités »
+- **THEN** le sous-menu affiche les entrées « Randonnées à vélo », « Formations », « Projections de films », « Éco citoyenneté » et « Autres activités de plein air »
+
+#### Scenario: Navigation vers Randonnées à vélo
+
+- **WHEN** un visiteur clique sur « Randonnées à vélo » dans le sous-menu
+- **THEN** le système navigue vers `/activites/randonnees-velo`
+
+#### Scenario: Navigation vers Formations
+
+- **WHEN** un visiteur clique sur « Formations » dans le sous-menu
+- **THEN** le système navigue vers `/activites/formations`
+
+#### Scenario: Navigation vers Projections de films
+
+- **WHEN** un visiteur clique sur « Projections de films » dans le sous-menu
+- **THEN** le système navigue vers `/activites/projections-films`
+
+#### Scenario: Navigation vers Éco citoyenneté
+
+- **WHEN** un visiteur clique sur « Éco citoyenneté » dans le sous-menu
+- **THEN** le système navigue vers `/activites/eco-citoyennete`
+
+#### Scenario: Navigation vers Autres activités de plein air
+
+- **WHEN** un visiteur clique sur « Autres activités de plein air » dans le sous-menu
+- **THEN** le système navigue vers `/activites/autres-plein-air`
+
+### Requirement: Menu Programme
+
+Le menu « Programme » DOIT naviguer vers la page programme des activités.
+
+#### Scenario: Navigation vers Programme
+
+- **WHEN** un visiteur clique sur le menu « Programme »
+- **THEN** le système navigue vers `/programme`
+
 ### Requirement: Menu Documentation
 
 Le menu « Documentation » DOIT naviguer vers la page de documentation.
@@ -60,3 +103,8 @@ Le système DOIT indiquer visuellement le menu ou sous-menu correspondant à la 
 
 - **WHEN** un visiteur est sur la page Organisation
 - **THEN** le menu « Association » et le sous-menu « Organisation » sont visuellement mis en évidence
+
+#### Scenario: Sous-menu actif sur une page activités
+
+- **WHEN** un visiteur est sur la page Formations
+- **THEN** le menu « Activités » et le sous-menu « Formations » sont visuellement mis en évidence

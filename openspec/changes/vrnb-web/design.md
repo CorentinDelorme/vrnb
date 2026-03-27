@@ -9,22 +9,24 @@ L'infrastructure existante comprend déjà :
 - **Contrôle d'accès admin** via `canAccessAdmin.ts` : seuls les utilisateurs ayant le référent « site web » accèdent au panneau admin.
 - **Frontend minimal** : Une page d'accueil avec uniquement la liste des partenaires et un layout basique sans header/footer.
 
-Le frontend public doit être considérablement étoffé : header avec navigation, page d'accueil complète, pages association (organisation, référents), et footer avec carousel partenaires.
+Le frontend public doit être considérablement étoffé : header avec navigation multi-niveaux, page d'accueil complète, pages association (organisation, référents), pages activités par type, page programme avec tableau filtrable, page documentation, et footer avec carousel partenaires.
 
 ## Goals / Non-Goals
 
 **Goals :**
 
-- Construire le frontend public complet du site VRNB avec navigation, page d'accueil riche, pages association et footer.
+- Construire le frontend public complet du site VRNB avec navigation, page d'accueil riche, pages association, activités, programme et documentation.
 - Enrichir le global `Home` dans Payload pour gérer la présentation, la description, la carte Google Maps, les cards activités/devises et les PDFs (statut, charte).
 - Créer un layout partagé avec header (navigation multi-niveaux) et footer (carousel partenaires).
 - Créer les pages Organisation (bureau) et Référents avec données dynamiques depuis Payload.
+- Créer les pages Activités par type (randonnées, formations, projections, éco citoyenneté, plein air) avec cards.
+- Créer la page Programme avec tableau des activités à venir, filtres par catégorie et recherche.
+- Créer la page Documentation listant les documentations de l'association.
 - Maintenir l'authentification adhérents et la restriction d'accès admin.
 - Permettre la gestion complète du contenu via Payload sans redéploiement.
 
 **Non-Goals :**
 
-- Page documentation complète (structure identifiée mais contenu détaillé hors scope de ce change).
 - Système de paiement ou gestion de cotisations.
 - Application mobile ou PWA.
 - Notifications par email.
@@ -38,21 +40,28 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 
 ```
 src/app/(frontend)/
-├── layout.tsx                    # Layout partagé : Header + Footer
-├── page.tsx                      # Page d'accueil
+├── layout.tsx                        # Layout partagé : Header + Footer
+├── page.tsx                          # Page d'accueil
 ├── association/
-│   ├── presentation/page.tsx     # Présentation (= accueil détaillée)
-│   ├── organisation/page.tsx     # Bureau et rôles
-│   └── referents/page.tsx        # Liste des référents
-└── documentation/page.tsx        # Page documentation
+│   ├── presentation/page.tsx         # Présentation (= accueil détaillée)
+│   ├── organisation/page.tsx         # Bureau et rôles
+│   └── referents/page.tsx            # Liste des référents
+├── activites/
+│   ├── randonnees-velo/page.tsx      # Randonnées à vélo
+│   ├── formations/page.tsx           # Formations
+│   ├── projections-films/page.tsx    # Projections de films
+│   ├── eco-citoyennete/page.tsx      # Éco citoyenneté
+│   └── autres-plein-air/page.tsx     # Autres activités de plein air
+├── programme/page.tsx                # Programme des activités
+└── documentation/page.tsx            # Page documentation
 ```
 
 **Alternatives considérées** :
 
 - Pages API séparées + SPA React : perte du SSR et du SEO.
-- Chaque page dans un dossier plat : moins organisé pour le sous-menu « Association ».
+- Chaque page dans un dossier plat : moins organisé pour les sous-menus « Association » et « Activités ».
 
-**Rationale** : Le groupe `(frontend)` est déjà en place. Les sous-routes `association/` regroupent logiquement les pages liées.
+**Rationale** : Le groupe `(frontend)` est déjà en place. Les sous-routes `association/` et `activites/` regroupent logiquement les pages liées à chaque menu.
 
 ### 2. Google Maps via iframe embed
 
@@ -92,6 +101,34 @@ src/app/(frontend)/
 **Choix** : Utiliser des champs `upload` (relation vers Media) pour les PDFs statut et charte dans le global Home.
 
 **Rationale** : Payload gère déjà les uploads via la collection Media. Les administrateurs peuvent remplacer les PDFs directement via le panneau admin.
+
+### 6. Pages Activités alimentées par ActivitesContent
+
+**Choix** : Chaque page activité (randonnées, formations, etc.) récupère son contenu depuis la collection `ActivitesContent` existante. Cette collection contient déjà les champs titre, texte (richText) et photo pour chaque type d'activité (balade, escapade, mécanique, sécurité, projection_film, ecocitoyennete, autre, etc.).
+
+**Alternatives considérées** :
+
+- Créer une collection séparée par type d'activité : duplication, plus de collections à maintenir.
+- Stocker le contenu dans des globals : la collection ActivitesContent remplit déjà ce rôle.
+
+**Rationale** : Réutiliser la collection existante `ActivitesContent` évite toute migration et garde un point d'édition unique pour les administrateurs. Les cards sont construites à partir des champs `*_title`, `*_text` et `*_photo`.
+
+### 7. Page Programme avec tableau filtrable côté client
+
+**Choix** : La page Programme charge les activités à venir (date >= aujourd'hui, triées par date) côté serveur. Les filtres par catégorie et la recherche sont appliqués côté client (React state) pour une UX réactive sans rechargement de page.
+
+**Alternatives considérées** :
+
+- Filtrage côté serveur avec query params : ajoute de la latence à chaque filtre.
+- Pagination serveur : pertinent à terme si le volume d'activités est très élevé.
+
+**Rationale** : Le volume d'activités d'une association locale est modéré. Charger toutes les activités à venir et filtrer côté client offre une UX fluide. La colonne « ville » provient de la relation `lieu.nom_ville`, et « catégorie » de `categories_formation.libelle`.
+
+### 8. Page Documentation depuis la collection Documentations
+
+**Choix** : La page Documentation liste les documents de la collection `Documentations` existante, groupés par catégorie (relation vers `Categories`). Chaque documentation affiche titre, auteur, intro et un lien de lecture.
+
+**Rationale** : La collection et les relations existent déjà. Il suffit de construire la page frontend.
 
 ## Risks / Trade-offs
 
