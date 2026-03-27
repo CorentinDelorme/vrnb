@@ -219,3 +219,29 @@ Chaque composant UI et chaque page DOIVENT faire l'objet d'une vérification vis
 - **GIVEN** un composant ou une page
 - **WHEN** l'affichage est vérifié via Chrome DevTools MCP
 - **THEN** le rendu est correct sur mobile (375px), tablette (768px) et desktop (1280px)
+
+### Requirement: Code en anglais, entités métier en français
+
+Tout le code source des composants UI dans `packages/ui` DOIT être rédigé en anglais : noms de composants, props, fonctions, variables, commentaires, tests et stories Storybook. Les seules exceptions sont les noms d'entités métier Payload utilisés comme props ou types (ex : `referents`, `activites`, `bureaux`).
+
+#### Scenario: Composant en anglais
+
+- **GIVEN** un composant dans `packages/ui/src/components/`
+- **THEN** le nom du composant est en anglais (ex : `Button`, `Card`, `CategoryFilter`)
+- **AND** les props sont en anglais (ex : `onClick`, `isDisabled`, `title`, `items`)
+- **AND** les variables internes et fonctions sont en anglais
+
+#### Scenario: Stories en anglais
+
+- **GIVEN** un fichier `.stories.ts` dans `packages/ui`
+- **THEN** les noms de stories sont en anglais (ex : `Default`, `WithImage`, `Disabled`, `Loading`)
+
+#### Scenario: Tests en anglais
+
+- **GIVEN** un fichier `.test.tsx` dans `packages/ui`
+- **THEN** les descriptions de tests sont en anglais (ex : `it('should render the button', ...)`)
+
+#### Scenario: Entités métier conservées en français
+
+- **WHEN** un composant reçoit des données métier Payload
+- **THEN** les noms de champs métier restent en français dans les types/interfaces (ex : `activites`, `referents`, `bureaux`, `nom_ville`)

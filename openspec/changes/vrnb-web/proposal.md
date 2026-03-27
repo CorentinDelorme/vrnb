@@ -64,6 +64,7 @@ L'association **Vélo Rando Nature Bruz (VRNB)** a besoin d'un site web complet 
 - `accessibility-wcag` : Conformité WCAG AA pour les contrastes de couleurs (4.5:1 texte, 3:1 éléments interactifs). Vérification Lighthouse (score accessibilité ≥ 90). Labels, rôles ARIA, alt images.
 - `design-style` : Style moderne, épuré et aéré. Respect des espacements DaisyUI par défaut, pas de surcharge padding/margin. Utilisation judicieuse de l'espace blanc.
 - `visual-verification` : Vérification visuelle des composants et pages via Chrome DevTools MCP : screenshots, audits Lighthouse accessibilité, inspection couleurs thèmes, tests responsive (375px, 768px, 1280px).
+- `code-language` : Code en anglais (variables, fonctions, composants, props, hooks, commentaires, tests). Exceptions : noms d'entités métier Payload existantes en français (Referents, Activites, Bureaux, etc.) et slugs d'URL français.
 
 ### Modified Capabilities
 

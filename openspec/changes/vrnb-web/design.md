@@ -560,6 +560,39 @@ Cette vérification est à effectuer pour chaque composant de `packages/ui` via 
 
 **Rationale** : Chrome DevTools MCP permet une vérification automatisée et documentée de l'affichage, évitant les régressions visuelles. Combiné avec Lighthouse, cela garantit l'accessibilité et la qualité visuelle.
 
+### 40. Convention de langue : code en anglais, entités métier en français
+
+**Choix** : Tout le code source (noms de variables, fonctions, composants React, props, hooks, fichiers, dossiers, commentaires de code, messages de commit, types TypeScript, interfaces, etc.) DOIT être rédigé en **anglais**. Les seules exceptions sont les **noms d'entités métier** propres au domaine de l'association VRNB, qui restent en **français** car ils correspondent aux collections et champs Payload existants :
+
+- Collections Payload : `Referents`, `Bureaux`, `Activites`, `ActivitesContent`, `Actualites`, `Partenaires`, `Lieux`, `Etats`, `CategoriesFormations`, `EtiquettesContent`, `Commentaires`, `DocsPdf`
+- Champs métier : `referents`, `bureaux`, `activites`, `partenaires`, `lieux`, `etats`, `infos_activite`, `lieu_rassemblement`, `nom_ville`, `categories_formation`, `affiche_actu`, etc.
+- Slugs d'URL français existants : `/referents`, `/randosvelo`, `/ecocitoyennete`, `/mentionslegales`, `/adhesion`, `/oubli-pass`, `/balades`, etc.
+
+**Ce qui DOIT être en anglais** :
+
+- Composants React : `Button`, `Card`, `Navbar`, `Footer`, `HeroImage`, `CategoryFilter`, etc.
+- Props : `onClick`, `isLoading`, `isDisabled`, `title`, `description`, `items`, etc.
+- Hooks : `useAuth`, `useFilters`, `useActivities`, etc.
+- Variables et fonctions : `fetchActivities()`, `handleSubmit()`, `filteredItems`, `isAuthenticated`, etc.
+- Fichiers utilitaires : `requireAuth.ts`, `formatDate.ts`, etc.
+- Commentaires de code : en anglais
+- Tests : descriptions (`it('should render...', ...)`) en anglais
+- Stories Storybook : noms de stories en anglais (`Default`, `WithImage`, `Disabled`, etc.)
+
+**Ce qui reste en français** :
+
+- Noms de collections et champs Payload (déjà existants, ne pas renommer)
+- Contenus affichés à l'utilisateur (gérés dans Payload, pas dans le code)
+- Labels de navigation et textes UI visibles par l'utilisateur final (ex : « Connexion », « Déconnexion », « Adhésion ») — ces textes DOIVENT être configurables via Payload quand possible
+- Specs et documentation openspec (rédigées en français)
+
+**Alternatives considérées** :
+
+- Tout en français : incohérent avec les conventions de la communauté JavaScript/TypeScript, rend le code moins accessible aux contributions extérieures.
+- Tout en anglais y compris les entités métier : nécessiterait de renommer les collections Payload existantes, risque de décalage entre le code et le vocabulaire des utilisateurs.
+
+**Rationale** : L'anglais est la langue standard du développement logiciel. Garder les entités métier en français préserve la cohérence avec les collections Payload existantes et le vocabulaire de l'association. Cette convention est claire et facile à appliquer.
+
 ## Risks / Trade-offs
 
 - **[Google Maps iframe et RGPD]** → L'embed Google Maps peut poser des problèmes RGPD (cookies tiers). **Mitigation** : Afficher un consentement avant le chargement de l'iframe, ou utiliser OpenStreetMap comme alternative.

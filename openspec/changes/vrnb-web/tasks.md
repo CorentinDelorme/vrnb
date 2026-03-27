@@ -253,3 +253,5 @@
 - [ ] 24.10 Lancer un audit Lighthouse accessibilité via Chrome DevTools MCP sur chaque page du site — objectif score ≥ 90
 - [ ] 24.11 Vérifier l'affichage responsive de chaque page via Chrome DevTools MCP sur mobile (375px), tablette (768px) et desktop (1280px)
 - [ ] 24.12 Vérifier visuellement que les couleurs du thème VRNB/VRNB-DARK sont correctement appliquées sur toutes les pages via Chrome DevTools MCP
+- [ ] 24.13 Vérifier que tout le code source (composants, props, variables, fonctions, hooks, commentaires, tests, stories) est rédigé en anglais — sauf les noms d'entités métier Payload en français (Referents, Activites, Bureaux, etc.)
+- [ ] 24.14 Vérifier qu'aucun texte UI visible par l'utilisateur n'est codé en dur dans les composants — les textes français sont configurables via Payload
