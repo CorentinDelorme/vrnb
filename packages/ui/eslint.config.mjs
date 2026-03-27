@@ -16,7 +16,19 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
-  ...storybook.configs["flat/recommended"]
+  // Disable no-html-link-for-pages in test and story files (UI library, not a Next.js app)
+  {
+    files: [
+      "**/*.test.tsx",
+      "**/*.test.ts",
+      "**/*.stories.tsx",
+      "**/*.stories.ts",
+    ],
+    rules: {
+      "@next/next/no-html-link-for-pages": "off",
+    },
+  },
+  ...storybook.configs["flat/recommended"],
 ]);
 
 export default eslintConfig;

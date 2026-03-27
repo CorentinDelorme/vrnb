@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const IntroPhoto: CollectionConfig = {
   slug: 'intro-photos',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['presentation_photo_intro', 'organisation_photo_intro'],

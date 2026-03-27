@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const DocPdf: CollectionConfig = {
   slug: 'docs-pdf',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'nompdf',
     defaultColumns: ['nompdf', 'pdfactivite'],

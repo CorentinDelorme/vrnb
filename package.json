@@ -9,9 +9,14 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "jsdom": "^29.0.1",
     "prettier": "^3.7.4",
     "turbo": "^2.8.20",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "ui": "workspace:*"
   },
   "engines": {
     "node": ">=18"

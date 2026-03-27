@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const PhotoCarousel: CollectionConfig = {
   slug: 'photos-carousels',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['image1', 'image2', 'image3'],

@@ -47,5 +47,13 @@ export const Users: CollectionConfig = {
       relationTo: 'referents',
       hasMany: true,
     },
+    {
+      name: 'photo',
+      type: 'upload',
+      relationTo: 'media',
+      admin: {
+        description: "Photo de profil de l'adhérent",
+      },
+    },
   ],
 }

@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const Lieu: CollectionConfig = {
   slug: 'lieux',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'nom_ville',
     defaultColumns: ['nom_ville', 'nom_rue', 'cp_ville'],

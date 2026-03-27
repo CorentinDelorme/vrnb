@@ -15,6 +15,25 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname, '../../'),
   },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/home',
+        permanent: false,
+      },
+      {
+        source: '/activite',
+        destination: '/activites',
+        permanent: true,
+      },
+      {
+        source: '/album',
+        destination: '/balades',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default withPayload(nextConfig, { devBundleServerPackages: false })

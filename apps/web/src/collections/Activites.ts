@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const Activite: CollectionConfig = {
   slug: 'activites',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'nom',
     defaultColumns: ['nom', 'date_activite', 'distance', 'etat', 'categories_formation'],

@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const Commentaire: CollectionConfig = {
   slug: 'commentaires',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'user_name',
     defaultColumns: ['user_name', 'date_creation', 'documentation'],

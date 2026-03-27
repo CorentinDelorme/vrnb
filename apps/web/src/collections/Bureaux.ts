@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const Bureau: CollectionConfig = {
   slug: 'bureaux',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'nom',
     defaultColumns: ['ordre', 'nom', 'updatedAt'],

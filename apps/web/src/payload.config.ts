@@ -27,6 +27,9 @@ import { IntroPhoto } from './collections/IntroPhotos'
 import { Documentation } from './collections/Documentations'
 import { Home } from './globals/Home'
 import { RandosVelo } from './globals/RandosVelo'
+import { MentionsLegales } from './globals/MentionsLegales'
+import { Contact } from './globals/Contact'
+import { Adhesion } from './globals/Adhesion'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -71,7 +74,7 @@ export default buildConfig({
     IntroPhoto,
     Documentation,
   ],
-  globals: [Home, RandosVelo],
+  globals: [Home, RandosVelo, MentionsLegales, Contact, Adhesion],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

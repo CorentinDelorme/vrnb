@@ -1,7 +1,10 @@
 import type { CollectionConfig } from 'payload'
 
+import { adminOnlyWrite } from '@/access/adminOnlyWrite'
+
 export const EtiquetteContent: CollectionConfig = {
   slug: 'etiquettes-content',
+  access: adminOnlyWrite,
   admin: {
     useAsTitle: 'id',
     defaultColumns: ['first_etiquette_text', 'second_etiquette_text'],

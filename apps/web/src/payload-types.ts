@@ -126,10 +126,16 @@ export interface Config {
   globals: {
     home: Home;
     'randos-velo': RandosVelo;
+    'mentions-legales': MentionsLegale;
+    contact: Contact;
+    adhesion: Adhesion;
   };
   globalsSelect: {
     home: HomeSelect<false> | HomeSelect<true>;
     'randos-velo': RandosVeloSelect<false> | RandosVeloSelect<true>;
+    'mentions-legales': MentionsLegalesSelect<false> | MentionsLegalesSelect<true>;
+    contact: ContactSelect<false> | ContactSelect<true>;
+    adhesion: AdhesionSelect<false> | AdhesionSelect<true>;
   };
   locale: null;
   widgets: {
@@ -172,6 +178,10 @@ export interface User {
   date_naissance?: string | null;
   bureau?: (string | null) | Bureau;
   referents?: (string | Referent)[] | null;
+  /**
+   * Photo de profil de l'adhérent
+   */
+  photo?: (string | null) | Media;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -910,6 +920,7 @@ export interface UsersSelect<T extends boolean = true> {
   date_naissance?: T;
   bureau?: T;
   referents?: T;
+  photo?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -1263,7 +1274,246 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
  */
 export interface Home {
   id: string;
-  layout: PartenairesListBlock[];
+  /**
+   * Logo de l'association VRNB affiché dans le header et la page d'accueil
+   */
+  logo?: (string | null) | Media;
+  /**
+   * Texte affiché sous la grande carte des prochaines balades
+   */
+  text_configurable_1?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Photos du carousel défilant en auto-scroll
+   */
+  carousel_photos?:
+    | {
+        image: string | Media;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Texte affiché sous le carousel de photos
+   */
+  text_configurable_2?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Titre du bloc configurable
+   */
+  bloc_title?: string | null;
+  /**
+   * Contenu du bloc configurable
+   */
+  bloc_content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Premier texte configurable en bas de page
+   */
+  text_configurable_bottom_1?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * Deuxième texte configurable en bas de page
+   */
+  text_configurable_bottom_2?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  /**
+   * PDF des statuts de l'association
+   */
+  pdf_statut?: (string | null) | Media;
+  /**
+   * PDF de la charte de l'association
+   */
+  pdf_charte?: (string | null) | Media;
+  layout: (
+    | PartenairesListBlock
+    | {
+        /**
+         * Titre optionnel au-dessus du contenu
+         */
+        titre?: string | null;
+        contenu: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        };
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'rich-text-block';
+      }
+    | {
+        image: string | Media;
+        /**
+         * Titre superposé sur l'image
+         */
+        titre?: string | null;
+        /**
+         * Description optionnelle sous le titre
+         */
+        description?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'hero-image-block';
+      }
+    | {
+        /**
+         * Titre optionnel de la section
+         */
+        titre?: string | null;
+        cards: {
+          titre: string;
+          description?: {
+            root: {
+              type: string;
+              children: {
+                type: any;
+                version: number;
+                [k: string]: unknown;
+              }[];
+              direction: ('ltr' | 'rtl') | null;
+              format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+              indent: number;
+              version: number;
+            };
+            [k: string]: unknown;
+          } | null;
+          image?: (string | null) | Media;
+          /**
+           * URL ou chemin interne du lien
+           */
+          lien?: string | null;
+          id?: string | null;
+        }[];
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'card-list-block';
+      }
+    | {
+        /**
+         * Titre optionnel au-dessus du carousel
+         */
+        titre?: string | null;
+        images: {
+          image: string | Media;
+          id?: string | null;
+        }[];
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'carousel-block';
+      }
+    | {
+        titre: string;
+        /**
+         * Texte d'introduction au-dessus du formulaire
+         */
+        texte_intro?: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        } | null;
+        id?: string | null;
+        blockName?: string | null;
+        blockType: 'contact-form-block';
+      }
+  )[];
   updatedAt?: string | null;
   createdAt?: string | null;
 }
@@ -1303,13 +1553,172 @@ export interface RandoVeloBlock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mentions-legales".
+ */
+export interface MentionsLegale {
+  id: string;
+  titre: string;
+  /**
+   * Paragraphes des mentions légales
+   */
+  paragraphes?:
+    | {
+        titre?: string | null;
+        contenu: {
+          root: {
+            type: string;
+            children: {
+              type: any;
+              version: number;
+              [k: string]: unknown;
+            }[];
+            direction: ('ltr' | 'rtl') | null;
+            format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+            indent: number;
+            version: number;
+          };
+          [k: string]: unknown;
+        };
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact".
+ */
+export interface Contact {
+  id: string;
+  titre: string;
+  /**
+   * Texte d'introduction affiché au-dessus du formulaire
+   */
+  texte_intro?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "adhesion".
+ */
+export interface Adhesion {
+  id: string;
+  titre: string;
+  /**
+   * Contenu de la page d'adhésion
+   */
+  description?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "home_select".
  */
 export interface HomeSelect<T extends boolean = true> {
+  logo?: T;
+  text_configurable_1?: T;
+  carousel_photos?:
+    | T
+    | {
+        image?: T;
+        id?: T;
+      };
+  text_configurable_2?: T;
+  bloc_title?: T;
+  bloc_content?: T;
+  text_configurable_bottom_1?: T;
+  text_configurable_bottom_2?: T;
+  pdf_statut?: T;
+  pdf_charte?: T;
   layout?:
     | T
     | {
         'partenaires-list'?: T | PartenairesListBlockSelect<T>;
+        'rich-text-block'?:
+          | T
+          | {
+              titre?: T;
+              contenu?: T;
+              id?: T;
+              blockName?: T;
+            };
+        'hero-image-block'?:
+          | T
+          | {
+              image?: T;
+              titre?: T;
+              description?: T;
+              id?: T;
+              blockName?: T;
+            };
+        'card-list-block'?:
+          | T
+          | {
+              titre?: T;
+              cards?:
+                | T
+                | {
+                    titre?: T;
+                    description?: T;
+                    image?: T;
+                    lien?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        'carousel-block'?:
+          | T
+          | {
+              titre?: T;
+              images?:
+                | T
+                | {
+                    image?: T;
+                    id?: T;
+                  };
+              id?: T;
+              blockName?: T;
+            };
+        'contact-form-block'?:
+          | T
+          | {
+              titre?: T;
+              texte_intro?: T;
+              id?: T;
+              blockName?: T;
+            };
       };
   updatedAt?: T;
   createdAt?: T;
@@ -1350,6 +1759,45 @@ export interface RandoVeloBlockSelect<T extends boolean = true> {
   photo?: T;
   id?: T;
   blockName?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "mentions-legales_select".
+ */
+export interface MentionsLegalesSelect<T extends boolean = true> {
+  titre?: T;
+  paragraphes?:
+    | T
+    | {
+        titre?: T;
+        contenu?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contact_select".
+ */
+export interface ContactSelect<T extends boolean = true> {
+  titre?: T;
+  texte_intro?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "adhesion_select".
+ */
+export interface AdhesionSelect<T extends boolean = true> {
+  titre?: T;
+  description?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
