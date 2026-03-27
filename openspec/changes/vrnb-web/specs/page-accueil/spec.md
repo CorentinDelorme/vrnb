@@ -1,78 +1,158 @@
 ## ADDED Requirements
 
-### Requirement: Section présentation de l'association
+### Requirement: Logo VRNB en haut de page
 
-Le système DOIT afficher sur la page d'accueil un titre « Présentation » et une description de l'association Vélo Rando Nature Bruz. Le titre et la description DOIVENT être modifiables via le panneau admin (global Home).
+Le système DOIT afficher le logo VRNB en haut de la page d'accueil (`/home`). Le logo DOIT être un upload configurable via le global Home dans Payload.
 
-#### Scenario: Affichage de la présentation
+#### Scenario: Affichage du logo
 
-- **WHEN** un visiteur accède à la page d'accueil
-- **THEN** le système affiche le titre de présentation et la description de l'association
+- **WHEN** un visiteur accède à `/home`
+- **THEN** le logo VRNB est affiché en haut de la page
 
-#### Scenario: Modification de la présentation via l'admin
+#### Scenario: Logo non configuré
 
-- **WHEN** un administrateur modifie le titre ou la description dans le global Home
-- **THEN** les modifications sont immédiatement visibles sur la page d'accueil
+- **WHEN** aucun logo n'est uploadé dans le global Home
+- **THEN** la section logo n'est pas affichée
 
-### Requirement: Carte Google Maps de localisation
+### Requirement: Grande carte des prochaines balades
 
-Le système DOIT afficher une carte Google Maps intégrée (iframe) sur la page d'accueil pour montrer la localisation de l'association. L'URL de la carte DOIT être configurable via le panneau admin.
+Le système DOIT afficher une grande carte contenant à l'intérieur deux cartes des deux prochaines balades (activités à venir). Chaque carte de balade DOIT afficher : la date, le titre (nom de l'activité), le lieu et l'heure du rendez-vous. Les balades sont chargées dynamiquement depuis la collection `Activites` (date >= aujourd'hui, triées par date croissante, limit 2). Les relations `lieu` (Lieux) DOIVENT être populées.
 
-#### Scenario: Affichage de la carte Google Maps
+#### Scenario: Affichage des 2 prochaines balades
 
-- **WHEN** un visiteur accède à la page d'accueil
-- **THEN** le système affiche une carte Google Maps avec la localisation de l'association
+- **GIVEN** 3 activités à venir : « Balade des marais » le 05/04/2026 à Bruz, « Escapade Rennes » le 12/04/2026 à Rennes, « Formation sécurité » le 20/04/2026
+- **WHEN** un visiteur accède à `/home`
+- **THEN** la grande carte affiche deux cartes : « Balade des marais » (date, titre, lieu Bruz, heure RDV) et « Escapade Rennes » (date, titre, lieu Rennes, heure RDV)
 
-#### Scenario: Carte non configurée
+#### Scenario: Une seule activité à venir
 
-- **WHEN** l'URL Google Maps n'est pas renseignée dans l'admin
-- **THEN** la section carte n'est pas affichée
+- **GIVEN** une seule activité à venir
+- **WHEN** un visiteur accède à `/home`
+- **THEN** la grande carte affiche une seule carte de balade
 
-### Requirement: Cards activités et devises
+#### Scenario: Aucune activité à venir
 
-Le système DOIT afficher des cards sur la page d'accueil présentant ce que propose l'association et ses devises. Chaque card DOIT contenir un titre et une description. Les cards DOIVENT être gérables via le panneau admin (tableau répétable dans le global Home).
+- **GIVEN** aucune activité à venir
+- **WHEN** un visiteur accède à `/home`
+- **THEN** la grande carte affiche un message indiquant qu'aucune balade n'est prévue
 
-#### Scenario: Affichage des cards
+### Requirement: Compteur d'événements à venir avec lien
 
-- **WHEN** un visiteur accède à la page d'accueil
-- **THEN** le système affiche les cards avec les activités et devises de l'association
+Dans la grande carte, sous les deux cartes de balades, le système DOIT afficher le texte « À noter sur vos agendas : » suivi du nombre total d'événements à venir. Ce nombre DOIT être un lien cliquable redirigeant vers la page Activités (`/activites`).
 
-#### Scenario: Aucune card configurée
+#### Scenario: Affichage du compteur d'événements
 
-- **WHEN** aucune card n'est définie dans l'admin
-- **THEN** la section cards n'est pas affichée
+- **GIVEN** 15 activités à venir dans la base
+- **WHEN** un visiteur accède à `/home`
+- **THEN** le texte « À noter sur vos agendas : 15 événements à venir » est affiché dans la grande carte, le nombre étant un lien vers `/activites`
 
-#### Scenario: Ajout d'une card via l'admin
+#### Scenario: Clic sur le nombre d'événements
 
-- **WHEN** un administrateur ajoute une card avec un titre et une description dans le global Home
-- **THEN** la nouvelle card apparaît sur la page d'accueil
+- **WHEN** un visiteur clique sur le nombre d'événements
+- **THEN** le système navigue vers `/activites`
 
-### Requirement: Documents PDF statut et charte
+#### Scenario: Aucun événement à venir
 
-Le système DOIT permettre d'afficher sur la page d'accueil des liens vers le statut de l'association et la charte de l'association au format PDF. Les fichiers PDF DOIVENT être uploadés via le panneau admin (champs upload dans le global Home).
+- **GIVEN** aucune activité à venir
+- **WHEN** un visiteur accède à `/home`
+- **THEN** le texte « À noter sur vos agendas : 0 événement à venir » est affiché
 
-#### Scenario: Téléchargement du statut PDF
+### Requirement: Premier texte configurable
 
-- **WHEN** un visiteur clique sur le lien « Statut de l'association »
-- **THEN** le navigateur télécharge ou ouvre le fichier PDF du statut
+Sous la grande carte, le système DOIT afficher un texte configurable (richText). Ce texte DOIT être modifiable via le global Home dans Payload.
 
-#### Scenario: Téléchargement de la charte PDF
+#### Scenario: Affichage du premier texte configurable
 
-- **WHEN** un visiteur clique sur le lien « Charte de l'association »
-- **THEN** le navigateur télécharge ou ouvre le fichier PDF de la charte
+- **WHEN** un visiteur accède à `/home`
+- **THEN** le premier texte configurable est affiché sous la grande carte
 
-#### Scenario: PDF non uploadé
+#### Scenario: Texte non configuré
 
-- **WHEN** un des PDFs n'est pas uploadé dans l'admin
-- **THEN** le lien correspondant n'est pas affiché
+- **WHEN** le champ richText n'est pas rempli dans l'admin
+- **THEN** la section texte n'est pas affichée
+
+### Requirement: Carousel de photos auto-scroll
+
+Sous le premier texte configurable, le système DOIT afficher un carousel de photos avec défilement automatique. Les photos DOIVENT être gérées via un tableau d'uploads (relation vers Media) dans le global Home.
+
+#### Scenario: Affichage du carousel de photos
+
+- **WHEN** un visiteur accède à `/home` et que des photos sont configurées
+- **THEN** un carousel affiche les photos avec un défilement automatique
+
+#### Scenario: Défilement automatique
+
+- **WHEN** le carousel est affiché
+- **THEN** les photos défilent automatiquement sans intervention de l'utilisateur
+
+#### Scenario: Aucune photo configurée
+
+- **WHEN** aucune photo n'est uploadée dans le global Home
+- **THEN** le carousel n'est pas affiché
+
+### Requirement: Deuxième texte configurable
+
+Sous le carousel de photos, le système DOIT afficher un deuxième texte configurable (richText) modifiable via le global Home.
+
+#### Scenario: Affichage du deuxième texte configurable
+
+- **WHEN** un visiteur accède à `/home`
+- **THEN** le deuxième texte configurable est affiché sous le carousel
+
+### Requirement: Bloc titre et texte modifiables
+
+Sous le deuxième texte configurable, le système DOIT afficher un bloc contenant un titre modifiable et un texte modifiable en dessous. Les deux champs DOIVENT être configurables via le global Home (champ titre text + champ contenu richText).
+
+#### Scenario: Affichage du bloc titre + texte
+
+- **WHEN** un visiteur accède à `/home` et que le bloc est configuré
+- **THEN** le titre est affiché suivi du texte en dessous
+
+#### Scenario: Bloc non configuré
+
+- **WHEN** ni le titre ni le texte ne sont remplis dans l'admin
+- **THEN** la section bloc n'est pas affichée
+
+### Requirement: Photos des 4 activités cliquables
+
+Sous le bloc titre/texte, le système DOIT afficher 4 photos avec au milieu de chaque photo un titre superposé. Les photos DOIVENT être cliquables et rediriger vers la page de l'activité correspondante. Les 4 activités correspondent aux quatre premières entrées du sous-menu Activités dans le header : **Randonnées à vélo** (`/activites/randonnees-velo`), **Formations** (`/activites/formations`), **Projections de films** (`/activites/projections-films`), **Éco citoyenneté** (`/activites/eco-citoyennete`).
+
+#### Scenario: Affichage des 4 photos activités
+
+- **WHEN** un visiteur accède à `/home`
+- **THEN** 4 photos sont affichées avec les titres « Randonnées à vélo », « Formations », « Projections de films » et « Éco citoyenneté » superposés au centre de chaque photo
+
+#### Scenario: Clic sur une photo activité
+
+- **WHEN** un visiteur clique sur la photo « Formations »
+- **THEN** le système navigue vers `/activites/formations`
+
+#### Scenario: Photos configurables
+
+- **WHEN** un administrateur modifie les photos des activités dans le global Home ou ActivitesContent
+- **THEN** les nouvelles photos sont affichées sur la page d'accueil
+
+### Requirement: Deux textes configurables en bas de page
+
+En bas de la page, avant le footer, le système DOIT afficher deux textes configurables (richText) modifiables via le global Home.
+
+#### Scenario: Affichage des deux textes en bas de page
+
+- **WHEN** un visiteur accède à `/home`
+- **THEN** les deux textes configurables sont affichés en bas de page
+
+#### Scenario: Un texte non configuré
+
+- **WHEN** un des deux textes n'est pas rempli dans l'admin
+- **THEN** seul le texte rempli est affiché
 
 ### Requirement: Carousel des partenaires dans le footer
 
-Le système DOIT afficher un carousel dans le footer de la page d'accueil avec la liste des partenaires. Chaque partenaire DOIT afficher une image (logo), le nom et un lien vers le site du partenaire. Les partenaires DOIVENT être triés par le champ `ordre`.
+Le système DOIT afficher un carousel dans le footer de la page avec la liste des partenaires. Chaque partenaire DOIT afficher une image (logo), le nom et un lien vers le site du partenaire. Les partenaires DOIVENT être triés par le champ `ordre`.
 
 #### Scenario: Affichage du carousel partenaires
 
-- **WHEN** un visiteur accède à la page d'accueil
+- **WHEN** un visiteur accède à `/home`
 - **THEN** le footer affiche un carousel défilant avec les logos, noms et liens des partenaires
 
 #### Scenario: Clic sur un partenaire

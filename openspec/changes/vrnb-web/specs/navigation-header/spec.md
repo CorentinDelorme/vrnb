@@ -12,7 +12,7 @@ Le système DOIT afficher un header persistant sur toutes les pages du site avec
 #### Scenario: Navigation vers l'accueil
 
 - **WHEN** un visiteur clique sur le menu « Accueil »
-- **THEN** le système navigue vers la page d'accueil (`/`)
+- **THEN** le système navigue vers la page d'accueil (`/home`)
 
 ### Requirement: Sous-menu Association
 

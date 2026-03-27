@@ -9,15 +9,20 @@
 - [ ] 1.7 Créer le composant Footer avec le carousel des partenaires (image, nom, URL)
 - [ ] 1.8 Mettre à jour le layout `src/app/(frontend)/layout.tsx` pour intégrer Header et Footer
 
-## 2. Page d'accueil enrichie
+## 2. Page d'accueil (`/home`)
 
-- [ ] 2.1 Enrichir le global `Home` avec les champs : titre présentation, description, URL Google Maps, tableau de cards (titre + description), upload PDF statut, upload PDF charte
-- [ ] 2.2 Mettre à jour `HomePageClient.tsx` pour afficher la section présentation (titre + description)
-- [ ] 2.3 Ajouter l'iframe Google Maps sur la page d'accueil
-- [ ] 2.4 Ajouter la section cards activités/devises sur la page d'accueil
-- [ ] 2.5 Ajouter les liens de téléchargement des PDFs statut et charte
-- [ ] 2.6 Remplacer la liste statique des partenaires par le carousel du footer
-- [ ] 2.7 Exécuter `bun run generate:types` après les modifications du global Home
+- [ ] 2.1 Créer la route `src/app/(frontend)/home/page.tsx` et ajouter une redirection de `/` vers `/home`
+- [ ] 2.2 Enrichir le global `Home` avec les nouveaux champs : upload logo, texte configurable 1 (richText), carousel photos (tableau d'uploads), texte configurable 2 (richText), bloc titre (text) + contenu (richText), 2 textes configurables bas de page (richText)
+- [ ] 2.3 Afficher le logo VRNB en haut de page (upload depuis global Home)
+- [ ] 2.4 Créer la grande carte contenant les 2 prochaines balades (requête Activites date >= aujourd'hui, limit 2, relations lieu populées) avec date, titre, lieu, heure RDV
+- [ ] 2.5 Ajouter le texte « À noter sur vos agendas : » avec compteur d'événements à venir (count Activites) et lien vers `/activites`
+- [ ] 2.6 Afficher le premier texte configurable (richText) sous la grande carte
+- [ ] 2.7 Créer le carousel de photos auto-scroll (tableau d'uploads depuis global Home)
+- [ ] 2.8 Afficher le deuxième texte configurable (richText) sous le carousel
+- [ ] 2.9 Afficher le bloc titre + texte modifiables
+- [ ] 2.10 Créer la section des 4 photos activités cliquables (Randonnées à vélo, Formations, Projections de films, Éco citoyenneté) avec titre superposé au centre et liens vers les routes activités
+- [ ] 2.11 Afficher les 2 textes configurables en bas de page
+- [ ] 2.12 Exécuter `bun run generate:types` après les modifications du global Home
 
 ## 3. Pages Association
 
@@ -40,7 +45,7 @@
 
 - [ ] 5.1 Créer le composant client `CategoryFilter` dans `src/components/` avec checkboxes par catégorie, champ de recherche et bouton « Filtrer »
 - [ ] 5.2 Définir les catégories fixes : Balade du dimanche, Escapade, Formations, Film documentaire, Éco-citoyenneté, Longe-côte, Réunion, Autres
-- [ ] 5.3 Implémenter la logique de filtrage réactive (état React) exportable vers les pages consommatrices
+- [ ] 5.3 Implémenter la logique de filtrage réactive (état React) exportable vers les pages consommatrices (Programme, Nos Balades, Documentation)
 
 ## 6. Page Programme
 
@@ -61,8 +66,11 @@
 
 ## 8. Page Documentation
 
-- [ ] 8.1 Créer la route `src/app/(frontend)/documentation/page.tsx` avec requête Payload pour les documentations groupées par catégorie
-- [ ] 8.2 Afficher chaque documentation avec titre, auteur, intro et lien de lecture
+- [ ] 8.1 Créer la route `src/app/(frontend)/documentation/page.tsx` avec requête Payload pour les documentations (relations catégorie populées)
+- [ ] 8.2 Créer le composant carte documentation (titre, description, catégorie, date de création, auteur)
+- [ ] 8.3 Intégrer le composant `CategoryFilter` partagé dans la sidebar de la page Documentation
+- [ ] 8.4 Implémenter le filtrage côté client par catégorie et recherche textuelle sur titre/auteur
+- [ ] 8.5 Implémenter la vue détail d'une documentation (titre, auteur, date, paragraphes richText, images, PDFs)
 
 ## 9. Page Trombinoscope (Espace Adhérent)
 

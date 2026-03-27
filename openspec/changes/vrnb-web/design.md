@@ -16,16 +16,16 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 **Goals :**
 
 - Construire le frontend public complet du site VRNB avec navigation, page d'accueil riche, pages association, activités, programme, documentation, nos balades, trombinoscope et profil.
-- Enrichir le global `Home` dans Payload pour gérer la présentation, la description, la carte Google Maps, les cards activités/devises et les PDFs (statut, charte).
+- Enrichir le global `Home` dans Payload pour gérer le contenu de la page d'accueil : grande carte des 2 prochaines balades, textes configurables, carousel photos, bloc titre/texte, photos activités cliquables.
 - Créer un layout partagé avec header (navigation multi-niveaux) et footer (carousel partenaires).
 - Créer les pages Organisation (bureau) et Référents avec données dynamiques depuis Payload.
 - Créer les pages Activités par type (randonnées, formations, projections, éco citoyenneté, plein air) avec cards.
 - Créer la page Programme avec tableau des activités à venir, filtres par catégorie et recherche.
 - Créer la page Nos Balades avec photo d'en-tête, description, cards des activités passées et filtres par catégorie.
-- Créer la page Documentation listant les documentations de l'association.
+- Créer la page Documentation avec cartes (titre, description, catégorie, date, auteur) et sidebar de filtres par catégorie (composant `CategoryFilter` partagé).
 - Créer la page Trombinoscope dans l'espace adhérent, affichant les cartes des membres avec rôle et photo.
 - Créer la page Profil permettant à l'adhérent de consulter et modifier ses informations personnelles.
-- Extraire un composant `CategoryFilter` partagé entre Programme et Nos Balades.
+- Extraire un composant `CategoryFilter` partagé entre Programme, Nos Balades et Documentation.
 - Maintenir l'authentification adhérents et la restriction d'accès admin.
 - Permettre la gestion complète du contenu via Payload sans redéploiement.
 
@@ -45,7 +45,7 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 ```
 src/app/(frontend)/
 ├── layout.tsx                        # Layout partagé : Header + Footer
-├── page.tsx                          # Page d'accueil
+├── home/page.tsx                     # Page d'accueil (/home)
 ├── association/
 │   ├── presentation/page.tsx         # Présentation (= accueil détaillée)
 │   ├── organisation/page.tsx         # Bureau et rôles
@@ -93,22 +93,16 @@ src/app/(frontend)/
 
 **Rationale** : Un carousel CSS avec animation auto-scroll est léger et ne nécessite aucune dépendance. Pour un volume modéré de partenaires, c'est suffisant.
 
-### 4. Enrichissement du global Home
+### 4. Enrichissement du global Home pour la page d'accueil
 
-**Choix** : Ajouter des champs au global `Home` existant pour la présentation, la description, l'URL Google Maps, les cards et les uploads PDF.
+**Choix** : Ajouter des champs au global `Home` existant pour la page d'accueil complète : texte sous la grande carte (richText), carousel de photos (tableau d'uploads), deux blocs texte configurable (richText), bloc titre/texte modifiable à titre et description libres, et deux textes configurables en bas de page. Les 2 prochaines balades et le compteur d'événements sont calculés dynamiquement depuis la collection Activites. Les 4 photos activités sont liées aux 4 premiers sous-menus Activités.
 
 **Alternatives considérées** :
 
-- Créer un nouveau global `Presentation` séparé : fragmente les données de la page d'accueil.
+- Créer un nouveau global séparé : fragmente les données de la page d'accueil.
 - Stocker en dur dans le code : pas modifiable sans redéploiement.
 
-**Rationale** : Le global `Home` est déjà lié à la page d'accueil via live preview. L'enrichir centralise la gestion du contenu de la page d'accueil.
-
-### 5. PDFs statut et charte comme uploads Payload
-
-**Choix** : Utiliser des champs `upload` (relation vers Media) pour les PDFs statut et charte dans le global Home.
-
-**Rationale** : Payload gère déjà les uploads via la collection Media. Les administrateurs peuvent remplacer les PDFs directement via le panneau admin.
+**Rationale** : Le global `Home` est déjà lié à la page d'accueil via live preview. L'enrichir centralise la gestion du contenu.
 
 ### 6. Pages Activités alimentées par ActivitesContent
 
@@ -132,22 +126,27 @@ src/app/(frontend)/
 
 **Rationale** : Le volume d'activités d'une association locale est modéré. Charger toutes les activités à venir et filtrer côté client offre une UX fluide. La colonne « ville » provient de la relation `lieu.nom_ville`, et « catégorie » de `categories_formation.libelle`.
 
-### 8. Page Documentation depuis la collection Documentations
+### 8. Page Documentation avec cartes et filtre catégorie
 
-**Choix** : La page Documentation liste les documents de la collection `Documentations` existante, groupés par catégorie (relation vers `Categories`). Chaque documentation affiche titre, auteur, intro et un lien de lecture.
+**Choix** : La page Documentation affiche chaque documentation dans une carte contenant le titre, la description (intro), le nom de la catégorie (relation `Categories`), la date de création et l'auteur. Une sidebar à gauche utilise le composant `CategoryFilter` partagé (même que Programme et Nos Balades) pour filtrer les documentations par catégorie côté client.
 
-**Rationale** : La collection et les relations existent déjà. Il suffit de construire la page frontend.
+**Alternatives considérées** :
 
-### 9. Composant `CategoryFilter` partagé entre Programme et Nos Balades
+- Groupement par catégorie sans filtre : moins interactif.
+- Filtre serveur : latence inutile pour un volume modéré.
 
-**Choix** : Extraire un composant React client `CategoryFilter` utilisé à la fois dans la page Programme et la page Nos Balades. Ce composant affiche une sidebar avec les catégories d'activités sous forme de checkboxes et un champ de recherche. Catégories fixes : Balade du dimanche, Escapade, Formations, Film documentaire, Éco-citoyenneté, Longe-côte, Réunion, Autres.
+**Rationale** : Réutiliser le `CategoryFilter` assure une UX cohérente entre les pages. Le filtrage côté client est suffisant pour le volume de documentations.
+
+### 9. Composant `CategoryFilter` partagé entre Programme, Nos Balades et Documentation
+
+**Choix** : Extraire un composant React client `CategoryFilter` utilisé dans la page Programme, la page Nos Balades et la page Documentation. Ce composant affiche une sidebar avec les catégories d'activités sous forme de checkboxes et un champ de recherche. Catégories fixes : Balade du dimanche, Escapade, Formations, Film documentaire, Éco-citoyenneté, Longe-côte, Réunion, Autres.
 
 **Alternatives considérées** :
 
 - Dupliquer la logique de filtrage dans chaque page : maintenance plus lourde.
 - Composant serveur avec query params : latence à chaque filtre.
 
-**Rationale** : Les deux pages partagent exactement la même logique de filtrage par catégorie. Un composant client réactif offre une UX fluide et une maintenance centralisée.
+**Rationale** : Les trois pages partagent la même logique de filtrage par catégorie. Un composant client réactif offre une UX fluide et une maintenance centralisée.
 
 ### 10. Page Nos Balades — Activités passées avec cards
 
@@ -176,6 +175,42 @@ src/app/(frontend)/
 - Formulaire en page séparée : une card avec toggle edit/view est plus fluide.
 
 **Rationale** : Les adhérents sans accès admin ont besoin d'un point d'entrée frontend pour consulter et mettre à jour leur profil.
+
+### 13. Page d'accueil — Layout vertical complet
+
+**Choix** : La page d'accueil (`/home`) suit un layout vertical composé de sections dans cet ordre :
+
+1. **Logo VRNB** : Image du logo, upload configurable via le global Home.
+2. **Grande carte « Prochaines balades »** : Contient deux cartes internes affichant les 2 prochaines activités (date, titre, lieu, heure RDV), calculées dynamiquement depuis la collection `Activites` (date >= aujourd'hui, triées par date, limit 2). En dessous : texte « À noter sur vos agendas : » + nombre d'événements à venir (lien vers `/activites`).
+3. **Texte configurable 1** : Champ richText dans le global Home.
+4. **Carousel de photos** : Tableau d'uploads dans le global Home, défilement automatique (CSS/JS léger).
+5. **Texte configurable 2** : Champ richText dans le global Home.
+6. **Bloc titre + texte modifiable** : Champs titre (text) et contenu (richText) dans le global Home.
+7. **Photos des 4 activités** : 4 images avec titre superposé centré, cliquables, correspondant aux 4 premières entrées du sous-menu Activités (Randonnées à vélo, Formations, Projections de films, Éco citoyenneté). Photos et titres configurables ou issus d'ActivitesContent.
+8. **2 textes configurables** : Deux champs richText supplémentaires dans le global Home.
+
+**Alternatives considérées** :
+
+- Page statique codée en dur : pas modifiable sans redéploiement.
+- CMS blocks dynamiques (Payload blocks) : plus flexible mais plus complexe ; un layout fixe avec champs configurables suffit pour cette page.
+
+**Rationale** : Un layout fixe avec des champs configurables dans le global Home offre à la fois la structure visuelle souhaitée et la modularité de contenu via l'admin.
+
+### 14. Carousel de photos sur la page d'accueil
+
+**Choix** : Carousel CSS/JS léger (même approche que le carousel partenaires du footer) avec défilement automatique. Les photos sont stockées dans un tableau de champs `upload` (relation vers Media) dans le global Home.
+
+**Rationale** : Cohérent avec l'approche carousel du footer. Un volume modéré de photos ne justifie pas une librairie lourde.
+
+### 15. URL de la page d'accueil : `/home`
+
+**Choix** : La page d'accueil est servie à la route `/home` (et non `/`). La route racine `/` redirigera vers `/home`.
+
+**Alternatives considérées** :
+
+- Servir directement sur `/` : le fichier `page.tsx` existant est déjà lié au live preview Payload, risque de conflit.
+
+**Rationale** : Une route dédiée `/home` simplifie la coexistence avec le `page.tsx` existant et la route Payload admin.
 
 ## Risks / Trade-offs
 
