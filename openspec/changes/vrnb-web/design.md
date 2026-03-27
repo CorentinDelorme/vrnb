@@ -15,13 +15,17 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 
 **Goals :**
 
-- Construire le frontend public complet du site VRNB avec navigation, page d'accueil riche, pages association, activités, programme et documentation.
+- Construire le frontend public complet du site VRNB avec navigation, page d'accueil riche, pages association, activités, programme, documentation, nos balades, trombinoscope et profil.
 - Enrichir le global `Home` dans Payload pour gérer la présentation, la description, la carte Google Maps, les cards activités/devises et les PDFs (statut, charte).
 - Créer un layout partagé avec header (navigation multi-niveaux) et footer (carousel partenaires).
 - Créer les pages Organisation (bureau) et Référents avec données dynamiques depuis Payload.
 - Créer les pages Activités par type (randonnées, formations, projections, éco citoyenneté, plein air) avec cards.
 - Créer la page Programme avec tableau des activités à venir, filtres par catégorie et recherche.
+- Créer la page Nos Balades avec photo d'en-tête, description, cards des activités passées et filtres par catégorie.
 - Créer la page Documentation listant les documentations de l'association.
+- Créer la page Trombinoscope dans l'espace adhérent, affichant les cartes des membres avec rôle et photo.
+- Créer la page Profil permettant à l'adhérent de consulter et modifier ses informations personnelles.
+- Extraire un composant `CategoryFilter` partagé entre Programme et Nos Balades.
 - Maintenir l'authentification adhérents et la restriction d'accès admin.
 - Permettre la gestion complète du contenu via Payload sans redéploiement.
 
@@ -52,8 +56,12 @@ src/app/(frontend)/
 │   ├── projections-films/page.tsx    # Projections de films
 │   ├── eco-citoyennete/page.tsx      # Éco citoyenneté
 │   └── autres-plein-air/page.tsx     # Autres activités de plein air
+├── nos-balades/page.tsx              # Galerie des balades passées
 ├── programme/page.tsx                # Programme des activités
-└── documentation/page.tsx            # Page documentation
+├── documentation/page.tsx            # Page documentation
+├── espace-adherent/
+│   └── trombinoscope/page.tsx        # Trombinoscope des adhérents
+└── profil/page.tsx                   # Profil de l'adhérent connecté
 ```
 
 **Alternatives considérées** :
@@ -129,6 +137,45 @@ src/app/(frontend)/
 **Choix** : La page Documentation liste les documents de la collection `Documentations` existante, groupés par catégorie (relation vers `Categories`). Chaque documentation affiche titre, auteur, intro et un lien de lecture.
 
 **Rationale** : La collection et les relations existent déjà. Il suffit de construire la page frontend.
+
+### 9. Composant `CategoryFilter` partagé entre Programme et Nos Balades
+
+**Choix** : Extraire un composant React client `CategoryFilter` utilisé à la fois dans la page Programme et la page Nos Balades. Ce composant affiche une sidebar avec les catégories d'activités sous forme de checkboxes et un champ de recherche. Catégories fixes : Balade du dimanche, Escapade, Formations, Film documentaire, Éco-citoyenneté, Longe-côte, Réunion, Autres.
+
+**Alternatives considérées** :
+
+- Dupliquer la logique de filtrage dans chaque page : maintenance plus lourde.
+- Composant serveur avec query params : latence à chaque filtre.
+
+**Rationale** : Les deux pages partagent exactement la même logique de filtrage par catégorie. Un composant client réactif offre une UX fluide et une maintenance centralisée.
+
+### 10. Page Nos Balades — Activités passées avec cards
+
+**Choix** : La page Nos Balades charge les activités passées (date < aujourd'hui, triées par date décroissante) côté serveur. Chaque activité s'affiche en card avec titre, date, créateur (relation `organisateur`), description (extrait de `infos_activite`) et badge catégorie. Le composant `CategoryFilter` partagé permet de filtrer côté client. La photo d'en-tête et le texte « Nos Balades » sont configurables via un nouveau global `NosBalades` ou des champs dans `Home`.
+
+**Rationale** : Même pattern que Programme mais centré sur les activités passées. Les données proviennent de la même collection `Activites` avec un filtre de date inversé.
+
+### 11. Page Trombinoscope — Annuaire des adhérents
+
+**Choix** : La page Trombinoscope (route `/espace-adherent/trombinoscope`) charge tous les utilisateurs actifs depuis la collection `Users`. Chaque adhérent s'affiche en card avec : rôle (dérivé de la relation `bureau` — ex. Président, Secrétaire, Adhérent), prénom NOM (nom en majuscules), et photo optionnelle (champ upload à ajouter à Users si absent). L'accès est réservé aux utilisateurs connectés.
+
+**Alternatives considérées** :
+
+- Page publique sans authentification : expose les données personnelles des adhérents.
+- Rôle stocké en champ texte dans Users : la relation `bureau` existe déjà et porte le libellé du rôle.
+
+**Rationale** : L'association souhaite un annuaire interne. La relation `bureau` fournit le rôle affiché. Restreindre l'accès aux adhérents connectés protège les données.
+
+### 12. Page Profil — Consultation et modification
+
+**Choix** : La page Profil (route `/profil`) affiche les informations de l'utilisateur connecté dans une card (pseudo, rôle bureau, référents, nom, prénom, téléphone, email, date de naissance). Un bouton « Modifier » ouvre un formulaire d'édition utilisant l'API REST Payload (`PATCH /api/users/:id`). Accès réservé aux utilisateurs connectés.
+
+**Alternatives considérées** :
+
+- Rediriger vers le profil Payload admin : les adhérents n'ont pas accès au panneau admin.
+- Formulaire en page séparée : une card avec toggle edit/view est plus fluide.
+
+**Rationale** : Les adhérents sans accès admin ont besoin d'un point d'entrée frontend pour consulter et mettre à jour leur profil.
 
 ## Risks / Trade-offs
 

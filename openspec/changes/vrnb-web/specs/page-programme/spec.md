@@ -33,14 +33,14 @@ Le système DOIT afficher un tableau des activités à venir triées par date cr
 - **WHEN** aucune activité n'a de date future
 - **THEN** le tableau affiche un message indiquant qu'aucune activité n'est programmée
 
-### Requirement: Sidebar de filtres avec catégories
+### Requirement: Sidebar de filtres avec catégories (composant partagé)
 
-Le système DOIT afficher à gauche du tableau une sidebar contenant des filtres par catégorie (checkboxes depuis la collection CategoriesFormations), un champ de recherche textuel et un bouton « Filtrer » pour appliquer les filtres.
+Le système DOIT afficher à gauche du tableau une sidebar de filtres utilisant le composant partagé `CategoryFilter` (commun avec la page Nos Balades). Ce composant affiche des checkboxes pour les catégories, un champ de recherche textuel et un bouton « Filtrer ». Les catégories fixes sont : **Balade du dimanche**, **Escapade**, **Formations**, **Film documentaire**, **Éco-citoyenneté**, **Longe-côte**, **Réunion**, **Autres**.
 
 #### Scenario: Affichage des filtres par catégorie
 
 - **WHEN** un visiteur accède à la page Programme
-- **THEN** la sidebar affiche la liste des catégories de formation avec des cases à cocher
+- **THEN** la sidebar affiche les catégories suivantes avec des cases à cocher : Balade du dimanche, Escapade, Formations, Film documentaire, Éco-citoyenneté, Longe-côte, Réunion, Autres
 
 #### Scenario: Affichage du champ de recherche
 

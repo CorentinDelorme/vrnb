@@ -2,7 +2,7 @@
 
 ### Requirement: Header avec navigation principale
 
-Le système DOIT afficher un header persistant sur toutes les pages du site avec les menus de navigation suivants : « Accueil », « Association », « Activités », « Programme » et « Documentation ».
+Le système DOIT afficher un header persistant sur toutes les pages du site avec les menus de navigation suivants : « Accueil », « Association », « Activités », « Nos Balades », « Programme », « Documentation », « Espace Adhérent » et « Profil ».
 
 #### Scenario: Affichage du header sur chaque page
 
@@ -90,6 +90,48 @@ Le menu « Documentation » DOIT naviguer vers la page de documentation.
 - **WHEN** un visiteur clique sur le menu « Documentation »
 - **THEN** le système navigue vers `/documentation`
 
+### Requirement: Menu Nos Balades
+
+Le menu « Nos Balades » DOIT naviguer vers la page galerie des balades passées.
+
+#### Scenario: Navigation vers Nos Balades
+
+- **WHEN** un visiteur clique sur le menu « Nos Balades »
+- **THEN** le système navigue vers `/nos-balades`
+
+### Requirement: Sous-menu Espace Adhérent
+
+Le menu « Espace Adhérent » DOIT contenir un sous-menu « Trombinoscope ». Le sous-menu DOIT s'afficher au survol ou au clic sur « Espace Adhérent ». Ce menu n'est visible que pour les utilisateurs connectés.
+
+#### Scenario: Affichage du sous-menu Espace Adhérent
+
+- **WHEN** un adhérent connecté survole ou clique sur le menu « Espace Adhérent »
+- **THEN** le sous-menu affiche l'entrée « Trombinoscope »
+
+#### Scenario: Navigation vers Trombinoscope
+
+- **WHEN** un adhérent connecté clique sur « Trombinoscope » dans le sous-menu
+- **THEN** le système navigue vers `/espace-adherent/trombinoscope`
+
+#### Scenario: Menu Espace Adhérent non visible pour les visiteurs non connectés
+
+- **WHEN** un visiteur non connecté consulte le header
+- **THEN** le menu « Espace Adhérent » n'est pas affiché
+
+### Requirement: Menu Profil
+
+Le menu « Profil » DOIT naviguer vers la page de profil de l'adhérent connecté. Ce menu n'est visible que pour les utilisateurs connectés.
+
+#### Scenario: Navigation vers Profil
+
+- **WHEN** un adhérent connecté clique sur le menu « Profil »
+- **THEN** le système navigue vers `/profil`
+
+#### Scenario: Menu Profil non visible pour les visiteurs non connectés
+
+- **WHEN** un visiteur non connecté consulte le header
+- **THEN** le menu « Profil » n'est pas affiché
+
 ### Requirement: Indicateur de page active
 
 Le système DOIT indiquer visuellement le menu ou sous-menu correspondant à la page actuellement visitée.
@@ -108,3 +150,18 @@ Le système DOIT indiquer visuellement le menu ou sous-menu correspondant à la 
 
 - **WHEN** un visiteur est sur la page Formations
 - **THEN** le menu « Activités » et le sous-menu « Formations » sont visuellement mis en évidence
+
+#### Scenario: Menu actif sur la page Nos Balades
+
+- **WHEN** un visiteur est sur la page Nos Balades
+- **THEN** le menu « Nos Balades » est visuellement mis en évidence
+
+#### Scenario: Sous-menu actif sur la page Trombinoscope
+
+- **WHEN** un adhérent connecté est sur la page Trombinoscope
+- **THEN** le menu « Espace Adhérent » et le sous-menu « Trombinoscope » sont visuellement mis en évidence
+
+#### Scenario: Menu actif sur la page Profil
+
+- **WHEN** un adhérent connecté est sur la page Profil
+- **THEN** le menu « Profil » est visuellement mis en évidence
