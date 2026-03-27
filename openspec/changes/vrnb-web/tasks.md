@@ -8,7 +8,7 @@
 - [ ] 1.6 Ajouter l'indicateur visuel de page active dans le header (menu et sous-menu)
 - [ ] 1.7 Implémenter le bouton « Déconnexion » à droite du header (visible si connecté, appelle `POST /api/users/logout`, redirige vers `/home`)
 - [ ] 1.8 Créer le composant Footer avec le carousel des partenaires (image, nom, URL)
-- [ ] 1.9 Ajouter les liens du footer : « Qui sommes-nous ? » (`/association/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`) + copyright « ©2026 VRNB » à droite
+- [ ] 1.9 Ajouter les liens du footer : « Qui sommes-nous ? » (`/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`) + copyright « ©2026 VRNB » à droite
 - [ ] 1.10 Mettre à jour le layout `src/app/(frontend)/layout.tsx` pour intégrer Header et Footer
 
 ## 2. Page d'accueil (`/home`)
@@ -29,19 +29,19 @@
 
 ## 3. Pages Association
 
-- [ ] 3.1 Créer la route `src/app/(frontend)/association/presentation/page.tsx` (contenu de présentation du global Home)
-- [ ] 3.2 Créer la route `src/app/(frontend)/association/organisation/page.tsx` avec requête Payload pour les postes du bureau et les utilisateurs associés
-- [ ] 3.3 Créer la route `src/app/(frontend)/association/referents/page.tsx` avec requête Payload pour les référents et les utilisateurs associés
+- [ ] 3.1 Créer la route `src/app/(frontend)/presentation/page.tsx` (contenu de présentation du global Home)
+- [ ] 3.2 Créer la route `src/app/(frontend)/organisation/page.tsx` avec requête Payload pour les postes du bureau et les utilisateurs associés
+- [ ] 3.3 Créer la route `src/app/(frontend)/referents/page.tsx` avec requête Payload pour les référents et les utilisateurs associés
 - [ ] 3.4 Afficher les postes du bureau triés par `ordre` avec nom + prénom du membre
 - [ ] 3.5 Afficher les référents triés par `ordre` avec la liste des membres associés
 
 ## 4. Pages Activités
 
-- [ ] 4.1 Créer la route `src/app/(frontend)/activites/randonnees-velo/page.tsx` avec contenu depuis ActivitesContent (champs balade/escapade)
-- [ ] 4.2 Créer la route `src/app/(frontend)/activites/formations/page.tsx` avec contenu depuis ActivitesContent (champs mécanique, sécurité, secourisme, etc.)
-- [ ] 4.3 Créer la route `src/app/(frontend)/activites/projections-films/page.tsx` avec contenu depuis ActivitesContent (champs projection_film)
-- [ ] 4.4 Créer la route `src/app/(frontend)/activites/eco-citoyennete/page.tsx` avec contenu depuis ActivitesContent (champs ecocitoyennete)
-- [ ] 4.5 Créer la route `src/app/(frontend)/activites/autres-plein-air/page.tsx` avec contenu depuis ActivitesContent (champs autre)
+- [ ] 4.1 Créer la route `src/app/(frontend)/randosvelo/page.tsx` avec contenu depuis ActivitesContent (champs balade/escapade)
+- [ ] 4.2 Créer la route `src/app/(frontend)/formations/page.tsx` avec contenu depuis ActivitesContent (champs mécanique, sécurité, secourisme, etc.)
+- [ ] 4.3 Créer la route `src/app/(frontend)/projections/page.tsx` avec contenu depuis ActivitesContent (champs projection_film)
+- [ ] 4.4 Créer la route `src/app/(frontend)/ecocitoyennete/page.tsx` avec contenu depuis ActivitesContent (champs ecocitoyennete)
+- [ ] 4.5 Créer la route `src/app/(frontend)/pleinair/page.tsx` avec contenu depuis ActivitesContent (champs autre)
 - [ ] 4.6 Créer le composant Card réutilisable avec layout trois colonnes (nom à gauche, description au milieu, photo optionnelle à droite)
 
 ## 5. Composant partagé CategoryFilter
@@ -52,7 +52,7 @@
 
 ## 6. Page Programme
 
-- [ ] 6.1 Créer la route `src/app/(frontend)/programme/page.tsx` avec requête Payload pour les activités à venir (date >= aujourd'hui, triées par date)
+- [ ] 6.1 Créer la route `src/app/(frontend)/activites/page.tsx` avec requête Payload pour les activités à venir (date >= aujourd'hui, triées par date)
 - [ ] 6.2 Afficher la photo d'en-tête du programme (configurable via admin)
 - [ ] 6.3 Créer le composant tableau des activités avec colonnes : date, nom, catégorie (`categories_formation.libelle`), ville (`lieu.nom_ville`), actions
 - [ ] 6.4 Ajouter le bouton « Détails » dans la colonne actions du tableau, redirigeant vers `/activites/detail/:id`
@@ -61,7 +61,7 @@
 
 ## 7. Page Nos Balades
 
-- [ ] 7.1 Créer la route `src/app/(frontend)/nos-balades/page.tsx` avec requête Payload pour les activités passées (date < aujourd'hui, triées par date décroissante)
+- [ ] 7.1 Créer la route `src/app/(frontend)/balades/page.tsx` avec requête Payload pour les activités passées (date < aujourd'hui, triées par date décroissante)
 - [ ] 7.2 Afficher la photo d'en-tête avec texte « Nos Balades » configurable (global Payload)
 - [ ] 7.3 Afficher le texte de description introductive sous la photo d'en-tête
 - [ ] 7.4 Créer le composant card pour les activités passées (titre, date, créateur, extrait description, badge catégorie)
@@ -85,12 +85,12 @@
 - [ ] 9.5 Trier les cartes par priorité de rôle bureau (Président en premier, puis autres rôles, puis adhérents par ordre alphabétique)
 - [ ] 9.6 Ajouter un champ upload photo de profil à la collection Users si absent
 
-## 10. Page Profil
+## 10. Page Profil (`/user/[id]`)
 
-- [ ] 10.1 Créer la route `src/app/(frontend)/profil/page.tsx` avec données de l'utilisateur connecté (relations bureau et referents populées)
+- [ ] 10.1 Créer ou étendre la route `src/app/(frontend)/user/[id]/page.tsx` pour servir à la fois de profil public et de profil éditable (propre profil si userId === currentUserId)
 - [ ] 10.2 Implémenter la protection d'accès : redirection vers la page de connexion si l'utilisateur n'est pas connecté
 - [ ] 10.3 Afficher le titre « Mon profil » et la carte d'informations (pseudo, rôle, bureau, référent, nom, prénom, téléphone, email, date de naissance)
-- [ ] 10.4 Implémenter le bouton « Modifier » avec passage en mode formulaire (champs éditables : pseudo, nom, prénom, téléphone, date de naissance)
+- [ ] 10.4 Implémenter le bouton « Modifier » (visible uniquement sur son propre profil) avec passage en mode formulaire (champs éditables : pseudo, nom, prénom, téléphone, date de naissance)
 - [ ] 10.5 Implémenter la sauvegarde via `PATCH /api/users/:id` avec message de confirmation/erreur
 
 ## 11. Contrôle d'accès et authentification
@@ -120,42 +120,35 @@
 - [ ] 14.4 Afficher les informations complémentaires : durée (minutes), distance (km), point de rendez-vous, infos activité
 - [ ] 14.5 Rendre le titre « Détails de l'activité » configurable via un global ou un champ admin
 
-## 15. Page Profil Utilisateur Public (`/user/[id]`)
+## 15. Page Mentions Légales (`/mentionslegales`)
 
-- [ ] 15.1 Créer la route `src/app/(frontend)/user/[id]/page.tsx` avec requête Payload pour charger l'utilisateur par ID (relations bureau et referents populées)
-- [ ] 15.2 Afficher le prénom + NOM (majuscules), rôle bureau, photo ou avatar par défaut
-- [ ] 15.3 Afficher les informations supplémentaires : liste des référents, poste bureau
-- [ ] 15.4 Protéger l'accès : seuls les utilisateurs connectés peuvent consulter les profils publics
+- [ ] 15.1 Créer le global `MentionsLegales` dans Payload avec champs : titre (text), paragraphes (array avec titre text + contenu richText)
+- [ ] 15.2 Créer la route `src/app/(frontend)/mentionslegales/page.tsx` avec chargement SSR du global MentionsLegales
+- [ ] 15.3 Afficher le titre et les paragraphes configurés (itération sur le tableau)
+- [ ] 15.4 Exécuter `bun run generate:types` après ajout du global
 
-## 16. Page Mentions Légales (`/mentionslegales`)
+## 16. Page Contact (`/contact`)
 
-- [ ] 16.1 Créer le global `MentionsLegales` dans Payload avec champs : titre (text), paragraphes (array avec titre text + contenu richText)
-- [ ] 16.2 Créer la route `src/app/(frontend)/mentionslegales/page.tsx` avec chargement SSR du global MentionsLegales
-- [ ] 16.3 Afficher le titre et les paragraphes configurés (itération sur le tableau)
-- [ ] 16.4 Exécuter `bun run generate:types` après ajout du global
+- [ ] 16.1 Créer le global `Contact` dans Payload avec champs : titre (text, défaut « Nous contacter »), texte intro (richText)
+- [ ] 16.2 Créer la route `src/app/(frontend)/contact/page.tsx` avec chargement SSR du global Contact
+- [ ] 16.3 Créer le formulaire contact : champs « Nom et prénom » (text, required), « Email » (email, required), « Message » (textarea, required) — tous les champs sont obligatoires, le formulaire ne peut pas être soumis si un champ est vide
+- [ ] 16.4 Implémenter le bouton « Envoyer » avec appel API (ex: `POST /api/contact`) pour envoi du formulaire
+- [ ] 16.5 Implémenter le bouton « Retour » redirigeant vers `/home`
+- [ ] 16.6 Créer un endpoint API custom ou un hook pour traiter la soumission du formulaire contact
+- [ ] 16.7 Exécuter `bun run generate:types` après ajout du global
 
-## 17. Page Contact (`/contact`)
+## 17. Tests et validation
 
-- [ ] 17.1 Créer le global `Contact` dans Payload avec champs : titre (text, défaut « Nous contacter »), texte intro (richText)
-- [ ] 17.2 Créer la route `src/app/(frontend)/contact/page.tsx` avec chargement SSR du global Contact
-- [ ] 17.3 Créer le formulaire contact : champs « Nom et prénom » (text), « Email » (email), « Message » (textarea)
-- [ ] 17.4 Implémenter le bouton « Envoyer » avec appel API (ex: `POST /api/contact`) pour envoi du formulaire
-- [ ] 17.5 Implémenter le bouton « Retour » redirigeant vers `/home`
-- [ ] 17.6 Créer un endpoint API custom ou un hook pour traiter la soumission du formulaire contact
-- [ ] 17.7 Exécuter `bun run generate:types` après ajout du global
-
-## 18. Tests et validation
-
-- [ ] 18.1 Écrire un test E2E vérifiant le header (logo VRNB, navigation, bouton Déconnexion, menus, sous-menus Activités, Association, Espace Adhérent)
-- [ ] 18.2 Écrire un test E2E vérifiant le footer (liens Qui sommes-nous, Mentions légales, Contact, copyright)
-- [ ] 18.3 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires, PDFs)
-- [ ] 18.4 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche, bouton Détails)
-- [ ] 18.5 Écrire un test E2E vérifiant la page Détail Activité (informations, carte organisateur, lien profil)
-- [ ] 18.6 Écrire un test E2E vérifiant la page Nos Balades (cards passées, filtres partagés, recherche)
-- [ ] 18.7 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
-- [ ] 18.8 Écrire un test E2E vérifiant la page Profil (affichage, édition, sauvegarde)
-- [ ] 18.9 Écrire un test E2E vérifiant la page Profil Utilisateur Public (affichage, accès protégé)
-- [ ] 18.10 Écrire un test E2E vérifiant la page Mentions Légales (titre, paragraphes)
-- [ ] 18.11 Écrire un test E2E vérifiant la page Contact (formulaire, envoi, bouton retour)
-- [ ] 18.12 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
-- [ ] 18.13 Exécuter `turbo lint` et `turbo check-types` pour valider le code
+- [ ] 17.1 Écrire un test E2E vérifiant le header (logo VRNB, navigation, bouton Déconnexion, menus, sous-menus Activités, Association, Espace Adhérent)
+- [ ] 17.2 Écrire un test E2E vérifiant le footer (liens Qui sommes-nous, Mentions légales, Contact, copyright)
+- [ ] 17.3 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires, PDFs, hover photos activités)
+- [ ] 17.4 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche, bouton Détails)
+- [ ] 17.5 Écrire un test E2E vérifiant la page Détail Activité (informations, carte organisateur, lien profil)
+- [ ] 17.6 Écrire un test E2E vérifiant la page Nos Balades (cards passées, filtres partagés, recherche)
+- [ ] 17.7 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
+- [ ] 17.8 Écrire un test E2E vérifiant la page Profil unifiée (`/user/:id`, affichage public, édition propre profil, sauvegarde)
+- [ ] 17.9 Écrire un test E2E vérifiant la page Mentions Légales (titre, paragraphes)
+- [ ] 17.10 Écrire un test E2E vérifiant la page Contact (formulaire, champs obligatoires, envoi, bouton retour)
+- [ ] 17.11 Écrire un test E2E vérifiant les redirections permanentes (`/activite` → `/activites`, `/album` → `/balades`)
+- [ ] 17.12 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
+- [ ] 17.13 Exécuter `turbo lint` et `turbo check-types` pour valider le code

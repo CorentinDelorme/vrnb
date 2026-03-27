@@ -6,7 +6,7 @@ Le système DOIT afficher sur la page Référents la liste de tous les référen
 
 #### Scenario: Affichage des référents
 
-- **WHEN** un visiteur accède à la page `/association/referents`
+- **WHEN** un visiteur accède à la page `/referents`
 - **THEN** le système affiche la liste des référents (Site Web, Logistique, Mécanique, Navigation GPS, etc.) avec les noms des membres associés
 
 #### Scenario: Référent sans membre associé

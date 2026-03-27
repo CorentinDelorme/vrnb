@@ -11,7 +11,7 @@ Le système DOIT afficher sur la page `/contact` une carte avec le titre « Nous
 
 ### Requirement: Formulaire de contact
 
-Le système DOIT afficher dans la carte un formulaire avec trois champs : « Nom et prénom » (text, obligatoire), « Email » (email, obligatoire) et « Message » (textarea, obligatoire).
+Le système DOIT afficher dans la carte un formulaire avec trois champs obligatoires : « Nom et prénom » (text, required), « Email » (email, required) et « Message » (textarea, required). Le formulaire NE DOIT PAS pouvoir être soumis si un ou plusieurs champs sont vides.
 
 #### Scenario: Affichage du formulaire
 

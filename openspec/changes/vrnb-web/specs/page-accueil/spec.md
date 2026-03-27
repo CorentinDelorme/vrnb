@@ -113,19 +113,24 @@ Sous le deuxième texte configurable, le système DOIT afficher un bloc contenan
 - **WHEN** ni le titre ni le texte ne sont remplis dans l'admin
 - **THEN** la section bloc n'est pas affichée
 
-### Requirement: Photos des 4 activités cliquables
+### Requirement: Photos des 4 activités cliquables avec hover overlay
 
-Sous le bloc titre/texte, le système DOIT afficher 4 photos avec au milieu de chaque photo un titre superposé. Les photos DOIVENT être cliquables et rediriger vers la page de l'activité correspondante. Les 4 activités correspondent aux quatre premières entrées du sous-menu Activités dans le header : **Randonnées à vélo** (`/activites/randonnees-velo`), **Formations** (`/activites/formations`), **Projections de films** (`/activites/projections-films`), **Éco citoyenneté** (`/activites/eco-citoyennete`).
+Sous le bloc titre/texte, le système DOIT afficher 4 photos avec au milieu de chaque photo un titre superposé. Les photos DOIVENT être cliquables et rediriger vers la page de l'activité correspondante. Les 4 activités correspondent aux quatre premières entrées du sous-menu Activités dans le header : **Randonnées à vélo** (`/randosvelo`), **Formations** (`/formations`), **Projections de films** (`/projections`), **Éco citoyenneté** (`/ecocitoyennete`). Au survol (hover), un overlay semi-transparent (fond sombre légèrement opaque) DOIT apparaître sur la photo avec la description de l'activité affichée en haut de la photo. Le titre reste visible au centre. La transition DOIT être fluide (CSS).
 
 #### Scenario: Affichage des 4 photos activités
 
 - **WHEN** un visiteur accède à `/home`
 - **THEN** 4 photos sont affichées avec les titres « Randonnées à vélo », « Formations », « Projections de films » et « Éco citoyenneté » superposés au centre de chaque photo
 
+#### Scenario: Hover sur une photo activité
+
+- **WHEN** un visiteur survole la photo « Formations »
+- **THEN** un overlay semi-transparent apparaît sur la photo avec la description de l'activité « Formations » affichée en haut de la photo, et le titre reste visible au centre
+
 #### Scenario: Clic sur une photo activité
 
 - **WHEN** un visiteur clique sur la photo « Formations »
-- **THEN** le système navigue vers `/activites/formations`
+- **THEN** le système navigue vers `/formations`
 
 #### Scenario: Photos configurables
 

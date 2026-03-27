@@ -52,34 +52,36 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 src/app/(frontend)/
 ├── layout.tsx                        # Layout partagé : Header + Footer
 ├── home/page.tsx                     # Page d'accueil (/home)
-├── association/
-│   ├── presentation/page.tsx         # Présentation (= accueil détaillée)
-│   ├── organisation/page.tsx         # Bureau et rôles
-│   └── referents/page.tsx            # Liste des référents
+├── presentation/page.tsx             # Présentation de l'association
+├── organisation/page.tsx             # Bureau et rôles
+├── referents/page.tsx                # Liste des référents
+├── randosvelo/page.tsx               # Randonnées à vélo
+├── formations/page.tsx               # Formations
+├── projections/page.tsx              # Projections de films
+├── ecocitoyennete/page.tsx           # Éco citoyenneté
+├── pleinair/page.tsx                 # Autres activités de plein air
 ├── activites/
-│   ├── randonnees-velo/page.tsx      # Randonnées à vélo
-│   ├── formations/page.tsx           # Formations
-│   ├── projections-films/page.tsx    # Projections de films
-│   ├── eco-citoyennete/page.tsx      # Éco citoyenneté
-│   ├── autres-plein-air/page.tsx     # Autres activités de plein air
+│   ├── page.tsx                      # Programme des activités (/activites)
 │   └── detail/[id]/page.tsx          # Détail d'une activité
-├── nos-balades/page.tsx              # Galerie des balades passées
-├── programme/page.tsx                # Programme des activités
+├── balades/page.tsx                  # Galerie des balades passées (/balades)
 ├── documentation/page.tsx            # Page documentation
 ├── espace-adherent/
 │   └── trombinoscope/page.tsx        # Trombinoscope des adhérents
-├── profil/page.tsx                   # Profil de l'adhérent connecté
-├── user/[id]/page.tsx                # Profil public d'un utilisateur
+├── user/[id]/page.tsx                # Profil utilisateur (propre profil éditable + profil public)
 ├── mentionslegales/page.tsx          # Mentions légales
 └── contact/page.tsx                  # Page contact
 ```
 
+Redirections permanentes configurées dans `next.config.ts` :
+- `/activite` → `/activites` (ancienne URL du programme)
+- `/album` → `/balades` (ancienne URL des balades)
+
 **Alternatives considérées** :
 
 - Pages API séparées + SPA React : perte du SSR et du SEO.
-- Chaque page dans un dossier plat : moins organisé pour les sous-menus « Association » et « Activités ».
+- Sous-dossiers `association/` et `activites/` : ajoutent de la profondeur d'URL inutile pour des pages simples.
 
-**Rationale** : Le groupe `(frontend)` est déjà en place. Les sous-routes `association/` et `activites/` regroupent logiquement les pages liées à chaque menu.
+**Rationale** : Le groupe `(frontend)` est déjà en place. Les routes plates (`/presentation`, `/organisation`, `/randosvelo`, etc.) offrent des URLs plus courtes et plus lisibles. Le dossier `activites/` est conservé uniquement pour le programme (`/activites`) et le détail (`/activites/detail/[id]`).
 
 ### 2. Google Maps via iframe embed
 
@@ -177,7 +179,7 @@ src/app/(frontend)/
 
 ### 12. Page Profil — Consultation et modification
 
-**Choix** : La page Profil (route `/profil`) affiche les informations de l'utilisateur connecté dans une card (pseudo, rôle bureau, référents, nom, prénom, téléphone, email, date de naissance). Un bouton « Modifier » ouvre un formulaire d'édition utilisant l'API REST Payload (`PATCH /api/users/:id`). Accès réservé aux utilisateurs connectés.
+**Choix** : La page Profil (route `/user/:id`) affiche les informations de l'utilisateur. Lorsqu'un utilisateur connecté consulte son propre profil, une card affiche ses informations (pseudo, rôle bureau, référents, nom, prénom, téléphone, email, date de naissance) avec un bouton « Modifier » ouvrant un formulaire d'édition utilisant l'API REST Payload (`PATCH /api/users/:id`). Pour les autres utilisateurs, seul le profil public est affiché. Accès réservé aux utilisateurs connectés.
 
 **Alternatives considérées** :
 
@@ -236,7 +238,7 @@ src/app/(frontend)/
 
 ### 18. Footer enrichi : liens et copyright
 
-**Choix** : Le footer affiche le carousel des partenaires, puis en dessous trois liens : « Qui sommes-nous ? » (`/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`). À droite, le copyright « ©2026 VRNB » (année dynamique).
+**Choix** : Le footer affiche le carousel des partenaires, puis en dessous trois liens : « Qui sommes-nous ? » (`/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`). À droite, le copyright « ©2026 VRNB ».
 
 **Rationale** : Conventions standard pour un site associatif français. Les liens sont accessibles depuis toutes les pages via le layout partagé.
 
@@ -273,6 +275,37 @@ src/app/(frontend)/
 **Choix** : Tous les titres et textes affichés sur les pages publiques DOIVENT être configurables via Payload CMS (globals ou collections). Aucun texte statique ne doit être codé en dur dans le frontend, à l'exception des labels de navigation et des textes techniques (boutons, formulaires).
 
 **Rationale** : Permet à l'association de personnaliser entièrement le contenu sans intervention technique.
+
+### 24. URLs plates et redirections permanentes
+
+**Choix** : Les pages de l'association et des activités utilisent des routes plates (sans sous-dossiers) : `/presentation`, `/organisation`, `/referents`, `/randosvelo`, `/formations`, `/projections`, `/ecocitoyennete`, `/pleinair`. Le programme est à `/activites` et les balades à `/balades`. Deux redirections permanentes (301) sont configurées dans `next.config.ts` : `/activite` → `/activites` et `/album` → `/balades` pour compatibilité avec les anciennes URLs.
+
+**Alternatives considérées** :
+
+- Sous-dossiers `/association/*` et `/activites/*` : URLs plus longues sans bénéfice.
+
+**Rationale** : Des URLs courtes sont plus faciles à partager et à mémoriser. Les redirections assurent la compatibilité SEO.
+
+### 25. Profil utilisateur unifié à `/user/:id`
+
+**Choix** : La route `/user/[id]` sert à la fois de profil public et de profil éditable. Lorsqu'un utilisateur connecté consulte son propre profil (`/user/:ownId`), le bouton « Modifier » et le mode édition sont disponibles. Pour les autres profils, seules les informations publiques sont affichées. Le menu « Profil » dans le header redirige vers `/user/:currentUserId`.
+
+**Alternatives considérées** :
+
+- Route séparée `/profil` : duplique la page de profil, nécessite deux templates.
+
+**Rationale** : Un seul template avec affichage conditionnel simplifie la maintenance et offre une URL cohérente.
+
+### 26. Hover overlay sur les photos activités de la page d'accueil
+
+**Choix** : Les 4 photos des activités sur la page d'accueil affichent au survol (hover) un overlay semi-transparent (fond sombre opaque) avec la description de l'activité en haut de la photo. Le titre reste visible au centre. L'overlay utilise une transition CSS douce.
+
+**Alternatives considérées** :
+
+- Tooltip séparé : moins intégré visuellement.
+- Description toujours visible : surcharge visuelle.
+
+**Rationale** : Le hover overlay offre une découverte progressive du contenu sans surcharger la vue initiale.
 
 ## Risks / Trade-offs
 

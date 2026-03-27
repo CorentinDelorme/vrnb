@@ -45,17 +45,17 @@ Le menu « Association » DOIT contenir trois sous-menus : « Présentation », 
 #### Scenario: Navigation vers Présentation
 
 - **WHEN** un visiteur clique sur « Présentation » dans le sous-menu
-- **THEN** le système navigue vers `/association/presentation`
+- **THEN** le système navigue vers `/presentation`
 
 #### Scenario: Navigation vers Organisation
 
 - **WHEN** un visiteur clique sur « Organisation » dans le sous-menu
-- **THEN** le système navigue vers `/association/organisation`
+- **THEN** le système navigue vers `/organisation`
 
 #### Scenario: Navigation vers Référents
 
 - **WHEN** un visiteur clique sur « Référents » dans le sous-menu
-- **THEN** le système navigue vers `/association/referents`
+- **THEN** le système navigue vers `/referents`
 
 ### Requirement: Sous-menu Activités
 
@@ -69,27 +69,27 @@ Le menu « Activités » DOIT contenir cinq sous-menus : « Randonnées à vélo
 #### Scenario: Navigation vers Randonnées à vélo
 
 - **WHEN** un visiteur clique sur « Randonnées à vélo » dans le sous-menu
-- **THEN** le système navigue vers `/activites/randonnees-velo`
+- **THEN** le système navigue vers `/randosvelo`
 
 #### Scenario: Navigation vers Formations
 
 - **WHEN** un visiteur clique sur « Formations » dans le sous-menu
-- **THEN** le système navigue vers `/activites/formations`
+- **THEN** le système navigue vers `/formations`
 
 #### Scenario: Navigation vers Projections de films
 
 - **WHEN** un visiteur clique sur « Projections de films » dans le sous-menu
-- **THEN** le système navigue vers `/activites/projections-films`
+- **THEN** le système navigue vers `/projections`
 
 #### Scenario: Navigation vers Éco citoyenneté
 
 - **WHEN** un visiteur clique sur « Éco citoyenneté » dans le sous-menu
-- **THEN** le système navigue vers `/activites/eco-citoyennete`
+- **THEN** le système navigue vers `/ecocitoyennete`
 
 #### Scenario: Navigation vers Autres activités de plein air
 
 - **WHEN** un visiteur clique sur « Autres activités de plein air » dans le sous-menu
-- **THEN** le système navigue vers `/activites/autres-plein-air`
+- **THEN** le système navigue vers `/pleinair`
 
 ### Requirement: Menu Programme
 
@@ -98,7 +98,7 @@ Le menu « Programme » DOIT naviguer vers la page programme des activités.
 #### Scenario: Navigation vers Programme
 
 - **WHEN** un visiteur clique sur le menu « Programme »
-- **THEN** le système navigue vers `/programme`
+- **THEN** le système navigue vers `/activites`
 
 ### Requirement: Menu Documentation
 
@@ -116,7 +116,7 @@ Le menu « Nos Balades » DOIT naviguer vers la page galerie des balades passée
 #### Scenario: Navigation vers Nos Balades
 
 - **WHEN** un visiteur clique sur le menu « Nos Balades »
-- **THEN** le système navigue vers `/nos-balades`
+- **THEN** le système navigue vers `/balades`
 
 ### Requirement: Sous-menu Espace Adhérent
 
@@ -144,7 +144,7 @@ Le menu « Profil » DOIT naviguer vers la page de profil de l'adhérent connect
 #### Scenario: Navigation vers Profil
 
 - **WHEN** un adhérent connecté clique sur le menu « Profil »
-- **THEN** le système navigue vers `/profil`
+- **THEN** le système navigue vers `/user/:userId` (où `:userId` est l'ID de l'utilisateur connecté)
 
 #### Scenario: Menu Profil non visible pour les visiteurs non connectés
 
@@ -206,7 +206,7 @@ Le header DOIT afficher un bouton « Déconnexion » à droite, visible uniqueme
 
 ### Requirement: Footer avec liens de navigation et copyright
 
-Le système DOIT afficher un footer persistant sous le carousel des partenaires avec trois liens de navigation et un copyright. Les liens DOIVENT être : « Qui sommes-nous ? » (`/association/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`). Le copyright « ©2026 VRNB » DOIT être affiché à droite.
+Le système DOIT afficher un footer persistant sous le carousel des partenaires avec trois liens de navigation et un copyright. Les liens DOIVENT être : « Qui sommes-nous ? » (`/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`). Le copyright « ©2026 VRNB » DOIT être affiché à droite.
 
 #### Scenario: Affichage des liens du footer
 
@@ -216,7 +216,7 @@ Le système DOIT afficher un footer persistant sous le carousel des partenaires 
 #### Scenario: Navigation vers Qui sommes-nous
 
 - **WHEN** un visiteur clique sur « Qui sommes-nous ? » dans le footer
-- **THEN** le système navigue vers `/association/presentation`
+- **THEN** le système navigue vers `/presentation`
 
 #### Scenario: Navigation vers Mentions légales
 

@@ -6,7 +6,7 @@ Le système DOIT afficher une photo d'en-tête en haut de la page Programme. Cet
 
 #### Scenario: Affichage de la photo d'en-tête
 
-- **WHEN** un visiteur accède à la page `/programme`
+- **WHEN** un visiteur accède à la page `/activites`
 - **THEN** le système affiche la photo d'en-tête du programme
 
 #### Scenario: Photo non configurée

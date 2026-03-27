@@ -6,27 +6,27 @@ Le système DOIT fournir une page dédiée pour chaque type d'activité : Randon
 
 #### Scenario: Affichage de la page Randonnées à vélo
 
-- **WHEN** un visiteur accède à `/activites/randonnees-velo`
+- **WHEN** un visiteur accède à `/randosvelo`
 - **THEN** le système affiche le titre et la description des randonnées à vélo depuis ActivitesContent
 
 #### Scenario: Affichage de la page Formations
 
-- **WHEN** un visiteur accède à `/activites/formations`
+- **WHEN** un visiteur accède à `/formations`
 - **THEN** le système affiche le titre et la description des formations depuis ActivitesContent
 
 #### Scenario: Affichage de la page Projections de films
 
-- **WHEN** un visiteur accède à `/activites/projections-films`
+- **WHEN** un visiteur accède à `/projections`
 - **THEN** le système affiche le titre et la description des projections de films depuis ActivitesContent
 
 #### Scenario: Affichage de la page Éco citoyenneté
 
-- **WHEN** un visiteur accède à `/activites/eco-citoyennete`
+- **WHEN** un visiteur accède à `/ecocitoyennete`
 - **THEN** le système affiche le titre et la description de l'éco citoyenneté depuis ActivitesContent
 
 #### Scenario: Affichage de la page Autres activités de plein air
 
-- **WHEN** un visiteur accède à `/activites/autres-plein-air`
+- **WHEN** un visiteur accède à `/pleinair`
 - **THEN** le système affiche le titre et la description des autres activités depuis ActivitesContent
 
 ### Requirement: Cards d'activités avec layout trois colonnes

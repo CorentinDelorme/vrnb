@@ -55,7 +55,7 @@ _(Aucune capacité existante modifiée — le dossier `openspec/specs/` est vide
 
 ## Impact
 
-- **Frontend** : Nouvelles pages Next.js dans `apps/web/src/app/(frontend)/` — accueil, association/\*, activites/\*, activites/detail/[id], user/[id], nos-balades, programme, documentation, espace-adherent/trombinoscope, profil, mentionslegales, contact.
+- **Frontend** : Nouvelles pages Next.js dans `apps/web/src/app/(frontend)/` — accueil, presentation, organisation, referents, randosvelo, formations, projections, ecocitoyennete, pleinair, activites (programme), activites/detail/[id], user/[id], balades, documentation, espace-adherent/trombinoscope, mentionslegales, contact. Redirections permanentes : `/activite` → `/activites`, `/album` → `/balades`.
 - **Layout** : Header avec logo VRNB, navigation multi-niveaux et bouton déconnexion. Footer avec carousel partenaires, liens (Qui sommes-nous, Mentions légales, Contact) et copyright.
 - **Composants partagés** : Composant `CategoryFilter` réutilisé entre Programme, Nos Balades et Documentation.
 - **Globals Payload** : Global `Home` enrichie avec champs présentation, description, Google Maps, cards, PDFs.

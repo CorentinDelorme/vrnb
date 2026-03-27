@@ -6,7 +6,7 @@ Le système DOIT afficher une photo d'en-tête en haut de la page « Nos Balades
 
 #### Scenario: Affichage de la photo d'en-tête
 
-- **WHEN** un visiteur accède à la page `/nos-balades`
+- **WHEN** un visiteur accède à la page `/balades`
 - **THEN** une photo d'en-tête est affichée avec le texte « Nos Balades » superposé
 
 #### Scenario: Modification du texte d'en-tête via l'admin
@@ -20,7 +20,7 @@ Le système DOIT afficher un texte de description sous la photo d'en-tête, conf
 
 #### Scenario: Affichage de la description
 
-- **WHEN** un visiteur accède à la page `/nos-balades`
+- **WHEN** un visiteur accède à la page `/balades`
 - **THEN** un texte de description est affiché sous la photo d'en-tête
 
 ### Requirement: Cards des activités passées
@@ -29,7 +29,7 @@ Le système DOIT afficher les activités passées (date antérieure à aujourd'h
 
 #### Scenario: Affichage des cards d'activités passées
 
-- **WHEN** un visiteur accède à la page `/nos-balades`
+- **WHEN** un visiteur accède à la page `/balades`
 - **THEN** les activités dont la date est antérieure à aujourd'hui sont affichées sous forme de cards, triées par date décroissante
 
 #### Scenario: Contenu d'une card
@@ -49,7 +49,7 @@ Le système DOIT afficher une sidebar de filtres par catégorie dans la partie g
 
 #### Scenario: Affichage de la sidebar de filtres
 
-- **WHEN** un visiteur accède à la page `/nos-balades`
+- **WHEN** un visiteur accède à la page `/balades`
 - **THEN** une sidebar de filtres par catégorie est affichée à gauche avec les catégories : Balade du dimanche, Escapade, Formations, Film documentaire, Éco-citoyenneté, Longe-côte, Réunion, Autres
 
 #### Scenario: Filtrage par une catégorie
@@ -82,5 +82,5 @@ Les activités passées DOIVENT être chargées côté serveur (SSR) depuis la c
 
 #### Scenario: Chargement initial des données
 
-- **WHEN** la page `/nos-balades` est chargée
+- **WHEN** la page `/balades` est chargée
 - **THEN** les activités passées sont récupérées côté serveur avec les relations organisateur et catégorie populées

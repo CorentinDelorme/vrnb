@@ -2,16 +2,16 @@
 
 ### Requirement: Accès réservé aux adhérents connectés
 
-La page Profil (route `/profil`) DOIT être accessible uniquement aux utilisateurs connectés. Les visiteurs non connectés DOIVENT être redirigés vers la page de connexion.
+La page Profil (route `/user/:id`) DOIT être accessible uniquement aux utilisateurs connectés. Les visiteurs non connectés DOIVENT être redirigés vers la page de connexion. Lorsqu'un utilisateur connecté consulte son propre profil (`/user/:ownId`), le bouton « Modifier » et le mode édition sont disponibles.
 
 #### Scenario: Accès par un adhérent connecté
 
-- **WHEN** un adhérent connecté accède à `/profil`
+- **WHEN** un adhérent connecté accède à `/user/:id`
 - **THEN** la page Profil est affichée
 
 #### Scenario: Accès par un visiteur non connecté
 
-- **WHEN** un visiteur non connecté accède à `/profil`
+- **WHEN** un visiteur non connecté accède à `/user/:id`
 - **THEN** le système redirige vers la page de connexion
 
 ### Requirement: Titre de la page

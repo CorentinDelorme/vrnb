@@ -6,7 +6,7 @@ Le système DOIT afficher sur la page Organisation la liste des postes du bureau
 
 #### Scenario: Affichage de l'organisation
 
-- **WHEN** un visiteur accède à la page `/association/organisation`
+- **WHEN** un visiteur accède à la page `/organisation`
 - **THEN** le système affiche la liste des postes du bureau (Président, Secrétaire, Trésorier, etc.) avec le nom et prénom des membres associés
 
 #### Scenario: Poste non attribué
