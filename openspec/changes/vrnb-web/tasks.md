@@ -238,3 +238,18 @@
 - [ ] 23.16 Vérifier que tous les composants `packages/ui` ont leurs stories Storybook et tests unitaires — exécuter `cd packages/ui && bun run storybook build` et `bun run test`
 - [ ] 23.17 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
 - [ ] 23.18 Exécuter `turbo lint` et `turbo check-types` pour valider le code
+
+## 24. Thèmes, accessibilité et vérification visuelle
+
+- [ ] 24.1 Vérifier que `packages/ui/app/globals.css` définit les thèmes `vrnb` (light, `--default`) et `vrnb-dark` (dark, `--prefersdark`) avec les tokens de couleur corrects
+- [ ] 24.2 Vérifier que le `<html>` du layout racine applique `data-theme="vrnb"` et que le basculement `prefers-color-scheme` fonctionne
+- [ ] 24.3 Vérifier qu'aucun composant dans `packages/ui/src/components/` n'utilise de couleurs en dur (hex, rgb, oklch) — uniquement des classes sémantiques DaisyUI
+- [ ] 24.4 Vérifier qu'aucun thème DaisyUI autre que `vrnb` et `vrnb-dark` n'est référencé dans le code source
+- [ ] 24.5 Vérifier les contrastes WCAG AA (4.5:1 texte normal, 3:1 texte large/éléments interactifs) pour toutes les combinaisons couleur du thème `vrnb`
+- [ ] 24.6 Vérifier les contrastes WCAG AA pour le thème `vrnb-dark` — ajuster les tokens dans `globals.css` si nécessaire (notamment base-100 et base-content pour le mode sombre)
+- [ ] 24.7 Vérifier que les composants ne surchargent pas les espacements internes DaisyUI avec des classes Tailwind `p-*`, `m-*` redondantes
+- [ ] 24.8 Lancer un audit Lighthouse accessibilité via Chrome DevTools MCP sur chaque story Storybook — objectif score ≥ 90
+- [ ] 24.9 Prendre un screenshot via Chrome DevTools MCP de chaque composant UI dans Storybook pour vérification visuelle
+- [ ] 24.10 Lancer un audit Lighthouse accessibilité via Chrome DevTools MCP sur chaque page du site — objectif score ≥ 90
+- [ ] 24.11 Vérifier l'affichage responsive de chaque page via Chrome DevTools MCP sur mobile (375px), tablette (768px) et desktop (1280px)
+- [ ] 24.12 Vérifier visuellement que les couleurs du thème VRNB/VRNB-DARK sont correctement appliquées sur toutes les pages via Chrome DevTools MCP

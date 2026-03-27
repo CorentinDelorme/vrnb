@@ -60,6 +60,10 @@ L'association **Vélo Rando Nature Bruz (VRNB)** a besoin d'un site web complet 
 - `access-control` : Contrôle d'accès frontend — pages publiques vs authentifiées avec redirection vers `/login`.
 - `ui-components` : Bibliothèque de composants UI dans `packages/ui` avec DaisyUI + TailwindCSS, Storybook stories et tests unitaires par composant.
 - `payload-blocks` : Blocks Payload génériques réutilisables (RichTextBlock, HeroImageBlock, CardListBlock, CarouselBlock, ContactFormBlock) pour les composants communs.
+- `theming-vrnb` : Thèmes DaisyUI exclusifs VRNB (light) et VRNB-DARK (dark) définis dans `packages/ui/app/globals.css`. Aucun autre thème DaisyUI utilisé. Composants utilisant uniquement les tokens sémantiques DaisyUI, aucune couleur en dur.
+- `accessibility-wcag` : Conformité WCAG AA pour les contrastes de couleurs (4.5:1 texte, 3:1 éléments interactifs). Vérification Lighthouse (score accessibilité ≥ 90). Labels, rôles ARIA, alt images.
+- `design-style` : Style moderne, épuré et aéré. Respect des espacements DaisyUI par défaut, pas de surcharge padding/margin. Utilisation judicieuse de l'espace blanc.
+- `visual-verification` : Vérification visuelle des composants et pages via Chrome DevTools MCP : screenshots, audits Lighthouse accessibilité, inspection couleurs thèmes, tests responsive (375px, 768px, 1280px).
 
 ### Modified Capabilities
 
@@ -74,4 +78,6 @@ _(Aucune capacité existante modifiée — le dossier `openspec/specs/` est vide
 - **Blocks Payload** : Blocks génériques réutilisables dans `apps/web/src/blocks/` (RichTextBlock, HeroImageBlock, CardListBlock, CarouselBlock, ContactFormBlock) + PartenairesList existant.
 - **Collections Payload** : Users, Referents, Bureaux, Activites, ActivitesContent, Partenaires, Actualites, Photos, PhotosAlbums, Media, Documentations, Categories, CategoriesFormations, Lieux, Etats.
 - **Contrôle d'accès** : `src/access/canAccessAdmin.ts` — vérification du référent « site web ».
+- **Thèmes** : Thèmes DaisyUI personnalisés VRNB (light) et VRNB-DARK (dark) dans `packages/ui/app/globals.css`. Tous les composants utilisent les classes sémantiques DaisyUI.
+- **Accessibilité** : Conformité WCAG AA, audits Lighthouse, vérification des contrastes via Chrome DevTools MCP.
 - **Dépendances** : Payload 3, Next.js 16, sharp, Google Maps embed (iframe).

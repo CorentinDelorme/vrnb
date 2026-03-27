@@ -125,3 +125,97 @@ Le package `packages/ui` ne DOIT PAS dépendre de Payload CMS, de Next.js server
 
 - **WHEN** un composant de `packages/ui` est importé
 - **THEN** il peut être utilisé comme composant client React sans directive serveur
+
+### Requirement: Thèmes DaisyUI exclusifs VRNB et VRNB-DARK
+
+Tous les composants UI DOIVENT utiliser exclusivement les thèmes DaisyUI personnalisés `vrnb` (light) et `vrnb-dark` (dark) définis dans `packages/ui/app/globals.css`. Aucun autre thème DaisyUI (light, dark, cupcake, etc.) ne DOIT être référencé ni utilisé. Les composants utilisent les classes sémantiques DaisyUI (`btn-primary`, `bg-base-100`, `text-base-content`, etc.) qui héritent des couleurs du thème actif. Aucune couleur en dur (hex, rgb, oklch) ne DOIT apparaître dans le code des composants.
+
+#### Scenario: Utilisation exclusive des tokens DaisyUI
+
+- **WHEN** un composant utilise une couleur
+- **THEN** il utilise une classe sémantique DaisyUI (`text-primary`, `bg-base-200`, `border-base-300`, etc.)
+- **AND** aucune valeur hex, rgb, ou oklch n'apparaît dans le code du composant
+
+#### Scenario: Pas de thème DaisyUI tiers
+
+- **WHEN** on recherche `data-theme` dans le code source
+- **THEN** seules les valeurs `vrnb` et `vrnb-dark` sont utilisées
+
+#### Scenario: Compatibilité light et dark
+
+- **GIVEN** un composant rendu avec `data-theme="vrnb"`
+- **AND** le même composant rendu avec `data-theme="vrnb-dark"`
+- **THEN** les deux rendus sont visuellement cohérents et le texte est lisible sur les deux thèmes
+
+### Requirement: Accessibilité et contrastes WCAG AA
+
+Tous les composants UI DOIVENT respecter les ratios de contraste WCAG AA : 4.5:1 pour le texte normal, 3:1 pour le texte large (≥ 18px ou ≥ 14px bold) et les éléments interactifs. Les composants DOIVENT être accessibles au clavier et aux lecteurs d'écran.
+
+#### Scenario: Contraste texte sur fond
+
+- **GIVEN** un composant avec du texte affiché sur un fond
+- **THEN** le ratio de contraste entre la couleur du texte et la couleur du fond est ≥ 4.5:1 (texte normal) ou ≥ 3:1 (texte large)
+- **AND** cela est vérifié pour les deux thèmes (vrnb et vrnb-dark)
+
+#### Scenario: Audit Lighthouse accessibilité
+
+- **WHEN** on lance un audit Lighthouse accessibilité sur une page ou une story Storybook
+- **THEN** le score d'accessibilité est ≥ 90
+
+#### Scenario: Labels et ARIA sur les formulaires
+
+- **GIVEN** un composant formulaire (Input, FormField, etc.)
+- **THEN** chaque champ a un `<label>` associé via `htmlFor`/`id`
+- **AND** les messages d'erreur utilisent `aria-describedby`
+- **AND** les champs obligatoires ont `aria-required="true"`
+
+#### Scenario: Images accessibles
+
+- **GIVEN** un composant affichant une image
+- **THEN** les images informatives ont un attribut `alt` descriptif
+- **AND** les images décoratives ont `alt=""`
+
+### Requirement: Style moderne, épuré et aéré
+
+Les composants UI DOIVENT suivre un style moderne, épuré et bien aéré. Les espacements internes des composants DaisyUI ne DOIVENT PAS être surchargés. Les classes Tailwind utilitaires sont réservées aux ajustements de layout entre sections, pas aux overrides internes des composants.
+
+#### Scenario: Pas de surcharge de spacing sur les composants DaisyUI
+
+- **WHEN** un composant utilise une classe DaisyUI (card, btn, input, hero, etc.)
+- **THEN** il ne rajoute PAS de classes Tailwind `p-*`, `m-*`, `px-*`, `py-*` qui surchargent le spacing interne du composant DaisyUI
+- **AND** les ajustements de layout se font entre les composants (gap, margin entre sections)
+
+#### Scenario: Espace blanc entre sections
+
+- **GIVEN** une page ou un composant composite
+- **THEN** les sections sont séparées par un espacement suffisant (`gap-6`, `my-8`, `py-12`, etc.)
+- **AND** le contenu n'est pas tassé visuellement
+
+#### Scenario: Typographie lisible
+
+- **WHEN** du texte est affiché
+- **THEN** les tailles de texte utilisent les classes Tailwind par défaut (`text-base`, `text-lg`, `text-xl`, etc.)
+- **AND** aucune taille micro (`text-[10px]`, `text-xs` pour du contenu principal) n'est utilisée
+
+### Requirement: Vérification visuelle via Chrome DevTools MCP
+
+Chaque composant UI et chaque page DOIVENT faire l'objet d'une vérification visuelle via Chrome DevTools MCP lors de leur implémentation.
+
+#### Scenario: Screenshot de composant via Storybook
+
+- **GIVEN** un composant dans `packages/ui` avec sa story Storybook
+- **WHEN** le Storybook est lancé
+- **THEN** un screenshot du composant est pris via Chrome DevTools MCP pour vérifier le rendu visuel
+
+#### Scenario: Audit Lighthouse via Chrome DevTools MCP
+
+- **GIVEN** une page rendue sur le serveur de développement ou un composant dans Storybook
+- **WHEN** un audit Lighthouse accessibilité est lancé via Chrome DevTools MCP
+- **THEN** le score d'accessibilité est ≥ 90
+- **AND** aucune erreur de contraste n'est signalée
+
+#### Scenario: Vérification responsive
+
+- **GIVEN** un composant ou une page
+- **WHEN** l'affichage est vérifié via Chrome DevTools MCP
+- **THEN** le rendu est correct sur mobile (375px), tablette (768px) et desktop (1280px)

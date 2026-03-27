@@ -500,6 +500,66 @@ Règle : `packages/ui` ne DOIT PAS dépendre de Payload, Next.js (server compone
 
 **Rationale** : Cette séparation garantit que les composants UI sont testables en isolation (Storybook + Vitest), réutilisables, et découplés de l'infrastructure CMS.
 
+### 36. Thèmes DaisyUI exclusifs : VRNB (light) et VRNB-DARK (dark)
+
+**Choix** : Le site utilise **exclusivement** les deux thèmes DaisyUI personnalisés définis dans `packages/ui/app/globals.css` :
+
+- **`vrnb`** (thème clair, `--default`) : primary `#b5ea86`, primary-content `#212529`, secondary `#198754`, secondary-content `#fff`, base-100 blanc, base-content sombre.
+- **`vrnb-dark`** (thème sombre, `--prefersdark`) : palette adaptée au mode sombre, respectant les mêmes tokens de couleur.
+
+Aucun autre thème DaisyUI (light, dark, cupcake, etc.) ne DOIT être utilisé. Les attributs `data-theme="vrnb"` et `data-theme="vrnb-dark"` sont appliqués au `<html>` via le layout racine. Les composants UI dans `packages/ui` DOIVENT utiliser les classes sémantiques DaisyUI (`btn-primary`, `bg-base-100`, `text-base-content`, etc.) qui héritent automatiquement des couleurs du thème actif. Aucune couleur en dur (hex, rgb, oklch) ne DOIT être utilisée dans les composants — uniquement les tokens DaisyUI.
+
+**Alternatives considérées** :
+
+- Thèmes DaisyUI par défaut : ne correspondent pas à l'identité visuelle VRNB.
+- Variables CSS custom sans DaisyUI : perd les classes sémantiques DaisyUI.
+
+**Rationale** : Les thèmes personnalisés garantissent la cohérence visuelle avec l'identité VRNB tout en conservant le système de design DaisyUI. Le basculement light/dark est géré nativement via `prefers-color-scheme`.
+
+### 37. Accessibilité : contrastes de couleurs et conformité WCAG
+
+**Choix** : Tous les composants UI DOIVENT respecter un ratio de contraste minimum **WCAG AA** (4.5:1 pour le texte normal, 3:1 pour le texte large et les éléments interactifs). Lors de l'implémentation de chaque composant :
+
+1. Vérifier que les combinaisons fond/texte du thème VRNB et VRNB-DARK respectent les ratios WCAG AA.
+2. Utiliser un outil de vérification de contraste (Lighthouse, axe-core, ou Chrome DevTools) pour valider.
+3. Si un token de couleur du thème produit un contraste insuffisant, ajuster le token dans `globals.css` (et NON dans le composant).
+4. Les éléments interactifs (boutons, liens, inputs) DOIVENT avoir des états visuels distincts (hover, focus, active, disabled) avec des contrastes suffisants.
+5. Les images décoratives utilisent `alt=""`, les images informatives ont un `alt` descriptif.
+6. Les formulaires utilisent des `<label>` associés, des `aria-describedby` pour les messages d'erreur, et `aria-required` pour les champs obligatoires.
+
+**Rationale** : L'accessibilité est un prérequis légal (RGAA en France) et une bonne pratique. Vérifier les contrastes dès le développement évite des corrections coûteuses.
+
+### 38. Style moderne, épuré et aéré — respect des défauts DaisyUI
+
+**Choix** : Le site DOIT avoir un style **moderne, épuré et bien aéré**. Pour atteindre cet objectif :
+
+1. **Ne PAS surcharger les composants DaisyUI** avec des classes Tailwind de padding, margin ou spacing excessifs. Les composants DaisyUI ont des espacements internes bien calibrés — les respecter.
+2. **Préférer les classes DaisyUI sémantiques** (`card`, `btn`, `input`, `hero`, `navbar`, `footer`, etc.) plutôt que de reconstruire des layouts manuellement avec Tailwind.
+3. **Limiter les classes Tailwind utilitaires** aux ajustements de layout (flex, grid, gap, max-w) et aux espacements entre sections (`my-8`, `py-12`, `gap-6`, etc.). Éviter les surcharges internes aux composants (`p-2 m-1` sur un `card-body` par exemple).
+4. **Utiliser l'espace blanc** comme élément de design : des sections bien espacées, pas de contenu tassé.
+5. **Typographie aérée** : utiliser les tailles de texte Tailwind par défaut (`text-base`, `text-lg`, `text-xl`), pas de tailles micro.
+6. **Bordures subtiles** : le thème VRNB définit `border: 1px` et `depth: 1` — respecter ces paramètres, pas de bordures épaisses ni d'ombres lourdes.
+
+**Alternatives considérées** :
+
+- Framework CSS custom avec variables de spacing : surdimensionné, incohérent avec DaisyUI.
+- Override systématique des composants DaisyUI : casse les mises à jour DaisyUI, complexifie la maintenance.
+
+**Rationale** : DaisyUI fournit des composants déjà stylés et cohérents. Les surcharger avec des utilitaires Tailwind crée des incohérences et rend le code difficile à maintenir. Un style épuré passe par le respect des défauts et l'utilisation judicieuse de l'espace blanc.
+
+### 39. Vérification visuelle des composants via Chrome DevTools MCP
+
+**Choix** : Lors de l'implémentation de chaque composant UI et de chaque page, effectuer une vérification visuelle en utilisant **Chrome DevTools MCP** pour :
+
+1. **Capture d'écran** : prendre un screenshot du composant ou de la page rendue dans le navigateur via Storybook (composants) ou le serveur de développement (pages).
+2. **Audit Lighthouse** : lancer un audit Lighthouse ciblé accessibilité pour vérifier les contrastes, les labels, les rôles ARIA et le score d'accessibilité (objectif ≥ 90).
+3. **Inspection des couleurs** : vérifier visuellement que les couleurs du thème VRNB/VRNB-DARK sont correctement appliquées et que le texte est lisible sur tous les fonds.
+4. **Test responsive** : vérifier l'affichage sur les breakpoints principaux (mobile 375px, tablet 768px, desktop 1280px).
+
+Cette vérification est à effectuer pour chaque composant de `packages/ui` via Storybook et pour chaque page de `apps/web` via le serveur de développement.
+
+**Rationale** : Chrome DevTools MCP permet une vérification automatisée et documentée de l'affichage, évitant les régressions visuelles. Combiné avec Lighthouse, cela garantit l'accessibilité et la qualité visuelle.
+
 ## Risks / Trade-offs
 
 - **[Google Maps iframe et RGPD]** → L'embed Google Maps peut poser des problèmes RGPD (cookies tiers). **Mitigation** : Afficher un consentement avant le chargement de l'iframe, ou utiliser OpenStreetMap comme alternative.
