@@ -1,18 +1,20 @@
 ## 1. Layout partagé : Header et Footer
 
-- [ ] 1.1 Créer le composant Header avec navigation (Accueil, Association avec sous-menu, Activités avec sous-menu, Nos Balades, Programme, Documentation, Espace Adhérent avec sous-menu, Profil) dans `src/app/(frontend)/`
+- [ ] 1.1 Créer le composant Header avec logo VRNB à gauche (upload depuis global Home, cliquable vers `/home`, fallback texte « VRNB ») et navigation (Accueil, Association avec sous-menu, Activités avec sous-menu, Nos Balades, Programme, Documentation, Espace Adhérent avec sous-menu, Profil) dans `src/app/(frontend)/`
 - [ ] 1.2 Implémenter le sous-menu déroulant « Association » (Présentation, Organisation, Référents)
 - [ ] 1.3 Implémenter le sous-menu déroulant « Activités » (Randonnées à vélo, Formations, Projections de films, Éco citoyenneté, Autres activités de plein air)
 - [ ] 1.4 Implémenter le sous-menu déroulant « Espace Adhérent » (Trombinoscope) — visible uniquement pour les utilisateurs connectés
 - [ ] 1.5 Implémenter le menu « Profil » — visible uniquement pour les utilisateurs connectés
 - [ ] 1.6 Ajouter l'indicateur visuel de page active dans le header (menu et sous-menu)
-- [ ] 1.7 Créer le composant Footer avec le carousel des partenaires (image, nom, URL)
-- [ ] 1.8 Mettre à jour le layout `src/app/(frontend)/layout.tsx` pour intégrer Header et Footer
+- [ ] 1.7 Implémenter le bouton « Déconnexion » à droite du header (visible si connecté, appelle `POST /api/users/logout`, redirige vers `/home`)
+- [ ] 1.8 Créer le composant Footer avec le carousel des partenaires (image, nom, URL)
+- [ ] 1.9 Ajouter les liens du footer : « Qui sommes-nous ? » (`/association/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`) + copyright « ©2026 VRNB » à droite
+- [ ] 1.10 Mettre à jour le layout `src/app/(frontend)/layout.tsx` pour intégrer Header et Footer
 
 ## 2. Page d'accueil (`/home`)
 
 - [ ] 2.1 Créer la route `src/app/(frontend)/home/page.tsx` et ajouter une redirection de `/` vers `/home`
-- [ ] 2.2 Enrichir le global `Home` avec les nouveaux champs : upload logo, texte configurable 1 (richText), carousel photos (tableau d'uploads), texte configurable 2 (richText), bloc titre (text) + contenu (richText), 2 textes configurables bas de page (richText)
+- [ ] 2.2 Enrichir le global `Home` avec les nouveaux champs : upload logo, texte configurable 1 (richText), carousel photos (tableau d'uploads), texte configurable 2 (richText), bloc titre (text) + contenu (richText), 2 textes configurables bas de page (richText), upload PDF statut (relation DocsPdf/Media), upload PDF charte (relation DocsPdf/Media)
 - [ ] 2.3 Afficher le logo VRNB en haut de page (upload depuis global Home)
 - [ ] 2.4 Créer la grande carte contenant les 2 prochaines balades (requête Activites date >= aujourd'hui, limit 2, relations lieu populées) avec date, titre, lieu, heure RDV
 - [ ] 2.5 Ajouter le texte « À noter sur vos agendas : » avec compteur d'événements à venir (count Activites) et lien vers `/activites`
@@ -22,7 +24,8 @@
 - [ ] 2.9 Afficher le bloc titre + texte modifiables
 - [ ] 2.10 Créer la section des 4 photos activités cliquables (Randonnées à vélo, Formations, Projections de films, Éco citoyenneté) avec titre superposé au centre et liens vers les routes activités
 - [ ] 2.11 Afficher les 2 textes configurables en bas de page
-- [ ] 2.12 Exécuter `bun run generate:types` après les modifications du global Home
+- [ ] 2.12 Afficher les liens de téléchargement des PDFs « Statut de l'association » et « Charte de l'association » (uploads depuis global Home, affichage conditionnel)
+- [ ] 2.13 Exécuter `bun run generate:types` après les modifications du global Home
 
 ## 3. Pages Association
 
@@ -52,8 +55,9 @@
 - [ ] 6.1 Créer la route `src/app/(frontend)/programme/page.tsx` avec requête Payload pour les activités à venir (date >= aujourd'hui, triées par date)
 - [ ] 6.2 Afficher la photo d'en-tête du programme (configurable via admin)
 - [ ] 6.3 Créer le composant tableau des activités avec colonnes : date, nom, catégorie (`categories_formation.libelle`), ville (`lieu.nom_ville`), actions
-- [ ] 6.4 Intégrer le composant `CategoryFilter` partagé dans la sidebar de la page Programme
-- [ ] 6.5 Implémenter le filtrage côté client par catégorie et recherche textuelle sur le nom
+- [ ] 6.4 Ajouter le bouton « Détails » dans la colonne actions du tableau, redirigeant vers `/activites/detail/:id`
+- [ ] 6.5 Intégrer le composant `CategoryFilter` partagé dans la sidebar de la page Programme
+- [ ] 6.6 Implémenter le filtrage côté client par catégorie et recherche textuelle sur le nom
 
 ## 7. Page Nos Balades
 
@@ -108,13 +112,50 @@
 - [ ] 13.2 Vérifier que Media est configuré avec sharp pour le traitement d'images
 - [ ] 13.3 Vérifier le stockage persistant dans le dossier `media/`
 
-## 14. Tests et validation
+## 14. Page Détail Activité (`/activites/detail/[id]`)
 
-- [ ] 14.1 Écrire un test E2E vérifiant le header et la navigation (menus, sous-menus Activités, Association, Espace Adhérent)
-- [ ] 14.2 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires)
-- [ ] 14.3 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche)
-- [ ] 14.4 Écrire un test E2E vérifiant la page Nos Balades (cards passées, filtres partagés, recherche)
-- [ ] 14.5 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
-- [ ] 14.6 Écrire un test E2E vérifiant la page Profil (affichage, édition, sauvegarde)
-- [ ] 14.7 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
-- [ ] 14.8 Exécuter `turbo lint` et `turbo check-types` pour valider le code
+- [ ] 14.1 Créer la route `src/app/(frontend)/activites/detail/[id]/page.tsx` avec requête Payload pour charger l'activité par ID (relations lieu, organisateur, categories_formation populées)
+- [ ] 14.2 Afficher les informations principales : date et heure, nom de l'activité, ville (depuis lieu)
+- [ ] 14.3 Créer la carte organisateur avec prénom + NOM (majuscules), photo ou avatar par défaut, lien vers `/user/:userId`
+- [ ] 14.4 Afficher les informations complémentaires : durée (minutes), distance (km), point de rendez-vous, infos activité
+- [ ] 14.5 Rendre le titre « Détails de l'activité » configurable via un global ou un champ admin
+
+## 15. Page Profil Utilisateur Public (`/user/[id]`)
+
+- [ ] 15.1 Créer la route `src/app/(frontend)/user/[id]/page.tsx` avec requête Payload pour charger l'utilisateur par ID (relations bureau et referents populées)
+- [ ] 15.2 Afficher le prénom + NOM (majuscules), rôle bureau, photo ou avatar par défaut
+- [ ] 15.3 Afficher les informations supplémentaires : liste des référents, poste bureau
+- [ ] 15.4 Protéger l'accès : seuls les utilisateurs connectés peuvent consulter les profils publics
+
+## 16. Page Mentions Légales (`/mentionslegales`)
+
+- [ ] 16.1 Créer le global `MentionsLegales` dans Payload avec champs : titre (text), paragraphes (array avec titre text + contenu richText)
+- [ ] 16.2 Créer la route `src/app/(frontend)/mentionslegales/page.tsx` avec chargement SSR du global MentionsLegales
+- [ ] 16.3 Afficher le titre et les paragraphes configurés (itération sur le tableau)
+- [ ] 16.4 Exécuter `bun run generate:types` après ajout du global
+
+## 17. Page Contact (`/contact`)
+
+- [ ] 17.1 Créer le global `Contact` dans Payload avec champs : titre (text, défaut « Nous contacter »), texte intro (richText)
+- [ ] 17.2 Créer la route `src/app/(frontend)/contact/page.tsx` avec chargement SSR du global Contact
+- [ ] 17.3 Créer le formulaire contact : champs « Nom et prénom » (text), « Email » (email), « Message » (textarea)
+- [ ] 17.4 Implémenter le bouton « Envoyer » avec appel API (ex: `POST /api/contact`) pour envoi du formulaire
+- [ ] 17.5 Implémenter le bouton « Retour » redirigeant vers `/home`
+- [ ] 17.6 Créer un endpoint API custom ou un hook pour traiter la soumission du formulaire contact
+- [ ] 17.7 Exécuter `bun run generate:types` après ajout du global
+
+## 18. Tests et validation
+
+- [ ] 18.1 Écrire un test E2E vérifiant le header (logo VRNB, navigation, bouton Déconnexion, menus, sous-menus Activités, Association, Espace Adhérent)
+- [ ] 18.2 Écrire un test E2E vérifiant le footer (liens Qui sommes-nous, Mentions légales, Contact, copyright)
+- [ ] 18.3 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires, PDFs)
+- [ ] 18.4 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche, bouton Détails)
+- [ ] 18.5 Écrire un test E2E vérifiant la page Détail Activité (informations, carte organisateur, lien profil)
+- [ ] 18.6 Écrire un test E2E vérifiant la page Nos Balades (cards passées, filtres partagés, recherche)
+- [ ] 18.7 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
+- [ ] 18.8 Écrire un test E2E vérifiant la page Profil (affichage, édition, sauvegarde)
+- [ ] 18.9 Écrire un test E2E vérifiant la page Profil Utilisateur Public (affichage, accès protégé)
+- [ ] 18.10 Écrire un test E2E vérifiant la page Mentions Légales (titre, paragraphes)
+- [ ] 18.11 Écrire un test E2E vérifiant la page Contact (formulaire, envoi, bouton retour)
+- [ ] 18.12 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
+- [ ] 18.13 Exécuter `turbo lint` et `turbo check-types` pour valider le code

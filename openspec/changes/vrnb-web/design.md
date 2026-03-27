@@ -17,7 +17,13 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 
 - Construire le frontend public complet du site VRNB avec navigation, page d'accueil riche, pages association, activités, programme, documentation, nos balades, trombinoscope et profil.
 - Enrichir le global `Home` dans Payload pour gérer le contenu de la page d'accueil : grande carte des 2 prochaines balades, textes configurables, carousel photos, bloc titre/texte, photos activités cliquables.
-- Créer un layout partagé avec header (navigation multi-niveaux) et footer (carousel partenaires).
+- Créer un layout partagé avec header (logo VRNB à gauche, navigation multi-niveaux, bouton déconnexion à droite) et footer (carousel partenaires, liens Qui sommes-nous / Mentions légales / Contact, copyright).
+- Créer la page Détail Activité (`/activites/detail/:id`) avec date/heure, nom, ville, organisateur (lien), durée, distance, lieu de rassemblement, info.
+- Créer la page Profil Utilisateur (`/user/:id`) affichant le profil public d'un utilisateur.
+- Créer la page Mentions Légales avec paragraphes configurables dans Payload.
+- Créer la page Contact avec formulaire (nom/prénom, email, message) et boutons envoyer/retour.
+- Gérer les PDFs statut et charte de l'association via des uploads Payload (global Home).
+- Garantir que tous les titres et textes sur toutes les pages sont modifiables dans Payload CMS.
 - Créer les pages Organisation (bureau) et Référents avec données dynamiques depuis Payload.
 - Créer les pages Activités par type (randonnées, formations, projections, éco citoyenneté, plein air) avec cards.
 - Créer la page Programme avec tableau des activités à venir, filtres par catégorie et recherche.
@@ -55,13 +61,17 @@ src/app/(frontend)/
 │   ├── formations/page.tsx           # Formations
 │   ├── projections-films/page.tsx    # Projections de films
 │   ├── eco-citoyennete/page.tsx      # Éco citoyenneté
-│   └── autres-plein-air/page.tsx     # Autres activités de plein air
+│   ├── autres-plein-air/page.tsx     # Autres activités de plein air
+│   └── detail/[id]/page.tsx          # Détail d'une activité
 ├── nos-balades/page.tsx              # Galerie des balades passées
 ├── programme/page.tsx                # Programme des activités
 ├── documentation/page.tsx            # Page documentation
 ├── espace-adherent/
 │   └── trombinoscope/page.tsx        # Trombinoscope des adhérents
-└── profil/page.tsx                   # Profil de l'adhérent connecté
+├── profil/page.tsx                   # Profil de l'adhérent connecté
+├── user/[id]/page.tsx                # Profil public d'un utilisateur
+├── mentionslegales/page.tsx          # Mentions légales
+└── contact/page.tsx                  # Page contact
 ```
 
 **Alternatives considérées** :
@@ -211,6 +221,58 @@ src/app/(frontend)/
 - Servir directement sur `/` : le fichier `page.tsx` existant est déjà lié au live preview Payload, risque de conflit.
 
 **Rationale** : Une route dédiée `/home` simplifie la coexistence avec le `page.tsx` existant et la route Payload admin.
+
+### 16. Page Détail Activité (`/activites/detail/:id`)
+
+**Choix** : Route dynamique `activites/detail/[id]/page.tsx`. La page charge l'activité par ID depuis la collection `Activites` avec les relations populées (lieu, organisateur). Affiche : date et heure, nom, ville, carte organisateur (lien vers `/user/:userId`), durée (minutes), distance (km), lieu de rassemblement, info de l'activité (`infos_activite`).
+
+**Rationale** : Permet d'accéder au détail complet d'une activité depuis le bouton « Détails » du tableau Programme. Le lien organisateur offre une navigation vers le profil utilisateur.
+
+### 17. Page Profil Utilisateur (`/user/:id`)
+
+**Choix** : Route dynamique `user/[id]/page.tsx`. Charge l'utilisateur par ID depuis `Users` avec relations `bureau` et `referents` populées. Affiche le profil public : prénom, nom, rôle bureau, photo optionnelle.
+
+**Rationale** : Permet de consulter le profil d'un organisateur depuis la page détail activité.
+
+### 18. Footer enrichi : liens et copyright
+
+**Choix** : Le footer affiche le carousel des partenaires, puis en dessous trois liens : « Qui sommes-nous ? » (`/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`). À droite, le copyright « ©2026 VRNB » (année dynamique).
+
+**Rationale** : Conventions standard pour un site associatif français. Les liens sont accessibles depuis toutes les pages via le layout partagé.
+
+### 19. Page Mentions Légales
+
+**Choix** : Route `mentionslegales/page.tsx`. Contenu géré via un nouveau global Payload `MentionsLegales` avec un titre (text) et un tableau de paragraphes (titre + contenu richText). Paragraphes typiques : dénomination, siège social, hébergement, collecte et traitement des données personnelles, etc.
+
+**Alternatives considérées** :
+
+- Fichier statique markdown : pas modifiable sans redéploiement.
+
+**Rationale** : Un global Payload permet aux administrateurs de mettre à jour les mentions légales sans intervention technique.
+
+### 20. Page Contact avec formulaire
+
+**Choix** : Route `contact/page.tsx`. Carte « Nous contacter » avec formulaire : champs Nom et prénom, Email, Message. Bouton « Envoyer » (soumet via API route `/api/contact` ou envoi email). Bouton « Retour » redirige vers `/home`. Le titre et le texte d'introduction de la page sont configurables via un global Payload `Contact`.
+
+**Rationale** : Un formulaire simple couvre le besoin de contact. L'envoi peut être implémenté via une API route Next.js ou un service email.
+
+### 21. PDFs statut et charte via Payload
+
+**Choix** : Ajouter deux champs `upload` (relation vers Media) dans le global `Home` pour le PDF statut de l'association et le PDF charte de l'association. Les administrateurs peuvent uploader/remplacer ces PDFs via le panneau admin.
+
+**Rationale** : Payload gère déjà les uploads via Media. Centraliser dans le global Home permet une gestion simple.
+
+### 22. Header : logo VRNB et bouton déconnexion
+
+**Choix** : Le header affiche à gauche le logo de l'association VRNB (upload configurable via le global Home). À droite, un bouton « Déconnexion » visible uniquement pour les utilisateurs connectés. Le bouton appelle `POST /api/users/logout` et redirige vers `/home`.
+
+**Rationale** : Le logo renforce l'identité visuelle. Le bouton déconnexion est essentiel pour les adhérents connectés.
+
+### 23. Contenu éditable dans Payload pour toutes les pages
+
+**Choix** : Tous les titres et textes affichés sur les pages publiques DOIVENT être configurables via Payload CMS (globals ou collections). Aucun texte statique ne doit être codé en dur dans le frontend, à l'exception des labels de navigation et des textes techniques (boutons, formulaires).
+
+**Rationale** : Permet à l'association de personnaliser entièrement le contenu sans intervention technique.
 
 ## Risks / Trade-offs
 

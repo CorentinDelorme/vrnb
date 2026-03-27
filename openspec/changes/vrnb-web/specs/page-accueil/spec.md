@@ -164,3 +164,27 @@ Le système DOIT afficher un carousel dans le footer de la page avec la liste de
 
 - **WHEN** aucun partenaire n'est enregistré
 - **THEN** le carousel n'est pas affiché
+
+### Requirement: PDFs Statut et Charte de l'association téléchargeables
+
+Le système DOIT afficher deux liens de téléchargement pour les documents PDF « Statut de l'association » et « Charte de l'association ». Les PDFs DOIVENT être uploadés et configurables via le global Home (deux champs upload de type `DocsPdf` ou `Media`). Les liens DOIVENT être affichés sur la page d'accueil, par exemple dans la section des textes en bas de page ou dans une section dédiée.
+
+#### Scenario: Affichage des liens PDF
+
+- **WHEN** un visiteur accède à `/home` et que les deux PDFs sont configurés dans le global Home
+- **THEN** deux liens de téléchargement sont affichés : « Statut de l'association » et « Charte de l'association »
+
+#### Scenario: Téléchargement d'un PDF
+
+- **WHEN** un visiteur clique sur le lien « Statut de l'association »
+- **THEN** le fichier PDF est téléchargé ou ouvert dans un nouvel onglet
+
+#### Scenario: Un seul PDF configuré
+
+- **WHEN** seul le PDF « Charte de l'association » est uploadé dans le global Home
+- **THEN** seul le lien « Charte de l'association » est affiché
+
+#### Scenario: Aucun PDF configuré
+
+- **WHEN** aucun PDF n'est uploadé dans le global Home
+- **THEN** la section téléchargement n'est pas affichée

@@ -28,6 +28,17 @@ Le système DOIT afficher un tableau des activités à venir triées par date cr
 - **WHEN** le tableau des activités est affiché
 - **THEN** il contient les colonnes date, nom, catégorie (depuis `categories_formation.libelle`), ville (depuis `lieu.nom_ville`) et actions
 
+#### Scenario: Bouton Détails dans la colonne actions
+
+- **WHEN** le tableau des activités est affiché
+- **THEN** chaque ligne contient un bouton « Détails » dans la colonne actions
+
+#### Scenario: Clic sur le bouton Détails
+
+- **GIVEN** une activité avec l'ID « abc123 »
+- **WHEN** un visiteur clique sur le bouton « Détails » de cette activité
+- **THEN** le système navigue vers `/activites/detail/abc123`
+
 #### Scenario: Aucune activité à venir
 
 - **WHEN** aucune activité n'a de date future

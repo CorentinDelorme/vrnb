@@ -1,5 +1,24 @@
 ## ADDED Requirements
 
+### Requirement: Logo VRNB à gauche du header
+
+Le header DOIT afficher le logo de l'association VRNB à gauche. Le logo DOIT être configurable via le global Home (champ upload logo). Le logo DOIT être cliquable et rediriger vers `/home`.
+
+#### Scenario: Affichage du logo dans le header
+
+- **WHEN** un visiteur accède à n'importe quelle page du site
+- **THEN** le logo VRNB est affiché à gauche du header
+
+#### Scenario: Clic sur le logo
+
+- **WHEN** un visiteur clique sur le logo VRNB dans le header
+- **THEN** le système navigue vers `/home`
+
+#### Scenario: Logo non configuré
+
+- **WHEN** aucun logo n'est uploadé dans le global Home
+- **THEN** un texte « VRNB » est affiché à la place du logo
+
 ### Requirement: Header avec navigation principale
 
 Le système DOIT afficher un header persistant sur toutes les pages du site avec les menus de navigation suivants : « Accueil », « Association », « Activités », « Nos Balades », « Programme », « Documentation », « Espace Adhérent » et « Profil ».
@@ -165,3 +184,51 @@ Le système DOIT indiquer visuellement le menu ou sous-menu correspondant à la 
 
 - **WHEN** un adhérent connecté est sur la page Profil
 - **THEN** le menu « Profil » est visuellement mis en évidence
+
+### Requirement: Bouton Déconnexion à droite du header
+
+Le header DOIT afficher un bouton « Déconnexion » à droite, visible uniquement pour les utilisateurs connectés. Le bouton DOIT appeler `POST /api/users/logout` et rediriger vers `/home`.
+
+#### Scenario: Affichage du bouton Déconnexion
+
+- **WHEN** un adhérent connecté consulte le header
+- **THEN** un bouton « Déconnexion » est affiché à droite du header
+
+#### Scenario: Clic sur Déconnexion
+
+- **WHEN** un adhérent connecté clique sur le bouton « Déconnexion »
+- **THEN** le système appelle `POST /api/users/logout`, déconnecte l'utilisateur et redirige vers `/home`
+
+#### Scenario: Bouton Déconnexion non visible pour les visiteurs non connectés
+
+- **WHEN** un visiteur non connecté consulte le header
+- **THEN** le bouton « Déconnexion » n'est pas affiché
+
+### Requirement: Footer avec liens de navigation et copyright
+
+Le système DOIT afficher un footer persistant sous le carousel des partenaires avec trois liens de navigation et un copyright. Les liens DOIVENT être : « Qui sommes-nous ? » (`/association/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`). Le copyright « ©2026 VRNB » DOIT être affiché à droite.
+
+#### Scenario: Affichage des liens du footer
+
+- **WHEN** un visiteur accède à n'importe quelle page du site
+- **THEN** le footer affiche les liens « Qui sommes-nous ? », « Mentions légales » et « Contact »
+
+#### Scenario: Navigation vers Qui sommes-nous
+
+- **WHEN** un visiteur clique sur « Qui sommes-nous ? » dans le footer
+- **THEN** le système navigue vers `/association/presentation`
+
+#### Scenario: Navigation vers Mentions légales
+
+- **WHEN** un visiteur clique sur « Mentions légales » dans le footer
+- **THEN** le système navigue vers `/mentionslegales`
+
+#### Scenario: Navigation vers Contact
+
+- **WHEN** un visiteur clique sur « Contact » dans le footer
+- **THEN** le système navigue vers `/contact`
+
+#### Scenario: Affichage du copyright
+
+- **WHEN** un visiteur accède à n'importe quelle page du site
+- **THEN** le texte « ©2026 VRNB » est affiché à droite dans le footer
