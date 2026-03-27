@@ -27,6 +27,8 @@ L'association **Vélo Rando Nature Bruz (VRNB)** a besoin d'un site web complet 
 - **Gestion des adhérents** : Authentification des adhérents, restriction d'accès admin aux porteurs du référent « site web ».
 - **Gestion du contenu admin** : CRUD complet pour référents, bureau, activités, partenaires, actualités via Payload.
 - **Photos des activités** : Upload et gestion de photos/albums liées aux activités.
+- **Bibliothèque de composants UI** (`packages/ui`) : Tous les composants UI réutilisables (Button, Card, Input, Badge, Navbar, Footer, Carousel, Table, Modal, Avatar, FormField, CategoryFilter, HeroImage, RichText) sont définis dans `packages/ui/src/components/` avec un dossier par composant. Chaque composant utilise exclusivement DaisyUI + TailwindCSS (aucun style en dur). Chaque composant a une story Storybook et des tests unitaires Vitest. Le site dans `apps/web` importe ces composants.
+- **Payload blocks communs** : Blocks Payload génériques réutilisables (RichTextBlock, HeroImageBlock, CardListBlock, CarouselBlock, ContactFormBlock) dans `apps/web/src/blocks/`. Les textes sont configurés dans l'espace admin Payload, jamais codés en dur.
 - **Données de référence** : Référents (Site web, Logistique, Photo-Vidéo, Mécanique, Navigation GPS, Sécurité, Secourisme, Stagiaire, Veille documentaire, Festivités, Guide conférencier, Balade du mardi, Equipement, Maniabilité). Bureau (Président, Trésorier, Secrétaire, Vice-Président, Vice-Secrétaire, Vice-Trésorier, Adhérent, Secrétaire-Comptable, Logistique, Référent des Référents).
 
 ## Capabilities
@@ -56,6 +58,8 @@ L'association **Vélo Rando Nature Bruz (VRNB)** a besoin d'un site web complet 
 - `page-login` : Page connexion (`/login`) avec formulaire pseudo/mot de passe, authentification via Payload REST API, lien mot de passe oublié, section adhésion.
 - `page-oubli-pass` : Page mot de passe oublié (`/oubli-pass`) avec formulaire email et envoi via `POST /api/users/forgot-password`.
 - `access-control` : Contrôle d'accès frontend — pages publiques vs authentifiées avec redirection vers `/login`.
+- `ui-components` : Bibliothèque de composants UI dans `packages/ui` avec DaisyUI + TailwindCSS, Storybook stories et tests unitaires par composant.
+- `payload-blocks` : Blocks Payload génériques réutilisables (RichTextBlock, HeroImageBlock, CardListBlock, CarouselBlock, ContactFormBlock) pour les composants communs.
 
 ### Modified Capabilities
 
@@ -65,8 +69,9 @@ _(Aucune capacité existante modifiée — le dossier `openspec/specs/` est vide
 
 - **Frontend** : Nouvelles pages Next.js dans `apps/web/src/app/(frontend)/` — accueil, presentation, organisation, referents, randosvelo, formations, projections, ecocitoyennete, pleinair, activites (programme), activites/detail/[id], user/[id], balades, documentation, espace-adherent/trombinoscope, mentionslegales, contact, adhesion, login, oubli-pass. Redirections permanentes : `/activite` → `/activites`, `/album` → `/balades`.
 - **Layout** : Header avec logo VRNB, navigation multi-niveaux (menus publics + menus connectés), bouton connexion/déconnexion. Footer avec carousel partenaires, liens (Qui sommes-nous, Mentions légales, Contact) et copyright.
-- **Composants partagés** : Composant `CategoryFilter` réutilisé entre Programme, Nos Balades et Documentation.
+- **Composants partagés** : Bibliothèque de composants UI dans `packages/ui/src/components/` (Button, Card, Input, Badge, Navbar, Footer, Carousel, Table, Modal, Avatar, FormField, CategoryFilter, HeroImage, RichText) avec DaisyUI + TailwindCSS. Stories Storybook et tests unitaires Vitest par composant.
 - **Globals Payload** : Global `Home` enrichie, nouveaux globals `MentionsLegales`, `Contact`, `Adhesion`.
+- **Blocks Payload** : Blocks génériques réutilisables dans `apps/web/src/blocks/` (RichTextBlock, HeroImageBlock, CardListBlock, CarouselBlock, ContactFormBlock) + PartenairesList existant.
 - **Collections Payload** : Users, Referents, Bureaux, Activites, ActivitesContent, Partenaires, Actualites, Photos, PhotosAlbums, Media, Documentations, Categories, CategoriesFormations, Lieux, Etats.
 - **Contrôle d'accès** : `src/access/canAccessAdmin.ts` — vérification du référent « site web ».
 - **Dépendances** : Payload 3, Next.js 16, sharp, Google Maps embed (iframe).

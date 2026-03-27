@@ -45,13 +45,15 @@
 - [ ] 4.3 Créer la route `src/app/(frontend)/projections/page.tsx` avec contenu depuis ActivitesContent (champs projection_film)
 - [ ] 4.4 Créer la route `src/app/(frontend)/ecocitoyennete/page.tsx` avec contenu depuis ActivitesContent (champs ecocitoyennete)
 - [ ] 4.5 Créer la route `src/app/(frontend)/pleinair/page.tsx` avec contenu depuis ActivitesContent (champs autre)
-- [ ] 4.6 Créer le composant Card réutilisable avec layout trois colonnes (nom à gauche, description au milieu, photo optionnelle à droite)
+- [ ] 4.6 Utiliser le composant Card de `packages/ui` pour le layout trois colonnes (nom à gauche, description au milieu, photo optionnelle à droite)
 
 ## 5. Composant partagé CategoryFilter
 
-- [ ] 5.1 Créer le composant client `CategoryFilter` dans `src/components/` avec checkboxes par catégorie, champ de recherche et bouton « Filtrer »
+- [ ] 5.1 Déplacer/créer le composant client `CategoryFilter` dans `packages/ui/src/components/CategoryFilter/CategoryFilter.tsx` avec checkboxes par catégorie, champ de recherche et bouton « Filtrer » — utiliser uniquement les classes DaisyUI/TailwindCSS
 - [ ] 5.2 Définir les catégories fixes : Balade du dimanche, Escapade, Formations, Film documentaire, Éco-citoyenneté, Longe-côte, Réunion, Autres
 - [ ] 5.3 Implémenter la logique de filtrage réactive (état React) exportable vers les pages consommatrices (Programme, Nos Balades, Documentation)
+- [ ] 5.4 Créer `CategoryFilter.stories.ts` avec variantes (vide, avec catégories sélectionnées, avec recherche)
+- [ ] 5.5 Créer `CategoryFilter.test.tsx` avec tests unitaires (rendu, sélection de catégories, recherche, callback)
 
 ## 6. Page Programme
 
@@ -172,22 +174,67 @@
 - [ ] 20.4 Vérifier la protection d'accès existante sur Profil (`/user/:id`) : redirection vers `/login`
 - [ ] 20.5 Créer un composant ou middleware partagé de vérification d'authentification (helper `requireAuth`) réutilisable par toutes les pages protégées
 
-## 21. Tests et validation
+## 21. Bibliothèque de composants UI (`packages/ui`)
 
-- [ ] 21.1 Écrire un test E2E vérifiant le header (logo VRNB, navigation publique, menus connectés, bouton Connexion/Déconnexion, sous-menus Activités, Association, Espace Adhérent, menu Adhésion)
-- [ ] 21.2 Écrire un test E2E vérifiant le footer (liens Qui sommes-nous, Mentions légales, Contact, copyright)
-- [ ] 21.3 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires, PDFs, hover photos activités)
-- [ ] 21.4 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche, bouton Détails)
-- [ ] 21.5 Écrire un test E2E vérifiant la page Détail Activité (informations, carte organisateur, lien profil)
-- [ ] 21.6 Écrire un test E2E vérifiant la page Nos Balades (accès protégé, cards passées, filtres partagés, recherche)
-- [ ] 21.7 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
-- [ ] 21.8 Écrire un test E2E vérifiant la page Profil unifiée (`/user/:id`, accès protégé, affichage public, édition propre profil, sauvegarde)
-- [ ] 21.9 Écrire un test E2E vérifiant la page Mentions Légales (titre, paragraphes)
-- [ ] 21.10 Écrire un test E2E vérifiant la page Contact (formulaire, champs obligatoires, envoi, bouton retour)
-- [ ] 21.11 Écrire un test E2E vérifiant les redirections permanentes (`/activite` → `/activites`, `/album` → `/balades`)
-- [ ] 21.12 Écrire un test E2E vérifiant la page Adhésion (titre, description configurables)
-- [ ] 21.13 Écrire un test E2E vérifiant la page Connexion (formulaire, validation, authentification, lien oubli mot de passe, section adhésion)
-- [ ] 21.14 Écrire un test E2E vérifiant la page Mot de passe oublié (formulaire email, validation, message de confirmation, lien retour)
-- [ ] 21.15 Écrire un test E2E vérifiant le contrôle d'accès (pages protégées redirigent vers `/login`, pages publiques accessibles sans connexion)
-- [ ] 21.16 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
-- [ ] 21.17 Exécuter `turbo lint` et `turbo check-types` pour valider le code
+- [ ] 21.1 Créer la structure `packages/ui/src/components/` avec un dossier par composant
+- [ ] 21.2 Créer le composant `Button` (`packages/ui/src/components/Button/Button.tsx`) — variantes DaisyUI (btn-primary, btn-secondary, btn-outline, btn-ghost, tailles sm/md/lg, états disabled/loading) — aucun style en dur
+- [ ] 21.3 Créer `Button.stories.ts` et `Button.test.tsx`
+- [ ] 21.4 Créer le composant `Card` (`packages/ui/src/components/Card/Card.tsx`) — classes DaisyUI card, card-body, card-title, card-actions, variantes avec/sans image, avec/sans footer
+- [ ] 21.5 Créer `Card.stories.ts` et `Card.test.tsx`
+- [ ] 21.6 Créer le composant `Input` (`packages/ui/src/components/Input/Input.tsx`) — DaisyUI input, input-bordered, variantes text/email/password, label, erreur validation, required
+- [ ] 21.7 Créer `Input.stories.ts` et `Input.test.tsx`
+- [ ] 21.8 Créer le composant `Badge` (`packages/ui/src/components/Badge/Badge.tsx`) — DaisyUI badge avec variantes de couleur
+- [ ] 21.9 Créer `Badge.stories.ts` et `Badge.test.tsx`
+- [ ] 21.10 Créer le composant `Navbar` (`packages/ui/src/components/Navbar/Navbar.tsx`) — DaisyUI navbar, dropdown pour sous-menus, responsive, slots pour logo/menus/actions
+- [ ] 21.11 Créer `Navbar.stories.ts` et `Navbar.test.tsx`
+- [ ] 21.12 Créer le composant `Footer` (`packages/ui/src/components/Footer/Footer.tsx`) — DaisyUI footer, slots pour carousel/liens/copyright
+- [ ] 21.13 Créer `Footer.stories.ts` et `Footer.test.tsx`
+- [ ] 21.14 Créer le composant `Carousel` (`packages/ui/src/components/Carousel/Carousel.tsx`) — DaisyUI carousel avec auto-scroll CSS/JS léger
+- [ ] 21.15 Créer `Carousel.stories.ts` et `Carousel.test.tsx`
+- [ ] 21.16 Créer le composant `Table` (`packages/ui/src/components/Table/Table.tsx`) — DaisyUI table, colonnes configurables, rows dynamiques
+- [ ] 21.17 Créer `Table.stories.ts` et `Table.test.tsx`
+- [ ] 21.18 Créer le composant `Modal` (`packages/ui/src/components/Modal/Modal.tsx`) — DaisyUI modal avec open/close
+- [ ] 21.19 Créer `Modal.stories.ts` et `Modal.test.tsx`
+- [ ] 21.20 Créer le composant `Avatar` (`packages/ui/src/components/Avatar/Avatar.tsx`) — DaisyUI avatar avec image ou placeholder par défaut
+- [ ] 21.21 Créer `Avatar.stories.ts` et `Avatar.test.tsx`
+- [ ] 21.22 Créer le composant `FormField` (`packages/ui/src/components/FormField/FormField.tsx`) — wrapper label + input + message erreur, classes Tailwind
+- [ ] 21.23 Créer `FormField.stories.ts` et `FormField.test.tsx`
+- [ ] 21.24 Créer le composant `HeroImage` (`packages/ui/src/components/HeroImage/HeroImage.tsx`) — image pleine largeur avec titre superposé centré, classes DaisyUI hero
+- [ ] 21.25 Créer `HeroImage.stories.ts` et `HeroImage.test.tsx`
+- [ ] 21.26 Créer le composant `RichText` (`packages/ui/src/components/RichText/RichText.tsx`) — rendu de contenu richText Payload, classes Tailwind typography (prose)
+- [ ] 21.27 Créer `RichText.stories.ts` et `RichText.test.tsx`
+- [ ] 21.28 Exporter tous les composants depuis `packages/ui/src/index.ts`
+- [ ] 21.29 Vérifier que `apps/web` importe correctement les composants depuis `packages/ui`
+- [ ] 21.30 Migrer le composant Button existant (`packages/ui/stories/Button.tsx`) vers la nouvelle structure
+
+## 22. Payload blocks communs
+
+- [ ] 22.1 Créer le block `RichTextBlock` dans `apps/web/src/blocks/RichTextBlock.ts` — champs : titre (text, optionnel), contenu (richText)
+- [ ] 22.2 Créer le block `HeroImageBlock` dans `apps/web/src/blocks/HeroImageBlock.ts` — champs : image (upload Media), titre superposé (text), description (richText, optionnel)
+- [ ] 22.3 Créer le block `CardListBlock` dans `apps/web/src/blocks/CardListBlock.ts` — champs : titre (text, optionnel), cards (array: titre, description, image optionnelle, lien optionnel)
+- [ ] 22.4 Créer le block `CarouselBlock` dans `apps/web/src/blocks/CarouselBlock.ts` — champs : titre (text, optionnel), images (array d'uploads Media)
+- [ ] 22.5 Créer le block `ContactFormBlock` dans `apps/web/src/blocks/ContactFormBlock.ts` — champs : titre (text), texte intro (richText), configuration
+- [ ] 22.6 Enregistrer les blocks dans `payload.config.ts`
+- [ ] 22.7 Créer les composants de rendu frontend pour chaque block dans `apps/web/src/components/blocks/` utilisant les composants de `packages/ui`
+- [ ] 22.8 Exécuter `bun run generate:types` et `bun run generate:importmap` après ajout des blocks
+
+## 23. Tests et validation
+
+- [ ] 23.1 Écrire un test E2E vérifiant le header (logo VRNB, navigation publique, menus connectés, bouton Connexion/Déconnexion, sous-menus Activités, Association, Espace Adhérent, menu Adhésion)
+- [ ] 23.2 Écrire un test E2E vérifiant le footer (liens Qui sommes-nous, Mentions légales, Contact, copyright)
+- [ ] 23.3 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires, PDFs, hover photos activités)
+- [ ] 23.4 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche, bouton Détails)
+- [ ] 23.5 Écrire un test E2E vérifiant la page Détail Activité (informations, carte organisateur, lien profil)
+- [ ] 23.6 Écrire un test E2E vérifiant la page Nos Balades (accès protégé, cards passées, filtres partagés, recherche)
+- [ ] 23.7 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
+- [ ] 23.8 Écrire un test E2E vérifiant la page Profil unifiée (`/user/:id`, accès protégé, affichage public, édition propre profil, sauvegarde)
+- [ ] 23.9 Écrire un test E2E vérifiant la page Mentions Légales (titre, paragraphes)
+- [ ] 23.10 Écrire un test E2E vérifiant la page Contact (formulaire, champs obligatoires, envoi, bouton retour)
+- [ ] 23.11 Écrire un test E2E vérifiant les redirections permanentes (`/activite` → `/activites`, `/album` → `/balades`)
+- [ ] 23.12 Écrire un test E2E vérifiant la page Adhésion (titre, description configurables)
+- [ ] 23.13 Écrire un test E2E vérifiant la page Connexion (formulaire, validation, authentification, lien oubli mot de passe, section adhésion)
+- [ ] 23.14 Écrire un test E2E vérifiant la page Mot de passe oublié (formulaire email, validation, message de confirmation, lien retour)
+- [ ] 23.15 Écrire un test E2E vérifiant le contrôle d'accès (pages protégées redirigent vers `/login`, pages publiques accessibles sans connexion)
+- [ ] 23.16 Vérifier que tous les composants `packages/ui` ont leurs stories Storybook et tests unitaires — exécuter `cd packages/ui && bun run storybook build` et `bun run test`
+- [ ] 23.17 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
+- [ ] 23.18 Exécuter `turbo lint` et `turbo check-types` pour valider le code

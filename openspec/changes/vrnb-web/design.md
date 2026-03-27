@@ -44,7 +44,7 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 - Système de paiement ou gestion de cotisations.
 - Application mobile ou PWA.
 - Notifications par email.
-- Design system complet ou thème CSS avancé (un style fonctionnel suffit).
+- Design system complet au-delà des composants DaisyUI/TailwindCSS fournis par `packages/ui`.
 
 ## Decisions
 
@@ -386,6 +386,119 @@ Le header adapte sa navigation en conséquence : les menus « Nos Balades », «
 - Pas de bouton connexion : les utilisateurs non connectés n'ont aucun point d'entrée visible pour se connecter.
 
 **Rationale** : Un bouton connexion visible à droite du header est une convention standard sur les sites web. Le menu Adhésion permet de diriger les prospects vers l'inscription.
+
+### 32. Composants UI dans `packages/ui` avec DaisyUI + TailwindCSS
+
+**Choix** : Tous les composants UI réutilisables (boutons, inputs, cards, badges, modales, tableaux, formulaires, etc.) DOIVENT être définis dans le package `packages/ui`. Chaque composant a son propre dossier : `packages/ui/src/components/<ComponentName>/` contenant au minimum `<ComponentName>.tsx`, `<ComponentName>.stories.ts` et `<ComponentName>.test.tsx`. Les composants utilisent exclusivement les classes **DaisyUI** et **TailwindCSS** — aucun style en dur (`style={{}}`, CSS modules, inline CSS) n'est autorisé. Le package `packages/ui` exporte ces composants pour consommation par `apps/web`.
+
+Structure type :
+
+```
+packages/ui/src/components/
+├── Button/
+│   ├── Button.tsx
+│   ├── Button.stories.ts
+│   └── Button.test.tsx
+├── Card/
+│   ├── Card.tsx
+│   ├── Card.stories.ts
+│   └── Card.test.tsx
+├── Input/
+│   ├── Input.tsx
+│   ├── Input.stories.ts
+│   └── Input.test.tsx
+├── Badge/
+│   ├── Badge.tsx
+│   ├── Badge.stories.ts
+│   └── Badge.test.tsx
+├── Navbar/
+│   ├── Navbar.tsx
+│   ├── Navbar.stories.ts
+│   └── Navbar.test.tsx
+├── Footer/
+│   ├── Footer.tsx
+│   ├── Footer.stories.ts
+│   └── Footer.test.tsx
+├── Carousel/
+│   ├── Carousel.tsx
+│   ├── Carousel.stories.ts
+│   └── Carousel.test.tsx
+├── Table/
+│   ├── Table.tsx
+│   ├── Table.stories.ts
+│   └── Table.test.tsx
+├── Modal/
+│   ├── Modal.tsx
+│   ├── Modal.stories.ts
+│   └── Modal.test.tsx
+├── Avatar/
+│   ├── Avatar.tsx
+│   ├── Avatar.stories.ts
+│   └── Avatar.test.tsx
+├── FormField/
+│   ├── FormField.tsx
+│   ├── FormField.stories.ts
+│   └── FormField.test.tsx
+├── CategoryFilter/
+│   ├── CategoryFilter.tsx
+│   ├── CategoryFilter.stories.ts
+│   └── CategoryFilter.test.tsx
+├── HeroImage/
+│   ├── HeroImage.tsx
+│   ├── HeroImage.stories.ts
+│   └── HeroImage.test.tsx
+└── RichText/
+    ├── RichText.tsx
+    ├── RichText.stories.ts
+    └── RichText.test.tsx
+```
+
+**Alternatives considérées** :
+
+- Composants inline dans `apps/web` : pas réutilisables, pas testables indépendamment.
+- CSS Modules ou styled-components : incohérent avec DaisyUI, ajoute une couche d'abstraction.
+
+**Rationale** : Le package `packages/ui` existe déjà avec Storybook, Vitest, DaisyUI et TailwindCSS configurés. Centraliser les composants UI permet une cohérence visuelle, des tests unitaires isolés, et une documentation Storybook vivante. DaisyUI fournit des composants prêts à l'emploi (btn, card, input, navbar, etc.) stylés via des classes Tailwind sémantiques.
+
+### 33. Storybook stories et tests unitaires par composant
+
+**Choix** : Chaque composant dans `packages/ui` DOIT avoir :
+
+- Un fichier `.stories.ts` Storybook documentant les variantes (tailles, couleurs, états disabled/loading, avec/sans icône, etc.).
+- Un fichier `.test.tsx` avec tests unitaires Vitest vérifiant le rendu, les props, les interactions et l'accessibilité.
+
+Les stories servent de documentation visuelle et de tests de non-régression visuels. Les tests unitaires couvrent la logique métier et les edge cases.
+
+**Rationale** : `packages/ui` a déjà Storybook 10 et Vitest configurés. Maintenir stories + tests par composant garantit la qualité et facilite le développement itératif.
+
+### 34. Payload blocks communs pour composants partagés
+
+**Choix** : Créer des blocks Payload réutilisables et génériques pour les patterns de contenu récurrents. Ces blocks sont configurables dans l'admin Payload et les textes ne DOIVENT JAMAIS être codés en dur dans le frontend. Les blocks sont définis dans `apps/web/src/blocks/` et utilisent les composants UI de `packages/ui` pour leur rendu frontend.
+
+Blocks génériques à créer :
+
+- `RichTextBlock` : titre (text, optionnel) + contenu (richText). Utilisé pour tous les blocs de texte configurable.
+- `HeroImageBlock` : image (upload) + titre superposé (text) + description optionnelle (richText). Utilisé pour les en-têtes de pages.
+- `CardListBlock` : titre (text, optionnel) + tableau de cards (titre, description, image, lien). Utilisé pour les listes de contenu (activités, documentations).
+- `CarouselBlock` : titre (text, optionnel) + tableau d'images (uploads). Utilisé pour les carousels de photos.
+- `ContactFormBlock` : titre (text) + texte intro (richText) + configuration des champs.
+
+Le block `PartenairesList` existant est conservé dans le footer.
+
+**Alternatives considérées** :
+
+- Champs directs sur les globals sans blocks : moins flexible, pas réutilisable.
+- Un seul block « catch-all » : trop générique, difficile à maintenir.
+
+**Rationale** : Les blocks Payload permettent aux administrateurs de composer du contenu via l'interface admin. Les blocs génériques évitent la duplication et restent réutilisables entre différentes pages/globals.
+
+### 35. Séparation stricte `packages/ui` (composants) vs `apps/web` (pages + Payload)
+
+**Choix** : Le site web vit dans `apps/web` (Next.js + Payload CMS). Les composants UI purs (sans logique Payload ni dépendance serveur) vivent dans `packages/ui`. Les pages dans `apps/web` importent les composants depuis `packages/ui` et les alimentent avec les données Payload. Les blocks Payload et la logique métier (accès, hooks, requêtes) restent dans `apps/web`.
+
+Règle : `packages/ui` ne DOIT PAS dépendre de Payload, Next.js (server components), ni de la base de données. Il ne contient que des composants React client purs avec DaisyUI/TailwindCSS.
+
+**Rationale** : Cette séparation garantit que les composants UI sont testables en isolation (Storybook + Vitest), réutilisables, et découplés de l'infrastructure CMS.
 
 ## Risks / Trade-offs
 
