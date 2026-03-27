@@ -73,6 +73,7 @@ src/app/(frontend)/
 ```
 
 Redirections permanentes configurées dans `next.config.ts` :
+
 - `/activite` → `/activites` (ancienne URL du programme)
 - `/album` → `/balades` (ancienne URL des balades)
 
