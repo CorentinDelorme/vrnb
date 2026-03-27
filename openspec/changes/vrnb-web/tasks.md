@@ -5,11 +5,14 @@
 - [ ] 1.3 Implémenter le sous-menu déroulant « Activités » (Randonnées à vélo, Formations, Projections de films, Éco citoyenneté, Autres activités de plein air)
 - [ ] 1.4 Implémenter le sous-menu déroulant « Espace Adhérent » (Trombinoscope) — visible uniquement pour les utilisateurs connectés
 - [ ] 1.5 Implémenter le menu « Profil » — visible uniquement pour les utilisateurs connectés
-- [ ] 1.6 Ajouter l'indicateur visuel de page active dans le header (menu et sous-menu)
-- [ ] 1.7 Implémenter le bouton « Déconnexion » à droite du header (visible si connecté, appelle `POST /api/users/logout`, redirige vers `/home`)
-- [ ] 1.8 Créer le composant Footer avec le carousel des partenaires (image, nom, URL)
-- [ ] 1.9 Ajouter les liens du footer : « Qui sommes-nous ? » (`/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`) + copyright « ©2026 VRNB » à droite
-- [ ] 1.10 Mettre à jour le layout `src/app/(frontend)/layout.tsx` pour intégrer Header et Footer
+- [ ] 1.6 Ajouter le menu « Adhésion » dans la navigation principale (visible pour tous les visiteurs, connectés ou non), lien vers `/adhesion`
+- [ ] 1.7 Ajouter l'indicateur visuel de page active dans le header (menu et sous-menu)
+- [ ] 1.8 Implémenter le bouton « Déconnexion » à droite du header (visible si connecté, appelle `POST /api/users/logout`, redirige vers `/home`)
+- [ ] 1.9 Implémenter le bouton « Connexion » à droite du header (visible si non connecté, redirige vers `/login`)
+- [ ] 1.10 Créer le composant Footer avec le carousel des partenaires (image, nom, URL)
+- [ ] 1.11 Ajouter les liens du footer : « Qui sommes-nous ? » (`/presentation`), « Mentions légales » (`/mentionslegales`), « Contact » (`/contact`) + copyright « ©2026 VRNB » à droite
+- [ ] 1.12 Mettre à jour le layout `src/app/(frontend)/layout.tsx` pour intégrer Header et Footer
+- [ ] 1.13 Implémenter la visibilité conditionnelle des menus header : menus « Nos Balades », « Documentation », « Espace Adhérent », « Profil » visibles uniquement pour les utilisateurs connectés
 
 ## 2. Page d'accueil (`/home`)
 
@@ -137,18 +140,54 @@
 - [ ] 16.6 Créer un endpoint API custom ou un hook pour traiter la soumission du formulaire contact
 - [ ] 16.7 Exécuter `bun run generate:types` après ajout du global
 
-## 17. Tests et validation
+## 17. Page Adhésion (`/adhesion`)
 
-- [ ] 17.1 Écrire un test E2E vérifiant le header (logo VRNB, navigation, bouton Déconnexion, menus, sous-menus Activités, Association, Espace Adhérent)
-- [ ] 17.2 Écrire un test E2E vérifiant le footer (liens Qui sommes-nous, Mentions légales, Contact, copyright)
-- [ ] 17.3 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires, PDFs, hover photos activités)
-- [ ] 17.4 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche, bouton Détails)
-- [ ] 17.5 Écrire un test E2E vérifiant la page Détail Activité (informations, carte organisateur, lien profil)
-- [ ] 17.6 Écrire un test E2E vérifiant la page Nos Balades (cards passées, filtres partagés, recherche)
-- [ ] 17.7 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
-- [ ] 17.8 Écrire un test E2E vérifiant la page Profil unifiée (`/user/:id`, affichage public, édition propre profil, sauvegarde)
-- [ ] 17.9 Écrire un test E2E vérifiant la page Mentions Légales (titre, paragraphes)
-- [ ] 17.10 Écrire un test E2E vérifiant la page Contact (formulaire, champs obligatoires, envoi, bouton retour)
-- [ ] 17.11 Écrire un test E2E vérifiant les redirections permanentes (`/activite` → `/activites`, `/album` → `/balades`)
-- [ ] 17.12 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
-- [ ] 17.13 Exécuter `turbo lint` et `turbo check-types` pour valider le code
+- [ ] 17.1 Créer le global `Adhesion` dans Payload avec champs : titre (text, défaut « Adhésion »), description (richText)
+- [ ] 17.2 Créer la route `src/app/(frontend)/adhesion/page.tsx` avec chargement SSR du global Adhesion
+- [ ] 17.3 Afficher le titre et la description (richText) configurés
+- [ ] 17.4 Exécuter `bun run generate:types` et `bun run generate:importmap` après ajout du global
+
+## 18. Page Connexion (`/login`)
+
+- [ ] 18.1 Créer la route `src/app/(frontend)/login/page.tsx` avec composant client pour le formulaire
+- [ ] 18.2 Afficher la carte « Connectez-vous » (titre configurable via Payload) avec formulaire : champ Pseudo (text, required), champ Mot de passe (password, required), bouton « Se connecter »
+- [ ] 18.3 Implémenter l'authentification via `POST /api/users/login` avec gestion des erreurs (identifiants incorrects, champs vides)
+- [ ] 18.4 Rediriger vers `/home` après connexion réussie ; si déjà connecté, rediriger vers `/home`
+- [ ] 18.5 Ajouter le lien « Mot de passe oublié » sous le formulaire, redirigeant vers `/oubli-pass`
+- [ ] 18.6 Ajouter la section « Nouveau sur le site ? » avec bouton « Adhérer à l'association » redirigeant vers `/adhesion`
+
+## 19. Page Mot de passe oublié (`/oubli-pass`)
+
+- [ ] 19.1 Créer la route `src/app/(frontend)/oubli-pass/page.tsx` avec composant client pour le formulaire
+- [ ] 19.2 Afficher le titre « Réinitialisation du mot de passe » (configurable via Payload)
+- [ ] 19.3 Créer le formulaire : champ Email (email, required, validation format email), bouton « Envoyer »
+- [ ] 19.4 Implémenter l'appel à `POST /api/users/forgot-password` avec message de confirmation générique
+- [ ] 19.5 Ajouter le lien « Retour à la connexion » redirigeant vers `/login`
+
+## 20. Contrôle d'accès frontend
+
+- [ ] 20.1 Implémenter la protection d'accès sur la page Nos Balades (`/balades`) : redirection vers `/login` si non connecté
+- [ ] 20.2 Implémenter la protection d'accès sur la page Documentation (`/documentation`) : redirection vers `/login` si non connecté
+- [ ] 20.3 Vérifier la protection d'accès existante sur Trombinoscope (`/espace-adherent/trombinoscope`) : redirection vers `/login`
+- [ ] 20.4 Vérifier la protection d'accès existante sur Profil (`/user/:id`) : redirection vers `/login`
+- [ ] 20.5 Créer un composant ou middleware partagé de vérification d'authentification (helper `requireAuth`) réutilisable par toutes les pages protégées
+
+## 21. Tests et validation
+
+- [ ] 21.1 Écrire un test E2E vérifiant le header (logo VRNB, navigation publique, menus connectés, bouton Connexion/Déconnexion, sous-menus Activités, Association, Espace Adhérent, menu Adhésion)
+- [ ] 21.2 Écrire un test E2E vérifiant le footer (liens Qui sommes-nous, Mentions légales, Contact, copyright)
+- [ ] 21.3 Écrire un test E2E vérifiant l'affichage de la page d'accueil (présentation, cards, carte, partenaires, PDFs, hover photos activités)
+- [ ] 21.4 Écrire un test E2E vérifiant la page Programme (tableau, filtres partagés, recherche, bouton Détails)
+- [ ] 21.5 Écrire un test E2E vérifiant la page Détail Activité (informations, carte organisateur, lien profil)
+- [ ] 21.6 Écrire un test E2E vérifiant la page Nos Balades (accès protégé, cards passées, filtres partagés, recherche)
+- [ ] 21.7 Écrire un test E2E vérifiant la page Trombinoscope (accès protégé, cartes adhérents)
+- [ ] 21.8 Écrire un test E2E vérifiant la page Profil unifiée (`/user/:id`, accès protégé, affichage public, édition propre profil, sauvegarde)
+- [ ] 21.9 Écrire un test E2E vérifiant la page Mentions Légales (titre, paragraphes)
+- [ ] 21.10 Écrire un test E2E vérifiant la page Contact (formulaire, champs obligatoires, envoi, bouton retour)
+- [ ] 21.11 Écrire un test E2E vérifiant les redirections permanentes (`/activite` → `/activites`, `/album` → `/balades`)
+- [ ] 21.12 Écrire un test E2E vérifiant la page Adhésion (titre, description configurables)
+- [ ] 21.13 Écrire un test E2E vérifiant la page Connexion (formulaire, validation, authentification, lien oubli mot de passe, section adhésion)
+- [ ] 21.14 Écrire un test E2E vérifiant la page Mot de passe oublié (formulaire email, validation, message de confirmation, lien retour)
+- [ ] 21.15 Écrire un test E2E vérifiant le contrôle d'accès (pages protégées redirigent vers `/login`, pages publiques accessibles sans connexion)
+- [ ] 21.16 Écrire un test d'intégration vérifiant l'accès admin (refusé sans référent, autorisé avec)
+- [ ] 21.17 Exécuter `turbo lint` et `turbo check-types` pour valider le code

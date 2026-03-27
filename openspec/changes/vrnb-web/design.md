@@ -17,11 +17,15 @@ Le frontend public doit être considérablement étoffé : header avec navigatio
 
 - Construire le frontend public complet du site VRNB avec navigation, page d'accueil riche, pages association, activités, programme, documentation, nos balades, trombinoscope et profil.
 - Enrichir le global `Home` dans Payload pour gérer le contenu de la page d'accueil : grande carte des 2 prochaines balades, textes configurables, carousel photos, bloc titre/texte, photos activités cliquables.
-- Créer un layout partagé avec header (logo VRNB à gauche, navigation multi-niveaux, bouton déconnexion à droite) et footer (carousel partenaires, liens Qui sommes-nous / Mentions légales / Contact, copyright).
+- Créer un layout partagé avec header (logo VRNB à gauche, navigation multi-niveaux, bouton déconnexion/connexion à droite selon l'état de connexion) et footer (carousel partenaires, liens Qui sommes-nous / Mentions légales / Contact, copyright).
 - Créer la page Détail Activité (`/activites/detail/:id`) avec date/heure, nom, ville, organisateur (lien), durée, distance, lieu de rassemblement, info.
 - Créer la page Profil Utilisateur (`/user/:id`) affichant le profil public d'un utilisateur.
 - Créer la page Mentions Légales avec paragraphes configurables dans Payload.
 - Créer la page Contact avec formulaire (nom/prénom, email, message) et boutons envoyer/retour.
+- Créer la page Adhésion (`/adhesion`) avec titre et description configurables dans Payload, indiquant le statut des adhésions.
+- Créer la page Connexion (`/login`) avec formulaire pseudo/mot de passe, lien mot de passe oublié et bouton adhésion.
+- Créer la page Mot de passe oublié (`/oubli-pass`) avec formulaire email et envoi via Payload.
+- Appliquer le contrôle d'accès : pages publiques (accueil, association, activités, programme, adhésion, contact, mentions légales) et pages authentifiées (balades, documentation, trombinoscope, profil).
 - Gérer les PDFs statut et charte de l'association via des uploads Payload (global Home).
 - Garantir que tous les titres et textes sur toutes les pages sont modifiables dans Payload CMS.
 - Créer les pages Organisation (bureau) et Référents avec données dynamiques depuis Payload.
@@ -69,7 +73,10 @@ src/app/(frontend)/
 │   └── trombinoscope/page.tsx        # Trombinoscope des adhérents
 ├── user/[id]/page.tsx                # Profil utilisateur (propre profil éditable + profil public)
 ├── mentionslegales/page.tsx          # Mentions légales
-└── contact/page.tsx                  # Page contact
+├── contact/page.tsx                  # Page contact
+├── adhesion/page.tsx                 # Page adhésion (/adhesion)
+├── login/page.tsx                    # Page connexion (/login)
+└── oubli-pass/page.tsx              # Mot de passe oublié (/oubli-pass)
 ```
 
 Redirections permanentes configurées dans `next.config.ts` :
@@ -307,6 +314,78 @@ Redirections permanentes configurées dans `next.config.ts` :
 - Description toujours visible : surcharge visuelle.
 
 **Rationale** : Le hover overlay offre une découverte progressive du contenu sans surcharger la vue initiale.
+
+### 27. Contrôle d'accès : pages publiques vs authentifiées
+
+**Choix** : Séparer les pages en deux catégories d'accès :
+
+**Pages publiques** (accessibles sans connexion) :
+
+- Accueil (`/home`)
+- Présentation (`/presentation`), Organisation (`/organisation`), Référents (`/referents`)
+- Pages Activités : Randonnées à vélo (`/randosvelo`), Formations (`/formations`), Projections (`/projections`), Éco citoyenneté (`/ecocitoyennete`), Plein air (`/pleinair`)
+- Programme (`/activites`), Détail activité (`/activites/detail/:id`)
+- Adhésion (`/adhesion`)
+- Connexion (`/login`), Mot de passe oublié (`/oubli-pass`)
+- Mentions légales (`/mentionslegales`), Contact (`/contact`)
+
+**Pages authentifiées** (réservées aux utilisateurs connectés, redirection vers `/login` sinon) :
+
+- Nos Balades (`/balades`)
+- Documentation (`/documentation`)
+- Espace Adhérent / Trombinoscope (`/espace-adherent/trombinoscope`)
+- Profil utilisateur (`/user/:id`)
+
+Le header adapte sa navigation en conséquence : les menus « Nos Balades », « Documentation », « Espace Adhérent » et « Profil » ne sont visibles que pour les utilisateurs connectés.
+
+**Alternatives considérées** :
+
+- Tout public : expose les données personnelles des adhérents.
+- Tout authentifié : empêche les non-adhérents de découvrir l'association.
+
+**Rationale** : Les pages vitrine de l'association et des activités doivent être publiques pour encourager l'adhésion. Les pages contenant des données personnelles (annuaire, balades, documentation) sont protégées.
+
+### 28. Page Adhésion (`/adhesion`)
+
+**Choix** : Route `adhesion/page.tsx`. Contenu géré via un nouveau global Payload `Adhesion` avec un titre (text, défaut « Adhésion ») et une description (richText) indiquant que les adhésions sont clôturées ou ouvertes selon la configuration.
+
+**Alternatives considérées** :
+
+- Formulaire d'inscription en ligne : hors scope (non-goal : pas de gestion de cotisations).
+- Page statique codée en dur : pas modifiable sans redéploiement.
+
+**Rationale** : Un global Payload permet aux administrateurs de mettre à jour le statut des adhésions et le contenu de la page sans intervention technique.
+
+### 29. Page Connexion (`/login`)
+
+**Choix** : Route `login/page.tsx`. Affiche une carte « Connectez-vous » avec un formulaire contenant pseudo (text, required) et mot de passe (password, required). L'authentification se fait via `POST /api/users/login` (API REST Payload) avec le champ `email` ou `username` selon le pseudo saisi. Sous le formulaire : lien « Mot de passe oublié » vers `/oubli-pass`. En dessous : section « Nouveau sur le site ? » avec bouton « Adhérer à l'association » redirigeant vers `/adhesion`.
+
+**Alternatives considérées** :
+
+- Rediriger vers le panneau admin Payload pour la connexion : les adhérents n'ont pas accès au panneau admin.
+- OAuth / SSO : surdimensionné pour une association locale.
+
+**Rationale** : Un formulaire de connexion dédié sur le frontend permet aux adhérents de se connecter sans exposer le panneau admin. L'API REST Payload gère nativement l'authentification.
+
+### 30. Page Mot de passe oublié (`/oubli-pass`)
+
+**Choix** : Route `oubli-pass/page.tsx`. Affiche un titre « Réinitialisation du mot de passe » (configurable via un global ou un champ admin) et un formulaire avec un champ email (email, required, validation format email) et un bouton « Envoyer ». Le formulaire appelle `POST /api/users/forgot-password` (API REST Payload) qui envoie un email de réinitialisation.
+
+**Alternatives considérées** :
+
+- Pas de page de récupération : les adhérents perdent l'accès en cas d'oubli.
+
+**Rationale** : Payload fournit nativement l'endpoint `forgot-password`. Une page dédiée offre une UX complète pour le flux d'authentification.
+
+### 31. Bouton Connexion dans le header
+
+**Choix** : Le header affiche à droite un bouton « Connexion » redirigeant vers `/login`, visible uniquement pour les utilisateurs non connectés. Pour les utilisateurs connectés, ce bouton est remplacé par le bouton « Déconnexion » existant (décision #22). Le menu « Adhésion » est ajouté à la navigation principale, visible pour tous les visiteurs (connectés ou non).
+
+**Alternatives considérées** :
+
+- Pas de bouton connexion : les utilisateurs non connectés n'ont aucun point d'entrée visible pour se connecter.
+
+**Rationale** : Un bouton connexion visible à droite du header est une convention standard sur les sites web. Le menu Adhésion permet de diriger les prospects vers l'inscription.
 
 ## Risks / Trade-offs
 

@@ -1,5 +1,19 @@
 ## ADDED Requirements
 
+### Requirement: Accès réservé aux adhérents connectés
+
+La page Nos Balades (route `/balades`) DOIT être accessible uniquement aux utilisateurs connectés. Les visiteurs non connectés DOIVENT être redirigés vers `/login`.
+
+#### Scenario: Accès par un adhérent connecté
+
+- **WHEN** un adhérent connecté accède à `/balades`
+- **THEN** la page Nos Balades est affichée
+
+#### Scenario: Accès par un visiteur non connecté
+
+- **WHEN** un visiteur non connecté accède à `/balades`
+- **THEN** le système redirige vers `/login`
+
 ### Requirement: Photo d'en-tête avec texte configurable
 
 Le système DOIT afficher une photo d'en-tête en haut de la page « Nos Balades » avec un texte superposé configurable (par défaut « Nos Balades »). La photo et le texte DOIVENT être modifiables via Payload (global `Home` ou global dédié `NosBalades`).

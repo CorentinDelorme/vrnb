@@ -1,5 +1,19 @@
 ## ADDED Requirements
 
+### Requirement: Accès réservé aux adhérents connectés
+
+La page Documentation (route `/documentation`) DOIT être accessible uniquement aux utilisateurs connectés. Les visiteurs non connectés DOIVENT être redirigés vers `/login`.
+
+#### Scenario: Accès par un adhérent connecté
+
+- **WHEN** un adhérent connecté accède à `/documentation`
+- **THEN** la page Documentation est affichée
+
+#### Scenario: Accès par un visiteur non connecté
+
+- **WHEN** un visiteur non connecté accède à `/documentation`
+- **THEN** le système redirige vers `/login`
+
 ### Requirement: Liste des documentations en cartes
 
 Le système DOIT afficher sur la page Documentation (`/documentation`) les documentations de l'association sous forme de cartes. Chaque carte DOIT contenir : le titre, la description (intro), le nom de la catégorie (relation vers `Categories`), la date de création et l'auteur. Les documentations proviennent de la collection `Documentations`.

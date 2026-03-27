@@ -21,12 +21,20 @@ Le header DOIT afficher le logo de l'association VRNB à gauche. Le logo DOIT ê
 
 ### Requirement: Header avec navigation principale
 
-Le système DOIT afficher un header persistant sur toutes les pages du site avec les menus de navigation suivants : « Accueil », « Association », « Activités », « Nos Balades », « Programme », « Documentation », « Espace Adhérent » et « Profil ».
+Le système DOIT afficher un header persistant sur toutes les pages du site avec les menus de navigation suivants :
+
+- **Toujours visibles** (public) : « Accueil », « Association », « Activités », « Programme », « Adhésion ».
+- **Visibles uniquement pour les utilisateurs connectés** : « Nos Balades », « Documentation », « Espace Adhérent », « Profil ».
 
 #### Scenario: Affichage du header sur chaque page
 
 - **WHEN** un visiteur accède à n'importe quelle page du site
-- **THEN** le header avec les menus de navigation est affiché
+- **THEN** le header avec les menus de navigation publics est affiché
+
+#### Scenario: Menus supplémentaires pour les utilisateurs connectés
+
+- **WHEN** un adhérent connecté accède à n'importe quelle page du site
+- **THEN** le header affiche les menus publics ET les menus réservés aux connectés (Nos Balades, Documentation, Espace Adhérent, Profil)
 
 #### Scenario: Navigation vers l'accueil
 
@@ -93,30 +101,49 @@ Le menu « Activités » DOIT contenir cinq sous-menus : « Randonnées à vélo
 
 ### Requirement: Menu Programme
 
-Le menu « Programme » DOIT naviguer vers la page programme des activités.
+Le menu « Programme » DOIT naviguer vers la page programme des activités. Ce menu est visible pour tous les visiteurs (connectés ou non).
 
 #### Scenario: Navigation vers Programme
 
 - **WHEN** un visiteur clique sur le menu « Programme »
 - **THEN** le système navigue vers `/activites`
 
+### Requirement: Menu Adhésion
+
+Le menu « Adhésion » DOIT naviguer vers la page d'adhésion. Ce menu est visible pour tous les visiteurs (connectés ou non).
+
+#### Scenario: Navigation vers Adhésion
+
+- **WHEN** un visiteur clique sur le menu « Adhésion »
+- **THEN** le système navigue vers `/adhesion`
+
 ### Requirement: Menu Documentation
 
-Le menu « Documentation » DOIT naviguer vers la page de documentation.
+Le menu « Documentation » DOIT naviguer vers la page de documentation. Ce menu n'est visible que pour les utilisateurs connectés.
 
 #### Scenario: Navigation vers Documentation
 
-- **WHEN** un visiteur clique sur le menu « Documentation »
+- **WHEN** un adhérent connecté clique sur le menu « Documentation »
 - **THEN** le système navigue vers `/documentation`
+
+#### Scenario: Menu Documentation non visible pour les visiteurs non connectés
+
+- **WHEN** un visiteur non connecté consulte le header
+- **THEN** le menu « Documentation » n'est pas affiché
 
 ### Requirement: Menu Nos Balades
 
-Le menu « Nos Balades » DOIT naviguer vers la page galerie des balades passées.
+Le menu « Nos Balades » DOIT naviguer vers la page galerie des balades passées. Ce menu n'est visible que pour les utilisateurs connectés.
 
 #### Scenario: Navigation vers Nos Balades
 
-- **WHEN** un visiteur clique sur le menu « Nos Balades »
+- **WHEN** un adhérent connecté clique sur le menu « Nos Balades »
 - **THEN** le système navigue vers `/balades`
+
+#### Scenario: Menu Nos Balades non visible pour les visiteurs non connectés
+
+- **WHEN** un visiteur non connecté consulte le header
+- **THEN** le menu « Nos Balades » n'est pas affiché
 
 ### Requirement: Sous-menu Espace Adhérent
 
@@ -203,6 +230,25 @@ Le header DOIT afficher un bouton « Déconnexion » à droite, visible uniqueme
 
 - **WHEN** un visiteur non connecté consulte le header
 - **THEN** le bouton « Déconnexion » n'est pas affiché
+
+### Requirement: Bouton Connexion à droite du header
+
+Le header DOIT afficher un bouton « Connexion » à droite, visible uniquement pour les visiteurs non connectés. Le bouton DOIT rediriger vers `/login`.
+
+#### Scenario: Affichage du bouton Connexion
+
+- **WHEN** un visiteur non connecté consulte le header
+- **THEN** un bouton « Connexion » est affiché à droite du header
+
+#### Scenario: Clic sur Connexion
+
+- **WHEN** un visiteur non connecté clique sur le bouton « Connexion »
+- **THEN** le système navigue vers `/login`
+
+#### Scenario: Bouton Connexion non visible pour les utilisateurs connectés
+
+- **WHEN** un adhérent connecté consulte le header
+- **THEN** le bouton « Connexion » n'est pas affiché (le bouton « Déconnexion » est affiché à sa place)
 
 ### Requirement: Footer avec liens de navigation et copyright
 

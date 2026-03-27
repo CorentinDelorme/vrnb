@@ -12,7 +12,7 @@ La page Profil (route `/user/:id`) DOIT être accessible uniquement aux utilisat
 #### Scenario: Accès par un visiteur non connecté
 
 - **WHEN** un visiteur non connecté accède à `/user/:id`
-- **THEN** le système redirige vers la page de connexion
+- **THEN** le système redirige vers `/login`
 
 ### Requirement: Titre de la page
 
