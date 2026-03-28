@@ -3,10 +3,12 @@
   "version": "1.6.0",
   "scripts": {
     "ng": "ng",
+    "dev": "ng serve",
     "start": "ng serve",
     "start:production": "ng serve --configuration production",
     "start:host": "ng serve --host 0.0.0.0",
     "build": "ng build",
+    "check-types": "tsc -p tsconfig.app.json --noEmit",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
@@ -41,7 +43,6 @@
     ]
   },
   "private": true,
-  "packageManager": "npm@11.10.0",
   "dependencies": {
     "@angular/common": "^21.2.2",
     "@angular/compiler": "^21.2.2",
