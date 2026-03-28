@@ -1,36 +1,39 @@
-# AGENTS.md - Cleaning App Development Guide
+# apps/clean — Outdoor Touring App
 
-This document provides guidelines for agents working on the Cleaning App codebase.
+> Part of the **vrnb** monorepo. See the [root AGENTS.md](../../AGENTS.md) for monorepo build/test commands and environment setup.
 
 ## Project Overview
 
-Angular 21 application using standalone components, Vitest for testing, ESLint for linting, and Tailwind CSS with DaisyUI for styling.
+Angular 21 application using standalone components, Vitest for testing, ESLint for linting, Tailwind CSS 4 with DaisyUI 5 for styling, and Leaflet for interactive maps with GPX track rendering.
 
 ## Build/Lint/Test Commands
 
 ```bash
-# Development server
-npm start           # or: ng serve
-# Opens at http://localhost:4200/
+# Development server (http://localhost:4200)
+bun run dev         # or: ng serve
 
 # Build
-npm run build       # Production build to dist/
-npm run watch      # Development build with watch mode
+bun run build       # Production build to dist/
 
-# Testing (Vitest via Angular)
-npm test            # Run all tests in watch mode
-ng test --watch=false --browsers=ChromeHeadless  # Single run
+# Unit testing (Vitest via @angular/build:unit-test)
+bun run test        # Run all tests in watch mode
+ng test --watch=false  # Single run
+ng test --include='**/app.spec.ts'  # Single test file
 
-# Run a single test file
-ng test --include='**/app.spec.ts'
-ng test --include='**/gpx-service.spec.ts'
-
-# Run a specific test (add .only to test in Vitest)
-# In test file: it('should...', () => { })
+# E2E testing (Playwright — starts own dev server)
+bun run e2e         # Run all E2E specs in e2e/
 
 # Linting
-npm run lint        # Run ESLint
-npm run lint:fix    # Fix auto-fixable issues
+bun run lint        # Run ESLint
+bun run lint:fix    # Fix auto-fixable issues
+
+# Type checking
+bun run check-types # tsc --noEmit
+
+# Data generation
+bun run generate:tours  # Generate tour data
+bun run generate:pdfs   # Generate PDF files
+bun run generate:all    # Generate tours + PDFs
 ```
 
 ## Code Style Guidelines
@@ -177,7 +180,7 @@ describe('TourService', () => {
 ### Git Conventions
 
 - Use conventional commits: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`
-- Run `npm run lint` and `ng test --watch=false` before committing
+- Run `bun run lint` and `bun run check-types` before committing
 - No commit without passing tests
 - Never commit without my approval first
 
@@ -212,8 +215,21 @@ src/
 ### Key Dependencies
 
 - Angular 21 (standalone components)
-- Vitest for unit testing
+- Vitest for unit testing, Playwright for E2E
 - ESLint + angular-eslint
-- Prettier + prettier-plugin-tailwindcss
-- Tailwind CSS 4 + DaisyUI 5
-- Leaflet for maps
+- Prettier + prettier-plugin-tailwindcss + prettier-plugin-organize-imports
+- Tailwind CSS 4 + DaisyUI 5 (`vrnb` / `vrnb-dark` themes only)
+- Leaflet + leaflet-arrowheads + leaflet.fullscreen for maps
+- HugeIcons for icon components
+
+### Key Files
+
+- `src/app/tours-service.ts` — Core business logic (tour list, filtering)
+- `src/app/tours-data.ts` — Tour definitions and static data
+- `src/app/tour-storage.service.ts` — Tour persistence (localStorage)
+- `src/app/tours-map/` — Leaflet map view with GPX track rendering
+- `src/app/tours-list/` — Tour listing view
+- `src/app/tour/` — Individual tour detail view
+- `public/gpx/` — GPX track files organized by tour ID (P1–P13, V1–V15)
+- `scripts/generate-tours.ts` — Data generation script
+- `e2e/` — Playwright E2E test specs
