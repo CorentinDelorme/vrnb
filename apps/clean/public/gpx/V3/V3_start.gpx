@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+  <metadata>
+    <link href="https://geovelo.app">
+      <text>Geovelo - GPS et Stats vélo</text>
+    </link>
+  </metadata>
+  <trk>
+    <type>cycling</type>
+    <name>Parc de l'An 2000 vers le parcours V3</name>
+    <trkseg>
+      <trkpt lat="48.016409" lon="-1.746016">
+      </trkpt>
+      <trkpt lat="48.016416" lon="-1.745879">
+      </trkpt>
+      <trkpt lat="48.016318" lon="-1.745875">
+      </trkpt>
+      <trkpt lat="48.016173" lon="-1.745861">
+      </trkpt>
+      <trkpt lat="48.01611" lon="-1.745768">
+      </trkpt>
+      <trkpt lat="48.015503" lon="-1.745694">
+      </trkpt>
+      <trkpt lat="48.015072" lon="-1.745679">
+      </trkpt>
+      <trkpt lat="48.014969" lon="-1.745676">
+      </trkpt>
+      <trkpt lat="48.01474" lon="-1.74567">
+      </trkpt>
+      <trkpt lat="48.014638" lon="-1.745663">
+      </trkpt>
+      <trkpt lat="48.0145" lon="-1.745652">
+      </trkpt>
+      <trkpt lat="48.014409" lon="-1.745645">
+      </trkpt>
+      <trkpt lat="48.014026" lon="-1.745617">
+      </trkpt>
+      <trkpt lat="48.013639" lon="-1.745589">
+      </trkpt>
+      <trkpt lat="48.013635" lon="-1.745633">
+      </trkpt>
+      <trkpt lat="48.013314" lon="-1.747531">
+      </trkpt>
+      <trkpt lat="48.013222" lon="-1.748044">
+      </trkpt>
+      <trkpt lat="48.013205" lon="-1.748249">
+      </trkpt>
+      <trkpt lat="48.012996" lon="-1.748265">
+      </trkpt>
+      <trkpt lat="48.012275" lon="-1.74812">
+      </trkpt>
+      <trkpt lat="48.011052" lon="-1.747868">
+      </trkpt>
+      <trkpt lat="48.010898" lon="-1.747842">
+      </trkpt>
+      <trkpt lat="48.01066" lon="-1.747813">
+      </trkpt>
+      <trkpt lat="48.010361" lon="-1.747812">
+      </trkpt>
+      <trkpt lat="48.009811" lon="-1.747716">
+      </trkpt>
+      <trkpt lat="48.009344" lon="-1.747513">
+      </trkpt>
+      <trkpt lat="48.009223" lon="-1.747471">
+      </trkpt>
+      <trkpt lat="48.00912" lon="-1.747482">
+      </trkpt>
+      <trkpt lat="48.009044" lon="-1.747527">
+      </trkpt>
+      <trkpt lat="48.008983" lon="-1.747676">
+      </trkpt>
+      <trkpt lat="48.007867" lon="-1.750525">
+      </trkpt>
+      <trkpt lat="48.007767" lon="-1.750916">
+      </trkpt>
+      <trkpt lat="48.007751" lon="-1.751173">
+      </trkpt>
+      <trkpt lat="48.007774" lon="-1.751997">
+      </trkpt>
+      <trkpt lat="48.007787" lon="-1.752487">
+      </trkpt>
+      <trkpt lat="48.007799" lon="-1.7529">
+      </trkpt>
+      <trkpt lat="48.007804" lon="-1.753126">
+      </trkpt>
+      <trkpt lat="48.007779" lon="-1.753128">
+      </trkpt>
+      <trkpt lat="48.007769" lon="-1.753128">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

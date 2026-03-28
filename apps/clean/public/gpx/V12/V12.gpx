@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+  <metadata>
+    <link href="https://geovelo.app">
+      <text>Geovelo - GPS et Stats vélo</text>
+    </link>
+  </metadata>
+  <trk>
+    <type>cycling</type>
+    <name>Parcours V12</name>
+    <trkseg>
+      <trkpt lat="48.016008" lon="-1.728044">
+      </trkpt>
+      <trkpt lat="48.015828" lon="-1.727922">
+      </trkpt>
+      <trkpt lat="48.015754" lon="-1.727874">
+      </trkpt>
+      <trkpt lat="48.015511" lon="-1.727763">
+      </trkpt>
+      <trkpt lat="48.014257" lon="-1.7272">
+      </trkpt>
+      <trkpt lat="48.013709" lon="-1.73321">
+      </trkpt>
+      <trkpt lat="48.014257" lon="-1.7272">
+      </trkpt>
+      <trkpt lat="48.013463" lon="-1.726834">
+      </trkpt>
+      <trkpt lat="48.013324" lon="-1.726702">
+      </trkpt>
+      <trkpt lat="48.013204" lon="-1.726546">
+      </trkpt>
+      <trkpt lat="48.013134" lon="-1.726441">
+      </trkpt>
+      <trkpt lat="48.013064" lon="-1.726297">
+      </trkpt>
+      <trkpt lat="48.012574" lon="-1.72505">
+      </trkpt>
+      <trkpt lat="48.01251" lon="-1.724917">
+      </trkpt>
+      <trkpt lat="48.012467" lon="-1.724872">
+      </trkpt>
+      <trkpt lat="48.012408" lon="-1.72484">
+      </trkpt>
+      <trkpt lat="48.011552" lon="-1.724654">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

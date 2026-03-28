@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+  <metadata>
+    <link href="https://geovelo.app">
+      <text>Geovelo - GPS et Stats vélo</text>
+    </link>
+  </metadata>
+  <trk>
+    <type>cycling</type>
+    <name>Parcours P2</name>
+    <trkseg>
+      <trkpt lat="48.016415" lon="-1.745898">
+      </trkpt>
+      <trkpt lat="48.016401" lon="-1.746189">
+      </trkpt>
+      <trkpt lat="48.016398" lon="-1.74653">
+      </trkpt>
+      <trkpt lat="48.016371" lon="-1.746649">
+      </trkpt>
+      <trkpt lat="48.016253" lon="-1.746925">
+      </trkpt>
+      <trkpt lat="48.016225" lon="-1.74703">
+      </trkpt>
+      <trkpt lat="48.016221" lon="-1.747141">
+      </trkpt>
+      <trkpt lat="48.016779" lon="-1.747169">
+      </trkpt>
+      <trkpt lat="48.017035" lon="-1.747168">
+      </trkpt>
+      <trkpt lat="48.017156" lon="-1.747167">
+      </trkpt>
+      <trkpt lat="48.017463" lon="-1.747242">
+      </trkpt>
+      <trkpt lat="48.017499" lon="-1.74679">
+      </trkpt>
+      <trkpt lat="48.017463" lon="-1.747242">
+      </trkpt>
+      <trkpt lat="48.017936" lon="-1.747427">
+      </trkpt>
+      <trkpt lat="48.01801" lon="-1.747272">
+      </trkpt>
+      <trkpt lat="48.018231" lon="-1.747153">
+      </trkpt>
+      <trkpt lat="48.018337" lon="-1.747111">
+      </trkpt>
+      <trkpt lat="48.018416" lon="-1.746643">
+      </trkpt>
+      <trkpt lat="48.018474" lon="-1.74604">
+      </trkpt>
+      <trkpt lat="48.018416" lon="-1.746643">
+      </trkpt>
+      <trkpt lat="48.018337" lon="-1.747111">
+      </trkpt>
+      <trkpt lat="48.018395" lon="-1.747559">
+      </trkpt>
+      <trkpt lat="48.018423" lon="-1.747669">
+      </trkpt>
+      <trkpt lat="48.01887" lon="-1.747507">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

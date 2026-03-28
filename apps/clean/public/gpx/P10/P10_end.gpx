@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+  <metadata>
+    <link href="https://geovelo.app">
+      <text>Geovelo - GPS et Stats vélo</text>
+    </link>
+  </metadata>
+  <trk>
+    <type>cycling</type>
+    <name>Fin du parcours P10 vers le Parc de l'An 2000</name>
+    <trkseg>
+      <trkpt lat="48.014955" lon="-1.745727">
+      </trkpt>
+      <trkpt lat="48.014969" lon="-1.745676">
+      </trkpt>
+      <trkpt lat="48.015072" lon="-1.745679">
+      </trkpt>
+      <trkpt lat="48.015503" lon="-1.745694">
+      </trkpt>
+      <trkpt lat="48.015498" lon="-1.745767">
+      </trkpt>
+      <trkpt lat="48.015487" lon="-1.745943">
+      </trkpt>
+      <trkpt lat="48.015577" lon="-1.746174">
+      </trkpt>
+      <trkpt lat="48.015847" lon="-1.746593">
+      </trkpt>
+      <trkpt lat="48.016098" lon="-1.746492">
+      </trkpt>
+      <trkpt lat="48.016277" lon="-1.746245">
+      </trkpt>
+      <trkpt lat="48.016401" lon="-1.746189">
+      </trkpt>
+      <trkpt lat="48.016409" lon="-1.746016">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

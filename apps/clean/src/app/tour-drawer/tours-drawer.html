@@ -1,0 +1,31 @@
+<div class="drawer">
+  <input class="drawer-toggle" id="tours-drawer" type="checkbox" />
+  <div class="drawer-content">
+    <label class="btn btn-primary btn-sm drawer-button" for="tours-drawer">Menu</label>
+  </div>
+  <div class="drawer-side">
+    <label class="drawer-overlay" for="tours-drawer" aria-label="close sidebar"></label>
+
+    <ul class="menu bg-base-200 min-h-full w-80 gap-3 p-4">
+      <div class="mb-3 flex items-center justify-between">
+        <h1 class="text-secondary text-2xl font-bold sm:text-4xl">{{ title.getTitle() }}</h1>
+        <label
+          class="btn btn-sm btn-circle btn-ghost mt-1"
+          for="tours-drawer"
+          aria-label="close sidebar"
+        >
+          <hugeicons-icon [icon]="cancelIcon" [strokeWidth]="1.5" alt="Fermer" />
+        </label>
+      </div>
+
+      @if (pdfUrl) {
+        <li>
+          <a [href]="pdfUrl" download target="_blank" rel="noopener">
+            <hugeicons-icon [icon]="pdf02Icon" [strokeWidth]="1.5" alt="" />
+            Télécharger le PDF de suivi
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

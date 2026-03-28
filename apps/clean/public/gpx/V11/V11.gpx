@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="gpx.py -- https://github.com/tkrajina/gpxpy">
+  <metadata>
+    <link href="https://geovelo.app">
+      <text>Geovelo - GPS et Stats vélo</text>
+    </link>
+  </metadata>
+  <trk>
+    <type>cycling</type>
+    <name>Parcours V11</name>
+    <trkseg>
+      <trkpt lat="48.020999" lon="-1.73593">
+      </trkpt>
+      <trkpt lat="48.020586" lon="-1.736027">
+      </trkpt>
+      <trkpt lat="48.019217" lon="-1.736351">
+      </trkpt>
+      <trkpt lat="48.018757" lon="-1.736369">
+      </trkpt>
+      <trkpt lat="48.018568" lon="-1.736342">
+      </trkpt>
+      <trkpt lat="48.018338" lon="-1.736242">
+      </trkpt>
+      <trkpt lat="48.018159" lon="-1.73615">
+      </trkpt>
+      <trkpt lat="48.017885" lon="-1.73601">
+      </trkpt>
+      <trkpt lat="48.016818" lon="-1.735453">
+      </trkpt>
+      <trkpt lat="48.016465" lon="-1.735268">
+      </trkpt>
+      <trkpt lat="48.01639" lon="-1.735229">
+      </trkpt>
+      <trkpt lat="48.017195" lon="-1.728828">
+      </trkpt>
+      <trkpt lat="48.017749" lon="-1.729175">
+      </trkpt>
+      <trkpt lat="48.0179" lon="-1.729265">
+      </trkpt>
+      <trkpt lat="48.018073" lon="-1.729373">
+      </trkpt>
+      <trkpt lat="48.018184" lon="-1.729421">
+      </trkpt>
+      <trkpt lat="48.018335" lon="-1.729444">
+      </trkpt>
+      <trkpt lat="48.019538" lon="-1.729372">
+      </trkpt>
+      <trkpt lat="48.020051" lon="-1.729341">
+      </trkpt>
+      <trkpt lat="48.019538" lon="-1.729372">
+      </trkpt>
+      <trkpt lat="48.018335" lon="-1.729444">
+      </trkpt>
+      <trkpt lat="48.018184" lon="-1.729421">
+      </trkpt>
+      <trkpt lat="48.018073" lon="-1.729373">
+      </trkpt>
+      <trkpt lat="48.0179" lon="-1.729265">
+      </trkpt>
+      <trkpt lat="48.017749" lon="-1.729175">
+      </trkpt>
+      <trkpt lat="48.017195" lon="-1.728828">
+      </trkpt>
+      <trkpt lat="48.016034" lon="-1.728061">
+      </trkpt>
+      <trkpt lat="48.016014" lon="-1.728048">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

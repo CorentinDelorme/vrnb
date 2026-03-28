@@ -1,0 +1,28 @@
+<main class="p-4 sm:p-8">
+  <header class="flex items-center gap-4 pb-4 sm:pb-8">
+    @if (router.url !== '/' && router.url !== '') {
+      <a class="btn btn-primary btn-sm" routerLink="/" aria-label="Retour à l'accueil">
+        <hugeicons-icon
+          class="text-primary-content"
+          [icon]="arrowLeftIcon"
+          [strokeWidth]="1.5"
+          alt="Retour à l'accueil"
+        />
+      </a>
+    } @else {
+      <img class="h-15.75 w-16" src="/icons/vrnb.png" alt="VRNB" />
+    }
+
+    <h1 class="text-secondary text-2xl font-bold sm:text-4xl">{{ title.getTitle() }}</h1>
+
+    @if (router.url.startsWith('/tour/')) {
+      <app-drawer class="ml-auto" />
+    }
+
+    @if (router.url.startsWith('/tours/')) {
+      <app-tours-drawer class="ml-auto" />
+    }
+  </header>
+
+  <router-outlet></router-outlet>
+</main>

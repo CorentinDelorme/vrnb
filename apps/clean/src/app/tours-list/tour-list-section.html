@@ -1,0 +1,55 @@
+<ul class="list bg-base-100 rounded-box shadow-md">
+  <li class="flex items-center justify-between p-4 pb-2">
+    <div class="flex items-center gap-4">
+      @if (type === 'V') {
+        <hugeicons-icon
+          class="text-primary-content sm:h-10 sm:w-10"
+          [icon]="bicycleIcon"
+          [strokeWidth]="1.5"
+          alt=""
+        />
+      }
+      @if (type === 'P') {
+        <hugeicons-icon
+          class="text-primary-content sm:h-10 sm:w-10"
+          [icon]="walkingIcon"
+          [strokeWidth]="1.5"
+          alt=""
+        />
+      }
+
+      <h2 class="text-secondary text-2xl tracking-wide sm:text-4xl">{{ title }}</h2>
+    </div>
+
+    <a class="btn btn-primary max-sm:hidden" [routerLink]="['/tours', type]">
+      Voir tous les parcours
+    </a>
+  </li>
+
+  @for (item of tours; track $index) {
+    <li class="list-row items-center">
+      <div class="text-xl font-light text-black opacity-70 sm:text-3xl">{{ item.name }}</div>
+      <div class="text-base font-light text-black opacity-60 sm:text-xl">
+        @if (item.distance < 1) {
+          {{ (item.distance * 1000).toFixed(0) }} m
+        } @else {
+          {{ item.distance.toString().replace('.', ',') }} km
+        }
+      </div>
+      <div class="list-col-grow flex justify-end">
+        <button
+          class="btn btn-square btn-ghost"
+          [routerLink]="['/tour', item.name]"
+          aria-label="Lancer le parcours"
+        >
+          <hugeicons-icon
+            class="text-primary-content"
+            [icon]="playIcon"
+            [strokeWidth]="1.5"
+            alt="Lancer le parcours"
+          />
+        </button>
+      </div>
+    </li>
+  }
+</ul>

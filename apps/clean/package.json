@@ -1,0 +1,96 @@
+{
+  "name": "clean",
+  "version": "1.6.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "start:production": "ng serve --configuration production",
+    "start:host": "ng serve --host 0.0.0.0",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test",
+    "lint": "ng lint",
+    "lint:fix": "ng lint --fix",
+    "generate:tours": "bun tsx scripts/generate-tours.ts && bun run lint:fix",
+    "generate:pdfs": "bun tsx scripts/generate-pdfs.ts",
+    "generate:all": "bun run generate:tours && bun run generate:pdfs",
+    "e2e": "ng e2e"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "htmlWhitespaceSensitivity": "ignore",
+    "plugins": [
+      "prettier-plugin-tailwindcss",
+      "prettier-plugin-organize-imports",
+      "prettier-plugin-organize-attributes"
+    ],
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      },
+      {
+        "files": "*.ts",
+        "options": {
+          "parser": "typescript"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "packageManager": "npm@11.10.0",
+  "dependencies": {
+    "@angular/common": "^21.2.2",
+    "@angular/compiler": "^21.2.2",
+    "@angular/core": "^21.2.2",
+    "@angular/forms": "^21.2.2",
+    "@angular/platform-browser": "^21.2.2",
+    "@angular/router": "^21.2.2",
+    "@hugeicons/angular": "^1.0.6",
+    "@hugeicons/core-free-icons": "^3.3.0",
+    "@tmcw/togeojson": "^7.1.2",
+    "@vercel/analytics": "^2.0.0",
+    "@vercel/speed-insights": "^2.0.0",
+    "canvas-confetti": "^1.9.4",
+    "daisyui": "^5.5.19",
+    "leaflet": "^1.9.4",
+    "leaflet-arrowheads": "^1.4.0",
+    "leaflet.fullscreen": "^5.3.0",
+    "rxjs": "~7.8.2",
+    "tslib": "^2.8.1"
+  },
+  "devDependencies": {
+    "@angular-eslint/builder": "21.3.0",
+    "@angular/build": "^21.2.1",
+    "@angular/cli": "^21.2.1",
+    "@angular/compiler-cli": "^21.2.2",
+    "@axe-core/playwright": "^4.11.1",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "1.58.2",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/canvas-confetti": "^1.9.0",
+    "@types/geojson": "^7946.0.16",
+    "@types/leaflet": "^1.9.21",
+    "@xmldom/xmldom": "^0.8.11",
+    "angular-eslint": "21.3.0",
+    "eslint": "^10.0.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.5",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
+    "playwright-ng-schematics": "^21.0.5",
+    "postcss": "^8.5.8",
+    "prettier": "^3.8.1",
+    "prettier-plugin-organize-attributes": "^1.0.0",
+    "prettier-plugin-organize-imports": "^4.3.0",
+    "prettier-plugin-tailwindcss": "^0.7.2",
+    "tailwindcss": "^4.2.1",
+    "tsx": "^4.21.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "8.57.0",
+    "vitest": "^4.0.18"
+  }
+}

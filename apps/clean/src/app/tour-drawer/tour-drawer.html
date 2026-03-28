@@ -1,0 +1,88 @@
+<div class="drawer">
+  <input class="drawer-toggle" id="my-drawer-1" type="checkbox" />
+  <div class="drawer-content">
+    <label class="btn btn-primary btn-sm drawer-button" for="my-drawer-1">Menu</label>
+  </div>
+  <div class="drawer-side">
+    <label class="drawer-overlay" for="my-drawer-1" aria-label="close sidebar"></label>
+
+    <ul class="menu bg-base-200 min-h-full w-60 gap-3 p-4 sm:w-80">
+      <div class="mb-3 flex items-center justify-between">
+        <h1 class="text-secondary text-2xl font-bold sm:text-4xl">{{ title.getTitle() }}</h1>
+        <label
+          class="btn btn-sm btn-circle btn-ghost mt-1"
+          for="my-drawer-1"
+          aria-label="close sidebar"
+        >
+          <hugeicons-icon [icon]="cancelIcon" [strokeWidth]="1.5" alt="Fermer" />
+        </label>
+      </div>
+
+      @if (pdfUrl) {
+        <li>
+          <a [href]="pdfUrl" download target="_blank" rel="noopener">
+            <hugeicons-icon [icon]="pdf02Icon" [strokeWidth]="1.5" alt="" />
+            Télécharger le PDF
+          </a>
+        </li>
+      }
+
+      <div class="divider m-0"></div>
+
+      @if (getGpxUrl('start')) {
+        <li>
+          <a [href]="getGpxUrl('start')" download target="_blank" rel="noopener">
+            <hugeicons-icon [icon]="route02Icon" [strokeWidth]="1.5" alt="" />
+            Télécharger le GPX vers le point de départ
+          </a>
+        </li>
+      }
+      @if (getGpxUrl()) {
+        <li>
+          <a [href]="getGpxUrl()" download target="_blank" rel="noopener">
+            <hugeicons-icon [icon]="mapsLocationIcon" [strokeWidth]="1.5" alt="" />
+            Télécharger le GPX du parcours
+          </a>
+        </li>
+      }
+      @if (getGpxUrl('end')) {
+        <li>
+          <a [href]="getGpxUrl('end')" download target="_blank" rel="noopener">
+            <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
+            Télécharger le GPX pour retourner au Parc de l’An 2000
+          </a>
+        </li>
+      }
+
+      <div class="divider m-0"></div>
+
+      <div class="flex justify-center">
+        <img class="h-8.5 w-45.5 sm:h-11.75 sm:w-63.75" src="/icons/geovelo.svg" alt="GeoVelo" />
+      </div>
+
+      <li>
+        <a [href]="gpxService.geoVeloToParcAn2000Link()" target="_blank" rel="noopener noreferrer">
+          <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
+          Retourner au Parc de l’An 2000 depuis ma position
+        </a>
+      </li>
+
+      @if (gpxService.links().toStart) {
+        <li>
+          <a [href]="gpxService.links().toStart" target="_blank" rel="noopener noreferrer">
+            <hugeicons-icon [icon]="route02Icon" [strokeWidth]="1.5" alt="" />
+            Itinéraire vers le point de départ
+          </a>
+        </li>
+      }
+      @if (gpxService.links().fromEnd) {
+        <li>
+          <a [href]="gpxService.links().fromEnd" target="_blank" rel="noopener noreferrer">
+            <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
+            Itinéraire pour retourner au Parc de l'An 2000
+          </a>
+        </li>
+      }
+    </ul>
+  </div>
+</div>
