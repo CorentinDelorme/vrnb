@@ -1,6 +1,5 @@
 import React from 'react'
 import 'ui/globals.css'
-import './styles.css'
 
 import { Header } from '@/components/Header'
 import { SiteFooter } from '@/components/SiteFooter'

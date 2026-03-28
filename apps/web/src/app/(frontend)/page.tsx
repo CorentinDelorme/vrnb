@@ -3,7 +3,6 @@ import React from 'react'
 
 import { HomePageClient } from './HomePageClient'
 import config from '@/payload.config'
-import './styles.css'
 
 export default async function HomePage() {
   const payloadConfig = await config

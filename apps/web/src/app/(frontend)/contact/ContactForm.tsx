@@ -2,6 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+
+interface ContactFormData {
+  name: string
+  email: string
+  message: string
+}
 
 interface ContactFormProps {
   titre: string
@@ -10,34 +17,30 @@ interface ContactFormProps {
 
 export function ContactForm({ titre }: ContactFormProps) {
   const router = useRouter()
-  const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isValid, isSubmitting },
+  } = useForm<ContactFormData>({ mode: 'onChange' })
   const [status, setStatus] = useState<{
     type: 'success' | 'error'
     message: string
   } | null>(null)
-  const [sending, setSending] = useState(false)
 
-  const isValid = form.name.trim() && form.email.trim() && form.message.trim()
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!isValid) return
-
-    setSending(true)
+  async function onSubmit(data: ContactFormData) {
     setStatus(null)
     try {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Erreur lors de l\'envoi')
       setStatus({ type: 'success', message: 'Message envoyé avec succès !' })
-      setForm({ name: '', email: '', message: '' })
+      reset()
     } catch {
       setStatus({ type: 'error', message: 'Erreur lors de l\'envoi du message.' })
-    } finally {
-      setSending(false)
     }
   }
 
@@ -46,7 +49,7 @@ export function ContactForm({ titre }: ContactFormProps) {
       <section className="container mx-auto px-4 max-w-2xl">
         <h1 className="text-4xl font-bold mb-6">{titre}</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="form-control">
             <label className="label">
               <span className="label-text">
@@ -55,10 +58,8 @@ export function ContactForm({ titre }: ContactFormProps) {
             </label>
             <input
               type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              {...register('name', { required: true })}
               className="input input-bordered w-full"
-              required
             />
           </div>
 
@@ -70,10 +71,8 @@ export function ContactForm({ titre }: ContactFormProps) {
             </label>
             <input
               type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              {...register('email', { required: true })}
               className="input input-bordered w-full"
-              required
             />
           </div>
 
@@ -84,10 +83,8 @@ export function ContactForm({ titre }: ContactFormProps) {
               </span>
             </label>
             <textarea
-              value={form.message}
-              onChange={(e) => setForm({ ...form, message: e.target.value })}
+              {...register('message', { required: true })}
               className="textarea textarea-bordered w-full h-32"
-              required
             />
           </div>
 
@@ -95,9 +92,9 @@ export function ContactForm({ titre }: ContactFormProps) {
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={!isValid || sending}
+              disabled={!isValid || isSubmitting}
             >
-              {sending ? 'Envoi...' : 'Envoyer'}
+              {isSubmitting ? 'Envoi...' : 'Envoyer'}
             </button>
             <button
               type="button"

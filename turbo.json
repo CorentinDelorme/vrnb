@@ -23,6 +23,15 @@
     "dev": {
       "cache": false,
       "persistent": true
-    }
+    },
+    "web#dev": {
+      "dependsOn": ["web-db#start"],
+      "cache": false,
+      "persistent": true
+    },
+    "start": {
+      "cache": false
+    },
+    "format": {}
   }
 }

@@ -12,6 +12,8 @@
     "generate:importmap": "cross-env NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "cross-env NODE_OPTIONS=--no-deprecation payload generate:types",
     "lint": "cross-env NODE_OPTIONS=--no-deprecation eslint --max-warnings 0",
+    "check-types": "cross-env NODE_OPTIONS=--no-deprecation tsc --noEmit",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "payload": "cross-env NODE_OPTIONS=--no-deprecation payload",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
     "test": "pnpm run test:int && pnpm run test:e2e",
@@ -31,6 +33,7 @@
     "payload": "3.80.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "react-hook-form": "^7.72.0",
     "sharp": "0.34.2",
     "ui": "workspace:*"
   },

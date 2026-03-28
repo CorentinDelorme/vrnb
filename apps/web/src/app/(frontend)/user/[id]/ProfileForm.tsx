@@ -2,44 +2,50 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+
+interface ProfileFormData {
+  username: string
+  nom: string
+  prenom: string
+  telephone: string
+  date_naissance: string
+}
 
 interface ProfileFormProps {
   userId: string
   isOwnProfile: boolean
-  initialData: {
-    username: string
-    nom: string
-    prenom: string
-    telephone: string
-    date_naissance: string
-  }
+  initialData: ProfileFormData
 }
 
 export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormProps) {
   const router = useRouter()
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState(initialData)
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<ProfileFormData>({ defaultValues: initialData })
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
-  const [saving, setSaving] = useState(false)
 
-  async function handleSave() {
-    setSaving(true)
+  async function onSubmit(data: ProfileFormData) {
     setStatus(null)
     try {
       const res = await fetch(`/api/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          username: form.username,
-          nom: form.nom,
-          prenom: form.prenom,
-          telephone: form.telephone,
-          date_naissance: form.date_naissance || undefined,
+          username: data.username,
+          nom: data.nom,
+          prenom: data.prenom,
+          telephone: data.telephone,
+          date_naissance: data.date_naissance || undefined,
         }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        throw new Error(data.message || 'Erreur lors de la sauvegarde')
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.message || 'Erreur lors de la sauvegarde')
       }
       setStatus({ type: 'success', message: 'Profil mis à jour avec succès.' })
       setEditing(false)
@@ -49,8 +55,6 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
         type: 'error',
         message: err instanceof Error ? err.message : 'Erreur inconnue',
       })
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -76,7 +80,7 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
   }
 
   return (
-    <div className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
         <div className="form-control">
           <label className="label">
@@ -84,8 +88,7 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
           </label>
           <input
             type="text"
-            value={form.username}
-            onChange={(e) => setForm({ ...form, username: e.target.value })}
+            {...register('username')}
             className="input input-bordered"
           />
         </div>
@@ -95,8 +98,7 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
           </label>
           <input
             type="text"
-            value={form.nom}
-            onChange={(e) => setForm({ ...form, nom: e.target.value })}
+            {...register('nom')}
             className="input input-bordered"
           />
         </div>
@@ -106,8 +108,7 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
           </label>
           <input
             type="text"
-            value={form.prenom}
-            onChange={(e) => setForm({ ...form, prenom: e.target.value })}
+            {...register('prenom')}
             className="input input-bordered"
           />
         </div>
@@ -117,8 +118,7 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
           </label>
           <input
             type="text"
-            value={form.telephone}
-            onChange={(e) => setForm({ ...form, telephone: e.target.value })}
+            {...register('telephone')}
             className="input input-bordered"
           />
         </div>
@@ -128,8 +128,7 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
           </label>
           <input
             type="date"
-            value={form.date_naissance}
-            onChange={(e) => setForm({ ...form, date_naissance: e.target.value })}
+            {...register('date_naissance')}
             className="input input-bordered"
           />
         </div>
@@ -137,19 +136,18 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
 
       <div className="flex gap-2">
         <button
-          type="button"
+          type="submit"
           className="btn btn-primary btn-sm"
-          onClick={handleSave}
-          disabled={saving}
+          disabled={isSubmitting}
         >
-          {saving ? 'Enregistrement...' : 'Enregistrer'}
+          {isSubmitting ? 'Enregistrement...' : 'Enregistrer'}
         </button>
         <button
           type="button"
           className="btn btn-ghost btn-sm"
           onClick={() => {
             setEditing(false)
-            setForm(initialData)
+            reset(initialData)
           }}
         >
           Annuler
@@ -161,6 +159,6 @@ export function ProfileForm({ userId, isOwnProfile, initialData }: ProfileFormPr
           <span>{status.message}</span>
         </div>
       )}
-    </div>
+    </form>
   )
 }
