@@ -1,59 +1,79 @@
-# CleaningApp
+# Appli Nettoyage Citoyen VRNB (Clean)
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.4.
+Application web pour organiser des actions de nettoyage des déchets, construite avec [Angular](https://angular.dev/). Elle permet de consulter les parcours de ramassage sur une carte interactive (Leaflet), de répartir les zones de nettoyage entre les différents groupes, de visualiser les tracés GPX et de télécharger les fiches PDF de chaque parcours.
 
-## Development server
+## Prérequis
 
-To start a local development server, run:
+- Avoir installé les dépendances depuis la racine du monorepo (`bun install`)
 
-```bash
-ng serve
+> Cette application n'a pas besoin de base de données, elle fonctionne avec des données embarquées.
+
+## Lancer en développement
+
+### Depuis la racine du projet (recommandé)
+
+```sh
+bun run dev:clean
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+### Depuis ce dossier
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```sh
+bun run dev
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+L'application sera accessible sur [http://localhost:4200](http://localhost:4200).
 
-```bash
-ng generate --help
+Les modifications du code source sont prises en compte automatiquement (rechargement en direct).
+
+## Commandes utiles
+
+| Commande | Description |
+|---|---|
+| `bun run dev` | Lancer le serveur de développement |
+| `bun run build` | Construire l'application pour la production |
+| `bun run lint` | Vérifier la qualité du code |
+| `bun run lint:fix` | Corriger automatiquement les problèmes de qualité |
+| `bun run check-types` | Vérifier les types TypeScript |
+| `bun run test` | Lancer les tests unitaires |
+| `bun run e2e` | Lancer les tests de bout en bout (E2E) |
+
+## Générer les données
+
+Les données des parcours de nettoyage et les fiches PDF peuvent être régénérées avec ces commandes :
+
+```sh
+bun run generate:tours    # Régénérer les données des parcours
+bun run generate:pdfs     # Régénérer les fiches PDF
+bun run generate:all      # Tout régénérer
 ```
 
-## Building
+## Tests
 
-To build the project run:
+### Tests unitaires
 
-```bash
-ng build
+```sh
+bun run test
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+### Tests de bout en bout (E2E)
 
-## Running unit tests
+Les tests E2E utilisent Playwright. Ils démarrent automatiquement le serveur de développement :
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
+```sh
+bun run e2e
 ```
 
-## Running end-to-end tests
+## Structure principale
 
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
 ```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+apps/clean/
+├── src/app/          ← Code source de l'application
+├── public/
+│   ├── gpx/          ← Fichiers de tracés GPS (un dossier par zone de nettoyage)
+│   ├── pdf/          ← Fiches PDF téléchargeables par groupe
+│   ├── media/        ← Images et médias
+│   └── icons/        ← Icônes
+├── e2e/              ← Tests de bout en bout
+└── scripts/          ← Scripts de génération de données
+```

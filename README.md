@@ -1,102 +1,107 @@
-# Turborepo starter
+# VRNB
 
-This Turborepo starter is maintained by the Turborepo core team.
+Dépôt principal du projet VRNB — un monorepo qui regroupe toutes les applications et les packages partagés de l'association Vélo Rando Nature Bruz.
 
-## Using this example
+## Contenu du projet
 
-Run the following command:
+| Dossier | Description |
+|---|---|
+| `apps/web` | Site web de l'association (CMS Payload + Next.js + MongoDB) |
+| `apps/clean` | Application pour organiser des actions de nettoyage des déchets (Angular + Leaflet + cartes GPX) |
+| `packages/ui` | Bibliothèque de composants visuels partagés (React + Storybook) |
+| `packages/web-db` | Service de base de données MongoDB (Docker) |
+| `packages/eslint-config` | Configuration partagée pour la qualité du code |
+| `packages/typescript-config` | Configuration TypeScript partagée |
 
-```sh
-bunx create-turbo@latest
-```
+## Prérequis
 
-## What's inside?
+Avant de commencer, assurez-vous d'avoir installé sur votre machine :
 
-This Turborepo includes the following packages/apps:
+- **[Bun](https://bun.sh)** (version 1.3.10 ou plus récente) — gestionnaire de paquets et d'exécution JavaScript
+- **[Docker](https://www.docker.com)** — nécessaire uniquement pour le site web (base de données MongoDB)
 
-### Apps and Packages
+## Installation
 
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Ouvrez un terminal à la racine du projet et lancez :
 
 ```sh
-turbo build
+bun install
 ```
 
-Without global `turbo`, use your package manager:
+Cela télécharge toutes les dépendances nécessaires pour l'ensemble des applications.
+
+## Lancer le projet en développement
+
+### Tout lancer (site web + appli pour organiser des actions de nettoyage des déchets)
 
 ```sh
-bunx turbo build
+bun run dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+> La base de données MongoDB se lance automatiquement avec le site web.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### Lancer uniquement le site web
 
 ```sh
-turbo build --filter=web
+bun run dev:web
 ```
 
-Without global `turbo`:
+Le site sera accessible sur [http://localhost:3000](http://localhost:3000).
+
+### Lancer uniquement l'appli pour organiser des actions de nettoyage des déchets
 
 ```sh
-bunx turbo build --filter=web
+bun run dev:clean
 ```
 
-### Develop
+L'application sera accessible sur [http://localhost:4200](http://localhost:4200).
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+## Construire le projet pour la production
 
 ```sh
-turbo dev
+bun run build
 ```
 
-Without global `turbo`, use your package manager:
+## Vérifier la qualité du code
+
+Ces commandes vérifient que le code est propre et sans erreurs :
 
 ```sh
-bunx turbo dev
+bun run lint
+bun run check-types
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Formater le code
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+Pour uniformiser la mise en forme de tous les fichiers :
 
 ```sh
-turbo dev --filter=web
+bun run format
 ```
 
-Without global `turbo`:
+## Lancer les tests
 
-```sh
-bunx turbo dev --filter=web
+Chaque application a ses propres tests. Consultez le README de chaque application pour plus de détails :
+
+- [apps/web/README.md](apps/web/README.md) — Tests du site web
+- [apps/clean/README.md](apps/clean/README.md) — Tests de l'appli pour organiser des actions de nettoyage des déchets
+- [packages/ui/README.md](packages/ui/README.md) — Tests des composants partagés
+
+## Structure du projet
+
 ```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+vrnb/
+├── apps/
+│   ├── web/          ← Site web de l'association
+│   └── clean/        ← Appli pour organiser des actions de nettoyage des déchets
+├── packages/
+│   ├── ui/           ← Composants visuels partagés
+│   ├── web-db/       ← Base de données MongoDB
+│   ├── eslint-config/    ← Règles de qualité du code
+│   └── typescript-config/ ← Configuration TypeScript
+├── openspec/         ← Gestion des changements
+└── package.json
+```
 
 By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
 

@@ -1,30 +1,27 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Composants Visuels Partagés (@repo/ui)
 
-## Getting Started
+Bibliothèque de composants React réutilisables, partagés entre les différentes applications du projet. Utilise [DaisyUI 5](https://daisyui.com/) pour le style et [Storybook](https://storybook.js.org/) pour la documentation visuelle des composants.
 
-First, run the development server:
+## Prérequis
 
-```bash
-bun dev
+- Avoir installé les dépendances depuis la racine du monorepo (`bun install`)
+
+## Consulter les composants avec Storybook
+
+Storybook permet de visualiser et tester chaque composant de manière isolée, sans lancer toute l'application :
+
+```sh
+bun run storybook
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Storybook sera accessible sur [http://localhost:6006](http://localhost:6006).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Commandes utiles
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Commande | Description |
+|---|---|
+| `bun run storybook` | Ouvrir Storybook (visualisation des composants) |
+| `bun run build-storybook` | Construire une version statique de Storybook |
+| `bun run test` | Lancer les tests unitaires |
+| `bun run test:watch` | Lancer les tests en mode continu (se relancent à chaque modification) |
+| `bun run lint` | Vérifier la qualité du code |

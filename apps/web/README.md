@@ -1,67 +1,93 @@
-# Payload Blank Template
+# Site Web VRNB
 
-This template comes configured with the bare minimum to get started on anything you need.
+Site web de l'association, construit avec [Payload CMS](https://payloadcms.com/) (système de gestion de contenu) et [Next.js](https://nextjs.org/) (framework web). Les données sont stockées dans une base MongoDB.
 
-## Quick start
+## Prérequis
 
-This template can be deployed directly from our Cloud hosting and it will setup MongoDB and cloud S3 object storage for media.
+- Avoir installé les dépendances depuis la racine du monorepo (`bun install`)
+- Avoir Docker lancé sur votre machine (nécessaire pour la base de données)
 
-## Quick Start - local setup
+## Configuration
 
-To spin up this template locally, follow these steps:
+Avant le premier lancement, copiez le fichier de configuration d'exemple :
 
-### Clone
+```sh
+cp .env.example .env
+```
 
-After you click the `Deploy` button above, you'll want to have standalone copy of this repo on your machine. If you've already cloned this repo, skip to [Development](#development).
+Les valeurs par défaut fonctionnent en local, pas besoin de les modifier.
 
-### Development
+## Lancer en développement
 
-1. First [clone the repo](#clone) if you have not done so already
-2. `cd my-project && cp .env.example .env` to copy the example environment variables. You'll need to add the `MONGODB_URL` from your Cloud project to your `.env` if you want to use S3 storage and the MongoDB database that was created for you.
+### Depuis la racine du projet (recommandé)
 
-3. `pnpm install && pnpm dev` to install dependencies and start the dev server
-4. open `http://localhost:3000` to open the app in your browser
+```sh
+bun run dev:web
+```
 
-That's it! Changes made in `./src` will be reflected in your app. Follow the on-screen instructions to login and create your first admin user. Then check out [Production](#production) once you're ready to build and serve your app, and [Deployment](#deployment) when you're ready to go live.
+> La base de données MongoDB démarre automatiquement.
 
-#### Docker (Optional)
+### Depuis ce dossier uniquement
 
-If you prefer to use Docker for local development instead of a local MongoDB instance, the provided docker-compose.yml file can be used.
+Si vous êtes déjà dans le dossier `apps/web`, lancez d'abord la base de données puis le serveur :
 
-To do so, follow these steps:
+```sh
+cd ../../packages/web-db && bun start && cd ../../apps/web
+bun run dev
+```
 
-- Modify the `MONGODB_URL` in your `.env` file to `mongodb://127.0.0.1/<dbname>`
-- Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
-- Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
+Le site sera accessible sur [http://localhost:3000](http://localhost:3000).
 
-## How it works
+Au premier lancement, suivez les instructions à l'écran pour créer votre compte administrateur.
 
-The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:
+## Panneau d'administration
 
-### Collections
+Une fois le serveur lancé, le panneau d'administration est accessible sur :
 
-See the [Collections](https://payloadcms.com/docs/configuration/collections) docs for details on how to extend this functionality.
+[http://localhost:3000/admin](http://localhost:3000/admin)
 
-- #### Users (Authentication)
+C'est ici que vous pouvez gérer le contenu du site (pages, médias, utilisateurs, etc.).
 
-  Users are auth-enabled collections that have access to the admin panel.
+## Collections de données
 
-  For additional help, see the official [Auth Example](https://github.com/payloadcms/payload/tree/main/examples/auth) or the [Authentication](https://payloadcms.com/docs/authentication/overview#authentication-overview) docs.
+La documentation complète du schéma de données se trouve dans [COLLECTIONS.md](COLLECTIONS.md).
 
-- #### Media
+## Commandes utiles
 
-  This is the uploads enabled collection. It features pre-configured sizes, focal point and manual resizing to help you manage your pictures.
+| Commande | Description |
+|---|---|
+| `bun run dev` | Lancer le serveur de développement |
+| `bun run build` | Construire le site pour la production |
+| `bun run start` | Démarrer le site en mode production |
+| `bun run lint` | Vérifier la qualité du code |
+| `bun run check-types` | Vérifier les types TypeScript |
+| `bun run generate:types` | Régénérer les types après modification du schéma Payload |
+| `bun run generate:importmap` | Régénérer l'import map après ajout de composants admin |
 
-### Docker
+## Tests
 
-Alternatively, you can use [Docker](https://www.docker.com) to spin up this template locally. To do so, follow these steps:
+### Tests d'intégration
 
-1. Follow [steps 1 and 2 from above](#development), the docker-compose file will automatically use the `.env` file in your project root
-1. Next run `docker-compose up`
-1. Follow [steps 4 and 5 from above](#development) to login and create your first admin user
+Nécessitent que la base de données soit lancée :
 
-That's it! The Docker instance will help you get up and running quickly while also standardizing the development environment across your teams.
+```sh
+bun run test:int
+```
 
-## Questions
+### Tests de bout en bout (E2E)
 
-If you have any issues or questions, reach out to us on [Discord](https://discord.com/invite/payload) or start a [GitHub discussion](https://github.com/payloadcms/payload/discussions).
+Nécessitent que le serveur de développement soit lancé :
+
+```sh
+bun run test:e2e
+```
+
+## Variables d'environnement
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | URL de connexion à MongoDB |
+| `PAYLOAD_SECRET` | Clé secrète pour Payload (chiffrement des sessions) |
+| `PAYLOAD_USER_EMAIL` | Email du compte administrateur initial |
+| `PAYLOAD_USER_PASSWORD` | Mot de passe du compte administrateur initial |
+| `NEXT_PUBLIC_SERVER_URL` | URL publique du site |
