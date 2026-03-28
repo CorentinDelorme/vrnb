@@ -24,7 +24,7 @@ export function Navbar({
       {...props}
     >
       <div className="navbar-start">
-        {logo && <div className="flex-shrink-0">{logo}</div>}
+        {logo && <div className="shrink-0">{logo}</div>}
       </div>
       <div className="navbar-center hidden lg:flex">
         {menuItems && (

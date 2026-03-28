@@ -1,6 +1,7 @@
 import type { StorybookConfig } from "@storybook/nextjs-vite";
 
-import { dirname } from "path";
+import { existsSync, readdirSync } from "node:fs";
+import { dirname, join } from "path";
 
 import { fileURLToPath } from "url";
 
@@ -11,12 +12,46 @@ import { fileURLToPath } from "url";
 function getAbsolutePath(value: string) {
   return dirname(fileURLToPath(import.meta.resolve(`${value}/package.json`)));
 }
-const config: StorybookConfig = {
-  stories: [
+
+function hasStoryFiles(dir: string) {
+  if (!existsSync(dir)) {
+    return false;
+  }
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = `${dir}/${entry.name}`;
+
+    if (entry.isDirectory()) {
+      if (hasStoryFiles(entryPath)) {
+        return true;
+      }
+      continue;
+    }
+
+    if (/\.stories\.(?:js|jsx|mjs|ts|tsx|mdx)$/.test(entry.name)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+const configDir = dirname(fileURLToPath(import.meta.url));
+const storyPatterns = [] as string[];
+
+if (hasStoryFiles(join(configDir, "..", "stories"))) {
+  storyPatterns.push(
     "../stories/**/*.mdx",
     "../stories/**/*.stories.@(js|jsx|mjs|ts|tsx)",
-    "../src/components/**/*.stories.@(js|jsx|mjs|ts|tsx)",
-  ],
+  );
+}
+
+if (hasStoryFiles(join(configDir, "..", "src", "components"))) {
+  storyPatterns.push("../src/components/**/*.stories.@(js|jsx|mjs|ts|tsx)");
+}
+
+const config: StorybookConfig = {
+  stories: storyPatterns,
   addons: [
     getAbsolutePath("@chromatic-com/storybook"),
     getAbsolutePath("@storybook/addon-vitest"),

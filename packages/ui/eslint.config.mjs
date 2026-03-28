@@ -16,6 +16,12 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Reusable UI components accept arbitrary image URLs and are not tied to Next.js image optimization.
+      "@next/next/no-img-element": "off",
+    },
+  },
   // Disable no-html-link-for-pages in test and story files (UI library, not a Next.js app)
   {
     files: [
