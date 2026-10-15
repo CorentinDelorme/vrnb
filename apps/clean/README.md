@@ -48,6 +48,17 @@ bun run generate:pdfs     # Régénérer les fiches PDF
 bun run generate:all      # Tout régénérer
 ```
 
+## Pack PDF par zone
+
+Pour fusionner les PDF d'une zone en un seul fichier (cartes + fiches parcours),
+hors du projet, dans `$HOME/Documents` :
+
+```sh
+bun run generate:zone-pdf              # Toutes les zones -> $HOME/Documents/<zoneId>.pdf
+bun run generate:zone-pdf -- --zone=bruz-sud          # Une seule zone
+bun run generate:zone-pdf -- --out-dir=/tmp/packs     # Dossier de sortie personnalisé
+```
+
 ## Tests
 
 ### Tests unitaires
