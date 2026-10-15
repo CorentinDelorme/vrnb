@@ -15,6 +15,7 @@ export class TourListSection {
   @Input() title = '';
   @Input() tours: Tour[] = [];
   @Input() type: 'P' | 'V' = 'P';
+  @Input() zoneId = '';
 
   playIcon = PlayIcon;
   bicycleIcon = BicycleIcon;

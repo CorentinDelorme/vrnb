@@ -21,7 +21,7 @@
       <h2 class="text-secondary text-2xl tracking-wide sm:text-4xl">{{ title }}</h2>
     </div>
 
-    <a class="btn btn-primary max-sm:hidden" [routerLink]="['/tours', type]">
+    <a class="btn btn-primary max-sm:hidden" [routerLink]="['/tours', zoneId, type]">
       Voir tous les parcours
     </a>
   </li>
@@ -39,7 +39,7 @@
       <div class="list-col-grow flex justify-end">
         <button
           class="btn btn-square btn-ghost"
-          [routerLink]="['/tour', item.name]"
+          [routerLink]="['/tour', zoneId, item.name]"
           aria-label="Lancer le parcours"
         >
           <hugeicons-icon

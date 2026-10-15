@@ -2,13 +2,13 @@
 @import 'leaflet.fullscreen/dist/Control.FullScreen.css';
 
 @import 'tailwindcss';
-@plugin "daisyui" {
+@plugin 'daisyui' {
   themes:
     vrnb --default,
     vrnb-dark --prefersdark;
 }
 
-@plugin "daisyui/theme" {
+@plugin 'daisyui/theme' {
   name: 'vrnb';
   default: true;
   prefersdark: false;
@@ -43,7 +43,7 @@
   --noise: 0;
 }
 
-@plugin "daisyui/theme" {
+@plugin 'daisyui/theme' {
   name: 'vrnb-dark';
   prefersdark: true;
   color-scheme: 'dark';

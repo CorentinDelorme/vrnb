@@ -3,7 +3,7 @@ import { DOMParser } from '@xmldom/xmldom';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-import { MEETING_POINT } from '../src/app/shared/constants';
+import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
 
 const rootDir = join(__dirname, '..');
 const gpxDir = join(rootDir, 'public/gpx');
@@ -30,8 +30,11 @@ function profileForTour(tourId: string): { osrm: 'bicycle' | 'foot'; gpxType: st
     : { osrm: 'foot', gpxType: 'walking' };
 }
 
-function getTourEndpoints(tourId: string): { start: LonLat; end: LonLat } | undefined {
-  const gpxPath = join(gpxDir, tourId, `${tourId}.gpx`);
+function getTourEndpoints(
+  tourId: string,
+  baseDir: string,
+): { start: LonLat; end: LonLat } | undefined {
+  const gpxPath = join(baseDir, tourId, `${tourId}.gpx`);
   if (!existsSync(gpxPath)) {
     return undefined;
   }
@@ -253,71 +256,112 @@ function parseTourFilter(): Set<string> | undefined {
   return ids.length > 0 ? new Set(ids) : undefined;
 }
 
-async function main(): Promise<void> {
-  const tourFilter = parseTourFilter();
-  const meetingCoords: LonLat = [MEETING_POINT.coordinates[0], MEETING_POINT.coordinates[1]];
+interface ZoneTours {
+  readonly zoneId: string;
+  readonly baseDir: string;
+  readonly tourIds: string[];
+}
 
+/** Group tour folders by zone (legacy root-level tours belong to the default zone). */
+function getZoneTours(tourFilter: Set<string> | undefined): ZoneTours[] {
   if (!existsSync(gpxDir)) {
     throw new Error(`GPX directory not found: ${gpxDir}`);
   }
 
-  const tourIds = readdirSync(gpxDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && /^[VP]/.test(entry.name))
-    .map((entry) => entry.name)
-    .filter((id) => !tourFilter || tourFilter.has(id))
-    .sort((a, b) => parseInt(a.slice(1)) - parseInt(b.slice(1)));
+  const isTourDir = (name: string): boolean => /^[VP]/.test(name);
+  const sortTours = (a: string, b: string): number => parseInt(a.slice(1)) - parseInt(b.slice(1));
+  const filterTours = (ids: string[]): string[] =>
+    ids.filter((id) => !tourFilter || tourFilter.has(id)).sort(sortTours);
 
-  if (tourIds.length === 0) {
+  const result: ZoneTours[] = [];
+  const entries = readdirSync(gpxDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    if (!entry.isDirectory() || isTourDir(entry.name)) continue;
+    const baseDir = join(gpxDir, entry.name);
+    const tourIds = filterTours(
+      readdirSync(baseDir, { withFileTypes: true })
+        .filter((tour) => tour.isDirectory() && isTourDir(tour.name))
+        .map((tour) => tour.name),
+    );
+    if (tourIds.length > 0) {
+      result.push({ zoneId: entry.name, baseDir, tourIds });
+    }
+  }
+
+  // Legacy layout: tour folders directly under public/gpx.
+  const legacyIds = filterTours(
+    entries.filter((entry) => entry.isDirectory() && isTourDir(entry.name)).map((e) => e.name),
+  );
+  if (legacyIds.length > 0) {
+    result.push({ zoneId: DEFAULT_ZONE_ID, baseDir: gpxDir, tourIds: legacyIds });
+  }
+
+  return result.sort((a, b) => a.zoneId.localeCompare(b.zoneId));
+}
+
+async function main(): Promise<void> {
+  const tourFilter = parseTourFilter();
+  const zones = getZoneTours(tourFilter);
+
+  if (zones.length === 0 || zones.every((z) => z.tourIds.length === 0)) {
     throw new Error('No tours found to process.');
   }
 
-  console.log(`Meeting point: ${MEETING_POINT.name} (${meetingCoords[1]}, ${meetingCoords[0]})`);
-  console.log(`Generating start/end GPX for ${tourIds.length} tours...`);
-
   let failures = 0;
 
-  for (const tourId of tourIds) {
-    const { osrm, gpxType } = profileForTour(tourId);
-    try {
-      const endpoints = getTourEndpoints(tourId);
-      if (!endpoints) {
-        throw new Error(`cannot read endpoints from ${tourId}/${tourId}.gpx`);
+  for (const { zoneId, baseDir, tourIds } of zones) {
+    const meetingPoint = getZone(zoneId).meetingPoint;
+    const meetingCoords: LonLat = [meetingPoint.coordinates[0], meetingPoint.coordinates[1]];
+
+    console.log(
+      `Zone ${zoneId} — meeting point: ${meetingPoint.name} (${meetingCoords[1]}, ${meetingCoords[0]})`,
+    );
+    console.log(`Generating start/end GPX for ${tourIds.length} tours...`);
+
+    for (const tourId of tourIds) {
+      const { osrm, gpxType } = profileForTour(tourId);
+      try {
+        const endpoints = getTourEndpoints(tourId, baseDir);
+        if (!endpoints) {
+          throw new Error(`cannot read endpoints from ${tourId}/${tourId}.gpx`);
+        }
+
+        const toStart = await resolveRoute(meetingCoords, endpoints.start, osrm);
+        await delay(REQUEST_DELAY_MS);
+        const fromEnd = await resolveRoute(endpoints.end, meetingCoords, osrm);
+
+        writeFileSync(
+          join(baseDir, tourId, `${tourId}_start.gpx`),
+          buildGpx(
+            `${meetingPoint.name} vers le parcours ${tourId}`,
+            gpxType,
+            toStart.coords,
+            toStart.source,
+          ),
+        );
+        writeFileSync(
+          join(baseDir, tourId, `${tourId}_end.gpx`),
+          buildGpx(
+            `Fin du parcours ${tourId} vers ${meetingPoint.name}`,
+            gpxType,
+            fromEnd.coords,
+            fromEnd.source,
+          ),
+        );
+
+        console.log(
+          `ok ${tourId} (${osrm}): start ${toStart.coords.length} pts` +
+            ` ${Math.round(toStart.distanceM)}m [${toStart.source}], end ${fromEnd.coords.length} pts` +
+            ` ${Math.round(fromEnd.distanceM)}m [${fromEnd.source}]`,
+        );
+      } catch (error) {
+        failures += 1;
+        console.error(`fail ${tourId}: ${error instanceof Error ? error.message : error}`);
       }
 
-      const toStart = await resolveRoute(meetingCoords, endpoints.start, osrm);
       await delay(REQUEST_DELAY_MS);
-      const fromEnd = await resolveRoute(endpoints.end, meetingCoords, osrm);
-
-      writeFileSync(
-        join(gpxDir, tourId, `${tourId}_start.gpx`),
-        buildGpx(
-          `${MEETING_POINT.name} vers le parcours ${tourId}`,
-          gpxType,
-          toStart.coords,
-          toStart.source,
-        ),
-      );
-      writeFileSync(
-        join(gpxDir, tourId, `${tourId}_end.gpx`),
-        buildGpx(
-          `Fin du parcours ${tourId} vers ${MEETING_POINT.name}`,
-          gpxType,
-          fromEnd.coords,
-          fromEnd.source,
-        ),
-      );
-
-      console.log(
-        `ok ${tourId} (${osrm}): start ${toStart.coords.length} pts` +
-          ` ${Math.round(toStart.distanceM)}m [${toStart.source}], end ${fromEnd.coords.length} pts` +
-          ` ${Math.round(fromEnd.distanceM)}m [${fromEnd.source}]`,
-      );
-    } catch (error) {
-      failures += 1;
-      console.error(`fail ${tourId}: ${error instanceof Error ? error.message : error}`);
     }
-
-    await delay(REQUEST_DELAY_MS);
   }
 
   if (failures > 0) {

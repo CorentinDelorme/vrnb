@@ -42,6 +42,28 @@ test.describe('Home page', () => {
   });
 
   test.describe('Tour sections', () => {
+    test('should display Bruz Sud zone heading', async ({ page }) => {
+      await page.goto('/');
+      await expect(page.locator('details[aria-label="Zone Bruz Sud"]')).toBeVisible();
+    });
+
+    test('should display zone heading with tour count', async ({ page }) => {
+      await page.goto('/');
+      const zone = page.locator('details[aria-label="Zone Bruz Sud"]');
+      await expect(zone.locator('summary h2', { hasText: 'Bruz Sud' })).toBeVisible();
+      await expect(zone.locator('summary')).toContainText('28 parcours');
+    });
+
+    test('should collapse and expand the zone block on summary click', async ({ page }) => {
+      await page.goto('/');
+      const zone = page.locator('details[aria-label="Zone Bruz Sud"]');
+      await expect(zone).toHaveAttribute('open', '');
+      await zone.locator('summary').click();
+      await expect(zone).not.toHaveAttribute('open', '');
+      await zone.locator('summary').click();
+      await expect(zone).toHaveAttribute('open', '');
+    });
+
     test('should display bike tours section', async ({ page }) => {
       await page.goto('/');
       await expect(page.locator('h2', { hasText: 'Parcours à vélo' })).toBeVisible();
@@ -109,7 +131,7 @@ test.describe('Home page', () => {
       });
       const link = bikeSection.getByRole('link', { name: 'Voir tous les parcours' });
       await expect(link).toBeVisible();
-      await expect(link).toHaveAttribute('href', '/tours/V');
+      await expect(link).toHaveAttribute('href', '/tours/bruz-sud/V');
     });
 
     test('should show "Voir tous les parcours" link for walking tours', async ({ page }) => {
@@ -119,7 +141,7 @@ test.describe('Home page', () => {
       });
       const link = walkingSection.getByRole('link', { name: 'Voir tous les parcours' });
       await expect(link).toBeVisible();
-      await expect(link).toHaveAttribute('href', '/tours/P');
+      await expect(link).toHaveAttribute('href', '/tours/bruz-sud/P');
     });
   });
 
@@ -131,10 +153,13 @@ test.describe('Home page', () => {
 
     test('should show saved tour banner when localStorage has saved tour', async ({ page }) => {
       await page.addInitScript(() => {
-        localStorage.setItem('vrnb_tour', JSON.stringify({ tourId: 'V1', step: 1 }));
+        localStorage.setItem(
+          'vrnb_tour',
+          JSON.stringify({ tourId: 'V1', step: 1, zoneId: 'bruz-sud' }),
+        );
       });
       await page.goto('/');
-      await expect(page.getByText('Reprendre le parcours V1 (étape 2/3)')).toBeVisible();
+      await expect(page.getByText('Reprendre le parcours Bruz Sud - V1 (étape 2/3)')).toBeVisible();
     });
   });
 });

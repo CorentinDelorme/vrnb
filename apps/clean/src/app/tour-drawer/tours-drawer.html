@@ -26,6 +26,15 @@
           </a>
         </li>
       }
+
+      @if (mapPdfUrl) {
+        <li>
+          <a [href]="mapPdfUrl" download target="_blank" rel="noopener">
+            <hugeicons-icon [icon]="mapsLocationIcon" [strokeWidth]="1.5" alt="" />
+            Télécharger le PDF de la carte
+          </a>
+        </li>
+      }
     </ul>
   </div>
 </div>

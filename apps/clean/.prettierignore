@@ -1,0 +1,10 @@
+dist
+.angular
+node_modules
+coverage
+test-results
+playwright-report
+scripts/.cache
+# Third-party docs, kept as-is
+.claude
+README.md

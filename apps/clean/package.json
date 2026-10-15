@@ -13,6 +13,8 @@
     "test": "ng test",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "generate:tours": "bun tsx scripts/generate-tours.ts && bun run lint:fix",
     "generate:routes": "bun tsx scripts/generate-start-end-gpx.ts",
     "generate:pdfs": "bun tsx scripts/generate-pdfs.ts",

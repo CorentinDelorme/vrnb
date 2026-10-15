@@ -26,13 +26,13 @@ test.describe('Mobile viewport', () => {
   });
 
   test('should render tour page with functional dock buttons', async ({ page }) => {
-    await page.goto('/tour/V1');
+    await page.goto('/tour/bruz-sud/V1');
     await expect(page.getByRole('button', { name: 'Précédent' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Suivant' })).toBeVisible();
   });
 
   test('should allow step navigation on mobile', async ({ page }) => {
-    await page.goto('/tour/V1');
+    await page.goto('/tour/bruz-sud/V1');
     await page.getByRole('button', { name: 'Suivant' }).click();
     await page.getByRole('button', { name: 'Suivant' }).click();
     await page.getByRole('button', { name: 'Terminer' }).click();
@@ -42,12 +42,12 @@ test.describe('Mobile viewport', () => {
   });
 
   test('should render map on mobile tours page', async ({ page }) => {
-    await page.goto('/tours/V');
+    await page.goto('/tours/bruz-sud/V');
     await expect(page.locator('div#map')).toBeVisible();
   });
 
   test('should open and close drawer on mobile', async ({ page }) => {
-    await page.goto('/tour/V1');
+    await page.goto('/tour/bruz-sud/V1');
     await page.getByText('Menu', { exact: true }).click();
     const drawer = page.locator('.drawer-side ul.menu');
     await expect(drawer).toBeVisible();

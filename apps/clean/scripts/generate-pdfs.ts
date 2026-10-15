@@ -6,8 +6,8 @@ import autoTable from 'jspdf-autotable';
 import { join } from 'path';
 import sharp from 'sharp';
 
-import { MEETING_POINT } from '../src/app/shared/constants';
 import { toursData } from '../src/app/tours-data';
+import { getZone } from '../src/app/zones';
 
 const rootDir = join(__dirname, '..');
 const pdfDir = join(rootDir, 'public/pdf');
@@ -33,6 +33,7 @@ interface TourDistances {
   readonly distance: number;
   readonly startDistance: number;
   readonly endDistance: number;
+  readonly zoneId: string;
 }
 
 interface PdfRect {
@@ -144,7 +145,11 @@ interface PlannedView {
  * The view bounds are exact (no tile snapping): the background image is
  * cropped precisely to these bounds, so the map stays zoomed on the route.
  */
-function planView(coords: LonLat[], aspect: number): PlannedView | undefined {
+function planView(
+  coords: LonLat[],
+  aspect: number,
+  maxPixels = MAX_VIEW_PIXELS,
+): PlannedView | undefined {
   if (coords.length === 0) {
     return undefined;
   }
@@ -161,7 +166,7 @@ function planView(coords: LonLat[], aspect: number): PlannedView | undefined {
     } else {
       halfH = halfW / aspect;
     }
-    if (halfW * 2 > MAX_VIEW_PIXELS || halfH * 2 > MAX_VIEW_PIXELS) continue;
+    if (halfW * 2 > maxPixels || halfH * 2 > maxPixels) continue;
     const minX = cx - halfW;
     const maxX = cx + halfW;
     const minY = cy - halfH;
@@ -255,7 +260,10 @@ function projectToPanel(
  * Assemble the OSM tiles covering the view into a single JPEG cropped
  * exactly to the view bounds. Missing tiles leave the neutral background.
  */
-async function buildMapBackground(view: PlannedView): Promise<Buffer | undefined> {
+async function buildMapBackground(
+  view: PlannedView,
+  quality = MAP_JPEG_QUALITY,
+): Promise<Buffer | undefined> {
   try {
     const originX = view.xTileMin * TILE_SIZE;
     const originY = view.yTileMin * TILE_SIZE;
@@ -283,11 +291,11 @@ async function buildMapBackground(view: PlannedView): Promise<Buffer | undefined
       create: { width: canvasW, height: canvasH, channels: 3, background: '#e9e7e2' },
     })
       .composite(layers)
-      .jpeg({ quality: MAP_JPEG_QUALITY })
+      .jpeg({ quality })
       .toBuffer();
     return await sharp(assembled)
       .extract({ left, top, width, height })
-      .jpeg({ quality: MAP_JPEG_QUALITY })
+      .jpeg({ quality })
       .toBuffer();
   } catch (error) {
     console.warn(`  map background failed: ${error instanceof Error ? error.message : error}`);
@@ -389,15 +397,48 @@ function drawLegend(doc: jsPDF, x: number, baselineY: number): void {
   doc.text('Arrivée', cursorX, baselineY);
 }
 
+/** Same hues as the overview map, one color per tour (in tour order). */
+const MAP_COLORS: [number, number, number][] = [
+  [239, 68, 68], // warm - red
+  [59, 130, 246], // cool - blue
+  [249, 115, 22], // warm - orange
+  [20, 184, 184], // cool - teal
+  [245, 158, 11], // warm - amber
+  [67, 56, 202], // cool - indigo
+  [234, 179, 8], // warm - yellow
+  [16, 185, 129], // cool - emerald
+  [236, 72, 153], // warm - pink
+  [14, 165, 233], // cool - sky
+  [219, 39, 119], // warm - rose
+  [6, 182, 212], // cool - cyan
+  [250, 204, 21], // warm - gold
+  [34, 197, 94], // cool - green
+  [244, 114, 182], // warm - coral
+  [168, 85, 247], // cool - violet
+  [153, 101, 21], // warm - brown
+  [126, 34, 206], // cool - fuchsia
+  [255, 99, 71], // warm - tomato
+  [132, 204, 22], // cool/warm - lime
+];
+
+/** GPX path for a tour file, with fallback to the legacy flat layout (pre-zone files). */
+function tourGpxPath(tour: TourDistances, suffix: string): string {
+  const zoned = join(gpxDir, tour.zoneId, tour.name, `${tour.name}${suffix}.gpx`);
+  if (existsSync(zoned)) return zoned;
+  return join(gpxDir, tour.name, `${tour.name}${suffix}.gpx`);
+}
+
 async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined): Promise<void> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;
   const contentWidth = pageWidth - margin * 2;
+  const meetingPoint = getZone(tour.zoneId).meetingPoint;
+  const zoneName = getZone(tour.zoneId).name;
 
-  const startCoords = parseGpxCoords(join(gpxDir, tour.name, `${tour.name}_start.gpx`));
-  const tourCoords = parseGpxCoords(join(gpxDir, tour.name, `${tour.name}.gpx`));
-  const endCoords = parseGpxCoords(join(gpxDir, tour.name, `${tour.name}_end.gpx`));
+  const startCoords = parseGpxCoords(tourGpxPath(tour, '_start'));
+  const tourCoords = parseGpxCoords(tourGpxPath(tour, ''));
+  const endCoords = parseGpxCoords(tourGpxPath(tour, '_end'));
 
   if (logo) {
     const logoHeight = 12;
@@ -407,7 +448,7 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.text(`Parcours ${tour.name}`, pageWidth / 2, 16, { align: 'center' });
+  doc.text(`${zoneName} - Parcours ${tour.name}`, pageWidth / 2, 16, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
@@ -456,9 +497,9 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   const smallMapY = smallCaptionY + 4;
   const smallH = 70;
   doc.setFontSize(10);
-  doc.text(`${MEETING_POINT.name} vers le début du parcours`, margin, smallCaptionY);
+  doc.text(`${meetingPoint.name} vers le début du parcours`, margin, smallCaptionY);
   doc.text(
-    `Fin du parcours vers la ${decapitalize(MEETING_POINT.name)}`,
+    `Fin du parcours vers la ${decapitalize(meetingPoint.name)}`,
     margin + smallWidth + gap,
     smallCaptionY,
   );
@@ -486,41 +527,198 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   doc.text('Cartes © OpenStreetMap', pageWidth - margin, 282, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
-  const outputPath = join(pdfDir, `${tour.name}.pdf`);
+  const zonePdfDir = join(pdfDir, tour.zoneId);
+  mkdirSync(zonePdfDir, { recursive: true });
+  const outputPath = join(zonePdfDir, `${tour.name}.pdf`);
   ensureWritable(outputPath);
   doc.save(outputPath);
   console.log(`Generated: ${outputPath}`);
 }
 
-// --- Tracking sheets (unchanged layout) ---
+// --- Zone overview maps: one landscape PDF per zone and tour type ---
 
-function generateTrackingPdf(tours: string[], title: string, filename: string): void {
+interface ZoneTrack {
+  readonly name: string;
+  readonly coords: LonLat[];
+}
+
+async function generateZoneMapPdf(
+  zoneId: string,
+  kind: 'V' | 'P',
+  tours: TourDistances[],
+  logo: LogoImage | undefined,
+): Promise<void> {
+  const zoneName = getZone(zoneId).name;
+  const typeLabel = kind === 'V' ? 'Parcours à vélo' : 'Parcours à pied';
+  const tracks: ZoneTrack[] = tours
+    .map((tour) => ({ name: tour.name, coords: parseGpxCoords(tourGpxPath(tour, '')) }))
+    .filter((track): track is ZoneTrack => !!track.coords && track.coords.length > 0);
+
+  if (tracks.length === 0) {
+    return;
+  }
+
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 10;
+  const contentWidth = pageWidth - margin * 2;
+
+  if (logo) {
+    const logoHeight = 12;
+    const dataUrl = `data:image/jpeg;base64,${logo.buffer.toString('base64')}`;
+    doc.addImage(dataUrl, 'JPEG', margin, 6, logoHeight * logo.aspect, logoHeight, 'vrnb-logo');
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.text(`${zoneName} - ${typeLabel}`, pageWidth / 2, 16, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Contact', pageWidth - margin, 7, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('06 23 13 56 48', pageWidth - margin, 12, { align: 'right' });
+
+  const mapY = 24;
+  const footerY = pageHeight - 6;
+  const rect: PdfRect = { x: margin, y: mapY, w: contentWidth, h: footerY - mapY - 6 };
+
+  const allCoords = tracks.flatMap((track) => track.coords);
+  // High resolution for the full-page map (print quality).
+  const view = planView(allCoords, rect.w / rect.h, 3072);
+  if (!view) {
+    console.warn(`  no map view for ${zoneId} ${kind}`);
+    return;
+  }
+
+  const background = await buildMapBackground(view, 92);
+  if (background) {
+    const dataUrl = `data:image/jpeg;base64,${background.toString('base64')}`;
+    try {
+      doc.addImage(dataUrl, 'JPEG', rect.x, rect.y, rect.w, rect.h, `${zoneId}-${kind}-map`);
+    } catch (error) {
+      console.warn(`  addImage failed: ${error instanceof Error ? error.message : error}`);
+    }
+  } else {
+    doc.setFillColor(235, 235, 232);
+    doc.rect(rect.x, rect.y, rect.w, rect.h, 'F');
+  }
+
+  doc.setLineCap(1);
+  doc.setLineJoin(1);
+  const labelMids: { x: number; y: number }[] = [];
+  for (let i = 0; i < tracks.length; i++) {
+    const track = tracks[i];
+    const color = MAP_COLORS[i % MAP_COLORS.length];
+    const points = track.coords.map(([lon, lat]) => projectToPanel(lon, lat, view, rect));
+
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(1.7);
+    for (let j = 1; j < points.length; j++) {
+      doc.line(points[j - 1].x, points[j - 1].y, points[j].x, points[j].y);
+    }
+    doc.setDrawColor(color[0], color[1], color[2]);
+    doc.setLineWidth(0.9);
+    for (let j = 1; j < points.length; j++) {
+      doc.line(points[j - 1].x, points[j - 1].y, points[j].x, points[j].y);
+    }
+
+    const start = points[0];
+    const end = points[points.length - 1];
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.4);
+    doc.setFillColor(22, 163, 74);
+    doc.circle(start.x, start.y, 1.2, 'FD');
+    doc.setFillColor(225, 29, 72);
+    doc.circle(end.x, end.y, 1.2, 'FD');
+
+    labelMids.push(points[Math.floor(points.length / 2)]);
+  }
+
+  // Labels last (same style as the web map: track color pill, white bold text),
+  // so no route line ever crosses a label.
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  for (let i = 0; i < tracks.length; i++) {
+    const color = MAP_COLORS[i % MAP_COLORS.length];
+    const mid = labelMids[i];
+    const labelWidth = doc.getTextWidth(tracks[i].name);
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.roundedRect(mid.x - labelWidth / 2 - 2, mid.y - 4.5, labelWidth + 4, 6.5, 1.5, 1.5, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.text(tracks[i].name, mid.x, mid.y, { align: 'center' });
+  }
+
+  doc.setTextColor(0, 0, 0);
+  drawLegend(doc, margin, footerY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Cartes © OpenStreetMap', pageWidth - margin, footerY, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+
+  const filename = kind === 'V' ? 'Carte_parcours_a_velo.pdf' : 'Carte_parcours_a_pied.pdf';
+  const zonePdfDir = join(pdfDir, zoneId);
+  mkdirSync(zonePdfDir, { recursive: true });
+  const outputPath = join(zonePdfDir, filename);
+  ensureWritable(outputPath);
+  doc.save(outputPath);
+  console.log(`Generated: ${outputPath}`);
+}
+
+// --- Tracking sheets: one file per tour type, one table per zone ---
+
+interface ZoneTrackingSection {
+  readonly zoneName: string;
+  readonly tours: string[];
+}
+
+type AutoTableDoc = jsPDF & { lastAutoTable: { finalY: number } };
+
+function generateTrackingPdf(
+  sections: ZoneTrackingSection[],
+  title: string,
+  filename: string,
+): void {
   const doc = new jsPDF();
 
   doc.setFontSize(18);
   doc.text(title, 14, 20);
 
-  autoTable(doc, {
-    startY: 30,
-    head: [['Parcours', 'Prénom NOM', 'Prénom NOM', 'Ordures (g)', 'Tri (g)', 'Verre (g)']],
-    body: tours.map((tour) => [tour, '', '', '', '', '']),
-    theme: 'grid',
-    headStyles: { fillColor: [66, 135, 75] },
-    columnStyles: {
-      0: { cellWidth: 20 },
-      3: { cellWidth: 25 },
-      4: { cellWidth: 25 },
-      5: { cellWidth: 25 },
-    },
-  });
+  let startY = 30;
+  for (const section of sections) {
+    doc.setFontSize(14);
+    doc.text(section.zoneName, 14, startY);
+    startY += 4;
 
-  autoTable(doc, {
-    startY: (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15,
-    head: [['Ordures (kg)', 'Tri (kg)', 'Verre (kg)', 'Total (kg)']],
-    body: [['', '', '', '']],
-    theme: 'grid',
-    headStyles: { fillColor: [66, 135, 75] },
-  });
+    autoTable(doc, {
+      startY,
+      head: [['Parcours', 'Prénom NOM', 'Prénom NOM', 'Ordures (g)', 'Tri (g)', 'Verre (g)']],
+      body: section.tours.map((tour) => [tour, '', '', '', '', '']),
+      theme: 'grid',
+      headStyles: { fillColor: [66, 135, 75] },
+      columnStyles: {
+        0: { cellWidth: 20 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 25 },
+        5: { cellWidth: 25 },
+      },
+    });
+
+    autoTable(doc, {
+      startY: (doc as AutoTableDoc).lastAutoTable.finalY + 8,
+      head: [['Ordures (kg)', 'Tri (kg)', 'Verre (kg)', 'Total (kg)']],
+      body: [['', '', '', '']],
+      theme: 'grid',
+      headStyles: { fillColor: [66, 135, 75] },
+    });
+
+    startY = (doc as AutoTableDoc).lastAutoTable.finalY + 15;
+  }
 
   const outputPath = join(pdfDir, filename);
   ensureWritable(outputPath);
@@ -559,18 +757,39 @@ async function main(): Promise<void> {
   }
 
   if (!tourFilter) {
-    const vTours = toursData.vTours.map((t) => t.name);
-    const pTours = toursData.pTours.map((t) => t.name);
+    const zoneIds = [...new Set(allTours.map((t) => t.zoneId))].sort();
+    const buildSections = (tours: TourDistances[]): ZoneTrackingSection[] =>
+      zoneIds
+        .map((zoneId) => ({
+          zoneName: getZone(zoneId).name,
+          tours: tours.filter((t) => t.zoneId === zoneId).map((t) => t.name),
+        }))
+        .filter((section) => section.tours.length > 0);
     generateTrackingPdf(
-      vTours,
+      buildSections(toursData.vTours),
       'Feuille de suivi des parcours à vélo',
       'Suivi_parcours_a_velo.pdf',
     );
     generateTrackingPdf(
-      pTours,
+      buildSections(toursData.pTours),
       'Feuille de suivi des parcours à pied',
       'Suivi_parcours_a_pied.pdf',
     );
+
+    for (const zoneId of zoneIds) {
+      await generateZoneMapPdf(
+        zoneId,
+        'V',
+        toursData.vTours.filter((t) => t.zoneId === zoneId),
+        logo,
+      );
+      await generateZoneMapPdf(
+        zoneId,
+        'P',
+        toursData.pTours.filter((t) => t.zoneId === zoneId),
+        logo,
+      );
+    }
   }
 }
 

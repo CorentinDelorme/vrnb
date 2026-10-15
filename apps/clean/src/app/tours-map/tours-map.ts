@@ -6,7 +6,8 @@ import { GpxService } from '../shared/gpx/gpx.service';
 import { MapMarkerService } from '../shared/map/map-marker.service';
 import { MapRouteService } from '../shared/map/map-route.service';
 import { MapService } from '../shared/map/map.service';
-import { Tour as TourInterface, ToursService } from '../tours-service';
+import { Tour as TourInterface, ToursService, TourType } from '../tours-service';
+import { Zone } from '../zones';
 
 @Component({
   selector: 'app-tours-map',
@@ -25,6 +26,7 @@ export class ToursMap implements AfterViewInit {
 
   private map?: L.Map;
   private tours: TourInterface[] = [];
+  private zone: Zone = this.toursService.getZone(this.route.snapshot.paramMap.get('zoneId'));
 
   private readonly colors = [
     'rgb(239, 68, 68)', // warm - red
@@ -50,14 +52,15 @@ export class ToursMap implements AfterViewInit {
   ];
 
   constructor() {
-    const type = this.route.snapshot.paramMap.get('type');
+    const type = this.route.snapshot.paramMap.get('type') as TourType | null;
     if (type === 'V') {
-      this.tours = this.toursService.vTours;
-      this.title.setTitle('Parcours à vélo');
+      this.tours = this.toursService.getZoneTours(this.zone.id, 'V');
+      this.title.setTitle(`${this.zone.name} - Parcours à vélo`);
     } else if (type === 'P') {
-      this.tours = this.toursService.pTours;
-      this.title.setTitle('Parcours à pied');
+      this.tours = this.toursService.getZoneTours(this.zone.id, 'P');
+      this.title.setTitle(`${this.zone.name} - Parcours à pied`);
     }
+    this.gpxService.zoneId.set(this.zone.id);
   }
 
   ngAfterViewInit(): void {
@@ -77,7 +80,7 @@ export class ToursMap implements AfterViewInit {
       const tourId = this.tours[i].name;
       const color = this.colors[i % this.colors.length];
 
-      this.gpxService.loadGpxFile(tourId).subscribe((gpxStr) => {
+      this.gpxService.loadGpxFile(tourId, undefined, this.zone.id).subscribe((gpxStr) => {
         this.addGpxToMap(gpxStr, color, tourId);
       });
     }

@@ -6,7 +6,6 @@ import { Position } from 'geojson';
 import * as L from 'leaflet';
 import { forkJoin } from 'rxjs';
 import { FinishModal } from '../finish-modal/finish-modal';
-import { MEETING_POINT } from '../shared/constants';
 import { GpxService } from '../shared/gpx/gpx.service';
 import { MapArrowService } from '../shared/map/map-arrow.service';
 import { MapLocationService } from '../shared/map/map-location.service';
@@ -39,6 +38,7 @@ export class Tour implements AfterViewInit, OnDestroy {
   private map?: L.Map;
   private layerGroup?: L.LayerGroup;
   private mapInitialized = false;
+  private readonly zoneId: string;
   step = signal(0);
   private readonly debug = {
     active: false,
@@ -47,17 +47,20 @@ export class Tour implements AfterViewInit, OnDestroy {
 
   // Read route params and restore saved step
   constructor() {
+    const zone = this.toursService.getZone(this.route.snapshot.paramMap.get('zoneId'));
+    this.zoneId = zone.id;
+    this.gpxService.zoneId.set(this.zoneId);
     this.tourService.tourId.set(this.route.snapshot.paramMap.get('id'));
     const currentTourId = this.tourService.tourId();
-    this.title.setTitle(`Parcours ${currentTourId}`);
+    this.title.setTitle(`${zone.name} - Parcours ${currentTourId}`);
     this.debug.active = this.route.snapshot.queryParamMap.get('debug') === 'true';
     this.debug.timeout = Number(this.route.snapshot.queryParamMap.get('timeout')) || 500;
 
     const savedTour = this.tourStorage.savedTour();
-    if (savedTour && savedTour.tourId === currentTourId) {
+    if (savedTour && savedTour.tourId === currentTourId && savedTour.zoneId === this.zoneId) {
       this.step.set(savedTour.step);
     } else if (currentTourId) {
-      this.tourStorage.save(currentTourId, 0);
+      this.tourStorage.save(currentTourId, 0, this.zoneId);
     }
 
     this.loadGpxFiles();
@@ -73,9 +76,9 @@ export class Tour implements AfterViewInit, OnDestroy {
     if (!tourId) return;
 
     forkJoin({
-      start: this.gpxService.loadGpxFile(tourId, 'start'),
-      tour: this.gpxService.loadGpxFile(tourId),
-      end: this.gpxService.loadGpxFile(tourId, 'end'),
+      start: this.gpxService.loadGpxFile(tourId, 'start', this.zoneId),
+      tour: this.gpxService.loadGpxFile(tourId, undefined, this.zoneId),
+      end: this.gpxService.loadGpxFile(tourId, 'end', this.zoneId),
     }).subscribe({
       next: (files: { start: string; tour: string; end: string }) => {
         this.gpxService.setAllGeoJson(files.start, files.tour, files.end);
@@ -137,6 +140,7 @@ export class Tour implements AfterViewInit, OnDestroy {
     const routeCoords = await this.gpxService.getCoordinatesFromGpx(
       this.tourService.tourId()!,
       gpxType,
+      this.zoneId,
     );
 
     if (routeCoords && routeCoords.length > 0) {
@@ -150,10 +154,9 @@ export class Tour implements AfterViewInit, OnDestroy {
       });
       this.fitBoundsFromCoords(routeCoords);
     } else {
+      const meetingCoords = this.toursService.getZone(this.zoneId).meetingPoint.coordinates;
       const fallbackCoords =
-        gpxType === 'start'
-          ? [MEETING_POINT.coordinates, points.start]
-          : [points.end, MEETING_POINT.coordinates];
+        gpxType === 'start' ? [meetingCoords, points.start] : [points.end, meetingCoords];
       this.mapRouteService.drawCoordinatesRoute(
         fallbackCoords,
         this.layerGroup,
@@ -199,12 +202,12 @@ export class Tour implements AfterViewInit, OnDestroy {
 
     const tourId = this.tourService.tourId();
     if (tourId) {
-      this.tourStorage.save(tourId, this.step());
+      this.tourStorage.save(tourId, this.step(), this.zoneId);
     }
   }
 
   private getCurrentTourDistance(step: number): number {
-    const tour = this.toursService.allTours.find((t) => t.name === this.tourService.tourId());
+    const tour = this.toursService.getTour(this.zoneId, this.tourService.tourId());
     if (!tour) return 0;
 
     const distances = [tour.startDistance, tour.distance, tour.endDistance] as const;

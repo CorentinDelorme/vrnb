@@ -3,9 +3,13 @@ import { DOMParser } from '@xmldom/xmldom';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
+import { DEFAULT_ZONE_ID } from '../src/app/zones';
+
 const rootDir = join(__dirname, '..');
 const gpxDir = join(rootDir, 'public/gpx');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
+
+const TOUR_FOLDER_PATTERN = /^[VP]\d+$/;
 
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
@@ -48,19 +52,46 @@ function parseGpxDistance(gpxPath: string): number {
   return Math.round(totalDistance * 10) / 10;
 }
 
-function getTours(
-  prefix: string,
-): { name: string; distance: number; startDistance: number; endDistance: number }[] {
+interface GeneratedTour {
+  name: string;
+  distance: number;
+  startDistance: number;
+  endDistance: number;
+  zoneId: string;
+}
+
+/** List the zone ids found under public/gpx (each zone is a folder of tour folders). */
+function getZoneIds(): string[] {
   if (!existsSync(gpxDir)) {
     return [];
   }
 
-  const folders = readdirSync(gpxDir).filter((f) => f.startsWith(prefix));
+  const zoneIds = readdirSync(gpxDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && !TOUR_FOLDER_PATTERN.test(entry.name))
+    .map((entry) => entry.name);
+
+  // Legacy layout: tour folders directly under public/gpx belong to the default zone.
+  const hasLegacyTours = readdirSync(gpxDir, { withFileTypes: true }).some(
+    (entry) => entry.isDirectory() && TOUR_FOLDER_PATTERN.test(entry.name),
+  );
+  if (hasLegacyTours && !zoneIds.includes(DEFAULT_ZONE_ID)) {
+    zoneIds.push(DEFAULT_ZONE_ID);
+  }
+
+  return zoneIds.sort();
+}
+
+function getTours(prefix: string, zoneId: string, baseDir: string): GeneratedTour[] {
+  if (!existsSync(baseDir)) {
+    return [];
+  }
+
+  const folders = readdirSync(baseDir).filter((f) => f.startsWith(prefix));
   return folders
     .map((tourId) => {
-      const gpxPath = join(gpxDir, tourId, `${tourId}.gpx`);
-      const startGpxPath = join(gpxDir, tourId, `${tourId}_start.gpx`);
-      const endGpxPath = join(gpxDir, tourId, `${tourId}_end.gpx`);
+      const gpxPath = join(baseDir, tourId, `${tourId}.gpx`);
+      const startGpxPath = join(baseDir, tourId, `${tourId}_start.gpx`);
+      const endGpxPath = join(baseDir, tourId, `${tourId}_end.gpx`);
 
       const distance = parseGpxDistance(gpxPath);
       const startDistance = parseGpxDistance(startGpxPath);
@@ -71,6 +102,7 @@ function getTours(
         distance,
         startDistance,
         endDistance,
+        zoneId,
       };
     })
     .sort((a, b) => {
@@ -80,10 +112,19 @@ function getTours(
     });
 }
 
-const vTours = getTours('V');
-const pTours = getTours('P');
+function zoneBaseDir(zoneId: string): string {
+  // Legacy layout: default-zone tours live directly under public/gpx.
+  if (zoneId === DEFAULT_ZONE_ID && !existsSync(join(gpxDir, DEFAULT_ZONE_ID))) {
+    return gpxDir;
+  }
+  return join(gpxDir, zoneId);
+}
 
-const content = `// Auto-generated from public/gpx folder
+const zoneIds = getZoneIds();
+const vTours = zoneIds.flatMap((zoneId) => getTours('V', zoneId, zoneBaseDir(zoneId)));
+const pTours = zoneIds.flatMap((zoneId) => getTours('P', zoneId, zoneBaseDir(zoneId)));
+
+const content = `// Auto-generated from public/gpx folder (one folder per zone)
 export const toursData = {
   vTours: ${JSON.stringify(vTours, null, 2).replace(/"/g, "'")},
   pTours: ${JSON.stringify(pTours, null, 2).replace(/"/g, "'")},
@@ -91,4 +132,6 @@ export const toursData = {
 `;
 
 writeFileSync(outputFile, content);
-console.log(`Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours`);
+console.log(
+  `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
+);

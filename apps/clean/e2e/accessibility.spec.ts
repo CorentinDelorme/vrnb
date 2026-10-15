@@ -15,7 +15,7 @@ test.describe('Accessibility', () => {
     });
 
     test('should have no a11y violations on tours map page', async ({ page }) => {
-      await page.goto('/tours/V');
+      await page.goto('/tours/bruz-sud/V');
       // Wait for map to render
       await expect(page.locator('div#map')).toBeVisible();
       const results = await new AxeBuilder({ page }).disableRules(EXCLUDED_RULES).analyze();
@@ -23,7 +23,7 @@ test.describe('Accessibility', () => {
     });
 
     test('should have no a11y violations on tour page', async ({ page }) => {
-      await page.goto('/tour/V1');
+      await page.goto('/tour/bruz-sud/V1');
       // Wait for map to render
       await expect(page.locator('div#map')).toBeVisible();
       const results = await new AxeBuilder({ page }).disableRules(EXCLUDED_RULES).analyze();
@@ -49,14 +49,14 @@ test.describe('Accessibility', () => {
     });
 
     test('should have accessible back button', async ({ page }) => {
-      await page.goto('/tour/V1');
+      await page.goto('/tour/bruz-sud/V1');
       const backButton = page.locator('a[aria-label="Retour à l\'accueil"]');
       await expect(backButton).toBeVisible();
       await expect(backButton).toHaveAttribute('aria-label', "Retour à l'accueil");
     });
 
     test('should have accessible close button on modal', async ({ page }) => {
-      await page.goto('/tour/V1');
+      await page.goto('/tour/bruz-sud/V1');
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
@@ -67,14 +67,14 @@ test.describe('Accessibility', () => {
     });
 
     test('should have accessible drawer close button', async ({ page }) => {
-      await page.goto('/tour/V1');
+      await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
       const closeLabel = page.locator('.drawer-side label.btn-circle[aria-label="close sidebar"]');
       await expect(closeLabel).toBeVisible();
     });
 
     test('should support keyboard navigation on step buttons', async ({ page }) => {
-      await page.goto('/tour/V1');
+      await page.goto('/tour/bruz-sud/V1');
       const suivantButton = page.getByRole('button', { name: 'Suivant' });
       await suivantButton.focus();
       await page.keyboard.press('Enter');
@@ -83,7 +83,7 @@ test.describe('Accessibility', () => {
     });
 
     test('should support keyboard navigation to close modal', async ({ page }) => {
-      await page.goto('/tour/V1');
+      await page.goto('/tour/bruz-sud/V1');
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();

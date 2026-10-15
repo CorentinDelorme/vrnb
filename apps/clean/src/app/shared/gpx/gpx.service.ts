@@ -2,8 +2,8 @@ import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { gpx } from '@tmcw/togeojson';
 import { FeatureCollection, Position } from 'geojson';
-import { firstValueFrom, Observable } from 'rxjs';
-import { MEETING_POINT } from '../constants';
+import { catchError, firstValueFrom, Observable } from 'rxjs';
+import { DEFAULT_ZONE_ID, getZone } from '../../zones';
 import { MapLocationService } from '../map/map-location.service';
 import { StartEndPoints, TourGeoJsonSet } from '../map/map.types';
 
@@ -14,15 +14,23 @@ export class GpxService {
 
   readonly geoJson = signal<TourGeoJsonSet | null>(null);
 
+  /** Zone context for meeting-point-dependent links. Set by the current view. */
+  readonly zoneId = signal<string>(DEFAULT_ZONE_ID);
+
+  private readonly meetingPoint = computed(() => getZone(this.zoneId()).meetingPoint);
+
   readonly links = signal<{ toStart: string; fromEnd: string }>({
     toStart: '',
     fromEnd: '',
   });
 
-  loadGpxFile(tourId: string, type?: 'start' | 'end'): Observable<string> {
-    return this.http.get(`/gpx/${tourId}/${tourId}${type ? `_${type}` : ''}.gpx`, {
-      responseType: 'text',
-    });
+  loadGpxFile(tourId: string, type?: 'start' | 'end', zoneId?: string): Observable<string> {
+    const zone = zoneId ?? this.zoneId();
+    const fileName = `${tourId}${type ? `_${type}` : ''}.gpx`;
+    return this.http.get(`/gpx/${zone}/${tourId}/${fileName}`, { responseType: 'text' }).pipe(
+      // Fallback to the legacy flat layout (pre-zone files).
+      catchError(() => this.http.get(`/gpx/${tourId}/${fileName}`, { responseType: 'text' })),
+    );
   }
 
   getGeoJsonFromGpx(gpxStr: string): FeatureCollection {
@@ -38,9 +46,13 @@ export class GpxService {
     });
   }
 
-  async getCoordinatesFromGpx(tourId: string, type: 'start' | 'tour' | 'end'): Promise<Position[]> {
+  async getCoordinatesFromGpx(
+    tourId: string,
+    type: 'start' | 'tour' | 'end',
+    zoneId?: string,
+  ): Promise<Position[]> {
     const gpxStr = await firstValueFrom(
-      this.loadGpxFile(tourId, type === 'tour' ? undefined : type),
+      this.loadGpxFile(tourId, type === 'tour' ? undefined : type, zoneId),
     );
     if (!gpxStr) return [];
     const geoJsonData = this.getGeoJsonFromGpx(gpxStr);
@@ -92,8 +104,8 @@ export class GpxService {
     const points = this.getStartAndEndPointsFromGeoJson(currentGeoJson.tour);
     if (!points) return;
 
-    const meetingLon = MEETING_POINT.coordinates[0];
-    const meetingLat = MEETING_POINT.coordinates[1];
+    const meetingLon = this.meetingPoint().coordinates[0];
+    const meetingLat = this.meetingPoint().coordinates[1];
 
     const startLon = points.start[0];
     const startLat = points.start[1];
@@ -111,8 +123,8 @@ export class GpxService {
   }
 
   readonly geoVeloToMeetingPointLink = computed(() => {
-    const meetingLon = MEETING_POINT.coordinates[0];
-    const meetingLat = MEETING_POINT.coordinates[1];
+    const meetingLon = this.meetingPoint().coordinates[0];
+    const meetingLat = this.meetingPoint().coordinates[1];
     const pos = this.mapLocationService.currentPosition();
     const fromParam = pos ? `&from=${pos.lng},${pos.lat}` : '';
 
