@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (OSRM)">
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (Valhalla)">
   <metadata>
     <link href="https://router.project-osrm.org">
       <text>OSRM</text>
@@ -9,9 +9,9 @@
     <type>cycling</type>
     <name>Place du Dr Joly vers le parcours V11</name>
     <trkseg>
-      <trkpt lat="48.024457" lon="-1.746875">
+      <trkpt lat="48.024457" lon="-1.746876">
       </trkpt>
-      <trkpt lat="48.024369" lon="-1.746838">
+      <trkpt lat="48.024369" lon="-1.746837">
       </trkpt>
       <trkpt lat="48.024348" lon="-1.746829">
       </trkpt>
@@ -27,7 +27,7 @@
       </trkpt>
       <trkpt lat="48.024118" lon="-1.746471">
       </trkpt>
-      <trkpt lat="48.023956" lon="-1.746299">
+      <trkpt lat="48.023956" lon="-1.746298">
       </trkpt>
       <trkpt lat="48.023804" lon="-1.746105">
       </trkpt>
@@ -47,7 +47,7 @@
       </trkpt>
       <trkpt lat="48.023540" lon="-1.744713">
       </trkpt>
-      <trkpt lat="48.023531" lon="-1.744497">
+      <trkpt lat="48.023530" lon="-1.744497">
       </trkpt>
       <trkpt lat="48.023502" lon="-1.744485">
       </trkpt>
@@ -89,7 +89,7 @@
       </trkpt>
       <trkpt lat="48.023195" lon="-1.739633">
       </trkpt>
-      <trkpt lat="48.023198" lon="-1.739173">
+      <trkpt lat="48.023198" lon="-1.739172">
       </trkpt>
       <trkpt lat="48.023199" lon="-1.739101">
       </trkpt>
@@ -129,7 +129,7 @@
       </trkpt>
       <trkpt lat="48.023055" lon="-1.736211">
       </trkpt>
-      <trkpt lat="48.023070" lon="-1.736187">
+      <trkpt lat="48.023069" lon="-1.736187">
       </trkpt>
       <trkpt lat="48.023087" lon="-1.736169">
       </trkpt>
@@ -152,8 +152,6 @@
       <trkpt lat="48.022821" lon="-1.735494">
       </trkpt>
       <trkpt lat="48.021012" lon="-1.735927">
-      </trkpt>
-      <trkpt lat="48.020999" lon="-1.735930">
       </trkpt>
     </trkseg>
   </trk>

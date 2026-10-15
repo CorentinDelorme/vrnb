@@ -9,9 +9,20 @@ const rootDir = join(__dirname, '..');
 const gpxDir = join(rootDir, 'public/gpx');
 
 const OSRM_BASE_URL = 'https://router.project-osrm.org/route/v1';
+const VALHALLA_URL = 'https://valhalla1.openstreetmap.de/route';
 const REQUEST_DELAY_MS = 400;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 type LonLat = [number, number];
+
+type RouterSource = 'osrm' | 'valhalla';
+
+interface RoutedPath {
+  readonly coords: LonLat[];
+  /** Routed distance in meters, as reported by the router. */
+  readonly distanceM: number;
+  readonly source: RouterSource;
+}
 
 function profileForTour(tourId: string): { osrm: 'bicycle' | 'foot'; gpxType: string } {
   return tourId.startsWith('V')
@@ -47,32 +58,153 @@ function getTourEndpoints(tourId: string): { start: LonLat; end: LonLat } | unde
 interface OsrmResponse {
   code: string;
   message?: string;
-  routes?: { geometry?: { coordinates?: number[][] } }[];
+  routes?: { geometry?: { coordinates?: number[][] }; distance?: number }[];
 }
 
-async function fetchRoute(from: LonLat, to: LonLat, profile: string): Promise<number[][]> {
+interface ValhallaResponse {
+  trip?: {
+    status?: number;
+    status_message?: string;
+    summary?: { length?: number };
+    legs?: { shape?: string }[];
+  };
+}
+
+async function fetchRoute(from: LonLat, to: LonLat, profile: string): Promise<RoutedPath> {
   const url =
     `${OSRM_BASE_URL}/${profile}/${from[0]},${from[1]};${to[0]},${to[1]}` +
     `?overview=full&geometries=geojson`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'vrnb-clean/generate-start-end-gpx' },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) {
     throw new Error(`OSRM HTTP ${res.status} for ${url}`);
   }
   const json = (await res.json()) as OsrmResponse;
-  const coords = json.routes?.[0]?.geometry?.coordinates;
+  const route = json.routes?.[0];
+  const coords = route?.geometry?.coordinates;
   if (json.code !== 'Ok' || !coords || coords.length === 0) {
     throw new Error(`OSRM error: ${json.code}${json.message ? ` (${json.message})` : ''}`);
   }
+  return {
+    coords: coords.map(([lon, lat]) => [lon, lat] as LonLat),
+    distanceM: route?.distance ?? 0,
+    source: 'osrm',
+  };
+}
+
+/**
+ * Decode a polyline-encoded shape (Valhalla uses precision 6 by default).
+ * Returns [lon, lat] pairs.
+ */
+function decodePolyline(encoded: string, precision = 6): LonLat[] {
+  const coords: LonLat[] = [];
+  let index = 0;
+  let lat = 0;
+  let lon = 0;
+  const factor = 10 ** precision;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lon += result & 1 ? ~(result >> 1) : result >> 1;
+
+    coords.push([lon / factor, lat / factor]);
+  }
+
   return coords;
+}
+
+/**
+ * Route with Valhalla bicycle costing. Unlike the OSRM demo server, Valhalla
+ * models contraflow cycling (e.g. `cycleway:*:opposite` in 30 km/h zones),
+ * so one-way streets that are legally rideable both ways don't force a
+ * detour loop (seen on Rue Gaudrine in Bruz).
+ */
+async function fetchValhallaBicycle(from: LonLat, to: LonLat): Promise<RoutedPath> {
+  const res = await fetch(VALHALLA_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'vrnb-clean/generate-start-end-gpx',
+    },
+    body: JSON.stringify({
+      locations: [
+        { lon: from[0], lat: from[1] },
+        { lon: to[0], lat: to[1] },
+      ],
+      costing: 'bicycle',
+    }),
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new Error(`Valhalla HTTP ${res.status}`);
+  }
+  const json = (await res.json()) as ValhallaResponse;
+  const trip = json.trip;
+  const shape = trip?.legs?.[0]?.shape;
+  const lengthKm = trip?.summary?.length;
+  if (trip?.status !== 0 || typeof shape !== 'string' || shape.length === 0) {
+    throw new Error(`Valhalla error: ${trip?.status_message ?? 'no route'}`);
+  }
+  const coords = decodePolyline(shape);
+  if (coords.length === 0) {
+    throw new Error('Valhalla error: empty shape');
+  }
+  return { coords, distanceM: (lengthKm ?? 0) * 1000, source: 'valhalla' };
+}
+
+/**
+ * For bike liaisons, query both routers and keep the shortest path.
+ * Falls back to whichever router answered when the other one fails.
+ */
+async function resolveBicycleRoute(from: LonLat, to: LonLat): Promise<RoutedPath> {
+  const outcomes = await Promise.allSettled([
+    fetchRoute(from, to, 'bicycle'),
+    (async () => {
+      await delay(REQUEST_DELAY_MS);
+      return fetchValhallaBicycle(from, to);
+    })(),
+  ]);
+  const fulfilled = outcomes
+    .filter(
+      (outcome): outcome is PromiseFulfilledResult<RoutedPath> => outcome.status === 'fulfilled',
+    )
+    .map((outcome) => outcome.value);
+  if (fulfilled.length === 0) {
+    const reasons = outcomes
+      .filter((outcome) => outcome.status === 'rejected')
+      .map((outcome) => String((outcome as PromiseRejectedResult).reason))
+      .join(' | ');
+    throw new Error(`No route from either router: ${reasons}`);
+  }
+  return fulfilled.reduce((best, candidate) =>
+    candidate.distanceM < best.distanceM ? candidate : best,
+  );
 }
 
 function escapeXml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-function buildGpx(name: string, type: string, coords: number[][]): string {
+function buildGpx(name: string, type: string, coords: LonLat[], source: RouterSource): string {
+  const creator = source === 'osrm' ? 'OSRM' : 'Valhalla';
   const points = coords
     .map(
       ([lon, lat]) =>
@@ -80,7 +212,7 @@ function buildGpx(name: string, type: string, coords: number[][]): string {
     )
     .join('\n');
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (OSRM)">
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (${creator})">
   <metadata>
     <link href="https://router.project-osrm.org">
       <text>OSRM</text>
@@ -143,20 +275,39 @@ async function main(): Promise<void> {
         throw new Error(`cannot read endpoints from ${tourId}/${tourId}.gpx`);
       }
 
-      const toStart = await fetchRoute(meetingCoords, endpoints.start, osrm);
+      const isBike = osrm === 'bicycle';
+      const toStart = isBike
+        ? await resolveBicycleRoute(meetingCoords, endpoints.start)
+        : await fetchRoute(meetingCoords, endpoints.start, osrm);
       await delay(REQUEST_DELAY_MS);
-      const fromEnd = await fetchRoute(endpoints.end, meetingCoords, osrm);
+      const fromEnd = isBike
+        ? await resolveBicycleRoute(endpoints.end, meetingCoords)
+        : await fetchRoute(endpoints.end, meetingCoords, osrm);
 
       writeFileSync(
         join(gpxDir, tourId, `${tourId}_start.gpx`),
-        buildGpx(`${MEETING_POINT.name} vers le parcours ${tourId}`, gpxType, toStart),
+        buildGpx(
+          `${MEETING_POINT.name} vers le parcours ${tourId}`,
+          gpxType,
+          toStart.coords,
+          toStart.source,
+        ),
       );
       writeFileSync(
         join(gpxDir, tourId, `${tourId}_end.gpx`),
-        buildGpx(`Fin du parcours ${tourId} vers ${MEETING_POINT.name}`, gpxType, fromEnd),
+        buildGpx(
+          `Fin du parcours ${tourId} vers ${MEETING_POINT.name}`,
+          gpxType,
+          fromEnd.coords,
+          fromEnd.source,
+        ),
       );
 
-      console.log(`ok ${tourId} (${osrm}): start ${toStart.length} pts, end ${fromEnd.length} pts`);
+      console.log(
+        `ok ${tourId} (${osrm}): start ${toStart.coords.length} pts` +
+          ` ${Math.round(toStart.distanceM)}m [${toStart.source}], end ${fromEnd.coords.length} pts` +
+          ` ${Math.round(fromEnd.distanceM)}m [${fromEnd.source}]`,
+      );
     } catch (error) {
       failures += 1;
       console.error(`fail ${tourId}: ${error instanceof Error ? error.message : error}`);
