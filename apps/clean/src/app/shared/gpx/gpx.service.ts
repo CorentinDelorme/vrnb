@@ -3,7 +3,7 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { gpx } from '@tmcw/togeojson';
 import { FeatureCollection, Position } from 'geojson';
 import { firstValueFrom, Observable } from 'rxjs';
-import { PARC_AN_2000 } from '../constants';
+import { MEETING_POINT } from '../constants';
 import { MapLocationService } from '../map/map-location.service';
 import { StartEndPoints, TourGeoJsonSet } from '../map/map.types';
 
@@ -92,31 +92,31 @@ export class GpxService {
     const points = this.getStartAndEndPointsFromGeoJson(currentGeoJson.tour);
     if (!points) return;
 
-    const parcLat = PARC_AN_2000[0];
-    const parcLon = PARC_AN_2000[1];
+    const meetingLon = MEETING_POINT.coordinates[0];
+    const meetingLat = MEETING_POINT.coordinates[1];
 
-    const startLat = points.start[0];
-    const startLon = points.start[1];
+    const startLon = points.start[0];
+    const startLat = points.start[1];
 
-    const endLat = points.end[0];
-    const endLon = points.end[1];
+    const endLon = points.end[0];
+    const endLat = points.end[1];
 
     this.links.set({
-      // Parc de l'An 2000 -> GPX start
-      toStart: `${this.getGeoVeloBaseUrl()}&from=${parcLat},${parcLon}&to=${startLat},${startLon}`,
+      // Meeting point -> GPX start
+      toStart: `${this.getGeoVeloBaseUrl()}&from=${meetingLon},${meetingLat}&to=${startLon},${startLat}`,
 
-      // GPX end -> Parc de l'An 2000
-      fromEnd: `${this.getGeoVeloBaseUrl()}&from=${endLat},${endLon}&to=${parcLat},${parcLon}`,
+      // GPX end -> Meeting point
+      fromEnd: `${this.getGeoVeloBaseUrl()}&from=${endLon},${endLat}&to=${meetingLon},${meetingLat}`,
     });
   }
 
-  readonly geoVeloToParcAn2000Link = computed(() => {
-    const parcLat = PARC_AN_2000[0];
-    const parcLon = PARC_AN_2000[1];
+  readonly geoVeloToMeetingPointLink = computed(() => {
+    const meetingLon = MEETING_POINT.coordinates[0];
+    const meetingLat = MEETING_POINT.coordinates[1];
     const pos = this.mapLocationService.currentPosition();
     const fromParam = pos ? `&from=${pos.lng},${pos.lat}` : '';
 
-    return `${this.getGeoVeloBaseUrl()}&to=${parcLat},${parcLon}${fromParam}`;
+    return `${this.getGeoVeloBaseUrl()}&to=${meetingLon},${meetingLat}${fromParam}`;
   });
 
   private getGeoVeloBaseUrl(): string {

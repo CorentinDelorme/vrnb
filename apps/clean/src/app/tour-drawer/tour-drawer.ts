@@ -9,6 +9,7 @@ import {
   Route02Icon,
   Tree06Icon,
 } from '@hugeicons/core-free-icons';
+import { MEETING_POINT } from '../shared/constants';
 import { GpxService } from '../shared/gpx/gpx.service';
 
 @Component({
@@ -21,6 +22,8 @@ export class TourDrawer {
   title = inject(Title);
   gpxService = inject(GpxService);
   private router = inject(Router);
+
+  readonly meetingPointName = MEETING_POINT.name;
 
   pdf02Icon = Pdf02Icon;
   mapsLocationIcon = MapsLocationIcon;

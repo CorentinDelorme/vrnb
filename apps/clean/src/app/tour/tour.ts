@@ -6,7 +6,7 @@ import { Position } from 'geojson';
 import * as L from 'leaflet';
 import { forkJoin } from 'rxjs';
 import { FinishModal } from '../finish-modal/finish-modal';
-import { PARC_AN_2000 } from '../shared/constants';
+import { MEETING_POINT } from '../shared/constants';
 import { GpxService } from '../shared/gpx/gpx.service';
 import { MapArrowService } from '../shared/map/map-arrow.service';
 import { MapLocationService } from '../shared/map/map-location.service';
@@ -151,7 +151,9 @@ export class Tour implements AfterViewInit, OnDestroy {
       this.fitBoundsFromCoords(routeCoords);
     } else {
       const fallbackCoords =
-        gpxType === 'start' ? [PARC_AN_2000, points.start] : [points.end, PARC_AN_2000];
+        gpxType === 'start'
+          ? [MEETING_POINT.coordinates, points.start]
+          : [points.end, MEETING_POINT.coordinates];
       this.mapRouteService.drawCoordinatesRoute(
         fallbackCoords,
         this.layerGroup,

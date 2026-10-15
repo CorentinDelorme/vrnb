@@ -49,7 +49,7 @@
         <li>
           <a [href]="getGpxUrl('end')" download target="_blank" rel="noopener">
             <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
-            Télécharger le GPX pour retourner au Parc de l’An 2000
+            Télécharger le GPX pour retourner au {{ meetingPointName }}
           </a>
         </li>
       }
@@ -61,9 +61,13 @@
       </div>
 
       <li>
-        <a [href]="gpxService.geoVeloToParcAn2000Link()" target="_blank" rel="noopener noreferrer">
+        <a
+          [href]="gpxService.geoVeloToMeetingPointLink()"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
-          Retourner au Parc de l’An 2000 depuis ma position
+          Retourner au {{ meetingPointName }} depuis ma position
         </a>
       </li>
 
@@ -79,7 +83,7 @@
         <li>
           <a [href]="gpxService.links().fromEnd" target="_blank" rel="noopener noreferrer">
             <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
-            Itinéraire pour retourner au Parc de l'An 2000
+            Itinéraire pour retourner au {{ meetingPointName }}
           </a>
         </li>
       }
