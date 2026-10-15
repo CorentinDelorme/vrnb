@@ -132,12 +132,16 @@ function decodePolyline(encoded: string, precision = 6): LonLat[] {
 }
 
 /**
- * Route with Valhalla bicycle costing. Unlike the OSRM demo server, Valhalla
- * models contraflow cycling (e.g. `cycleway:*:opposite` in 30 km/h zones),
- * so one-way streets that are legally rideable both ways don't force a
- * detour loop (seen on Rue Gaudrine in Bruz).
+ * Route with Valhalla. Unlike the OSRM demo server, Valhalla does not force
+ * pedestrians and contraflow cyclists onto detours: one-way streets that are
+ * legally usable on foot (or by bike in 30 km/h zones, e.g. Rue Gaudrine in
+ * Bruz) don't trigger a loop around the block.
  */
-async function fetchValhallaBicycle(from: LonLat, to: LonLat): Promise<RoutedPath> {
+async function fetchValhalla(
+  from: LonLat,
+  to: LonLat,
+  costing: 'bicycle' | 'pedestrian',
+): Promise<RoutedPath> {
   const res = await fetch(VALHALLA_URL, {
     method: 'POST',
     headers: {
@@ -149,7 +153,7 @@ async function fetchValhallaBicycle(from: LonLat, to: LonLat): Promise<RoutedPat
         { lon: from[0], lat: from[1] },
         { lon: to[0], lat: to[1] },
       ],
-      costing: 'bicycle',
+      costing,
     }),
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
@@ -171,15 +175,20 @@ async function fetchValhallaBicycle(from: LonLat, to: LonLat): Promise<RoutedPat
 }
 
 /**
- * For bike liaisons, query both routers and keep the shortest path.
+ * Query both routers and keep the shortest path.
  * Falls back to whichever router answered when the other one fails.
  */
-async function resolveBicycleRoute(from: LonLat, to: LonLat): Promise<RoutedPath> {
+async function resolveRoute(
+  from: LonLat,
+  to: LonLat,
+  kind: 'bicycle' | 'foot',
+): Promise<RoutedPath> {
+  const valhallaCosting = kind === 'bicycle' ? 'bicycle' : 'pedestrian';
   const outcomes = await Promise.allSettled([
-    fetchRoute(from, to, 'bicycle'),
+    fetchRoute(from, to, kind),
     (async () => {
       await delay(REQUEST_DELAY_MS);
-      return fetchValhallaBicycle(from, to);
+      return fetchValhalla(from, to, valhallaCosting);
     })(),
   ]);
   const fulfilled = outcomes
@@ -275,14 +284,9 @@ async function main(): Promise<void> {
         throw new Error(`cannot read endpoints from ${tourId}/${tourId}.gpx`);
       }
 
-      const isBike = osrm === 'bicycle';
-      const toStart = isBike
-        ? await resolveBicycleRoute(meetingCoords, endpoints.start)
-        : await fetchRoute(meetingCoords, endpoints.start, osrm);
+      const toStart = await resolveRoute(meetingCoords, endpoints.start, osrm);
       await delay(REQUEST_DELAY_MS);
-      const fromEnd = isBike
-        ? await resolveBicycleRoute(endpoints.end, meetingCoords)
-        : await fetchRoute(endpoints.end, meetingCoords, osrm);
+      const fromEnd = await resolveRoute(endpoints.end, meetingCoords, osrm);
 
       writeFileSync(
         join(gpxDir, tourId, `${tourId}_start.gpx`),

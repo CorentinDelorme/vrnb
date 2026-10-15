@@ -19,7 +19,7 @@ const TILE_SIZE = 256;
 const USER_AGENT = 'vrnb-clean generate-pdfs';
 const REQUEST_DELAY_MS = 400;
 const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_ZOOM = 16;
+const MAX_ZOOM = 18;
 const TILE_JPEG_QUALITY = 85;
 const MAP_JPEG_QUALITY = 88;
 /** Max width/height in pixels of the exact map view (before tiling). */
@@ -41,8 +41,15 @@ interface PdfRect {
   readonly h: number;
 }
 
-function formatKmFr(value: number): string {
+function formatDistance(value: number): string {
+  if (value < 1) {
+    return `${Math.round(value * 1000)} m`;
+  }
   return `${value.toFixed(1).replace('.', ',')} km`;
+}
+
+function decapitalize(value: string): string {
+  return value.length === 0 ? value : value.charAt(0).toLowerCase() + value.slice(1);
 }
 
 function formatTotal(tour: TourDistances): number {
@@ -377,10 +384,10 @@ async function generateTourPdf(tour: TourDistances): Promise<void> {
     head: [['Début', 'Zone de nettoyage', 'Fin', 'Total']],
     body: [
       [
-        formatKmFr(tour.startDistance),
-        formatKmFr(tour.distance),
-        formatKmFr(tour.endDistance),
-        formatKmFr(formatTotal(tour)),
+        formatDistance(tour.startDistance),
+        formatDistance(tour.distance),
+        formatDistance(tour.endDistance),
+        formatDistance(formatTotal(tour)),
       ],
     ],
     theme: 'grid',
@@ -409,8 +416,12 @@ async function generateTourPdf(tour: TourDistances): Promise<void> {
   const smallMapY = smallCaptionY + 4;
   const smallH = 70;
   doc.setFontSize(10);
-  doc.text(`${MEETING_POINT.name} vers début du parcours`, margin, smallCaptionY);
-  doc.text(`Fin du parcours vers ${MEETING_POINT.name}`, margin + smallWidth + gap, smallCaptionY);
+  doc.text(`${MEETING_POINT.name} vers le début du parcours`, margin, smallCaptionY);
+  doc.text(
+    `Fin du parcours vers la ${decapitalize(MEETING_POINT.name)}`,
+    margin + smallWidth + gap,
+    smallCaptionY,
+  );
   await renderMapPanel(
     doc,
     startCoords,
