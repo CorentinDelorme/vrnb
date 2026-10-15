@@ -19,9 +19,11 @@ const TILE_SIZE = 256;
 const USER_AGENT = 'vrnb-clean generate-pdfs';
 const REQUEST_DELAY_MS = 400;
 const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_TILES_PER_SIDE = 5;
-const MAX_ZOOM = 15;
-const TILE_JPEG_QUALITY = 75;
+const MAX_ZOOM = 16;
+const TILE_JPEG_QUALITY = 85;
+const MAP_JPEG_QUALITY = 88;
+/** Max width/height in pixels of the exact map view (before tiling). */
+const MAX_VIEW_PIXELS = 1536;
 
 type LonLat = [number, number];
 
@@ -106,8 +108,9 @@ interface PlannedView {
 }
 
 /**
- * Pick a zoom level so the track (with padding) fits the panel aspect,
- * then snap the view to OSM tile boundaries so tiles fill the panel exactly.
+ * Pick a zoom level so the track (with a small margin) fits the panel aspect.
+ * The view bounds are exact (no tile snapping): the background image is
+ * cropped precisely to these bounds, so the map stays zoomed on the route.
  */
 function planView(coords: LonLat[], aspect: number): PlannedView | undefined {
   if (coords.length === 0) {
@@ -118,27 +121,29 @@ function planView(coords: LonLat[], aspect: number): PlannedView | undefined {
     const ys = coords.map(([, lat]) => latToPixelY(lat, zoom));
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
     const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-    const pad = 1.15;
-    const halfW = (Math.max(...xs) - Math.min(...xs) + 60) / 2;
-    const halfH = (Math.max(...ys) - Math.min(...ys) + 60) / 2;
-    const fittedHalfW = Math.max(halfW * pad, halfH * pad * aspect);
-    const fittedHalfH = Math.max(halfH * pad, (halfW * pad) / aspect);
-    const xTileMin = Math.floor((cx - fittedHalfW) / TILE_SIZE);
-    const xTileMax = Math.floor((cx + fittedHalfW - 1e-6) / TILE_SIZE);
-    const yTileMin = Math.floor((cy - fittedHalfH) / TILE_SIZE);
-    const yTileMax = Math.floor((cy + fittedHalfH - 1e-6) / TILE_SIZE);
-    if (xTileMax - xTileMin + 1 > MAX_TILES_PER_SIDE) continue;
-    if (yTileMax - yTileMin + 1 > MAX_TILES_PER_SIDE) continue;
+    const pad = 1.08;
+    let halfW = Math.max((Math.max(...xs) - Math.min(...xs)) / 2, 30) * pad;
+    let halfH = Math.max((Math.max(...ys) - Math.min(...ys)) / 2, 30) * pad;
+    if (halfW / halfH < aspect) {
+      halfW = halfH * aspect;
+    } else {
+      halfH = halfW / aspect;
+    }
+    if (halfW * 2 > MAX_VIEW_PIXELS || halfH * 2 > MAX_VIEW_PIXELS) continue;
+    const minX = cx - halfW;
+    const maxX = cx + halfW;
+    const minY = cy - halfH;
+    const maxY = cy + halfH;
     return {
       zoom,
-      xTileMin,
-      xTileMax,
-      yTileMin,
-      yTileMax,
-      minX: xTileMin * TILE_SIZE,
-      maxX: (xTileMax + 1) * TILE_SIZE,
-      minY: yTileMin * TILE_SIZE,
-      maxY: (yTileMax + 1) * TILE_SIZE,
+      xTileMin: Math.floor(minX / TILE_SIZE),
+      xTileMax: Math.floor((maxX - 1e-6) / TILE_SIZE),
+      yTileMin: Math.floor(minY / TILE_SIZE),
+      yTileMax: Math.floor((maxY - 1e-6) / TILE_SIZE),
+      minX,
+      maxX,
+      minY,
+      maxY,
     };
   }
   return undefined;
@@ -214,17 +219,61 @@ function projectToPanel(
   };
 }
 
+/**
+ * Assemble the OSM tiles covering the view into a single JPEG cropped
+ * exactly to the view bounds. Missing tiles leave the neutral background.
+ */
+async function buildMapBackground(view: PlannedView): Promise<Buffer | undefined> {
+  try {
+    const originX = view.xTileMin * TILE_SIZE;
+    const originY = view.yTileMin * TILE_SIZE;
+    const canvasW = (view.xTileMax - view.xTileMin + 1) * TILE_SIZE;
+    const canvasH = (view.yTileMax - view.yTileMin + 1) * TILE_SIZE;
+    const layers: { input: Buffer; left: number; top: number }[] = [];
+    for (let x = view.xTileMin; x <= view.xTileMax; x++) {
+      for (let y = view.yTileMin; y <= view.yTileMax; y++) {
+        const tile = await fetchTile(view.zoom, x, y);
+        if (!tile) continue;
+        layers.push({
+          input: tile,
+          left: (x - view.xTileMin) * TILE_SIZE,
+          top: (y - view.yTileMin) * TILE_SIZE,
+        });
+      }
+    }
+    const left = Math.min(Math.max(Math.round(view.minX - originX), 0), canvasW - 1);
+    const top = Math.min(Math.max(Math.round(view.minY - originY), 0), canvasH - 1);
+    const width = Math.min(Math.round(view.maxX - view.minX), canvasW - left);
+    const height = Math.min(Math.round(view.maxY - view.minY), canvasH - top);
+    // Note: sharp applies extract() before composite() within a single
+    // pipeline, so assemble the full canvas first, then crop in a second step.
+    const assembled = await sharp({
+      create: { width: canvasW, height: canvasH, channels: 3, background: '#e9e7e2' },
+    })
+      .composite(layers)
+      .jpeg({ quality: MAP_JPEG_QUALITY })
+      .toBuffer();
+    return await sharp(assembled)
+      .extract({ left, top, width, height })
+      .jpeg({ quality: MAP_JPEG_QUALITY })
+      .toBuffer();
+  } catch (error) {
+    console.warn(`  map background failed: ${error instanceof Error ? error.message : error}`);
+    return undefined;
+  }
+}
+
 async function renderMapPanel(
   doc: jsPDF,
   coords: LonLat[] | undefined,
   rect: PdfRect,
   style: PanelStyle,
   emptyLabel: string,
+  mapKey: string,
 ): Promise<void> {
-  doc.setFillColor(235, 235, 232);
-  doc.rect(rect.x, rect.y, rect.w, rect.h, 'F');
-
   if (!coords || coords.length === 0) {
+    doc.setFillColor(235, 235, 232);
+    doc.rect(rect.x, rect.y, rect.w, rect.h, 'F');
     doc.setFontSize(9);
     doc.setTextColor(120, 120, 120);
     doc.text(emptyLabel, rect.x + rect.w / 2, rect.y + rect.h / 2, { align: 'center' });
@@ -237,21 +286,17 @@ async function renderMapPanel(
     return;
   }
 
-  for (let x = view.xTileMin; x <= view.xTileMax; x++) {
-    for (let y = view.yTileMin; y <= view.yTileMax; y++) {
-      const tile = await fetchTile(view.zoom, x, y);
-      if (!tile) continue;
-      const tx = rect.x + ((x * TILE_SIZE - view.minX) / (view.maxX - view.minX)) * rect.w;
-      const ty = rect.y + ((y * TILE_SIZE - view.minY) / (view.maxY - view.minY)) * rect.h;
-      const tw = (TILE_SIZE / (view.maxX - view.minX)) * rect.w + 0.2;
-      const th = (TILE_SIZE / (view.maxY - view.minY)) * rect.h + 0.2;
-      const dataUrl = `data:image/jpeg;base64,${tile.toString('base64')}`;
-      try {
-        doc.addImage(dataUrl, 'JPEG', tx, ty, tw, th, `tile-${view.zoom}-${x}-${y}`);
-      } catch (error) {
-        console.warn(`  addImage failed: ${error instanceof Error ? error.message : error}`);
-      }
+  const background = await buildMapBackground(view);
+  if (background) {
+    const dataUrl = `data:image/jpeg;base64,${background.toString('base64')}`;
+    try {
+      doc.addImage(dataUrl, 'JPEG', rect.x, rect.y, rect.w, rect.h, mapKey);
+    } catch (error) {
+      console.warn(`  addImage failed: ${error instanceof Error ? error.message : error}`);
     }
+  } else {
+    doc.setFillColor(235, 235, 232);
+    doc.rect(rect.x, rect.y, rect.w, rect.h, 'F');
   }
 
   const points = coords.map(([lon, lat]) => projectToPanel(lon, lat, view, rect));
@@ -277,16 +322,40 @@ async function renderMapPanel(
   doc.circle(start.x, start.y, style.markerRadius, 'FD');
   doc.setFillColor(225, 29, 72);
   doc.circle(end.x, end.y, style.markerRadius, 'FD');
-
-  doc.setDrawColor(120, 120, 120);
-  doc.setLineWidth(0.3);
-  doc.rect(rect.x, rect.y, rect.w, rect.h);
 }
 
 // --- Per-tour PDF ---
 
 const MAIN_STYLE: PanelStyle = { lineWidth: 0.9, casingWidth: 1.7, markerRadius: 2 };
 const SMALL_STYLE: PanelStyle = { lineWidth: 0.7, casingWidth: 1.3, markerRadius: 1.5 };
+
+/** Graphical legend: green dot = start, blue line = route, red dot = finish. */
+function drawLegend(doc: jsPDF, x: number, baselineY: number): void {
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+
+  let cursorX = x;
+  const midY = baselineY - 1;
+
+  doc.setFillColor(22, 163, 74);
+  doc.circle(cursorX + 1.5, midY, 1.5, 'F');
+  cursorX += 4;
+  doc.text('Départ', cursorX, baselineY);
+  cursorX += doc.getTextWidth('Départ') + 4;
+
+  doc.setDrawColor(0, 88, 202);
+  doc.setLineWidth(0.9);
+  doc.line(cursorX, midY, cursorX + 7, midY);
+  cursorX += 9;
+  doc.text('Parcours', cursorX, baselineY);
+  cursorX += doc.getTextWidth('Parcours') + 4;
+
+  doc.setFillColor(225, 29, 72);
+  doc.circle(cursorX + 1.5, midY, 1.5, 'F');
+  cursorX += 4;
+  doc.text('Arrivée', cursorX, baselineY);
+}
 
 async function generateTourPdf(tour: TourDistances): Promise<void> {
   const doc = new jsPDF();
@@ -302,57 +371,68 @@ async function generateTourPdf(tour: TourDistances): Promise<void> {
   doc.setFontSize(22);
   doc.text(`Parcours ${tour.name}`, pageWidth / 2, 16, { align: 'center' });
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(12);
-  const distanceLine =
-    `Début : ${formatKmFr(tour.startDistance)}  •  Parcours : ${formatKmFr(tour.distance)}` +
-    `  •  Fin : ${formatKmFr(tour.endDistance)}  •  Total : ${formatKmFr(formatTotal(tour))}`;
-  doc.text(distanceLine, pageWidth / 2, 24, { align: 'center' });
+  autoTable(doc, {
+    startY: 23,
+    margin: { left: margin, right: margin },
+    head: [['Début', 'Zone de nettoyage', 'Fin', 'Total']],
+    body: [
+      [
+        formatKmFr(tour.startDistance),
+        formatKmFr(tour.distance),
+        formatKmFr(tour.endDistance),
+        formatKmFr(formatTotal(tour)),
+      ],
+    ],
+    theme: 'grid',
+    headStyles: { fillColor: [66, 135, 75], halign: 'center' },
+    bodyStyles: { halign: 'center' },
+  });
 
-  doc.setFontSize(9);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Départ et arrivée : ${MEETING_POINT.name}`, pageWidth / 2, 30, { align: 'center' });
-  doc.setTextColor(0, 0, 0);
+  const tableEndY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
-  doc.text(`Parcours principal - étape 2 (${formatKmFr(tour.distance)})`, margin, 38);
-  const mainRect: PdfRect = { x: margin, y: 41, w: contentWidth, h: 140 };
-  await renderMapPanel(doc, tourCoords, mainRect, MAIN_STYLE, 'Trace principal introuvable');
+  doc.text('Zone de nettoyage', margin, tableEndY + 7);
+  const mainRect: PdfRect = { x: margin, y: tableEndY + 10, w: contentWidth, h: 132 };
+  await renderMapPanel(
+    doc,
+    tourCoords,
+    mainRect,
+    MAIN_STYLE,
+    'Trace principal introuvable',
+    `${tour.name}-main`,
+  );
 
   const gap = 4;
   const smallWidth = (contentWidth - gap) / 2;
-  const smallY = 188;
-  const smallH = 80;
-  doc.setFontSize(11);
-  doc.text(`Début - étape 1 (${formatKmFr(tour.startDistance)})`, margin, smallY);
-  doc.text(`Fin - étape 3 (${formatKmFr(tour.endDistance)})`, margin + smallWidth + gap, smallY);
+  const smallCaptionY = mainRect.y + mainRect.h + 7;
+  const smallMapY = smallCaptionY + 4;
+  const smallH = 70;
+  doc.setFontSize(10);
+  doc.text(`${MEETING_POINT.name} vers début du parcours`, margin, smallCaptionY);
+  doc.text(`Fin du parcours vers ${MEETING_POINT.name}`, margin + smallWidth + gap, smallCaptionY);
   await renderMapPanel(
     doc,
     startCoords,
-    { x: margin, y: smallY + 4, w: smallWidth, h: smallH },
+    { x: margin, y: smallMapY, w: smallWidth, h: smallH },
     SMALL_STYLE,
     'Trace aller introuvable',
+    `${tour.name}-start`,
   );
   await renderMapPanel(
     doc,
     endCoords,
-    { x: margin + smallWidth + gap, y: smallY + 4, w: smallWidth, h: smallH },
+    { x: margin + smallWidth + gap, y: smallMapY, w: smallWidth, h: smallH },
     SMALL_STYLE,
     'Trace retour introuvable',
+    `${tour.name}-end`,
   );
 
+  drawLegend(doc, margin, 282);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
-  doc.text(
-    'Pastille verte : départ du tronçon - Tracé bleu : parcours - Pastille rouge : arrivée',
-    margin,
-    280,
-  );
-  doc.text('Fond de carte : OpenStreetMap contributors', pageWidth - margin, 280, {
-    align: 'right',
-  });
+  doc.text('Cartes © OpenStreetMap', pageWidth - margin, 282, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
   const outputPath = join(pdfDir, `${tour.name}.pdf`);
