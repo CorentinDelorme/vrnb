@@ -12,6 +12,7 @@ import { toursData } from '../src/app/tours-data';
 const rootDir = join(__dirname, '..');
 const pdfDir = join(rootDir, 'public/pdf');
 const gpxDir = join(rootDir, 'public/gpx');
+const logoPath = join(rootDir, 'public/icons/vrnb.png');
 const tileCacheDir = join(rootDir, 'scripts', '.cache', 'tiles');
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
@@ -50,6 +51,30 @@ function formatDistance(value: number): string {
 
 function decapitalize(value: string): string {
   return value.length === 0 ? value : value.charAt(0).toLowerCase() + value.slice(1);
+}
+
+interface LogoImage {
+  readonly buffer: Buffer;
+  /** Width over height ratio, to size the logo without distortion. */
+  readonly aspect: number;
+}
+
+/** Load the VRNB logo flattened on white (JPEG keeps PDFs small). */
+async function loadLogo(): Promise<LogoImage | undefined> {
+  try {
+    if (!existsSync(logoPath)) {
+      console.warn(`  logo not found: ${logoPath}`);
+      return undefined;
+    }
+    const source = sharp(readFileSync(logoPath));
+    const metadata = await source.metadata();
+    const buffer = await source.flatten({ background: '#ffffff' }).jpeg({ quality: 85 }).toBuffer();
+    const aspect = (metadata.width ?? 1) / (metadata.height ?? 1);
+    return { buffer, aspect };
+  } catch (error) {
+    console.warn(`  logo failed: ${error instanceof Error ? error.message : error}`);
+    return undefined;
+  }
 }
 
 function formatTotal(tour: TourDistances): number {
@@ -364,7 +389,7 @@ function drawLegend(doc: jsPDF, x: number, baselineY: number): void {
   doc.text('Arrivée', cursorX, baselineY);
 }
 
-async function generateTourPdf(tour: TourDistances): Promise<void> {
+async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined): Promise<void> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 10;
@@ -374,9 +399,24 @@ async function generateTourPdf(tour: TourDistances): Promise<void> {
   const tourCoords = parseGpxCoords(join(gpxDir, tour.name, `${tour.name}.gpx`));
   const endCoords = parseGpxCoords(join(gpxDir, tour.name, `${tour.name}_end.gpx`));
 
+  if (logo) {
+    const logoHeight = 12;
+    const dataUrl = `data:image/jpeg;base64,${logo.buffer.toString('base64')}`;
+    doc.addImage(dataUrl, 'JPEG', margin, 6, logoHeight * logo.aspect, logoHeight, 'vrnb-logo');
+  }
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.text(`Parcours ${tour.name}`, pageWidth / 2, 16, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Contact', pageWidth - margin, 7, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('06 23 13 56 48', pageWidth - margin, 12, { align: 'right' });
 
   autoTable(doc, {
     startY: 23,
@@ -512,8 +552,10 @@ async function main(): Promise<void> {
     throw new Error('No tours match the --tour filter.');
   }
 
+  const logo = await loadLogo();
+
   for (const tour of allTours) {
-    await generateTourPdf(tour);
+    await generateTourPdf(tour, logo);
   }
 
   if (!tourFilter) {

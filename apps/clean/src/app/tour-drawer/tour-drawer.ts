@@ -25,6 +25,12 @@ export class TourDrawer {
 
   readonly meetingPointName = MEETING_POINT.name;
 
+  /** Meeting point name for mid-sentence use, e.g. "à la place du Dr Joly". */
+  get meetingPointNameLower(): string {
+    const name = MEETING_POINT.name;
+    return name.charAt(0).toLowerCase() + name.slice(1);
+  }
+
   pdf02Icon = Pdf02Icon;
   mapsLocationIcon = MapsLocationIcon;
   tree06Icon = Tree06Icon;

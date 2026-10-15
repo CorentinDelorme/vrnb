@@ -130,7 +130,7 @@ Routes: `/tour/V1`, `/tour/P3`
 | `should open drawer with tour title`  | Click "Menu"       | Drawer shows "Parcours V1"                                                       |
 | `should show PDF download link`       | Open drawer        | "Télécharger le PDF" with `href="/pdf/V1.pdf"`                                   |
 | `should show 3 GPX download links`    | Open drawer        | Start: `/gpx/V1/V1_start.gpx`, Tour: `/gpx/V1/V1.gpx`, End: `/gpx/V1/V1_end.gpx` |
-| `should show GeoVelo section`         | Open drawer        | GeoVelo logo + "Retourner au {{ meetingPointName }}" link (default: Parc de l'An 2000) |
+| `should show GeoVelo section`         | Open drawer        | GeoVelo logo + "Retourner à la {{ meetingPointName }}" link |
 | `should close drawer on close button` | Open/close drawer  | Drawer toggles correctly                                                         |
 
 ### `describe('Tour page — P3 (walking)')`

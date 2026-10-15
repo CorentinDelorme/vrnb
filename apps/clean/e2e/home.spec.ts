@@ -14,7 +14,7 @@ test.describe('Home page', () => {
 
     test('should display Ouest-France links in the press collapse', async ({ page }) => {
       await page.goto('/');
-      await page.getByText('Articles Ouest-France').click();
+      await page.getByText('Articles Ouest-France 2026').click();
 
       await expect(page.locator('img[alt="Logo Ouest-France"]')).toBeVisible();
       await expect(

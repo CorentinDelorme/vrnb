@@ -49,7 +49,7 @@
         <li>
           <a [href]="getGpxUrl('end')" download target="_blank" rel="noopener">
             <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
-            Télécharger le GPX pour retourner au {{ meetingPointName }}
+            Télécharger le GPX pour retourner à la {{ meetingPointNameLower }}
           </a>
         </li>
       }
@@ -67,7 +67,7 @@
           rel="noopener noreferrer"
         >
           <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
-          Retourner au {{ meetingPointName }} depuis ma position
+          Retourner à la {{ meetingPointNameLower }} depuis ma position
         </a>
       </li>
 
@@ -83,7 +83,7 @@
         <li>
           <a [href]="gpxService.links().fromEnd" target="_blank" rel="noopener noreferrer">
             <hugeicons-icon [icon]="tree06Icon" [strokeWidth]="1.5" alt="" />
-            Itinéraire pour retourner au {{ meetingPointName }}
+            Itinéraire pour retourner à la {{ meetingPointNameLower }}
           </a>
         </li>
       }

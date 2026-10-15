@@ -161,7 +161,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await expect(tourGpx).toHaveAttribute('href', '/gpx/V1/V1.gpx');
 
       const endGpx = drawerSide.locator('a', {
-        hasText: 'GPX pour retourner au',
+        hasText: 'GPX pour retourner à la',
       });
       await expect(endGpx).toBeVisible();
       await expect(endGpx).toHaveAttribute('href', '/gpx/V1/V1_end.gpx');
@@ -234,7 +234,7 @@ test.describe('Tour page — P3 (walking)', () => {
     await expect(tourGpx).toHaveAttribute('href', '/gpx/P3/P3.gpx');
 
     const endGpx = drawerSide.locator('a', {
-      hasText: 'GPX pour retourner au',
+      hasText: 'GPX pour retourner à la',
     });
     await expect(endGpx).toBeVisible();
     await expect(endGpx).toHaveAttribute('href', '/gpx/P3/P3_end.gpx');
