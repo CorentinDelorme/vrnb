@@ -47,3 +47,6 @@ Thumbs.db
 /test-results/
 /playwright-report/
 /playwright/.cache/
+
+# Generated tile cache for scripts/generate-pdfs.ts (OSM tiles, refetchable)
+scripts/.cache/
