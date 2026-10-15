@@ -9,6 +9,30 @@
     <type>walking</type>
     <name>Fin du parcours P3 vers Place du Dr Joly</name>
     <trkseg>
+      <trkpt lat="48.018198" lon="-1.748624">
+      </trkpt>
+      <trkpt lat="48.018335" lon="-1.748629">
+      </trkpt>
+      <trkpt lat="48.018426" lon="-1.748542">
+      </trkpt>
+      <trkpt lat="48.018487" lon="-1.748593">
+      </trkpt>
+      <trkpt lat="48.018549" lon="-1.748614">
+      </trkpt>
+      <trkpt lat="48.018635" lon="-1.748622">
+      </trkpt>
+      <trkpt lat="48.018818" lon="-1.748630">
+      </trkpt>
+      <trkpt lat="48.018850" lon="-1.748456">
+      </trkpt>
+      <trkpt lat="48.018980" lon="-1.748322">
+      </trkpt>
+      <trkpt lat="48.019166" lon="-1.748218">
+      </trkpt>
+      <trkpt lat="48.019319" lon="-1.748151">
+      </trkpt>
+      <trkpt lat="48.019411" lon="-1.748099">
+      </trkpt>
       <trkpt lat="48.019595" lon="-1.748025">
       </trkpt>
       <trkpt lat="48.019667" lon="-1.747996">

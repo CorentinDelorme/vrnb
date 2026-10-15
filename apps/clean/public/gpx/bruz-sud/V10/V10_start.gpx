@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (valhalla)">
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (Valhalla)">
   <metadata>
     <link href="https://router.project-osrm.org">
       <text>OSRM</text>
@@ -236,6 +236,22 @@
       <trkpt lat="48.004320" lon="-1.723815">
       </trkpt>
       <trkpt lat="48.004746" lon="-1.723809">
+      </trkpt>
+      <trkpt lat="48.005074" lon="-1.723840">
+      </trkpt>
+      <trkpt lat="48.005149" lon="-1.724036">
+      </trkpt>
+      <trkpt lat="48.005284" lon="-1.724336">
+      </trkpt>
+      <trkpt lat="48.005363" lon="-1.724921">
+      </trkpt>
+      <trkpt lat="48.005436" lon="-1.725124">
+      </trkpt>
+      <trkpt lat="48.005538" lon="-1.725578">
+      </trkpt>
+      <trkpt lat="48.005540" lon="-1.725959">
+      </trkpt>
+      <trkpt lat="48.005540" lon="-1.725959">
       </trkpt>
     </trkseg>
   </trk>

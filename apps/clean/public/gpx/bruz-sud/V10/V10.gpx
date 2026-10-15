@@ -9,6 +9,20 @@
     <type>cycling</type>
     <name>Parcours V10</name>
     <trkseg>
+      <trkpt lat="48.00554" lon="-1.725959">
+      </trkpt>
+      <trkpt lat="48.005538" lon="-1.725578">
+      </trkpt>
+      <trkpt lat="48.005436" lon="-1.725124">
+      </trkpt>
+      <trkpt lat="48.005363" lon="-1.724921">
+      </trkpt>
+      <trkpt lat="48.005284" lon="-1.724336">
+      </trkpt>
+      <trkpt lat="48.005149" lon="-1.724036">
+      </trkpt>
+      <trkpt lat="48.005074" lon="-1.72384">
+      </trkpt>
       <trkpt lat="48.004758" lon="-1.723792">
       </trkpt>
       <trkpt lat="48.004746" lon="-1.723809">

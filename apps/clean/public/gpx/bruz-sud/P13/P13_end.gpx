@@ -9,6 +9,16 @@
     <type>walking</type>
     <name>Fin du parcours P13 vers Place du Dr Joly</name>
     <trkseg>
+      <trkpt lat="48.019024" lon="-1.754315">
+      </trkpt>
+      <trkpt lat="48.019198" lon="-1.754046">
+      </trkpt>
+      <trkpt lat="48.020022" lon="-1.753089">
+      </trkpt>
+      <trkpt lat="48.020074" lon="-1.753033">
+      </trkpt>
+      <trkpt lat="48.020573" lon="-1.752450">
+      </trkpt>
       <trkpt lat="48.020930" lon="-1.752069">
       </trkpt>
       <trkpt lat="48.020969" lon="-1.751986">
