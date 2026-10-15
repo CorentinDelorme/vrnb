@@ -1,0 +1,18 @@
+/* Type-check for Node tooling files (scripts, Playwright config).
+ * The app config (tsconfig.app.json) intentionally uses `"types": []` so Node
+ * globals don't leak into browser code. Tooling files need Node types, so
+ * they get their own project which the IDE can attach to instead of using
+ * an inferred project without @types/node. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "types": ["node"],
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2022"
+  },
+  "include": ["scripts/**/*.ts", "playwright.config.ts"]
+}

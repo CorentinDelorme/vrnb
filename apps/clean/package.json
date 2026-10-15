@@ -8,7 +8,7 @@
     "start:production": "ng serve --configuration production",
     "start:host": "ng serve --host 0.0.0.0",
     "build": "ng build",
-    "check-types": "tsc -p tsconfig.app.json --noEmit",
+    "check-types": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.tools.json --noEmit",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
