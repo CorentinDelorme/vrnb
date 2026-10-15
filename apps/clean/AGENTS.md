@@ -31,9 +31,10 @@ bun run lint:fix    # Fix auto-fixable issues
 bun run check-types # tsc --noEmit
 
 # Data generation
+bun run generate:routes # Generate start/end GPX from MEETING_POINT (OSRM)
 bun run generate:tours  # Generate tour data
 bun run generate:pdfs   # Generate PDF files
-bun run generate:all    # Generate tours + PDFs
+bun run generate:all    # Generate routes + tours + PDFs
 ```
 
 ## Code Style Guidelines
@@ -232,4 +233,5 @@ src/
 - `src/app/tour/` — Individual tour detail view
 - `public/gpx/` — GPX track files organized by tour ID (P1–P13, V1–V15)
 - `scripts/generate-tours.ts` — Data generation script
+- `scripts/generate-start-end-gpx.ts` — Start/end GPX generation from MEETING_POINT via OSRM
 - `e2e/` — Playwright E2E test specs

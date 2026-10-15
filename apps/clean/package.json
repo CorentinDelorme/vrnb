@@ -14,8 +14,9 @@
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "generate:tours": "bun tsx scripts/generate-tours.ts && bun run lint:fix",
+    "generate:routes": "bun tsx scripts/generate-start-end-gpx.ts",
     "generate:pdfs": "bun tsx scripts/generate-pdfs.ts",
-    "generate:all": "bun run generate:tours && bun run generate:pdfs",
+    "generate:all": "bun run generate:routes && bun run generate:tours && bun run generate:pdfs",
     "e2e": "ng e2e"
   },
   "prettier": {
@@ -75,6 +76,7 @@
     "@types/canvas-confetti": "^1.9.0",
     "@types/geojson": "^7946.0.16",
     "@types/leaflet": "^1.9.21",
+    "@types/node": "^26.6.5",
     "@xmldom/xmldom": "^0.8.11",
     "angular-eslint": "21.3.0",
     "eslint": "^10.0.3",
