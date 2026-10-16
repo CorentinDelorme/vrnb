@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Position } from 'geojson';
 import type * as L from 'leaflet';
 
+import { loadLeaflet } from './leaflet-loader';
 import { ArrowOptions } from './map.types';
 
 @Injectable({ providedIn: 'root' })
@@ -24,7 +25,7 @@ export class MapArrowService {
     layerGroup: L.LayerGroup,
     options: ArrowOptions,
   ): Promise<void> {
-    const L = await import('leaflet');
+    const L = await loadLeaflet();
     await import('leaflet-arrowheads');
     const polyline = L.polyline(coords.map((c) => L.latLng(c[1], c[0]))).addTo(layerGroup);
     const frequency = this.computeFrequency(options.distanceKm);

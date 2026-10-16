@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { Position } from 'geojson';
 import type * as L from 'leaflet';
 
+import { loadLeaflet } from './leaflet-loader';
 import { LabelMarkerOptions, MarkerSize } from './map.types';
 
 interface IconSizeConfig {
@@ -27,7 +28,7 @@ export class MapMarkerService {
   }
 
   async addLabelMarker(options: LabelMarkerOptions, target: L.Map | L.LayerGroup): Promise<void> {
-    const L = await import('leaflet');
+    const L = await loadLeaflet();
     const labelHtml = `<div style="background:${options.color};color:#fff;padding:2px 6px;border-radius:4px;font-size:14px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.3);">${options.text}</div>`;
     const dIcon = L.divIcon({ className: 'tour-label', html: labelHtml, iconSize: undefined });
 
@@ -41,7 +42,7 @@ export class MapMarkerService {
     target: L.Map | L.LayerGroup,
     size: MarkerSize,
   ): Promise<void> {
-    const L = await import('leaflet');
+    const L = await loadLeaflet();
     const sizeConfig = this.ICON_SIZES[size];
     const iconUrl = type === 'start' ? '/media/pin-icon-start.png' : '/media/pin-icon-end.png';
 

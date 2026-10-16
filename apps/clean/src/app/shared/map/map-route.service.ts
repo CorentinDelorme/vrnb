@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { FeatureCollection, Position } from 'geojson';
 import type * as L from 'leaflet';
 
+import { loadLeaflet } from './leaflet-loader';
 import { RouteStyle } from './map.types';
 
 @Injectable({ providedIn: 'root' })
@@ -30,7 +31,7 @@ export class MapRouteService {
     target: L.Map | L.LayerGroup,
     style: RouteStyle,
   ): Promise<L.GeoJSON> {
-    const L = await import('leaflet');
+    const L = await loadLeaflet();
     const layer = L.geoJSON(geoJson as GeoJSON.GeoJsonObject, {
       style: () => style,
     }).addTo(target);

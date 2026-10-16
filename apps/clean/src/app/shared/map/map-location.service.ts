@@ -3,6 +3,7 @@ import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { Position } from 'geojson';
 import type * as L from 'leaflet';
 
+import { loadLeaflet } from './leaflet-loader';
 import { LocationTrackingOptions } from './map.types';
 
 @Injectable({ providedIn: 'root' })
@@ -20,7 +21,7 @@ export class MapLocationService {
     coords: Position[],
     currentIndex: number,
   ): Promise<{ latlng: L.LatLng; nextIndex: number }> {
-    const L = await import('leaflet');
+    const L = await loadLeaflet();
     if (coords.length === 0) {
       return { latlng: L.latLng(48.013572, -1.749696), nextIndex: currentIndex };
     }
@@ -79,7 +80,7 @@ export class MapLocationService {
     if (this.positionCircle) {
       this.positionCircle.setLatLng(e.latlng);
     } else {
-      const L = await import('leaflet');
+      const L = await loadLeaflet();
       if (!this.map) return;
       this.positionCircle = L.circle(e.latlng, {
         radius: e.accuracy || 30,

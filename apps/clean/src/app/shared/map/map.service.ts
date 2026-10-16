@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import type * as L from 'leaflet';
 
+import { loadLeaflet } from './leaflet-loader';
 import type { MapInitOptions } from './map.types';
 
 @Injectable({ providedIn: 'root' })
@@ -11,10 +12,10 @@ export class MapService {
   ];
 
   async createMap(options: MapInitOptions): Promise<L.Map> {
-    const L = await import('leaflet');
-    const map = new L.Map(options.elementId);
+    const leaflet = await loadLeaflet();
+    const map = new leaflet.Map(options.elementId);
 
-    new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    new leaflet.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: 'Map data &copy; <a href="http://www.osm.org">OpenStreetMap</a>',
       minZoom: options.minZoom,
       zIndex: 0,
@@ -35,8 +36,8 @@ export class MapService {
   }
 
   async createLayerGroup(map: L.Map): Promise<L.LayerGroup> {
-    const L = await import('leaflet');
-    const layerGroup = new L.LayerGroup();
+    const leaflet = await loadLeaflet();
+    const layerGroup = new leaflet.LayerGroup();
     layerGroup.addTo(map);
     return layerGroup;
   }

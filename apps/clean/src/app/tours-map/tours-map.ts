@@ -4,6 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import type * as L from 'leaflet';
 import { GpxService } from '../shared/gpx/gpx.service';
+import { loadLeaflet } from '../shared/map/leaflet-loader';
 import { MapMarkerService } from '../shared/map/map-marker.service';
 import { MapRouteService } from '../shared/map/map-route.service';
 import { MapService } from '../shared/map/map.service';
@@ -117,7 +118,7 @@ export class ToursMap implements AfterViewInit {
         await this.mapMarkerService.addStartEndMarkers(start, end, this.map, 'small');
 
         // 5. Calculate label position (midpoint of coordinates)
-        const L = await import('leaflet');
+        const L = await loadLeaflet();
         const midIdx = Math.floor(coords.length / 2);
         const midCoord = coords[midIdx];
         const labelPos = L.latLng(midCoord[1], midCoord[0]);

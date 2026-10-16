@@ -8,6 +8,7 @@ import type * as L from 'leaflet';
 import { forkJoin } from 'rxjs';
 import { FinishModal } from '../finish-modal/finish-modal';
 import { GpxService } from '../shared/gpx/gpx.service';
+import { loadLeaflet } from '../shared/map/leaflet-loader';
 import { MapArrowService } from '../shared/map/map-arrow.service';
 import { MapLocationService } from '../shared/map/map-location.service';
 import { MapMarkerService } from '../shared/map/map-marker.service';
@@ -221,7 +222,7 @@ export class Tour implements AfterViewInit, OnDestroy {
 
   private async fitBoundsFromCoords(coords: Position[]): Promise<void> {
     if (!this.map) return;
-    const L = await import('leaflet');
+    const L = await loadLeaflet();
     const bounds = L.latLngBounds(coords.map((c) => [c[1], c[0]] as [number, number]));
     this.map.fitBounds(bounds);
   }
