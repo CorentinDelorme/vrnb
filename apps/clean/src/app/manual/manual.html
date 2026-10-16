@@ -27,14 +27,36 @@
           Sur
           <strong>l'accueil,</strong>
           trouvez votre zone puis la liste des parcours. Chaque parcours affiche sa distance et un
-          bouton de lecture pour le commencer.
+          bouton de lecture
+          <hugeicons-icon
+            class="inline-block align-middle"
+            [icon]="playIcon"
+            [strokeWidth]="1.5"
+            alt=""
+          />
+          pour le commencer.
         </li>
         <li>
           Pendant le parcours, une
           <strong>carte</strong>
           vous montre le chemin, avec les 3 étapes en haut et les boutons
           <strong>Précédent, Suivant et Terminer</strong>
-          en bas.
+          en bas. Vous pouvez
+          <strong>zoomer et dézoomer</strong>
+          avec les boutons
+          <kbd class="kbd kbd-sm">+</kbd>
+          et
+          <kbd class="kbd kbd-sm">−</kbd>
+          de la carte (ou en pinçant l'écran avec deux doigts), et passer la carte en
+          <strong>plein écran</strong>
+          avec le bouton
+          <hugeicons-icon
+            class="inline-block align-middle"
+            [icon]="fullScreenIcon"
+            [strokeWidth]="1.5"
+            alt=""
+          />
+          en haut à gauche de la carte.
         </li>
         <li>
           Votre
@@ -69,7 +91,14 @@
             <strong>Bruz Sud</strong>
             puis regardez dans
             <strong>Parcours à pied</strong>
-            et appuyez sur le bouton de lecture de la ligne
+            et appuyez sur le bouton de lecture
+            <hugeicons-icon
+              class="inline-block align-middle"
+              [icon]="playIcon"
+              [strokeWidth]="1.5"
+              alt=""
+            />
+            de la ligne
             <strong>P2</strong>
             ci-dessous.
           </p>
@@ -193,6 +222,12 @@
         <li>
           Appuyez sur le
           <strong>bouton de lecture du message</strong>
+          <hugeicons-icon
+            class="inline-block align-middle"
+            [icon]="playIcon"
+            [strokeWidth]="1.5"
+            alt=""
+          />
           : vous retrouvez votre carte exactement là où vous l'aviez laissée.
         </li>
         <li>
