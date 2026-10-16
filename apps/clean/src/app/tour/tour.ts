@@ -1,9 +1,10 @@
-import { AfterViewInit, Component, inject, OnDestroy, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { AfterViewInit, Component, inject, OnDestroy, PLATFORM_ID, signal } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 import confetti from 'canvas-confetti';
 import { Position } from 'geojson';
-import * as L from 'leaflet';
+import type * as L from 'leaflet';
 import { forkJoin } from 'rxjs';
 import { FinishModal } from '../finish-modal/finish-modal';
 import { GpxService } from '../shared/gpx/gpx.service';
@@ -34,6 +35,7 @@ export class Tour implements AfterViewInit, OnDestroy {
   private readonly tourStorage = inject(TourStorageService);
   private readonly tourService = inject(TourService);
   private readonly toursService = inject(ToursService);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private map?: L.Map;
   private layerGroup?: L.LayerGroup;
@@ -56,18 +58,21 @@ export class Tour implements AfterViewInit, OnDestroy {
     this.debug.active = this.route.snapshot.queryParamMap.get('debug') === 'true';
     this.debug.timeout = Number(this.route.snapshot.queryParamMap.get('timeout')) || 500;
 
-    const savedTour = this.tourStorage.savedTour();
-    if (savedTour && savedTour.tourId === currentTourId && savedTour.zoneId === this.zoneId) {
-      this.step.set(savedTour.step);
-    } else if (currentTourId) {
-      this.tourStorage.save(currentTourId, 0, this.zoneId);
-    }
+    if (this.isBrowser) {
+      const savedTour = this.tourStorage.savedTour();
+      if (savedTour && savedTour.tourId === currentTourId && savedTour.zoneId === this.zoneId) {
+        this.step.set(savedTour.step);
+      } else if (currentTourId) {
+        this.tourStorage.save(currentTourId, 0, this.zoneId);
+      }
 
-    this.loadGpxFiles();
+      this.loadGpxFiles();
+    }
   }
 
   ngAfterViewInit(): void {
-    this.initMap();
+    if (!this.isBrowser) return;
+    void this.initMap();
   }
 
   // Load the 3 GPX files
@@ -84,20 +89,20 @@ export class Tour implements AfterViewInit, OnDestroy {
         this.gpxService.setAllGeoJson(files.start, files.tour, files.end);
         this.gpxService.generateGeoVeloLinks();
         if (this.mapInitialized) {
-          this.updateMapContent();
+          void this.updateMapContent();
         } else {
-          this.initMap();
+          void this.initMap();
         }
       },
       error: (err: Error) => console.error('Error loading GPX files:', err),
     });
   }
 
-  private initMap(): void {
+  private async initMap(): Promise<void> {
     if (this.mapInitialized || !this.gpxService.geoJson()?.tour) return;
 
     try {
-      this.map = this.mapService.createMap({
+      this.map = await this.mapService.createMap({
         elementId: 'map',
         minZoom: 13,
         maxBounds: this.mapService.maxBounds,
@@ -108,23 +113,23 @@ export class Tour implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.layerGroup = this.mapService.createLayerGroup(this.map);
+    this.layerGroup = await this.mapService.createLayerGroup(this.map);
     this.mapInitialized = true;
-    this.updateMapContent();
+    await this.updateMapContent();
   }
 
-  private updateMapContent(): void {
+  private async updateMapContent(): Promise<void> {
     if (!this.map || !this.gpxService.geoJson()?.tour || !this.layerGroup) return;
 
-    this.layerGroup = this.mapService.clearLayers(this.map, this.layerGroup);
+    this.layerGroup = await this.mapService.clearLayers(this.map, this.layerGroup);
     this.mapLocationService.stopTracking();
 
     if (this.step() === 0) {
-      this.updateMap('start');
+      await this.updateMap('start');
     } else if (this.step() === 2) {
-      this.updateMap('end');
+      await this.updateMap('end');
     } else {
-      this.updateMap('tour');
+      await this.updateMap('tour');
     }
   }
 
@@ -135,7 +140,7 @@ export class Tour implements AfterViewInit, OnDestroy {
     const points = this.gpxService.getStartAndEndPointsFromGeoJson(geoJsonSet[gpxType]);
     if (!points) return;
 
-    this.mapMarkerService.addStartEndMarkers(points.start, points.end, this.layerGroup);
+    await this.mapMarkerService.addStartEndMarkers(points.start, points.end, this.layerGroup);
 
     const routeCoords = await this.gpxService.getCoordinatesFromGpx(
       this.tourService.tourId()!,
@@ -144,25 +149,25 @@ export class Tour implements AfterViewInit, OnDestroy {
     );
 
     if (routeCoords && routeCoords.length > 0) {
-      this.mapRouteService.drawCoordinatesRoute(
+      await this.mapRouteService.drawCoordinatesRoute(
         routeCoords,
         this.layerGroup,
         this.mapRouteService.getDefaultRouteStyle(),
       );
-      this.mapArrowService.addArrows(routeCoords, this.layerGroup, {
+      await this.mapArrowService.addArrows(routeCoords, this.layerGroup, {
         distanceKm: this.getCurrentTourDistance(this.step()),
       });
-      this.fitBoundsFromCoords(routeCoords);
+      await this.fitBoundsFromCoords(routeCoords);
     } else {
       const meetingCoords = this.toursService.getZone(this.zoneId).meetingPoint.coordinates;
       const fallbackCoords =
         gpxType === 'start' ? [meetingCoords, points.start] : [points.end, meetingCoords];
-      this.mapRouteService.drawCoordinatesRoute(
+      await this.mapRouteService.drawCoordinatesRoute(
         fallbackCoords,
         this.layerGroup,
         this.mapRouteService.getDashedRouteStyle(),
       );
-      this.fitBoundsFromCoords(fallbackCoords);
+      await this.fitBoundsFromCoords(fallbackCoords);
     }
 
     this.startLocationTracking();
@@ -197,7 +202,7 @@ export class Tour implements AfterViewInit, OnDestroy {
     this.step.set(step);
 
     if (this.mapInitialized) {
-      this.updateMapContent();
+      void this.updateMapContent();
     }
 
     const tourId = this.tourService.tourId();
@@ -214,8 +219,9 @@ export class Tour implements AfterViewInit, OnDestroy {
     return distances[step];
   }
 
-  private fitBoundsFromCoords(coords: Position[]): void {
+  private async fitBoundsFromCoords(coords: Position[]): Promise<void> {
     if (!this.map) return;
+    const L = await import('leaflet');
     const bounds = L.latLngBounds(coords.map((c) => [c[1], c[0]] as [number, number]));
     this.map.fitBounds(bounds);
   }

@@ -15,17 +15,7 @@ export const routes: Routes = [
     component: ToursMap,
   },
   {
-    // Legacy URL (pre-zone): defaults to the Bruz Sud zone.
-    path: 'tours/:type',
-    component: ToursMap,
-  },
-  {
     path: 'tour/:zoneId/:id',
-    component: Tour,
-  },
-  {
-    // Legacy URL (pre-zone): defaults to the Bruz Sud zone.
-    path: 'tour/:id',
     component: Tour,
   },
   {

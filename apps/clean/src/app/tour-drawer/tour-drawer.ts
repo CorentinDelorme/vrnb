@@ -29,30 +29,21 @@ export class TourDrawer {
   cancelIcon = CancelIcon;
   route02Icon = Route02Icon;
 
-  /** Returns the zone portion of the current "/tour/:zoneId/:id" url, or the default zone. */
-  private getCurrentZoneId(): string {
+  /** Zone and tour id parsed from the current "/tour/:zoneId/:id" url. */
+  private getZoneAndId(): { zoneId: string; id: string | undefined } {
     const match = this.router.url.match(/\/tour\/([^/]+)\/([^/?]+)/);
-    return match ? match[1] : DEFAULT_ZONE_ID;
-  }
-
-  /** Returns the id portion of the current "/tour/:zoneId/:id" url, or undefined. */
-  private getCurrentTourId(): string | undefined {
-    const zoned = this.router.url.match(/\/tour\/([^/]+)\/([^/?]+)/);
-    if (zoned) return zoned[2];
-    const legacy = this.router.url.match(/\/tour\/([^/?]+)/);
-    return legacy ? legacy[1] : undefined;
+    return { zoneId: match?.[1] ?? DEFAULT_ZONE_ID, id: match?.[2] };
   }
 
   /** URL to download the PDF for the current tour (e.g. "/pdf/bruz-sud/V1.pdf"). */
   get pdfUrl(): string | undefined {
-    const id = this.getCurrentTourId();
-    return id ? `/pdf/${this.getCurrentZoneId()}/${id}.pdf` : undefined;
+    const { zoneId, id } = this.getZoneAndId();
+    return id ? `/pdf/${zoneId}/${id}.pdf` : undefined;
   }
 
   /** URL to download the GPX for the current tour (e.g. "/gpx/bruz-sud/V1/V1.gpx"). */
   getGpxUrl(type?: 'start' | 'end'): string | undefined {
-    const id = this.getCurrentTourId();
-    const zoneId = this.getCurrentZoneId();
+    const { zoneId, id } = this.getZoneAndId();
     return id ? `/gpx/${zoneId}/${id}/${id}${type ? `_${type}` : ''}.gpx` : undefined;
   }
 }

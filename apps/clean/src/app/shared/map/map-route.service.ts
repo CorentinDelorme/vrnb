@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { FeatureCollection, Position } from 'geojson';
-import * as L from 'leaflet';
+import type * as L from 'leaflet';
+
 import { RouteStyle } from './map.types';
 
 @Injectable({ providedIn: 'root' })
@@ -24,22 +25,23 @@ export class MapRouteService {
     };
   }
 
-  drawGeoJsonRoute(
+  async drawGeoJsonRoute(
     geoJson: FeatureCollection | GeoJSON.Feature,
     target: L.Map | L.LayerGroup,
     style: RouteStyle,
-  ): L.GeoJSON {
+  ): Promise<L.GeoJSON> {
+    const L = await import('leaflet');
     const layer = L.geoJSON(geoJson as GeoJSON.GeoJsonObject, {
       style: () => style,
     }).addTo(target);
     return layer;
   }
 
-  drawCoordinatesRoute(
+  async drawCoordinatesRoute(
     coords: Position[],
     target: L.Map | L.LayerGroup,
     style: RouteStyle,
-  ): L.GeoJSON {
+  ): Promise<L.GeoJSON> {
     const routeLine = this.createRouteLine(coords);
     return this.drawGeoJsonRoute(routeLine, target, style);
   }

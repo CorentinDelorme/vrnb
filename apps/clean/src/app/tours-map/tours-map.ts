@@ -1,7 +1,8 @@
-import { AfterViewInit, Component, inject } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { AfterViewInit, Component, inject, PLATFORM_ID } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
-import * as L from 'leaflet';
+import type * as L from 'leaflet';
 import { GpxService } from '../shared/gpx/gpx.service';
 import { MapMarkerService } from '../shared/map/map-marker.service';
 import { MapRouteService } from '../shared/map/map-route.service';
@@ -23,6 +24,7 @@ export class ToursMap implements AfterViewInit {
   private readonly mapMarkerService = inject(MapMarkerService);
   private readonly route = inject(ActivatedRoute);
   private readonly title = inject(Title);
+  private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   private map?: L.Map;
   private tours: TourInterface[] = [];
@@ -64,7 +66,12 @@ export class ToursMap implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    this.map = this.mapService.createMap({
+    if (!this.isBrowser) return;
+    void this.initMap();
+  }
+
+  private async initMap(): Promise<void> {
+    this.map = await this.mapService.createMap({
       elementId: 'map',
       minZoom: 12,
       maxBounds: this.mapService.maxBounds,
@@ -81,12 +88,12 @@ export class ToursMap implements AfterViewInit {
       const color = this.colors[i % this.colors.length];
 
       this.gpxService.loadGpxFile(tourId, undefined, this.zone.id).subscribe((gpxStr) => {
-        this.addGpxToMap(gpxStr, color, tourId);
+        void this.addGpxToMap(gpxStr, color, tourId);
       });
     }
   }
 
-  private addGpxToMap(gpxStr: string, color: string, tourId: string): void {
+  private async addGpxToMap(gpxStr: string, color: string, tourId: string): Promise<void> {
     if (!this.map) return;
 
     try {
@@ -94,7 +101,7 @@ export class ToursMap implements AfterViewInit {
       const geojson = this.gpxService.getGeoJsonFromGpx(gpxStr);
 
       // 2. Draw the route
-      const geojsonLayer = this.mapRouteService.drawGeoJsonRoute(geojson, this.map, {
+      const geojsonLayer = await this.mapRouteService.drawGeoJsonRoute(geojson, this.map, {
         color,
         weight: 4,
       });
@@ -107,15 +114,19 @@ export class ToursMap implements AfterViewInit {
         const end = coords[coords.length - 1];
 
         // 4. Add start/end markers (small size for overview)
-        this.mapMarkerService.addStartEndMarkers(start, end, this.map, 'small');
+        await this.mapMarkerService.addStartEndMarkers(start, end, this.map, 'small');
 
         // 5. Calculate label position (midpoint of coordinates)
+        const L = await import('leaflet');
         const midIdx = Math.floor(coords.length / 2);
         const midCoord = coords[midIdx];
         const labelPos = L.latLng(midCoord[1], midCoord[0]);
 
         // 6. Add label marker
-        this.mapMarkerService.addLabelMarker({ position: labelPos, text: tourId, color }, this.map);
+        await this.mapMarkerService.addLabelMarker(
+          { position: labelPos, text: tourId, color },
+          this.map,
+        );
       }
 
       // 7. Fit bounds

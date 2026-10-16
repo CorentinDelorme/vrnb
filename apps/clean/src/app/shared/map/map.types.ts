@@ -1,5 +1,5 @@
 import { FeatureCollection, Position } from 'geojson';
-import * as L from 'leaflet';
+import type * as L from 'leaflet';
 
 export interface MapInitOptions {
   readonly elementId: string;

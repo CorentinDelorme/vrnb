@@ -64,24 +64,4 @@ test.describe('Cross-route navigation', () => {
     await expect(page).toHaveURL('/tour/bruz-sud/V1');
   });
 
-  test('should support legacy pre-zone tour URL (defaults to Bruz Sud)', async ({ page }) => {
-    await page.goto('/tour/V1');
-    await expect(page).toHaveTitle('Bruz Sud - Parcours V1');
-    await expect(page.locator('div#map')).toBeVisible();
-  });
-
-  test('should support legacy pre-zone tours map URL (defaults to Bruz Sud)', async ({ page }) => {
-    await page.goto('/tours/V');
-    await expect(page.locator('div#map')).toBeVisible();
-  });
-
-  test('should restore step from legacy pre-zone save (no zoneId)', async ({ page }) => {
-    await page.addInitScript(() => {
-      localStorage.setItem('vrnb_tour', JSON.stringify({ tourId: 'V1', step: 1 }));
-    });
-    await page.goto('/tour/bruz-sud/V1');
-
-    const secondStep = page.locator('li.step').nth(1);
-    await expect(secondStep).toHaveClass(/step-secondary/);
-  });
 });

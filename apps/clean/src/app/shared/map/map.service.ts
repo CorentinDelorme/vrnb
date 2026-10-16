@@ -1,16 +1,17 @@
 import { Injectable } from '@angular/core';
-import * as L from 'leaflet';
-import { FullScreen } from 'leaflet.fullscreen';
-import { MapInitOptions } from './map.types';
+import type * as L from 'leaflet';
+
+import type { MapInitOptions } from './map.types';
 
 @Injectable({ providedIn: 'root' })
 export class MapService {
-  readonly maxBounds: L.LatLngBoundsExpression = L.latLngBounds(
+  readonly maxBounds: L.LatLngBoundsExpression = [
     [47.974278, -1.789123], // Southwest corner
     [48.062, -1.697445], // Northeast corner (covers Bruz Ker Lann, up to lat 48.055)
-  );
+  ];
 
-  createMap(options: MapInitOptions): L.Map {
+  async createMap(options: MapInitOptions): Promise<L.Map> {
+    const L = await import('leaflet');
     const map = new L.Map(options.elementId);
 
     new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -20,6 +21,7 @@ export class MapService {
     }).addTo(map);
 
     if (options.fullscreen) {
+      const { FullScreen } = await import('leaflet.fullscreen');
       map.addControl(
         new FullScreen({
           position: 'topleft',
@@ -32,13 +34,14 @@ export class MapService {
     return map;
   }
 
-  createLayerGroup(map: L.Map): L.LayerGroup {
+  async createLayerGroup(map: L.Map): Promise<L.LayerGroup> {
+    const L = await import('leaflet');
     const layerGroup = new L.LayerGroup();
     layerGroup.addTo(map);
     return layerGroup;
   }
 
-  clearLayers(map: L.Map, layerGroup: L.LayerGroup): L.LayerGroup {
+  async clearLayers(map: L.Map, layerGroup: L.LayerGroup): Promise<L.LayerGroup> {
     map.removeLayer(layerGroup);
     return this.createLayerGroup(map);
   }

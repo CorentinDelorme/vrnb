@@ -19,12 +19,10 @@ export class ToursDrawer {
   pdf02Icon = Pdf02Icon;
   mapsLocationIcon = MapsLocationIcon;
 
-  /** Matches both "/tours/:type" and "/tours/:zoneId/:type". */
+  /** Zone and type parsed from the current "/tours/:zoneId/:type" url. */
   private getZoneAndType(): { zoneId: string; type: string | undefined } {
-    const zoned = this.router.url.match(/\/tours\/([^/]+)\/([^/?]+)/);
-    if (zoned) return { zoneId: zoned[1], type: zoned[2] };
-    const legacy = this.router.url.match(/\/tours\/([^/?]+)/);
-    return { zoneId: DEFAULT_ZONE_ID, type: legacy ? legacy[1] : undefined };
+    const match = this.router.url.match(/\/tours\/([^/]+)\/([^/?]+)/);
+    return { zoneId: match?.[1] ?? DEFAULT_ZONE_ID, type: match?.[2] };
   }
 
   get pdfUrl(): string | undefined {
