@@ -8,7 +8,7 @@ export const routes: Routes = [
   {
     path: 'manual',
     component: Manual,
-    title: "Mode d'emploi",
+    title: "Action ramassage des déchets - Mode d'emploi",
   },
   {
     path: 'tours/:zoneId/:type',

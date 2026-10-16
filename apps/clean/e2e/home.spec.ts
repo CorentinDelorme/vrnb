@@ -47,13 +47,6 @@ test.describe('Home page', () => {
       await expect(page.locator('details[aria-label="Zone Bruz Sud"]')).toBeVisible();
     });
 
-    test('should display Bruz Ker Lann zone heading with tour count', async ({ page }) => {
-      await page.goto('/');
-      const zone = page.locator('details[aria-label="Zone Bruz Ker Lann"]');
-      await expect(zone).toBeVisible();
-      await expect(zone.locator('summary')).toContainText('12 parcours');
-    });
-
     test('should display zone heading with tour count', async ({ page }) => {
       await page.goto('/');
       const zone = page.locator('details[aria-label="Zone Bruz Sud"]');
@@ -97,29 +90,13 @@ test.describe('Home page', () => {
       }
     });
 
-    test('should list all 12 Bruz Ker Lann bike tours (V1–V12)', async ({ page }) => {
-      await page.goto('/');
-      const zone = page.locator('details[aria-label="Zone Bruz Ker Lann"]');
-      const bikeSection = zone.locator('app-tour-list-section', {
-        hasText: 'Parcours à vélo',
-      });
-      const tourRows = bikeSection.locator('li.list-row');
-      await expect(tourRows).toHaveCount(12);
-
-      for (let i = 1; i <= 12; i++) {
-        await expect(
-          bikeSection.locator('li.list-row', { hasText: `V${i}` }).first(),
-        ).toBeVisible();
-      }
-    });
-
-    test('should list all 19 walking tours (P1–P13 + Vau Gaillard P1–P6)', async ({ page }) => {
+    test('should list all 13 walking tours (P1–P13)', async ({ page }) => {
       await page.goto('/');
       const walkingSection = page.locator('app-tour-list-section', {
         hasText: 'Parcours à pied',
       });
       const tourRows = walkingSection.locator('li.list-row');
-      await expect(tourRows).toHaveCount(19);
+      await expect(tourRows).toHaveCount(13);
 
       for (let i = 1; i <= 13; i++) {
         await expect(
@@ -144,8 +121,8 @@ test.describe('Home page', () => {
     test('should have play button on each tour row', async ({ page }) => {
       await page.goto('/');
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-      // 15 bike (Bruz Sud) + 12 bike (Ker Lann) + 13 walking (Bruz Sud) + 6 walking (Vau Gaillard) = 46 total
-      await expect(playButtons).toHaveCount(46);
+      // 15 bike (Bruz Sud) + 6 bike (Vau Gaillard) + 13 walking (Bruz Sud) = 34 total
+      await expect(playButtons).toHaveCount(34);
     });
 
     test('should show "Voir tous les parcours" link for bike tours', async ({ page }) => {

@@ -13,6 +13,10 @@
       <img class="h-15.75 w-16" src="/icons/vrnb.png" alt="VRNB" />
     }
 
+    @if (router.url.startsWith('/manual')) {
+      <img class="h-15.75 w-16" src="/icons/vrnb.png" alt="VRNB" />
+    }
+
     <h1 class="text-secondary text-2xl font-bold sm:text-4xl">{{ title.getTitle() }}</h1>
 
     @if (router.url.startsWith('/tour/')) {

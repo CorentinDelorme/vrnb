@@ -9,33 +9,6 @@
   </div>
 </div>
 
-<div class="mb-4 sm:mb-8">
-  <details class="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm">
-    <summary class="collapse-title text-sm font-semibold sm:text-base flex items-center gap-4">
-      <img class="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
-
-      Articles Ouest-France 2026
-    </summary>
-
-    <div class="collapse-content">
-      <ul class="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-base-200 pt-4">
-        @for (article of articles; track article.url) {
-          <li>
-            <a
-              class="link link-secondary font-medium"
-              [href]="article.url"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {{ article.title }}
-            </a>
-          </li>
-        }
-      </ul>
-    </div>
-  </details>
-</div>
-
 @if (tourStorage.savedTour(); as saved) {
   <ul class="list bg-base-100 rounded-box mb-4 shadow-md sm:mb-8">
     <li class="list-row items-center">
@@ -110,5 +83,32 @@
     </div>
   </details>
 }
+
+<div class="mb-4 sm:mb-8">
+  <details class="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm">
+    <summary class="collapse-title text-sm font-semibold sm:text-base flex items-center gap-4">
+      <img class="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
+
+      Articles Ouest-France 2026
+    </summary>
+
+    <div class="collapse-content">
+      <ul class="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-base-200 pt-4">
+        @for (article of articles; track article.url) {
+          <li>
+            <a
+              class="link link-secondary font-medium"
+              [href]="article.url"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ article.title }}
+            </a>
+          </li>
+        }
+      </ul>
+    </div>
+  </details>
+</div>
 
 <footer class="pt-4 text-center text-sm opacity-70 sm:pt-8">©{{ currentYear }} VRNB</footer>

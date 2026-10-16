@@ -13,7 +13,7 @@ export interface Zone {
 
 /**
  * All touring zones. Existing tours belong to "bruz-sud".
- * To add a new zone (e.g. Bruz Ker Lann), append an entry here,
+ * To add a new zone, append an entry here,
  * add its GPX files under `public/gpx/<zone-id>/`, then run `bun run generate:tours`.
  */
 export const ZONES: readonly Zone[] = [
@@ -28,14 +28,6 @@ export const ZONES: readonly Zone[] = [
   {
     id: 'bruz-vau-gaillard',
     name: 'Bruz Vau Gaillard',
-    meetingPoint: {
-      name: `Place du Dr Joly`,
-      coordinates: [-1.747083, 48.024417],
-    },
-  },
-  {
-    id: 'bruz-ker-lann',
-    name: 'Bruz Ker Lann',
     meetingPoint: {
       name: `Place du Dr Joly`,
       coordinates: [-1.747083, 48.024417],

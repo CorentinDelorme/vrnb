@@ -21,8 +21,8 @@ test.describe('Mobile viewport', () => {
   test('should still display all tour rows on mobile', async ({ page }) => {
     await page.goto('/');
     const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-    // 15 bike (Bruz Sud) + 12 bike (Ker Lann) + 13 walking (Bruz Sud) + 6 walking (Vau Gaillard) = 46 total
-    await expect(playButtons).toHaveCount(46);
+    // 15 bike (Bruz Sud) + 6 bike (Vau Gaillard) + 13 walking (Bruz Sud) = 34 total
+    await expect(playButtons).toHaveCount(34);
   });
 
   test('should render tour page with functional dock buttons', async ({ page }) => {

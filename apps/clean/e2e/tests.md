@@ -41,17 +41,15 @@ Route: `/`
 | Test name                                                        | Steps                       | Expected                                                       |
 | ---------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
 | `should display Bruz Sud zone heading`                           | `goto('/')`                 | `details[aria-label="Zone Bruz Sud"]` visible                  |
-| `should display Bruz Ker Lann zone heading with tour count`      | `goto('/')`                 | Zone summary shows "Bruz Ker Lann" and "12 parcours"           |
 | `should display zone heading with tour count`                    | `goto('/')`                 | Zone summary shows "Bruz Sud" and "28 parcours"                |
 | `should collapse and expand the zone block on summary click`     | `goto('/')` → click summary | `open` attribute toggles off then on                           |
 | `should display bike tours section`                              | `goto('/')`                 | Heading "Parcours à vélo" visible                              |
 | `should display walking tours section`                           | `goto('/')`                 | Heading "Parcours à pied" visible                              |
 | `should list all 15 Bruz Sud bike tours (V1–V15)`                | `goto('/')`                 | 15 tour rows under Bruz Sud bike section, names V1 through V15 |
-| `should list all 12 Bruz Ker Lann bike tours (V1–V12)`           | `goto('/')`                 | 12 tour rows under Ker Lann bike section, names V1 through V12 |
-| `should list all 19 walking tours (P1–P13 + Vau Gaillard P1–P6)` | `goto('/')`                 | 19 tour rows under walking sections, names P1 through P13      |
+| `should list all 13 walking tours (P1–P13)`                     | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13      |
 | `should display distance in km for V1 (1,1 km)`                  | `goto('/')`                 | V1 row contains text "1,1 km"                                  |
 | `should display distance in meters for tours under 1km`          | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m"                             |
-| `should have play button on each tour row`                       | `goto('/')`                 | 46 buttons with `aria-label="Lancer le parcours"`              |
+| `should have play button on each tour row`                       | `goto('/')`                 | 34 buttons with `aria-label="Lancer le parcours"`              |
 | `should show "Voir tous les parcours" link for bike tours`       | `goto('/')` (desktop)       | Link visible in V section, href `/tours/bruz-sud/V`            |
 | `should show "Voir tous les parcours" link for walking tours`    | `goto('/')` (desktop)       | Link visible in P section, href `/tours/bruz-sud/P`            |
 
@@ -224,7 +222,7 @@ Uses `test.use({ viewport: { width: 390, height: 844 } })` (iPhone 12 dimensions
 | Test name                                              | Steps                                             | Expected                            |
 | ------------------------------------------------------ | ------------------------------------------------- | ----------------------------------- |
 | `should hide "Voir tous les parcours" links on mobile` | `goto('/')`                                       | Links NOT visible (`max-sm:hidden`) |
-| `should still display all tour rows on mobile`         | `goto('/')`                                       | 46 play buttons present             |
+| `should still display all tour rows on mobile`         | `goto('/')`                                       | 34 play buttons present             |
 | `should render tour page with functional dock buttons` | `goto('/tour/bruz-sud/V1')`                       | "Précédent" and "Suivant" visible   |
 | `should allow step navigation on mobile`               | Full step flow → "Terminer"                       | Finish modal opens                  |
 | `should render map on mobile tours page`               | `goto('/tours/bruz-sud/V')`                       | `div#map` visible                   |

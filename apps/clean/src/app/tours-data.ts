@@ -106,6 +106,48 @@ export const toursData = {
       endDistance: 4.6,
       zoneId: 'bruz-sud',
     },
+    {
+      name: 'V20',
+      distance: 0.9,
+      startDistance: 1,
+      endDistance: 2,
+      zoneId: 'bruz-vau-gaillard',
+    },
+    {
+      name: 'V21',
+      distance: 1.3,
+      startDistance: 1,
+      endDistance: 1,
+      zoneId: 'bruz-vau-gaillard',
+    },
+    {
+      name: 'V22',
+      distance: 1.5,
+      startDistance: 0.7,
+      endDistance: 1.5,
+      zoneId: 'bruz-vau-gaillard',
+    },
+    {
+      name: 'V23',
+      distance: 1,
+      startDistance: 0.9,
+      endDistance: 1.4,
+      zoneId: 'bruz-vau-gaillard',
+    },
+    {
+      name: 'V24',
+      distance: 1.1,
+      startDistance: 1.1,
+      endDistance: 2.2,
+      zoneId: 'bruz-vau-gaillard',
+    },
+    {
+      name: 'V25',
+      distance: 1.4,
+      startDistance: 2.1,
+      endDistance: 2,
+      zoneId: 'bruz-vau-gaillard',
+    },
   ],
   pTours: [
     {
