@@ -7,7 +7,7 @@ import { MapInitOptions } from './map.types';
 export class MapService {
   readonly maxBounds: L.LatLngBoundsExpression = L.latLngBounds(
     [47.974278, -1.789123], // Southwest corner
-    [48.032512, -1.697445], // Northeast corner
+    [48.062, -1.697445], // Northeast corner (covers Bruz Ker Lann, up to lat 48.055)
   );
 
   createMap(options: MapInitOptions): L.Map {

@@ -28,10 +28,10 @@ export class ToursDrawer {
   }
 
   get pdfUrl(): string | undefined {
-    const { type } = this.getZoneAndType();
+    const { zoneId, type } = this.getZoneAndType();
     if (!type) return undefined;
     const filename = type === 'V' ? 'Suivi_parcours_a_velo.pdf' : 'Suivi_parcours_a_pied.pdf';
-    return `/pdf/${filename}`;
+    return `/pdf/${zoneId}/${filename}`;
   }
 
   get mapPdfUrl(): string | undefined {

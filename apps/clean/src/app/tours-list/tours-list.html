@@ -67,20 +67,35 @@
       </span>
     </summary>
     <div class="collapse-content">
-      <div class="grid grid-cols-1 gap-4 pt-2 sm:gap-8 lg:grid-cols-2">
-        <app-tour-list-section
-          [title]="'Parcours à vélo'"
-          [tours]="tourService.getZoneTours(zone.id, 'V')"
-          [type]="'V'"
-          [zoneId]="zone.id"
-        />
-        <app-tour-list-section
-          [title]="'Parcours à pied'"
-          [tours]="tourService.getZoneTours(zone.id, 'P')"
-          [type]="'P'"
-          [zoneId]="zone.id"
-        />
-      </div>
+      @if (
+        tourService.getZoneTours(zone.id, 'V').length > 0 ||
+        tourService.getZoneTours(zone.id, 'P').length > 0
+      ) {
+        <div
+          class="grid grid-cols-1 gap-4 pt-2 sm:gap-8"
+          [class.lg:grid-cols-2]="
+            tourService.getZoneTours(zone.id, 'V').length > 0 &&
+            tourService.getZoneTours(zone.id, 'P').length > 0
+          "
+        >
+          @if (tourService.getZoneTours(zone.id, 'V').length > 0) {
+            <app-tour-list-section
+              [title]="'Parcours à vélo'"
+              [tours]="tourService.getZoneTours(zone.id, 'V')"
+              [type]="'V'"
+              [zoneId]="zone.id"
+            />
+          }
+          @if (tourService.getZoneTours(zone.id, 'P').length > 0) {
+            <app-tour-list-section
+              [title]="'Parcours à pied'"
+              [tours]="tourService.getZoneTours(zone.id, 'P')"
+              [type]="'P'"
+              [zoneId]="zone.id"
+            />
+          }
+        </div>
+      }
     </div>
   </details>
 }

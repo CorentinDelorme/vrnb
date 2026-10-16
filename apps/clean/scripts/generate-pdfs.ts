@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'f
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { join } from 'path';
+import { toBuffer as qrCodeToBuffer } from 'qrcode';
 import sharp from 'sharp';
 
 import { toursData } from '../src/app/tours-data';
@@ -25,6 +26,12 @@ const TILE_JPEG_QUALITY = 85;
 const MAP_JPEG_QUALITY = 88;
 /** Max width/height in pixels of the exact map view (before tiling). */
 const MAX_VIEW_PIXELS = 1536;
+
+/** Public base URL of the deployed app; tour pages live at `tour/<zoneId>/<tour>`. */
+const TOUR_URL_PREFIX = 'https://clean.velorandonaturebruz.fr/';
+/** QR code image resolution (square pixels) and on-page size (mm). */
+const QR_IMAGE_PX = 512;
+const QR_PDF_SIZE_MM = 18;
 
 type LonLat = [number, number];
 
@@ -80,6 +87,52 @@ async function loadLogo(): Promise<LogoImage | undefined> {
 
 function formatTotal(tour: TourDistances): number {
   return Math.round((tour.startDistance + tour.distance + tour.endDistance) * 10) / 10;
+}
+
+/** Deep link to the tour page in the deployed app. */
+function tourUrl(tour: TourDistances): string {
+  return `${TOUR_URL_PREFIX}tour/${tour.zoneId}/${tour.name}`;
+}
+
+/**
+ * QR code PNG for a tour URL with the VRNB logo centered.
+ * Error correction level H keeps the code scannable despite the overlay.
+ */
+async function buildQrCodeImage(url: string): Promise<Buffer | undefined> {
+  try {
+    const qr = await qrCodeToBuffer(url, {
+      errorCorrectionLevel: 'H',
+      width: QR_IMAGE_PX,
+      margin: 2,
+    });
+    if (!existsSync(logoPath)) {
+      return qr;
+    }
+    const overlaySize = Math.round(QR_IMAGE_PX * 0.22);
+    const padding = Math.round(QR_IMAGE_PX * 0.03);
+    const overlay = await sharp(readFileSync(logoPath))
+      .resize(overlaySize, overlaySize, {
+        fit: 'contain',
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      })
+      .flatten({ background: '#ffffff' })
+      .extend({
+        top: padding,
+        bottom: padding,
+        left: padding,
+        right: padding,
+        background: '#ffffff',
+      })
+      .png()
+      .toBuffer();
+    return await sharp(qr)
+      .composite([{ input: overlay, gravity: 'center' }])
+      .png()
+      .toBuffer();
+  } catch (error) {
+    console.warn(`  QR code failed: ${error instanceof Error ? error.message : error}`);
+    return undefined;
+  }
 }
 
 function delay(ms: number): Promise<void> {
@@ -450,17 +503,36 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   doc.setFontSize(22);
   doc.text(`${zoneName} - Parcours ${tour.name}`, pageWidth / 2, 16, { align: 'center' });
 
+  const qrImage = await buildQrCodeImage(tourUrl(tour));
+
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
-  doc.text('Contact', pageWidth - margin, 7, { align: 'right' });
-  doc.setTextColor(0, 0, 0);
+  const contactLabel = 'Contact : ';
+  doc.text(contactLabel, margin, 24);
+  const contactNumberX = margin + doc.getTextWidth(contactLabel);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(11);
-  doc.text('06 23 13 56 48', pageWidth - margin, 12, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+  doc.text('06 23 13 56 48', contactNumberX, 24);
+
+  if (qrImage) {
+    const qrX = pageWidth - margin - QR_PDF_SIZE_MM;
+    const qrY = 4;
+    const qrDataUrl = `data:image/png;base64,${qrImage.toString('base64')}`;
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, `${tour.name}-qr`);
+    doc.link(qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, { url: tourUrl(tour) });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Voir en ligne', qrX + QR_PDF_SIZE_MM / 2, qrY + QR_PDF_SIZE_MM + 3.5, {
+      align: 'center',
+    });
+    doc.setTextColor(0, 0, 0);
+  }
 
   autoTable(doc, {
-    startY: 23,
+    startY: 29,
     margin: { left: margin, right: margin },
     head: [['Début', 'Zone de nettoyage', 'Fin', 'Total']],
     body: [
@@ -670,71 +742,73 @@ async function generateZoneMapPdf(
   console.log(`Generated: ${outputPath}`);
 }
 
-// --- Tracking sheets: one file per tour type, one table per zone ---
-
-interface ZoneTrackingSection {
-  readonly zoneName: string;
-  readonly tours: string[];
-}
+// --- Tracking sheets: one file per zone and tour type ---
 
 type AutoTableDoc = jsPDF & { lastAutoTable: { finalY: number } };
 
-function generateTrackingPdf(
-  sections: ZoneTrackingSection[],
-  title: string,
-  filename: string,
-): void {
+function generateTrackingPdf(zoneId: string, kind: 'V' | 'P', tourNames: string[]): void {
+  if (tourNames.length === 0) {
+    return;
+  }
+  const zoneName = getZone(zoneId).name;
+  const title =
+    kind === 'V'
+      ? `${zoneName} - Suivi des parcours à vélo`
+      : `${zoneName} - Suivi des parcours à pied`;
+  const filename = kind === 'V' ? 'Suivi_parcours_a_velo.pdf' : 'Suivi_parcours_a_pied.pdf';
+
   const doc = new jsPDF();
 
   doc.setFontSize(18);
   doc.text(title, 14, 20);
 
-  let startY = 30;
-  for (const section of sections) {
-    doc.setFontSize(14);
-    doc.text(section.zoneName, 14, startY);
-    startY += 4;
+  autoTable(doc, {
+    startY: 30,
+    head: [['Parcours', 'Prénom NOM', 'Prénom NOM', 'Ordures (g)', 'Tri (g)', 'Verre (g)']],
+    body: tourNames.map((tour) => [tour, '', '', '', '', '']),
+    theme: 'grid',
+    headStyles: { fillColor: [66, 135, 75] },
+    columnStyles: {
+      0: { cellWidth: 20 },
+      3: { cellWidth: 25 },
+      4: { cellWidth: 25 },
+      5: { cellWidth: 25 },
+    },
+  });
 
-    autoTable(doc, {
-      startY,
-      head: [['Parcours', 'Prénom NOM', 'Prénom NOM', 'Ordures (g)', 'Tri (g)', 'Verre (g)']],
-      body: section.tours.map((tour) => [tour, '', '', '', '', '']),
-      theme: 'grid',
-      headStyles: { fillColor: [66, 135, 75] },
-      columnStyles: {
-        0: { cellWidth: 20 },
-        3: { cellWidth: 25 },
-        4: { cellWidth: 25 },
-        5: { cellWidth: 25 },
-      },
-    });
+  autoTable(doc, {
+    startY: (doc as AutoTableDoc).lastAutoTable.finalY + 8,
+    head: [['Ordures (kg)', 'Tri (kg)', 'Verre (kg)', 'Total (kg)']],
+    body: [['', '', '', '']],
+    theme: 'grid',
+    headStyles: { fillColor: [66, 135, 75] },
+  });
 
-    autoTable(doc, {
-      startY: (doc as AutoTableDoc).lastAutoTable.finalY + 8,
-      head: [['Ordures (kg)', 'Tri (kg)', 'Verre (kg)', 'Total (kg)']],
-      body: [['', '', '', '']],
-      theme: 'grid',
-      headStyles: { fillColor: [66, 135, 75] },
-    });
-
-    startY = (doc as AutoTableDoc).lastAutoTable.finalY + 15;
-  }
-
-  const outputPath = join(pdfDir, filename);
+  const zonePdfDir = join(pdfDir, zoneId);
+  mkdirSync(zonePdfDir, { recursive: true });
+  const outputPath = join(zonePdfDir, filename);
   ensureWritable(outputPath);
   doc.save(outputPath);
   console.log(`Generated: ${outputPath}`);
 }
 
-function parseTourFilter(): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith('--tour='));
+function parseArgValues(flag: string): Set<string> | undefined {
+  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
   if (!arg) return undefined;
   const ids = arg
-    .slice('--tour='.length)
+    .slice(flag.length + 1)
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
   return ids.length > 0 ? new Set(ids) : undefined;
+}
+
+function parseTourFilter(): Set<string> | undefined {
+  return parseArgValues('--tour');
+}
+
+function parseZoneFilter(): Set<string> | undefined {
+  return parseArgValues('--zone');
 }
 
 async function main(): Promise<void> {
@@ -742,12 +816,13 @@ async function main(): Promise<void> {
   mkdirSync(tileCacheDir, { recursive: true });
 
   const tourFilter = parseTourFilter();
+  const zoneFilter = parseZoneFilter();
   const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter(
-    (t) => !tourFilter || tourFilter.has(t.name),
+    (t) => (!tourFilter || tourFilter.has(t.name)) && (!zoneFilter || zoneFilter.has(t.zoneId)),
   );
 
-  if (tourFilter && allTours.length === 0) {
-    throw new Error('No tours match the --tour filter.');
+  if ((tourFilter || zoneFilter) && allTours.length === 0) {
+    throw new Error('No tours match the --tour/--zone filter.');
   }
 
   const logo = await loadLogo();
@@ -758,35 +833,30 @@ async function main(): Promise<void> {
 
   if (!tourFilter) {
     const zoneIds = [...new Set(allTours.map((t) => t.zoneId))].sort();
-    const buildSections = (tours: TourDistances[]): ZoneTrackingSection[] =>
-      zoneIds
-        .map((zoneId) => ({
-          zoneName: getZone(zoneId).name,
-          tours: tours.filter((t) => t.zoneId === zoneId).map((t) => t.name),
-        }))
-        .filter((section) => section.tours.length > 0);
-    generateTrackingPdf(
-      buildSections(toursData.vTours),
-      'Feuille de suivi des parcours à vélo',
-      'Suivi_parcours_a_velo.pdf',
-    );
-    generateTrackingPdf(
-      buildSections(toursData.pTours),
-      'Feuille de suivi des parcours à pied',
-      'Suivi_parcours_a_pied.pdf',
-    );
+    const vTours = toursData.vTours.filter((t) => zoneIds.includes(t.zoneId));
+    const pTours = toursData.pTours.filter((t) => zoneIds.includes(t.zoneId));
 
     for (const zoneId of zoneIds) {
+      generateTrackingPdf(
+        zoneId,
+        'V',
+        vTours.filter((t) => t.zoneId === zoneId).map((t) => t.name),
+      );
+      generateTrackingPdf(
+        zoneId,
+        'P',
+        pTours.filter((t) => t.zoneId === zoneId).map((t) => t.name),
+      );
       await generateZoneMapPdf(
         zoneId,
         'V',
-        toursData.vTours.filter((t) => t.zoneId === zoneId),
+        vTours.filter((t) => t.zoneId === zoneId),
         logo,
       );
       await generateZoneMapPdf(
         zoneId,
         'P',
-        toursData.pTours.filter((t) => t.zoneId === zoneId),
+        pTours.filter((t) => t.zoneId === zoneId),
         logo,
       );
     }

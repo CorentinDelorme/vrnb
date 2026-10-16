@@ -3,6 +3,7 @@ import { DOMParser } from '@xmldom/xmldom';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
+import { toursData } from '../src/app/tours-data';
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
 
 const rootDir = join(__dirname, '..');
@@ -120,9 +121,59 @@ function zoneBaseDir(zoneId: string): string {
   return join(gpxDir, zoneId);
 }
 
-const zoneIds = getZoneIds();
-const vTours = zoneIds.flatMap((zoneId) => getTours('V', zoneId, zoneBaseDir(zoneId)));
-const pTours = zoneIds.flatMap((zoneId) => getTours('P', zoneId, zoneBaseDir(zoneId)));
+function parseArgValues(flag: string): Set<string> | undefined {
+  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
+  if (!arg) return undefined;
+  const ids = arg
+    .slice(flag.length + 1)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return ids.length > 0 ? new Set(ids) : undefined;
+}
+
+function sortTours(a: GeneratedTour, b: GeneratedTour): number {
+  if (a.zoneId !== b.zoneId) {
+    return a.zoneId.localeCompare(b.zoneId);
+  }
+  if (a.name[0] !== b.name[0]) {
+    return a.name[0] < b.name[0] ? -1 : 1;
+  }
+  return parseInt(a.name.slice(1)) - parseInt(b.name.slice(1));
+}
+
+/**
+ * Merge freshly computed tours with the existing data: only matching tours
+ * are recomputed, other entries are kept untouched. Without filters every
+ * tour is recomputed from the GPX files.
+ */
+function mergeTours(existing: GeneratedTour[], fresh: GeneratedTour[]): GeneratedTour[] {
+  const freshKeys = new Set(fresh.map((t) => `${t.zoneId}/${t.name}`));
+  const kept = existing.filter((t) => !freshKeys.has(`${t.zoneId}/${t.name}`));
+  return [...kept, ...fresh].sort(sortTours);
+}
+
+const tourFilter = parseArgValues('--tour');
+const zoneFilter = parseArgValues('--zone');
+const filtered = tourFilter !== undefined || zoneFilter !== undefined;
+
+const zoneIds = getZoneIds().filter((zoneId) => !zoneFilter || zoneFilter.has(zoneId));
+if (filtered && zoneIds.length === 0) {
+  throw new Error('No zones match the --tour/--zone filter.');
+}
+const matchesTour = (tour: GeneratedTour): boolean => !tourFilter || tourFilter.has(tour.name);
+const freshVTours = zoneIds.flatMap((zoneId) =>
+  getTours('V', zoneId, zoneBaseDir(zoneId)).filter(matchesTour),
+);
+const freshPTours = zoneIds.flatMap((zoneId) =>
+  getTours('P', zoneId, zoneBaseDir(zoneId)).filter(matchesTour),
+);
+if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
+  throw new Error('No tours match the --tour/--zone filter.');
+}
+
+const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
+const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
 
 const content = `// Auto-generated from public/gpx folder (one folder per zone)
 export const toursData = {

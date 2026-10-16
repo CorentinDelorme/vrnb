@@ -245,15 +245,23 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function parseTourFilter(): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith('--tour='));
+function parseArgValues(flag: string): Set<string> | undefined {
+  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
   if (!arg) return undefined;
   const ids = arg
-    .slice('--tour='.length)
+    .slice(flag.length + 1)
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
   return ids.length > 0 ? new Set(ids) : undefined;
+}
+
+function parseTourFilter(): Set<string> | undefined {
+  return parseArgValues('--tour');
+}
+
+function parseZoneFilter(): Set<string> | undefined {
+  return parseArgValues('--zone');
 }
 
 interface ZoneTours {
@@ -263,7 +271,10 @@ interface ZoneTours {
 }
 
 /** Group tour folders by zone (legacy root-level tours belong to the default zone). */
-function getZoneTours(tourFilter: Set<string> | undefined): ZoneTours[] {
+function getZoneTours(
+  tourFilter: Set<string> | undefined,
+  zoneFilter: Set<string> | undefined,
+): ZoneTours[] {
   if (!existsSync(gpxDir)) {
     throw new Error(`GPX directory not found: ${gpxDir}`);
   }
@@ -278,6 +289,7 @@ function getZoneTours(tourFilter: Set<string> | undefined): ZoneTours[] {
 
   for (const entry of entries) {
     if (!entry.isDirectory() || isTourDir(entry.name)) continue;
+    if (zoneFilter && !zoneFilter.has(entry.name)) continue;
     const baseDir = join(gpxDir, entry.name);
     const tourIds = filterTours(
       readdirSync(baseDir, { withFileTypes: true })
@@ -293,7 +305,7 @@ function getZoneTours(tourFilter: Set<string> | undefined): ZoneTours[] {
   const legacyIds = filterTours(
     entries.filter((entry) => entry.isDirectory() && isTourDir(entry.name)).map((e) => e.name),
   );
-  if (legacyIds.length > 0) {
+  if (legacyIds.length > 0 && (!zoneFilter || zoneFilter.has(DEFAULT_ZONE_ID))) {
     result.push({ zoneId: DEFAULT_ZONE_ID, baseDir: gpxDir, tourIds: legacyIds });
   }
 
@@ -302,7 +314,8 @@ function getZoneTours(tourFilter: Set<string> | undefined): ZoneTours[] {
 
 async function main(): Promise<void> {
   const tourFilter = parseTourFilter();
-  const zones = getZoneTours(tourFilter);
+  const zoneFilter = parseZoneFilter();
+  const zones = getZoneTours(tourFilter, zoneFilter);
 
   if (zones.length === 0 || zones.every((z) => z.tourIds.length === 0)) {
     throw new Error('No tours found to process.');

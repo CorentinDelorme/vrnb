@@ -19,18 +19,22 @@ test.describe('Cross-route navigation', () => {
 
   test('should navigate from home to bike tours map', async ({ page }) => {
     await page.goto('/');
-    const bikeSection = page.locator('app-tour-list-section', {
-      hasText: 'Parcours à vélo',
-    });
+    const bikeSection = page
+      .locator('app-tour-list-section', {
+        hasText: 'Parcours à vélo',
+      })
+      .first();
     await bikeSection.getByRole('link', { name: 'Voir tous les parcours' }).click();
     await expect(page).toHaveURL('/tours/bruz-sud/V');
   });
 
   test('should navigate from home to walking tours map', async ({ page }) => {
     await page.goto('/');
-    const walkingSection = page.locator('app-tour-list-section', {
-      hasText: 'Parcours à pied',
-    });
+    const walkingSection = page
+      .locator('app-tour-list-section', {
+        hasText: 'Parcours à pied',
+      })
+      .first();
     await walkingSection.getByRole('link', { name: 'Voir tous les parcours' }).click();
     await expect(page).toHaveURL('/tours/bruz-sud/P');
   });

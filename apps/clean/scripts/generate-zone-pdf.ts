@@ -10,6 +10,7 @@ const pdfDir = join(rootDir, 'public/pdf');
 
 const TOUR_PDF_PATTERN = /^[VP]\d+\.pdf$/;
 const MAP_PDFS = ['Carte_parcours_a_velo.pdf', 'Carte_parcours_a_pied.pdf'];
+const TRACKING_PDFS = ['Suivi_parcours_a_velo.pdf', 'Suivi_parcours_a_pied.pdf'];
 
 function sortTourFiles(a: string, b: string): number {
   if (a[0] !== b[0]) {
@@ -19,8 +20,7 @@ function sortTourFiles(a: string, b: string): number {
 }
 
 /**
- * All PDFs belonging to a zone: overview maps, then tour sheets (V then P).
- * Tracking sheets are shared across zones and stay separate.
+ * All PDFs belonging to a zone: overview maps, tracking sheets, then tour sheets (V then P).
  */
 function getZoneFiles(zoneId: string): string[] {
   const zoneDir = join(pdfDir, zoneId);
@@ -33,6 +33,13 @@ function getZoneFiles(zoneId: string): string[] {
     const mapPath = join(zoneDir, mapPdf);
     if (existsSync(mapPath)) {
       files.push(mapPath);
+    }
+  }
+
+  for (const trackingPdf of TRACKING_PDFS) {
+    const trackingPath = join(zoneDir, trackingPdf);
+    if (existsSync(trackingPath)) {
+      files.push(trackingPath);
     }
   }
 

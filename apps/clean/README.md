@@ -48,6 +48,24 @@ bun run generate:pdfs     # Régénérer les fiches PDF
 bun run generate:all      # Tout régénérer
 ```
 
+### Tester sur un seul parcours ou une seule zone
+
+Pour éviter de tout régénérer à chaque essai (mise en page PDF, QR code...) :
+
+```sh
+bun run generate:one -- --tour=V1 --zone=bruz-sud   # Un seul parcours (routes -> données -> PDF)
+bun run generate:one -- --zone=bruz-sud             # Tous les parcours d'une zone
+bun run generate:one -- --tour=V1 --zone=bruz-sud --skip-routes --skip-tours  # PDF seul, sans appels réseau
+```
+
+Les scripts acceptent aussi les filtres individuellement (`--tour=V1,V2`, `--zone=bruz-sud`) :
+`generate:routes`, `generate:tours` et `generate:pdfs`.
+Note : un même nom de parcours (ex. `V1`) peut exister dans plusieurs zones,
+précisez `--zone` pour lever l'ambiguïté.
+
+Chaque fiche PDF de parcours affiche en haut un QR code cliquable vers
+`https://clean.velorandonaturebruz.fr/tour/<zone>/<parcours>` (logo VRNB au centre).
+
 ## Pack PDF par zone
 
 Pour fusionner les PDF d'une zone en un seul fichier (cartes + fiches parcours),

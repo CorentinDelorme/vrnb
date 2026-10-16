@@ -34,6 +34,7 @@ bun run check-types # tsc --noEmit
 bun run generate:routes # Generate start/end GPX from MEETING_POINT (OSRM)
 bun run generate:tours  # Generate tour data
 bun run generate:pdfs   # Generate PDF files
+bun run generate:one -- --tour=V1 --zone=bruz-sud  # Single tour or zone only (add --skip-routes --skip-tours for PDF only)
 bun run generate:all    # Generate routes + tours + PDFs
 ```
 

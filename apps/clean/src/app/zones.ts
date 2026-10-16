@@ -25,6 +25,22 @@ export const ZONES: readonly Zone[] = [
       coordinates: [-1.747083, 48.024417],
     },
   },
+  {
+    id: 'bruz-vau-gaillard',
+    name: 'Bruz Vau Gaillard',
+    meetingPoint: {
+      name: `Place du Dr Joly`,
+      coordinates: [-1.747083, 48.024417],
+    },
+  },
+  {
+    id: 'bruz-ker-lann',
+    name: 'Bruz Ker Lann',
+    meetingPoint: {
+      name: `Place du Dr Joly`,
+      coordinates: [-1.747083, 48.024417],
+    },
+  },
 ];
 
 export const DEFAULT_ZONE_ID = ZONES[0].id;

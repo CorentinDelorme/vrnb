@@ -47,6 +47,13 @@ test.describe('Home page', () => {
       await expect(page.locator('details[aria-label="Zone Bruz Sud"]')).toBeVisible();
     });
 
+    test('should display Bruz Ker Lann zone heading with tour count', async ({ page }) => {
+      await page.goto('/');
+      const zone = page.locator('details[aria-label="Zone Bruz Ker Lann"]');
+      await expect(zone).toBeVisible();
+      await expect(zone.locator('summary')).toContainText('12 parcours');
+    });
+
     test('should display zone heading with tour count', async ({ page }) => {
       await page.goto('/');
       const zone = page.locator('details[aria-label="Zone Bruz Sud"]');
@@ -66,17 +73,18 @@ test.describe('Home page', () => {
 
     test('should display bike tours section', async ({ page }) => {
       await page.goto('/');
-      await expect(page.locator('h2', { hasText: 'Parcours à vélo' })).toBeVisible();
+      await expect(page.locator('h2', { hasText: 'Parcours à vélo' }).first()).toBeVisible();
     });
 
     test('should display walking tours section', async ({ page }) => {
       await page.goto('/');
-      await expect(page.locator('h2', { hasText: 'Parcours à pied' })).toBeVisible();
+      await expect(page.locator('h2', { hasText: 'Parcours à pied' }).first()).toBeVisible();
     });
 
-    test('should list all 15 bike tours (V1–V15)', async ({ page }) => {
+    test('should list all 15 Bruz Sud bike tours (V1–V15)', async ({ page }) => {
       await page.goto('/');
-      const bikeSection = page.locator('app-tour-list-section', {
+      const zone = page.locator('details[aria-label="Zone Bruz Sud"]');
+      const bikeSection = zone.locator('app-tour-list-section', {
         hasText: 'Parcours à vélo',
       });
       const tourRows = bikeSection.locator('li.list-row');
@@ -89,13 +97,29 @@ test.describe('Home page', () => {
       }
     });
 
-    test('should list all 13 walking tours (P1–P13)', async ({ page }) => {
+    test('should list all 12 Bruz Ker Lann bike tours (V1–V12)', async ({ page }) => {
+      await page.goto('/');
+      const zone = page.locator('details[aria-label="Zone Bruz Ker Lann"]');
+      const bikeSection = zone.locator('app-tour-list-section', {
+        hasText: 'Parcours à vélo',
+      });
+      const tourRows = bikeSection.locator('li.list-row');
+      await expect(tourRows).toHaveCount(12);
+
+      for (let i = 1; i <= 12; i++) {
+        await expect(
+          bikeSection.locator('li.list-row', { hasText: `V${i}` }).first(),
+        ).toBeVisible();
+      }
+    });
+
+    test('should list all 19 walking tours (P1–P13 + Vau Gaillard P1–P6)', async ({ page }) => {
       await page.goto('/');
       const walkingSection = page.locator('app-tour-list-section', {
         hasText: 'Parcours à pied',
       });
       const tourRows = walkingSection.locator('li.list-row');
-      await expect(tourRows).toHaveCount(13);
+      await expect(tourRows).toHaveCount(19);
 
       for (let i = 1; i <= 13; i++) {
         await expect(
@@ -112,23 +136,25 @@ test.describe('Home page', () => {
 
     test('should display distance in meters for tours under 1 km', async ({ page }) => {
       await page.goto('/');
-      // P1 has distance 0.5, so it should display "500 m"
-      const p1Row = page.locator('li.list-row', { hasText: 'P1' }).first();
-      await expect(p1Row).toContainText('500 m');
+      // P2 (Bruz Sud) has distance 0.8, so it should display "800 m"
+      const p2Row = page.locator('li.list-row', { hasText: 'P2' }).first();
+      await expect(p2Row).toContainText('800 m');
     });
 
     test('should have play button on each tour row', async ({ page }) => {
       await page.goto('/');
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-      // 15 bike + 13 walking = 28 total
-      await expect(playButtons).toHaveCount(28);
+      // 15 bike (Bruz Sud) + 12 bike (Ker Lann) + 13 walking (Bruz Sud) + 6 walking (Vau Gaillard) = 46 total
+      await expect(playButtons).toHaveCount(46);
     });
 
     test('should show "Voir tous les parcours" link for bike tours', async ({ page }) => {
       await page.goto('/');
-      const bikeSection = page.locator('app-tour-list-section', {
-        hasText: 'Parcours à vélo',
-      });
+      const bikeSection = page
+        .locator('app-tour-list-section', {
+          hasText: 'Parcours à vélo',
+        })
+        .first();
       const link = bikeSection.getByRole('link', { name: 'Voir tous les parcours' });
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute('href', '/tours/bruz-sud/V');
@@ -136,9 +162,11 @@ test.describe('Home page', () => {
 
     test('should show "Voir tous les parcours" link for walking tours', async ({ page }) => {
       await page.goto('/');
-      const walkingSection = page.locator('app-tour-list-section', {
-        hasText: 'Parcours à pied',
-      });
+      const walkingSection = page
+        .locator('app-tour-list-section', {
+          hasText: 'Parcours à pied',
+        })
+        .first();
       const link = walkingSection.getByRole('link', { name: 'Voir tous les parcours' });
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute('href', '/tours/bruz-sud/P');

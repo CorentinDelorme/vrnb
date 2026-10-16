@@ -36,7 +36,7 @@ test.describe('Tours map — Bike (V)', () => {
       name: 'Télécharger le PDF de suivi',
     });
     await expect(pdfLink).toBeVisible();
-    await expect(pdfLink).toHaveAttribute('href', '/pdf/Suivi_parcours_a_velo.pdf');
+    await expect(pdfLink).toHaveAttribute('href', '/pdf/bruz-sud/Suivi_parcours_a_velo.pdf');
   });
 
   test('should show map PDF download link in drawer', async ({ page }) => {
@@ -83,7 +83,7 @@ test.describe('Tours map — Walking (P)', () => {
       name: 'Télécharger le PDF de suivi',
     });
     await expect(pdfLink).toBeVisible();
-    await expect(pdfLink).toHaveAttribute('href', '/pdf/Suivi_parcours_a_pied.pdf');
+    await expect(pdfLink).toHaveAttribute('href', '/pdf/bruz-sud/Suivi_parcours_a_pied.pdf');
   });
 
   test('should show map PDF download link with correct href', async ({ page }) => {
