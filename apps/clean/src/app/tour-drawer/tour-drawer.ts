@@ -10,7 +10,7 @@ import {
   Tree06Icon,
 } from '@hugeicons/core-free-icons';
 import { GpxService } from '../shared/gpx/gpx.service';
-import { DEFAULT_ZONE_ID, getZone } from '../zones';
+import { DEFAULT_ZONE_ID } from '../zones';
 
 @Component({
   selector: 'app-drawer',
@@ -22,14 +22,6 @@ export class TourDrawer {
   title = inject(Title);
   gpxService = inject(GpxService);
   private router = inject(Router);
-
-  readonly meetingPointName = getZone(this.getCurrentZoneId()).meetingPoint.name;
-
-  /** Meeting point name for mid-sentence use, e.g. "à la place du Dr Joly". */
-  get meetingPointNameLower(): string {
-    const name = getZone(this.getCurrentZoneId()).meetingPoint.name;
-    return name.charAt(0).toLowerCase() + name.slice(1);
-  }
 
   pdf02Icon = Pdf02Icon;
   mapsLocationIcon = MapsLocationIcon;
