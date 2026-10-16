@@ -23,6 +23,9 @@
   "engines": {
     "node": ">=18"
   },
+  "overrides": {
+    "@jridgewell/sourcemap-codec": "^1.6.0"
+  },
   "packageManager": "bun@1.3.10",
   "workspaces": [
     "apps/*",
