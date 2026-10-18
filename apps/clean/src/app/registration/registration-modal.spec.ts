@@ -312,4 +312,29 @@ describe('RegistrationModal', () => {
 
     expect(submitButton().disabled).toBe(false);
   });
+
+  it('keeps the confirmation when the modal was opened through the request input', async () => {
+    loadStatus();
+    fixture.componentRef.setInput('request', { zone: ZONE, tour: TOUR });
+    fixture.detectChanges();
+    expect(element<HTMLDialogElement>('dialog').hasAttribute('open')).toBe(true);
+
+    fillForm();
+    solveCaptcha();
+    submitForm();
+    httpTesting
+      .expectOne('/api/inscriptions')
+      .flush(
+        { year: 2027, zoneId: 'bruz-sud', tourName: 'V2' },
+        { status: 201, statusText: 'Created' },
+      );
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Removing the widget after the success must not reopen the modal and wipe
+    // the confirmation: only the request input drives the open effect.
+    expect(modal.confirmed()).toBe(true);
+    expect(dialogText()).toContain('Votre binôme est inscrit.');
+  });
 });

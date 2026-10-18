@@ -1,4 +1,14 @@
-import { Component, ElementRef, computed, inject, signal, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  computed,
+  effect,
+  inject,
+  input,
+  signal,
+  untracked,
+  viewChild,
+} from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
@@ -29,9 +39,10 @@ function trimmedRequired(control: AbstractControl): ValidationErrors | null {
 /**
  * Binome registration dialog of one tour, opened from the home page.
  *
- * A single instance lives in `ToursList`: `open` binds the tour context, computes
- * the registration window and shows the native dialog; the service owns every
- * piece of server state, the modal only renders it.
+ * A single deferred instance lives in `ToursList`: the parent pushes a
+ * registration request and the modal opens itself, computes the registration
+ * window and shows the native dialog; the service owns every piece of server
+ * state, the modal only renders it.
  */
 @Component({
   selector: 'app-registration-modal',
@@ -42,6 +53,21 @@ function trimmedRequired(control: AbstractControl): ValidationErrors | null {
 export class RegistrationModal {
   protected readonly registration = inject(RegistrationService);
   private readonly formBuilder = inject(NonNullableFormBuilder);
+
+  /** Registration context pushed by the deferred parent; opens the dialog when set. */
+  readonly request = input<{ readonly zone: Zone; readonly tour: Tour } | null>(null);
+
+  constructor() {
+    effect(() => {
+      const request = this.request();
+      if (request) {
+        // Untracked: `open` reads the viewChild signals (dialog, widget), and the
+        // widget query flips to undefined when a success hides the form; tracking
+        // it would re-run this effect and reopen the modal on the confirmation.
+        untracked(() => this.open(request.zone, request.tour));
+      }
+    });
+  }
 
   private readonly dialogRef = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly turnstile = viewChild(TurnstileWidget);

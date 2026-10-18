@@ -1,4 +1,4 @@
-import { Component, afterNextRender, inject, viewChild } from '@angular/core';
+import { Component, afterNextRender, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { PlayIcon } from '@hugeicons/core-free-icons';
@@ -19,7 +19,12 @@ export class ToursList {
   tourService = inject(ToursService);
   tourStorage = inject(TourStorageService);
   readonly registration = inject(RegistrationService);
-  readonly registrationModal = viewChild(RegistrationModal);
+  /**
+   * Registration request pushed to the deferred modal: the modal is created
+   * lazily (its forms bundle stays out of the initial chunk), so the parent
+   * cannot hold an eager component reference and stores the pending context.
+   */
+  readonly pendingRegistration = signal<{ readonly zone: Zone; readonly tour: Tour } | null>(null);
   playIcon = PlayIcon;
   readonly currentYear = new Date().getFullYear();
 
@@ -37,7 +42,8 @@ export class ToursList {
   }
 
   openRegistration(zone: Zone, tour: Tour): void {
-    this.registrationModal()?.open(zone, tour);
+    // New object identity on every click so the deferred modal reopens each time.
+    this.pendingRegistration.set({ zone, tour });
   }
 
   readonly articles = [

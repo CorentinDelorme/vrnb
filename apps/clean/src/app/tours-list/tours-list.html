@@ -119,4 +119,6 @@
 
 <footer class="pt-4 text-center text-sm opacity-70 sm:pt-8">©{{ currentYear }} VRNB</footer>
 
-<app-registration-modal />
+@defer (on idle) {
+  <app-registration-modal [request]="pendingRegistration()" />
+}
