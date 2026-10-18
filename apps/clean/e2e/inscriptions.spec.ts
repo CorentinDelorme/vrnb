@@ -1,11 +1,5 @@
 import { Page, expect, test } from '@playwright/test';
 
-/** Minimal stub of the Cloudflare Turnstile global used by the app. */
-interface TurnstileStubOptions {
-  sitekey: string;
-  callback: (token: string) => void;
-}
-
 const INSCRIPTIONS_URL = '**/api/inscriptions';
 const TURNSTILE_SCRIPT_URL = 'https://challenges.cloudflare.com/**';
 
@@ -24,16 +18,24 @@ interface StatusOptions {
 /** Fakes the Turnstile global so no real challenge is fetched. */
 async function stubTurnstile(page: Page): Promise<void> {
   await page.addInitScript(() => {
+    let solved = 0;
+    let callback: ((token: string) => void) | null = null;
     const turnstile = {
       render: (
         container: Element,
         options: { sitekey: string; callback: (token: string) => void },
       ): string => {
         container.innerHTML = '<div data-testid="turnstile-stub"></div>';
+        callback = options.callback;
+        solved += 1;
         options.callback('e2e-captcha-token');
         return 'e2e-widget';
       },
-      reset: (): void => undefined,
+      // A reset restarts the challenge; it may resolve while the dialog is hidden.
+      reset: (): void => {
+        solved += 1;
+        callback?.(`e2e-captcha-token-${solved}`);
+      },
     };
     (window as unknown as Record<string, unknown>)['turnstile'] = turnstile;
   });
@@ -156,5 +158,51 @@ test.describe('Binome registration', () => {
     await expect(modal.getByRole('button', { name: "Valider l'inscription" })).toBeDisabled();
     await expect(modal.getByLabel('Prénom du premier membre')).toBeDisabled();
     await expect(modal.getByTestId('turnstile-stub')).toHaveCount(0);
+  });
+
+  test('restarts the captcha challenge and stays submittable after a close and reopen', async ({
+    page,
+  }) => {
+    await stubTurnstile(page);
+    let posted: unknown = null;
+    await mockInscriptions(page, {}, (body) => {
+      posted = body;
+    });
+    await page.goto('/');
+
+    const row = tourRow(page, 'Parcours à vélo', 'V2');
+    const modal = registrationModal(page);
+    const submit = modal.getByRole('button', { name: "Valider l'inscription" });
+    const fill = async (): Promise<void> => {
+      await modal.getByLabel('Prénom du premier membre', { exact: true }).fill('Alice');
+      await modal.getByLabel('Nom du premier membre', { exact: true }).fill('Martin');
+      await modal.getByLabel('Prénom du second membre', { exact: true }).fill('Bruno');
+      await modal.getByLabel('Nom du second membre', { exact: true }).fill('Petit');
+      await modal.getByRole('checkbox').check();
+    };
+
+    // First open: the challenge resolves and the form is ready to submit.
+    await row.getByRole('button', { name: 'Inscrire un binôme' }).click();
+    await expect(modal).toBeVisible();
+    await fill();
+    await expect(submit).toBeEnabled();
+
+    // Close without submitting: the widget is released and reset while hidden.
+    await page.keyboard.press('Escape');
+    await expect(modal).not.toBeVisible();
+
+    // Reopen: without a restarted challenge the dropped token would block the submit.
+    await row.getByRole('button', { name: 'Inscrire un binôme' }).click();
+    await expect(modal).toBeVisible();
+    await fill();
+    await expect(submit).toBeEnabled();
+
+    await submit.click();
+    await expect(modal).toContainText('Votre binôme est inscrit.');
+    expect(posted).toMatchObject({
+      zoneId: 'bruz-sud',
+      tourName: 'V2',
+      captchaToken: expect.stringMatching(/^e2e-captcha-token/) as string,
+    });
   });
 });
