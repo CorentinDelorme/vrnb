@@ -217,11 +217,14 @@ export function readKvConfig(env: Readonly<Record<string, string | undefined>>):
 
 export type FetchLike = (
   input: string,
-  init?: { readonly headers?: Record<string, string> },
+  init?: { readonly headers?: Record<string, string>; readonly signal?: AbortSignal },
 ) => Promise<Response>;
 
 const SCAN_COUNT = 100;
 const MGET_CHUNK_SIZE = 50;
+
+/** Timeout applied to every KV REST call, same as the server store (`server/kv.ts`). */
+const KV_REQUEST_TIMEOUT_MS = 10_000;
 
 function errorMessage(payload: unknown): string | null {
   if (typeof payload === 'object' && payload !== null && 'error' in payload) {
@@ -239,6 +242,7 @@ async function kvRestCommand(
   try {
     response = await fetchImpl(`${config.url}/${command}`, {
       headers: { Authorization: `Bearer ${config.token}` },
+      signal: AbortSignal.timeout(KV_REQUEST_TIMEOUT_MS),
     });
   } catch {
     throw new Error(

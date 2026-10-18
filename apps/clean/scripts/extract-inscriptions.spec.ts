@@ -220,6 +220,18 @@ describe('scanRegistrationKeys', () => {
 
     await expect(scanRegistrationKeys(CONFIG, YEAR, fetchImpl)).rejects.toThrow(/KV injoignable/);
   });
+
+  it('borne chaque appel REST par un délai d’expiration', async () => {
+    let seenInit: { readonly signal?: AbortSignal } | undefined;
+    const fetchImpl: FetchLike = async (_input, init) => {
+      seenInit = init;
+      return new Response(JSON.stringify({ result: ['0', []] }), { status: 200 });
+    };
+
+    await scanRegistrationKeys(CONFIG, YEAR, fetchImpl);
+
+    expect(seenInit?.signal).toBeInstanceOf(AbortSignal);
+  });
 });
 
 describe('parseCliArgs', () => {
