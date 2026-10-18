@@ -68,6 +68,9 @@
               [tours]="tourService.getZoneTours(zone.id, 'V')"
               [type]="'V'"
               [zoneId]="zone.id"
+              [statusLoaded]="registration.statusLoaded()"
+              [coveredNames]="coveredNames(zone.id)"
+              (registerTour)="openRegistration(zone, $event)"
             />
           }
           @if (tourService.getZoneTours(zone.id, 'P').length > 0) {
@@ -76,6 +79,9 @@
               [tours]="tourService.getZoneTours(zone.id, 'P')"
               [type]="'P'"
               [zoneId]="zone.id"
+              [statusLoaded]="registration.statusLoaded()"
+              [coveredNames]="coveredNames(zone.id)"
+              (registerTour)="openRegistration(zone, $event)"
             />
           }
         </div>
@@ -112,3 +118,5 @@
 </div>
 
 <footer class="pt-4 text-center text-sm opacity-70 sm:pt-8">©{{ currentYear }} VRNB</footer>
+
+<app-registration-modal />

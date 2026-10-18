@@ -4,29 +4,31 @@
       <span
         class="bg-primary text-primary-content flex items-center justify-center rounded-full p-2 sm:p-2.5"
       >
-        @if (type === 'V') {
+        @if (type() === 'V') {
           <hugeicons-icon class="sm:h-10 sm:w-10" [icon]="bicycleIcon" [strokeWidth]="1.5" alt="" />
         }
-        @if (type === 'P') {
+        @if (type() === 'P') {
           <hugeicons-icon class="sm:h-10 sm:w-10" [icon]="walkingIcon" [strokeWidth]="1.5" alt="" />
         }
       </span>
 
       <div class="flex flex-wrap items-center gap-2">
-        <h2 class="text-secondary text-xl font-bold tracking-wide sm:text-2xl">{{ title }}</h2>
-        <span class="badge badge-secondary badge-sm sm:badge-md">{{ tours.length }} parcours</span>
+        <h2 class="text-secondary text-xl font-bold tracking-wide sm:text-2xl">{{ title() }}</h2>
+        <span class="badge badge-secondary badge-sm sm:badge-md">
+          {{ tours().length }} parcours
+        </span>
       </div>
     </div>
 
     <a
       class="btn btn-primary btn-sm max-sm:hidden sm:btn-md shrink-0"
-      [routerLink]="['/tours', zoneId, type]"
+      [routerLink]="['/tours', zoneId(), type()]"
     >
       Voir tous les parcours
     </a>
   </li>
 
-  @for (item of tours; track $index) {
+  @for (item of tours(); track item.name) {
     <li class="list-row items-center bg-base-100 border-base-200 rounded-lg border">
       <div class="text-base-content text-xl font-medium sm:text-3xl">{{ item.name }}</div>
       <div class="text-base-content/70 text-base font-light sm:text-xl">
@@ -36,10 +38,29 @@
           {{ item.distance.toString().replace('.', ',') }} km
         }
       </div>
-      <div class="list-col-grow flex justify-end">
+      <div class="list-col-grow flex items-center justify-end gap-2">
+        @if (statusLoaded()) {
+          @if (isCovered(item.name)) {
+            <span class="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
+          } @else {
+            <button
+              class="btn btn-square btn-ghost"
+              (click)="registerTour.emit(item)"
+              type="button"
+              aria-label="Inscrire un binôme"
+            >
+              <hugeicons-icon
+                class="text-primary-content"
+                [icon]="registerIcon"
+                [strokeWidth]="1.5"
+                alt="Inscrire un binôme"
+              />
+            </button>
+          }
+        }
         <button
           class="btn btn-square btn-ghost"
-          [routerLink]="['/tour', zoneId, item.name]"
+          [routerLink]="['/tour', zoneId(), item.name]"
           aria-label="Lancer le parcours"
         >
           <hugeicons-icon
