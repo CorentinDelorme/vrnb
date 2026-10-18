@@ -50,3 +50,6 @@ Thumbs.db
 
 # Generated tile cache for scripts/generate-pdfs.ts (OSM tiles, refetchable)
 scripts/.cache/
+
+# Tracking sheets of scripts/extract-inscriptions.ts (personal data, never published)
+scripts/output/
