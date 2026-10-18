@@ -49,6 +49,7 @@ describe('RegistrationModal', () => {
   let render: ReturnType<
     typeof vi.fn<(container: HTMLElement, options: TurnstileRenderOptions) => string>
   >;
+  let reset: ReturnType<typeof vi.fn<(widgetId?: string) => void>>;
 
   beforeEach(async () => {
     renderedOptions = null;
@@ -56,10 +57,8 @@ describe('RegistrationModal', () => {
       renderedOptions = options;
       return 'widget-1';
     });
-    window.turnstile = {
-      render,
-      reset: vi.fn((): void => undefined),
-    };
+    reset = vi.fn((): void => undefined);
+    window.turnstile = { render, reset };
 
     await TestBed.configureTestingModule({
       imports: [RegistrationModal],
@@ -274,5 +273,21 @@ describe('RegistrationModal', () => {
 
     expect(element<HTMLDialogElement>('dialog').hasAttribute('open')).toBe(false);
     expect(field('first-name-1').value).toBe('');
+  });
+
+  it('reopens with a fresh captcha challenge after a close', () => {
+    openReadyModal();
+    fillForm();
+    // Managed flow: the challenge also resolves while the dialog is hidden.
+    reset.mockImplementation(() => renderedOptions?.callback('captcha-token'));
+
+    modal.close();
+    fixture.detectChanges();
+    expect(element<HTMLDialogElement>('dialog').hasAttribute('open')).toBe(false);
+
+    openModal();
+    fillForm();
+
+    expect(submitButton().disabled).toBe(false);
   });
 });

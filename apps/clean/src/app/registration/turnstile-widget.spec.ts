@@ -87,6 +87,22 @@ describe('TurnstileWidget', () => {
     expect(render).toHaveBeenCalledTimes(1);
   });
 
+  it('restarts the challenge when it is activated again after a deactivation', () => {
+    host.active.set(true);
+    fixture.detectChanges();
+
+    host.active.set(false);
+    fixture.detectChanges();
+    expect(reset).toHaveBeenCalledTimes(1);
+
+    host.active.set(true);
+    fixture.detectChanges();
+
+    expect(render).toHaveBeenCalledTimes(1);
+    expect(reset).toHaveBeenCalledTimes(2);
+    expect(reset).toHaveBeenLastCalledWith('widget-1');
+  });
+
   it('forwards the token resolved by the challenge', () => {
     host.active.set(true);
     fixture.detectChanges();

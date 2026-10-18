@@ -84,6 +84,9 @@ export class TurnstileWidget {
         return;
       }
       if (this.widgetId !== null) {
+        // Restart the challenge on every activation: the widget is released while
+        // hidden, so a solved challenge would otherwise never emit a fresh token.
+        this.api?.reset(this.widgetId);
         return;
       }
       if (siteKey.length === 0) {

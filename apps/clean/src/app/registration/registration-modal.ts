@@ -97,6 +97,9 @@ export class RegistrationModal {
     this.zoneState.set(zone);
     this.tourState.set(tour);
     this.resetState();
+    // A widget that survived a previous close must restart its challenge: the
+    // state reset above dropped its token and a solved widget emits no new one.
+    this.turnstile()?.reset();
     const closed = !isRegistrationOpen(ACTION_EDITION, new Date());
     this.closed.set(closed);
     if (closed) {
