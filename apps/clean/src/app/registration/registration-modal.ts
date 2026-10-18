@@ -48,6 +48,7 @@ export class RegistrationModal {
 
   private readonly zoneState = signal<Zone | null>(null);
   private readonly tourState = signal<Tour | null>(null);
+  private readonly captchaTokenState = signal('');
 
   readonly zone = this.zoneState.asReadonly();
   readonly tour = this.tourState.asReadonly();
@@ -92,6 +93,11 @@ export class RegistrationModal {
     () => this.visible() && !this.confirmed() && !this.closed(),
   );
 
+  /** True while the visible challenge has not resolved: the submit stays disabled. */
+  protected readonly captchaMissing = computed(
+    () => this.widgetActive() && this.captchaTokenState().length === 0,
+  );
+
   /** Opens the dialog for one tour of one zone. */
   open(zone: Zone, tour: Tour): void {
     this.zoneState.set(zone);
@@ -122,10 +128,13 @@ export class RegistrationModal {
   }
 
   protected handleToken(token: string): void {
+    this.captchaTokenState.set(token);
     this.form.controls.captchaToken.setValue(token);
   }
 
-  protected fieldError(name: 'firstName1' | 'lastName1' | 'firstName2' | 'lastName2'): boolean {
+  protected fieldError(
+    name: 'firstName1' | 'lastName1' | 'firstName2' | 'lastName2' | 'commitment',
+  ): boolean {
     const control = this.form.controls[name];
     return control.invalid && (control.touched || control.dirty);
   }
@@ -158,7 +167,7 @@ export class RegistrationModal {
           return;
         }
         // The captcha token is cleared: a rejected token cannot be submitted twice.
-        this.form.controls.captchaToken.reset('');
+        this.handleToken('');
         this.turnstile()?.reset();
         this.errorMessage.set(result.message);
       });
@@ -166,6 +175,7 @@ export class RegistrationModal {
 
   private resetState(): void {
     this.form.reset();
+    this.captchaTokenState.set('');
     this.submitting.set(false);
     this.confirmed.set(false);
     this.errorMessage.set(null);

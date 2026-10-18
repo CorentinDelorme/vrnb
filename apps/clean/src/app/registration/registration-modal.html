@@ -108,27 +108,37 @@
             </div>
           </div>
 
-          <label
-            class="label cursor-pointer items-start justify-start gap-3"
-            for="registration-commitment"
-          >
-            <input
-              class="checkbox"
-              id="registration-commitment"
-              type="checkbox"
-              formControlName="commitment"
-              required
-            />
-            <span>
-              Je confirme que notre binôme participera à l'action de ramassage des déchets.
-            </span>
-          </label>
+          <div>
+            <label
+              class="label cursor-pointer items-start justify-start gap-3"
+              for="registration-commitment"
+            >
+              <input
+                class="checkbox"
+                id="registration-commitment"
+                type="checkbox"
+                formControlName="commitment"
+                required
+              />
+              <span>
+                Je confirme que notre binôme participera à l'action de ramassage des déchets.
+              </span>
+            </label>
+            @if (fieldError('commitment')) {
+              <p class="text-error mt-1 text-xs">Merci de cocher cette case.</p>
+            }
+          </div>
 
-          <app-turnstile-widget
-            [siteKey]="registration.turnstileSiteKey()"
-            [active]="widgetActive()"
-            (tokenChange)="handleToken($event)"
-          />
+          <div>
+            <app-turnstile-widget
+              [siteKey]="registration.turnstileSiteKey()"
+              [active]="widgetActive()"
+              (tokenChange)="handleToken($event)"
+            />
+            @if (captchaMissing()) {
+              <p class="text-xs opacity-70">Complétez le captcha pour poursuivre.</p>
+            }
+          </div>
 
           <p class="text-xs opacity-70">
             Vos prénoms et noms servent uniquement à l'organisation de l'action (fiches de suivi) et

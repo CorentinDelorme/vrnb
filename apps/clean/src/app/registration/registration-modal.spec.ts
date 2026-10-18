@@ -191,6 +191,28 @@ describe('RegistrationModal', () => {
     expect(render).not.toHaveBeenCalled();
   });
 
+  it('explains the pending captcha and the unchecked commitment checkbox', () => {
+    openReadyModal();
+
+    expect(dialogText()).toContain('Complétez le captcha pour poursuivre.');
+    expect(dialogText()).not.toContain('Merci de cocher cette case.');
+
+    // Checking then unchecking marks the checkbox dirty: the missing commitment is explained.
+    checkCommitment();
+    const checkbox = field('commitment');
+    checkbox.checked = false;
+    checkbox.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(dialogText()).toContain('Merci de cocher cette case.');
+
+    checkCommitment();
+    fixture.detectChanges();
+    expect(dialogText()).not.toContain('Merci de cocher cette case.');
+
+    solveCaptcha();
+    expect(dialogText()).not.toContain('Complétez le captcha pour poursuivre.');
+  });
+
   it('posts the trimmed identity, shows a submitting state and confirms the registration', () => {
     openReadyModal();
     fillForm({ ...IDENTITY, firstName1: '  Alice  ', lastName1: ' Martin ' });
