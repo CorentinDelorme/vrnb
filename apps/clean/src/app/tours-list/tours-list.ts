@@ -1,22 +1,44 @@
-import { Component, inject } from '@angular/core';
+import { Component, afterNextRender, inject, viewChild } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { HugeiconsIconComponent } from '@hugeicons/angular';
 import { PlayIcon } from '@hugeicons/core-free-icons';
+import { RegistrationModal } from '../registration/registration-modal';
+import { RegistrationService } from '../registration/registration.service';
 import { TourStorageService } from '../tour-storage.service';
-import { ToursService } from '../tours-service';
+import { Tour, ToursService } from '../tours-service';
+import { Zone } from '../zones';
 import { TourListSection } from './tour-list-section';
 
 @Component({
   selector: 'app-tours-list',
   standalone: true,
-  imports: [RouterModule, TourListSection, HugeiconsIconComponent],
+  imports: [RouterModule, TourListSection, HugeiconsIconComponent, RegistrationModal],
   templateUrl: './tours-list.html',
 })
 export class ToursList {
   tourService = inject(ToursService);
   tourStorage = inject(TourStorageService);
+  readonly registration = inject(RegistrationService);
+  readonly registrationModal = viewChild(RegistrationModal);
   playIcon = PlayIcon;
   readonly currentYear = new Date().getFullYear();
+
+  constructor() {
+    // Coverage is fetched client-side only: the home page itself stays prerendered.
+    afterNextRender(() => this.registration.loadStatus());
+  }
+
+  /** Names of the covered tours of one zone, as expected by the list sections. */
+  coveredNames(zoneId: string): readonly string[] {
+    return this.registration
+      .coveredTours()
+      .filter((tour) => tour.zoneId === zoneId)
+      .map((tour) => tour.tourName);
+  }
+
+  openRegistration(zone: Zone, tour: Tour): void {
+    this.registrationModal()?.open(zone, tour);
+  }
 
   readonly articles = [
     {
