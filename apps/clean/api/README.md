@@ -93,7 +93,7 @@ All manual operations use the KV console or CLI; there is no admin UI.
   `inscriptions:<previous-year>:*` (`SCAN` then `DEL` from the console/CLI). The
   new year starts empty with no deployment: keys are namespaced by year.
 - **Extract the year's registrations** for the tracking sheets: run the local
-  extraction script (`scripts/export-inscriptions.ts`, documented in its own
+  extraction script (`scripts/extract-inscriptions.ts`, documented in its own
   README) with the standard token; output stays in a local, git-ignored folder.
 
 ## Preview-deployment smoke test (TODO before production)
