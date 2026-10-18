@@ -44,6 +44,40 @@ function warnMalformedKey(key: string): void {
   console.warn(`[inscriptions] Skipping malformed registration stored at key "${key}"`);
 }
 
+/** Trimmed non-empty string, or null. */
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' ? value : null;
+}
+
+/** Strict `RegistrationRecord` check: the `as` cast alone would expose junk through GET. */
+function toRegistrationRecord(parsed: unknown): RegistrationRecord | null {
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return null;
+  }
+  const candidate = parsed as Record<string, unknown>;
+  const year = candidate['year'];
+  const zoneId = nonEmptyString(candidate['zoneId']);
+  const tourName = nonEmptyString(candidate['tourName']);
+  const firstName1 = nonEmptyString(candidate['firstName1']);
+  const lastName1 = nonEmptyString(candidate['lastName1']);
+  const firstName2 = nonEmptyString(candidate['firstName2']);
+  const lastName2 = nonEmptyString(candidate['lastName2']);
+  if (
+    typeof year !== 'number' ||
+    !Number.isInteger(year) ||
+    year <= 0 ||
+    zoneId === null ||
+    tourName === null ||
+    firstName1 === null ||
+    lastName1 === null ||
+    firstName2 === null ||
+    lastName2 === null
+  ) {
+    return null;
+  }
+  return { firstName1, lastName1, firstName2, lastName2, year, zoneId, tourName };
+}
+
 /** Parses one stored value; skips missing or malformed values, never logging the value. */
 function parseRecord(value: unknown, key: string): RegistrationRecord | undefined {
   if (value === null || value === undefined) {
@@ -54,9 +88,9 @@ function parseRecord(value: unknown, key: string): RegistrationRecord | undefine
     return undefined;
   }
   try {
-    const parsed: unknown = JSON.parse(value);
-    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-      return parsed as RegistrationRecord;
+    const record = toRegistrationRecord(JSON.parse(value));
+    if (record) {
+      return record;
     }
   } catch {
     // Fall through to the warning below.
@@ -129,7 +163,8 @@ export function createUpstashStore(env: Record<string, string | undefined>): Reg
       const chunk = keys.slice(start, start + MGET_CHUNK_SIZE);
       const path = `/mget/${chunk.map((key) => encodeURIComponent(key)).join('/')}`;
       const values = await command(path);
-      if (!Array.isArray(values)) {
+      // A short response would silently drop the tail: keep the two REST clients aligned.
+      if (!Array.isArray(values) || values.length !== chunk.length) {
         throw new Error('Upstash Redis MGET returned an unexpected result');
       }
       chunk.forEach((key, index) => {

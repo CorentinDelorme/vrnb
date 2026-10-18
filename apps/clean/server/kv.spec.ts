@@ -196,6 +196,59 @@ describe('createUpstashStore list', () => {
     expect(JSON.stringify(warn.mock.calls)).not.toContain('not-json');
   });
 
+  it('skips parsed objects that cannot form a registration record', async () => {
+    const fetchMock = createFetchMock();
+    stubFetch(fetchMock);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    fetchMock
+      .mockResolvedValueOnce(
+        redisResponse([
+          '0',
+          [
+            'inscriptions:2027:bruz-sud:V1',
+            'inscriptions:2027:bruz-sud:V2',
+            'inscriptions:2027:bruz-sud:V3',
+          ],
+        ]),
+      )
+      .mockResolvedValueOnce(
+        redisResponse([
+          JSON.stringify({ zoneId: { note: 'Ada' }, tourName: 5 }),
+          JSON.stringify({ year: 2027, zoneId: 'bruz-sud', tourName: 'V2' }),
+          JSON.stringify({ ...RECORD, tourName: '' }),
+        ]),
+      );
+
+    const store = createUpstashStore({
+      UPSTASH_REDIS_REST_URL: BASE_URL,
+      UPSTASH_REDIS_REST_TOKEN: TOKEN,
+    });
+
+    await expect(store.list('inscriptions:2027:')).resolves.toEqual([]);
+    expect(warn).toHaveBeenCalledTimes(3);
+    const warnings = warn.mock.calls.map(([message]) => String(message)).join(' ');
+    expect(warnings).toContain('inscriptions:2027:bruz-sud:V1');
+    expect(warnings).not.toContain('Ada');
+    expect(warnings).not.toContain('Lovelace');
+  });
+
+  it('does not drop records when MGET returns fewer values than keys', async () => {
+    const fetchMock = createFetchMock();
+    stubFetch(fetchMock);
+    fetchMock
+      .mockResolvedValueOnce(
+        redisResponse(['0', ['inscriptions:2027:bruz-sud:V1', 'inscriptions:2027:bruz-sud:V2']]),
+      )
+      .mockResolvedValueOnce(redisResponse([JSON.stringify(RECORD)]));
+
+    const store = createUpstashStore({
+      UPSTASH_REDIS_REST_URL: BASE_URL,
+      UPSTASH_REDIS_REST_TOKEN: TOKEN,
+    });
+
+    await expect(store.list('inscriptions:2027:')).rejects.toThrow(/MGET/);
+  });
+
   it('returns an empty list without calling MGET when no key matches', async () => {
     const fetchMock = createFetchMock();
     stubFetch(fetchMock);
