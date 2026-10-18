@@ -106,3 +106,19 @@ apps/clean/
 ├── e2e/              ← Tests de bout en bout
 └── scripts/          ← Scripts de génération de données
 ```
+
+## Inscriptions des binômes
+
+Depuis la page d'accueil, chaque parcours peut être réservé par un binôme : un seul binôme
+par parcours et par année, premier arrivé premier servi. Les noms ne sont jamais exposés
+sur le site public.
+
+- Configuration annuelle (année + date de l'action) :
+  `src/app/registration/registration-config.ts`.
+- API et stockage KV : voir [`api/README.md`](api/README.md).
+- Extraction des inscriptions et fiches de suivi (référent, hors du site) :
+  voir [`scripts/README-inscriptions.md`](scripts/README-inscriptions.md).
+
+| Commande | Description |
+|---|---|
+| `bun scripts/extract-inscriptions.ts` | Génère les fiches de suivi de l'année dans `scripts/output/inscriptions/<année>/` (dossier local, non publié) |
