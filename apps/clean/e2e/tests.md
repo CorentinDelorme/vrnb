@@ -38,20 +38,20 @@ Route: `/`
 
 #### Tour sections
 
-| Test name                                                        | Steps                       | Expected                                                       |
-| ---------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
-| `should display Bruz Sud zone heading`                           | `goto('/')`                 | `details[aria-label="Zone Bruz Sud"]` visible                  |
-| `should display zone heading with tour count`                    | `goto('/')`                 | Zone summary shows "Bruz Sud" and "28 parcours"                |
-| `should collapse and expand the zone block on summary click`     | `goto('/')` → click summary | `open` attribute toggles off then on                           |
-| `should display bike tours section`                              | `goto('/')`                 | Heading "Parcours à vélo" visible                              |
-| `should display walking tours section`                           | `goto('/')`                 | Heading "Parcours à pied" visible                              |
-| `should list all 15 Bruz Sud bike tours (V1–V15)`                | `goto('/')`                 | 15 tour rows under Bruz Sud bike section, names V1 through V15 |
-| `should list all 13 walking tours (P1–P13)`                     | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13      |
-| `should display distance in km for V1 (1,1 km)`                  | `goto('/')`                 | V1 row contains text "1,1 km"                                  |
-| `should display distance in meters for tours under 1km`          | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m"                             |
-| `should have play button on each tour row`                       | `goto('/')`                 | 34 buttons with `aria-label="Lancer le parcours"`              |
-| `should show "Voir tous les parcours" link for bike tours`       | `goto('/')` (desktop)       | Link visible in V section, href `/tours/bruz-sud/V`            |
-| `should show "Voir tous les parcours" link for walking tours`    | `goto('/')` (desktop)       | Link visible in P section, href `/tours/bruz-sud/P`            |
+| Test name                                                     | Steps                       | Expected                                                       |
+| ------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
+| `should display Bruz Sud zone heading`                        | `goto('/')`                 | `details[aria-label="Zone Bruz Sud"]` visible                  |
+| `should display zone heading with tour count`                 | `goto('/')`                 | Zone summary shows "Bruz Sud" and "28 parcours"                |
+| `should collapse and expand the zone block on summary click`  | `goto('/')` → click summary | `open` attribute toggles off then on                           |
+| `should display bike tours section`                           | `goto('/')`                 | Heading "Parcours à vélo" visible                              |
+| `should display walking tours section`                        | `goto('/')`                 | Heading "Parcours à pied" visible                              |
+| `should list all 15 Bruz Sud bike tours (V1–V15)`             | `goto('/')`                 | 15 tour rows under Bruz Sud bike section, names V1 through V15 |
+| `should list all 13 walking tours (P1–P13)`                   | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13      |
+| `should display distance in km for V1 (1,1 km)`               | `goto('/')`                 | V1 row contains text "1,1 km"                                  |
+| `should display distance in meters for tours under 1km`       | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m"                             |
+| `should have play button on each tour row`                    | `goto('/')`                 | 34 buttons with `aria-label="Lancer le parcours"`              |
+| `should show "Voir tous les parcours" link for bike tours`    | `goto('/')` (desktop)       | Link visible in V section, href `/tours/bruz-sud/V`            |
+| `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop)       | Link visible in P section, href `/tours/bruz-sud/P`            |
 
 #### Saved tour banner
 
@@ -121,11 +121,11 @@ Routes: `/tour/bruz-sud/V1`, `/tour/bruz-sud/P3`
 
 #### Finish flow
 
-| Test name                                    | Steps                                    | Expected                                             |
-| -------------------------------------------- | ---------------------------------------- | ---------------------------------------------------- |
-| `should open finish modal on Terminer click` | Step 2 → "Terminer"                      | `dialog#finish_modal` visible                        |
-| `should show congratulations text in modal`  | Open modal                               | "Félicitations !" + "Vous avez terminé le parcours." |
-| `should close modal on close button click`   | Open modal → click `aria-label="Fermer"` | Modal hidden                                         |
+| Test name                                    | Steps                                    | Expected                                                                                                   |
+| -------------------------------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `should open finish modal on Terminer click` | Step 2 → "Terminer"                      | `dialog#finish_modal` visible                                                                              |
+| `should show participation message in modal` | Open modal                               | "Merci pour votre participation !" + "Allez voir les organisateurs pour faire peser les déchets ramassés." |
+| `should close modal on close button click`   | Open modal → click `aria-label="Fermer"` | Modal hidden                                                                                               |
 
 #### Drawer menu
 
@@ -143,7 +143,7 @@ Routes: `/tour/bruz-sud/V1`, `/tour/bruz-sud/P3`
 | Test name                                  | Steps                       | Expected                                                                |
 | ------------------------------------------ | --------------------------- | ----------------------------------------------------------------------- |
 | `should have correct title`                | `goto('/tour/bruz-sud/P3')` | `page.toHaveTitle('Bruz Sud - Parcours P3')`                            |
-| `should navigate through steps and finish` | Full step flow → "Terminer" | Modal opens with "Félicitations !"                                      |
+| `should navigate through steps and finish` | Full step flow → "Terminer" | Modal opens with "Merci pour votre participation !"                     |
 | `should show correct PDF link in drawer`   | Open drawer                 | `href="/pdf/bruz-sud/P3.pdf"`                                           |
 | `should show correct GPX links`            | Open drawer                 | Tour GPX: `/gpx/bruz-sud/P3/P3.gpx`, End: `/gpx/bruz-sud/P3/P3_end.gpx` |
 

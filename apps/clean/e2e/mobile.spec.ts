@@ -38,7 +38,7 @@ test.describe('Mobile viewport', () => {
     await page.getByRole('button', { name: 'Terminer' }).click();
     const modal = page.locator('dialog#finish_modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('h3')).toContainText('Félicitations !');
+    await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
   });
 
   test('should render map on mobile tours page', async ({ page }) => {

@@ -29,6 +29,8 @@ const MAX_VIEW_PIXELS = 1536;
 
 /** Public base URL of the deployed app; tour pages live at `tour/<zoneId>/<tour>`. */
 const TOUR_URL_PREFIX = 'https://clean.velorandonaturebruz.fr/';
+/** Address printed under the QR code, so it stays usable without scanning. */
+const SITE_HOST = new URL(TOUR_URL_PREFIX).host;
 /** QR code image resolution (square pixels) and on-page size (mm). */
 const QR_IMAGE_PX = 512;
 const QR_PDF_SIZE_MM = 18;
@@ -512,7 +514,7 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   doc.text(contactLabel, margin, 24);
   const contactNumberX = margin + doc.getTextWidth(contactLabel);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
+  doc.setFontSize(9);
   doc.setTextColor(0, 0, 0);
   doc.text('06 23 13 56 48', contactNumberX, 24);
 
@@ -523,11 +525,11 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
     doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, `${tour.name}-qr`);
     doc.link(qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, { url: tourUrl(tour) });
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
+    doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text('Voir en ligne', qrX + QR_PDF_SIZE_MM / 2, qrY + QR_PDF_SIZE_MM + 3.5, {
-      align: 'center',
-    });
+    // The address is wider than the QR code: right-align it on the page
+    // margin so the whole line stays inside the printable area.
+    doc.text(SITE_HOST, pageWidth - margin, qrY + QR_PDF_SIZE_MM + 3.5, { align: 'right' });
     doc.setTextColor(0, 0, 0);
   }
 
