@@ -1,0 +1,16 @@
+/* Type-check for Node-side runtime code (Vercel functions in `api/`, shared
+ * handlers in `server/`) and its Vitest config. The app config
+ * (tsconfig.app.json) intentionally uses `"types": []` so Node globals don't
+ * leak into browser code, so server code gets its own project. */
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "types": ["node"],
+    "noEmit": true,
+    "lib": ["ES2023"],
+    "target": "ES2022"
+  },
+  "include": ["api/**/*.ts", "server/**/*.ts", "vitest.config.server.ts"]
+}
