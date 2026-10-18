@@ -64,7 +64,8 @@ Note : un même nom de parcours (ex. `V1`) peut exister dans plusieurs zones,
 précisez `--zone` pour lever l'ambiguïté.
 
 Chaque fiche PDF de parcours affiche en haut un QR code cliquable vers
-`https://clean.velorandonaturebruz.fr/tour/<zone>/<parcours>` (logo VRNB au centre).
+`https://clean.velorandonaturebruz.fr/tour/<zone>/<parcours>` (logo VRNB au centre,
+domaine `clean.velorandonaturebruz.fr` affiché sous le QR code).
 
 ## Pack PDF par zone
 

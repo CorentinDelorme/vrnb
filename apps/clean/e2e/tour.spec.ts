@@ -97,14 +97,16 @@ test.describe('Tour page — V1 (bike)', () => {
       await expect(modal).toBeVisible();
     });
 
-    test('should show congratulations text in modal', async ({ page }) => {
+    test('should show participation message in modal', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
       const modal = page.locator('dialog#finish_modal');
-      await expect(modal.locator('h3')).toContainText('Félicitations !');
-      await expect(modal).toContainText('Vous avez terminé le parcours.');
+      await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
+      await expect(modal).toContainText(
+        'Allez voir les organisateurs pour faire peser les déchets ramassés.',
+      );
     });
 
     test('should close modal on close button click', async ({ page }) => {
@@ -208,7 +210,7 @@ test.describe('Tour page — P3 (walking)', () => {
     await page.getByRole('button', { name: 'Terminer' }).click();
     const modal = page.locator('dialog#finish_modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('h3')).toContainText('Félicitations !');
+    await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
   });
 
   test('should show correct PDF link in drawer', async ({ page }) => {
