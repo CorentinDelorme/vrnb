@@ -11,7 +11,7 @@
     "check-types": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.tools.json --noEmit && tsc -p tsconfig.server.json --noEmit",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "test:api": "vitest run -c vitest.config.server.ts",
+    "test:api": "vitest run -c vitest.config.server.mts",
     "lint": "ng lint",
     "lint:fix": "ng lint --fix",
     "format": "prettier --write .",

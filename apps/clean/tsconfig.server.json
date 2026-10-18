@@ -12,5 +12,5 @@
     "lib": ["ES2023"],
     "target": "ES2022"
   },
-  "include": ["api/**/*.ts", "server/**/*.ts", "vitest.config.server.ts"]
+  "include": ["api/**/*.ts", "server/**/*.ts", "vitest.config.server.mts"]
 }
