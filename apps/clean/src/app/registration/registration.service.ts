@@ -1,6 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable, Signal, computed, inject, signal } from '@angular/core';
-import { Observable, catchError, map, of } from 'rxjs';
+import { Observable, catchError, finalize, map, of } from 'rxjs';
 import {
   CoveredTour,
   RegistrationCreatedResponse,
@@ -97,7 +97,7 @@ export class RegistrationService {
   private readonly coveredKeys = computed(
     () => new Set(this.coveredToursState().map((tour) => labelKey(tour.zoneId, tour.tourName))),
   );
-  private statusRequested = false;
+  private statusPending = false;
 
   /** Public status of the current edition; empty until the first successful load. */
   readonly coveredTours: Signal<readonly CoveredTour[]> = this.coveredToursState.asReadonly();
@@ -106,27 +106,38 @@ export class RegistrationService {
   /** Public Turnstile site key; empty string when the captcha is not configured. */
   readonly turnstileSiteKey: Signal<string> = this.turnstileSiteKeyState.asReadonly();
 
-  /** Loads the public status once per app lifetime; later calls are no-ops. */
+  /**
+   * Loads the public status; a no-op once it is loaded or while a request is in
+   * flight. A failed attempt leaves the state unknown, so the next call (next
+   * visit to the page) re-issues the request.
+   */
   loadStatus(): void {
-    if (this.statusRequested) {
+    if (this.statusPending || this.statusLoadedState()) {
       return;
     }
-    this.statusRequested = true;
     this.refreshStatus();
   }
 
   /** Reloads the public status; a failure keeps the current state and only warns. */
   refreshStatus(): void {
-    this.http.get<RegistrationStatusResponse>(REGISTRATION_STATUS_URL).subscribe({
-      next: (status) => {
-        this.coveredToursState.set(status.coveredTours);
-        this.turnstileSiteKeyState.set(status.turnstileSiteKey);
-        this.statusLoadedState.set(true);
-      },
-      error: (error: HttpErrorResponse) => {
-        console.warn('Unable to load the registration status.', error);
-      },
-    });
+    this.statusPending = true;
+    this.http
+      .get<RegistrationStatusResponse>(REGISTRATION_STATUS_URL)
+      .pipe(
+        finalize(() => {
+          this.statusPending = false;
+        }),
+      )
+      .subscribe({
+        next: (status) => {
+          this.coveredToursState.set(status.coveredTours);
+          this.turnstileSiteKeyState.set(status.turnstileSiteKey);
+          this.statusLoadedState.set(true);
+        },
+        error: (error: HttpErrorResponse) => {
+          console.warn('Unable to load the registration status.', error);
+        },
+      });
   }
 
   /** Whether a tour is already covered by a binome for the current edition. */

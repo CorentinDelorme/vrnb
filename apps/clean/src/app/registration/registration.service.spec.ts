@@ -73,6 +73,22 @@ describe('RegistrationService', () => {
     expect(service.statusLoaded()).toBe(true);
   });
 
+  it('re-issues the status request after a failed load', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    service.loadStatus();
+    httpTesting
+      .expectOne('/api/inscriptions')
+      .flush('boom', { status: 500, statusText: 'Server Error' });
+    expect(service.statusLoaded()).toBe(false);
+
+    service.loadStatus();
+    flushStatus();
+
+    expect(service.statusLoaded()).toBe(true);
+    warn.mockRestore();
+  });
+
   it('keeps the status unknown and warns when the status request fails', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
