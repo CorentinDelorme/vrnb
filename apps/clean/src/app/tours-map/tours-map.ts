@@ -2,8 +2,10 @@ import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, Component, inject, PLATFORM_ID } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
+import { FeatureCollection } from 'geojson';
 import type * as L from 'leaflet';
-import { GpxService } from '../shared/gpx/gpx.service';
+import { fetchGpxFile, getGeoJsonFromGpx } from '../shared/gpx/gpx';
+import { fetchTourRouteGeoJson } from '../shared/gpx/tour-geojson';
 import { loadLeaflet } from '../shared/map/leaflet-loader';
 import { MapMarkerService } from '../shared/map/map-marker.service';
 import { MapRouteService } from '../shared/map/map-route.service';
@@ -18,7 +20,6 @@ import { Zone } from '../zones';
   templateUrl: './tours-map.html',
 })
 export class ToursMap implements AfterViewInit {
-  private readonly gpxService = inject(GpxService);
   private readonly toursService = inject(ToursService);
   private readonly mapService = inject(MapService);
   private readonly mapRouteService = inject(MapRouteService);
@@ -63,7 +64,6 @@ export class ToursMap implements AfterViewInit {
       this.tours = this.toursService.getZoneTours(this.zone.id, 'P');
       this.title.setTitle(`${this.zone.name} - Parcours à pied`);
     }
-    this.gpxService.zoneId.set(this.zone.id);
   }
 
   ngAfterViewInit(): void {
@@ -88,49 +88,71 @@ export class ToursMap implements AfterViewInit {
       const tourId = this.tours[i].name;
       const color = this.colors[i % this.colors.length];
 
-      this.gpxService.loadGpxFile(tourId, undefined, this.zone.id).subscribe((gpxStr) => {
-        void this.addGpxToMap(gpxStr, color, tourId);
-      });
+      void this.addTourToMap(tourId, color);
     }
   }
 
-  private async addGpxToMap(gpxStr: string, color: string, tourId: string): Promise<void> {
+  private async addTourToMap(tourId: string, color: string): Promise<void> {
+    let geoJson: FeatureCollection | null = null;
+
+    try {
+      geoJson = await fetchTourRouteGeoJson(tourId, this.zone.id);
+    } catch (err) {
+      console.error(`Error loading precomputed GeoJSON for ${tourId}:`, err);
+    }
+
+    if (!geoJson) {
+      // No precomputed asset: fall back to fetching and parsing the tour GPX.
+      try {
+        const gpxStr = await fetchGpxFile(tourId, undefined, this.zone.id);
+        geoJson = getGeoJsonFromGpx(gpxStr);
+      } catch (err) {
+        console.error(`Error processing GPX for ${tourId}:`, err);
+        return;
+      }
+    }
+
+    await this.addGeoJsonToMap(geoJson, color, tourId);
+  }
+
+  private async addGeoJsonToMap(
+    geoJson: FeatureCollection,
+    color: string,
+    tourId: string,
+  ): Promise<void> {
     if (!this.map) return;
 
     try {
-      // 1. Convert GPX to GeoJSON
-      const geojson = this.gpxService.getGeoJsonFromGpx(gpxStr);
-
-      // 2. Draw the route
-      const geojsonLayer = await this.mapRouteService.drawGeoJsonRoute(geojson, this.map, {
+      // 1. Draw the route
+      const geojsonLayer = await this.mapRouteService.drawGeoJsonRoute(geoJson, this.map, {
         color,
         weight: 4,
       });
 
-      // 3. Extract start/end coords and add markers
-      const firstFeature = geojson.features[0];
+      // 2. Extract start/end coords and add markers
+      const firstFeature = geoJson.features[0];
       if (firstFeature && firstFeature.geometry.type === 'LineString') {
         const coords = firstFeature.geometry.coordinates;
         const start = coords[0];
         const end = coords[coords.length - 1];
 
-        // 4. Add start/end markers (small size for overview)
+        // 3. Add start/end markers (small size for overview)
         await this.mapMarkerService.addStartEndMarkers(start, end, this.map, 'small');
 
-        // 5. Calculate label position (midpoint of coordinates)
+        // 4. Calculate label position (midpoint of coordinates)
         const L = await loadLeaflet();
         const midIdx = Math.floor(coords.length / 2);
         const midCoord = coords[midIdx];
         const labelPos = L.latLng(midCoord[1], midCoord[0]);
 
-        // 6. Add label marker
+        // 5. Add label marker
         await this.mapMarkerService.addLabelMarker(
           { position: labelPos, text: tourId, color },
           this.map,
         );
       }
 
-      // 7. Fit bounds
+      // 6. Fit bounds
       this.map.fitBounds(geojsonLayer.getBounds());
     } catch (err) {
       console.error(`Error processing GPX for ${tourId}:`, err);

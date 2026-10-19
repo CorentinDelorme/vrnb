@@ -1,13 +1,16 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { FeatureCollection } from 'geojson';
 import { join } from 'path';
 
+import { buildTourGeoJsonAsset } from '../src/app/shared/gpx/tour-geojson';
 import { toursData } from '../src/app/tours-data';
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
 
 const rootDir = join(import.meta.dirname, '..');
 const gpxDir = join(rootDir, 'public/gpx');
+const geoJsonDir = join(rootDir, 'public/geojson');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
 
 const TOUR_FOLDER_PATTERN = /^[VP]\d+$/;
@@ -27,14 +30,24 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-function parseGpxDistance(gpxPath: string): number {
+/** Convert a GPX file to GeoJSON, or undefined when the file is missing. */
+function readGpxCollection(gpxPath: string): FeatureCollection | undefined {
   if (!existsSync(gpxPath)) {
-    return 0;
+    return undefined;
   }
 
   const content = readFileSync(gpxPath, 'utf-8');
   const parsedGpx = new DOMParser().parseFromString(content, 'application/xml');
-  const geoJson = gpx(parsedGpx);
+  return gpx(parsedGpx);
+}
+
+function parseGpxDistance(gpxPath: string): number {
+  const geoJson = readGpxCollection(gpxPath);
+
+  if (!geoJson) {
+    return 0;
+  }
+
   const feature = geoJson.features[0];
 
   if (!feature || feature.geometry.type !== 'LineString') {
@@ -121,6 +134,24 @@ function zoneBaseDir(zoneId: string): string {
   return join(gpxDir, zoneId);
 }
 
+/**
+ * Emit the precomputed GeoJSON asset for a tour (public/geojson/<zone>/<tour>
+ * .geojson): the route plus the start/end segments, each feature tagged with
+ * its role, so maps fetch precomputed data at runtime instead of parsing GPX.
+ */
+function emitTourGeoJson(zoneId: string, tourId: string): void {
+  const tourGpxDir = join(zoneBaseDir(zoneId), tourId);
+  const asset = buildTourGeoJsonAsset({
+    start: readGpxCollection(join(tourGpxDir, `${tourId}_start.gpx`)),
+    tour: readGpxCollection(join(tourGpxDir, `${tourId}.gpx`)),
+    end: readGpxCollection(join(tourGpxDir, `${tourId}_end.gpx`)),
+  });
+
+  const outputDir = join(geoJsonDir, zoneId);
+  mkdirSync(outputDir, { recursive: true });
+  writeFileSync(join(outputDir, `${tourId}.geojson`), `${JSON.stringify(asset)}\n`);
+}
+
 function parseArgValues(flag: string): Set<string> | undefined {
   const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
   if (!arg) return undefined;
@@ -175,6 +206,13 @@ if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
 const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
 const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
 
+// Emit precomputed GeoJSON for every freshly computed tour only; tours kept
+// by the --tour/--zone merge keep their existing asset untouched.
+const freshTours = [...freshVTours, ...freshPTours];
+for (const tour of freshTours) {
+  emitTourGeoJson(tour.zoneId, tour.name);
+}
+
 const content = `// Auto-generated from public/gpx folder (one folder per zone)
 export const toursData = {
   vTours: ${JSON.stringify(vTours, null, 2).replace(/"/g, "'")},
@@ -186,3 +224,4 @@ writeFileSync(outputFile, content);
 console.log(
   `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
 );
+console.log(`Emitted ${freshTours.length} precomputed GeoJSON files under public/geojson/`);

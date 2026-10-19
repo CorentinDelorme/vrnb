@@ -32,6 +32,10 @@ _Avoid_: track, tracé, ligne
 Les traces reliant le Point de rendez-vous au début du Parcours, et la fin du Parcours au Point de rendez-vous.
 _Avoid_: liaisons, accès
 
+**GeoJSON précalculé**:
+L'asset émis par la pipeline (`public/geojson/<zone>/<parcours>.geojson`) regroupant le tracé du Parcours et ses segments de début et de fin, fetché au runtime par les cartes à la place du parsing GPX.
+_Avoid_: geojson, fichier cartographique
+
 **Étape**:
 L'une des trois phases d'un Parcours : Début, Nettoyage, Fin.
 _Avoid_: étape du guide, phase

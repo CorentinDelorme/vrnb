@@ -9,6 +9,10 @@ scripts/.cache
 # Legacy Angular templates: frozen until the Angular sources are removed (ticket #13).
 # The Prettier `angular` parser was dropped with the Next.js migration.
 src/**/*.html
+# Generated GeoJSON assets (bun run generate:tours).
+public/geojson
+# Lockfile formatting is tool-managed.
+bun.lock
 # Third-party docs, kept as-is
 .claude
 README.md

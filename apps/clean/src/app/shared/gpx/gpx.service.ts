@@ -1,15 +1,21 @@
-import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { gpx } from '@tmcw/togeojson';
-import { FeatureCollection, Position } from 'geojson';
-import { catchError, firstValueFrom, Observable } from 'rxjs';
+import { FeatureCollection } from 'geojson';
+
 import { DEFAULT_ZONE_ID, getZone } from '../../zones';
 import { MapLocationService } from '../map/map-location.service';
 import { StartEndPoints, TourGeoJsonSet } from '../map/map.types';
+import {
+  buildGeoVeloToMeetingPointLink,
+  fetchGpxFile,
+  generateGeoVeloLinks,
+  GeoVeloLinks,
+  getGeoJsonFromGpx,
+  getStartAndEndPointsFromGeoJson,
+} from './gpx';
+import { fetchTourGeoJsonSet } from './tour-geojson';
 
 @Injectable({ providedIn: 'root' })
 export class GpxService {
-  private readonly http = inject(HttpClient);
   private readonly mapLocationService = inject(MapLocationService);
 
   readonly geoJson = signal<TourGeoJsonSet | null>(null);
@@ -19,126 +25,46 @@ export class GpxService {
 
   private readonly meetingPoint = computed(() => getZone(this.zoneId()).meetingPoint);
 
-  readonly links = signal<{ toStart: string; fromEnd: string }>({
+  readonly links = signal<GeoVeloLinks>({
     toStart: '',
     fromEnd: '',
   });
 
-  loadGpxFile(tourId: string, type?: 'start' | 'end', zoneId?: string): Observable<string> {
+  /**
+   * Load the map data for a parcours: the precomputed GeoJSON asset when it
+   * exists, otherwise the GPX files fetched and parsed at runtime.
+   */
+  async loadTourGeoJson(tourId: string, zoneId?: string): Promise<TourGeoJsonSet | null> {
     const zone = zoneId ?? this.zoneId();
-    const fileName = `${tourId}${type ? `_${type}` : ''}.gpx`;
-    return this.http.get(`/gpx/${zone}/${tourId}/${fileName}`, { responseType: 'text' }).pipe(
-      // Fallback to the legacy flat layout (pre-zone files).
-      catchError(() => this.http.get(`/gpx/${tourId}/${fileName}`, { responseType: 'text' })),
-    );
-  }
 
-  getGeoJsonFromGpx(gpxStr: string): FeatureCollection {
-    const parsedGpx = new DOMParser().parseFromString(gpxStr, 'application/xml');
-    return gpx(parsedGpx);
-  }
+    const precomputed = await fetchTourGeoJsonSet(tourId, zone);
+    if (precomputed) return precomputed;
 
-  setAllGeoJson(start: string, tour: string, end: string): void {
-    this.geoJson.set({
-      start: this.getGeoJsonFromGpx(start),
-      tour: this.getGeoJsonFromGpx(tour),
-      end: this.getGeoJsonFromGpx(end),
-    });
-  }
-
-  async getCoordinatesFromGpx(
-    tourId: string,
-    type: 'start' | 'tour' | 'end',
-    zoneId?: string,
-  ): Promise<Position[]> {
-    const gpxStr = await firstValueFrom(
-      this.loadGpxFile(tourId, type === 'tour' ? undefined : type, zoneId),
-    );
-    if (!gpxStr) return [];
-    const geoJsonData = this.getGeoJsonFromGpx(gpxStr);
-    const feature = geoJsonData.features[0];
-    if (!feature || feature.geometry.type !== 'LineString') {
-      return [];
-    }
-    return feature.geometry.coordinates;
+    const [start, tour, end] = await Promise.all([
+      fetchGpxFile(tourId, 'start', zone),
+      fetchGpxFile(tourId, undefined, zone),
+      fetchGpxFile(tourId, 'end', zone),
+    ]);
+    return {
+      start: getGeoJsonFromGpx(start),
+      tour: getGeoJsonFromGpx(tour),
+      end: getGeoJsonFromGpx(end),
+    };
   }
 
   getStartAndEndPointsFromGeoJson(geoJson: FeatureCollection): StartEndPoints | undefined {
-    if (!geoJson?.features.length) return undefined;
-
-    const firstFeature = geoJson.features[0];
-    const geometry = firstFeature.geometry;
-
-    if (!geometry) return undefined;
-
-    if (geometry.type === 'LineString') {
-      const coords = geometry.coordinates;
-      if (coords.length === 0) return undefined;
-
-      return {
-        start: coords[0],
-        end: coords[coords.length - 1],
-      };
-    }
-
-    if (geometry.type === 'MultiLineString') {
-      const lines = geometry.coordinates;
-      if (!lines.length || !lines[0].length) return undefined;
-
-      const firstLine = lines[0];
-      const lastLine = lines[lines.length - 1];
-
-      return {
-        start: firstLine[0],
-        end: lastLine[lastLine.length - 1],
-      };
-    }
-
-    return undefined;
+    return getStartAndEndPointsFromGeoJson(geoJson);
   }
 
   generateGeoVeloLinks(): void {
-    const currentGeoJson = this.geoJson();
-    if (!currentGeoJson) return;
-
-    const points = this.getStartAndEndPointsFromGeoJson(currentGeoJson.tour);
-    if (!points) return;
-
-    const meetingLon = this.meetingPoint().coordinates[0];
-    const meetingLat = this.meetingPoint().coordinates[1];
-
-    const startLon = points.start[0];
-    const startLat = points.start[1];
-
-    const endLon = points.end[0];
-    const endLat = points.end[1];
-
-    this.links.set({
-      // Meeting point -> GPX start
-      toStart: `${this.getGeoVeloBaseUrl()}&from=${meetingLon},${meetingLat}&to=${startLon},${startLat}`,
-
-      // GPX end -> Meeting point
-      fromEnd: `${this.getGeoVeloBaseUrl()}&from=${endLon},${endLat}&to=${meetingLon},${meetingLat}`,
-    });
+    const links = generateGeoVeloLinks(this.geoJson()?.tour, this.meetingPoint().coordinates);
+    if (links) this.links.set(links);
   }
 
-  readonly geoVeloToMeetingPointLink = computed(() => {
-    const meetingLon = this.meetingPoint().coordinates[0];
-    const meetingLat = this.meetingPoint().coordinates[1];
-    const pos = this.mapLocationService.currentPosition();
-    const fromParam = pos ? `&from=${pos.lng},${pos.lat}` : '';
-
-    return `${this.getGeoVeloBaseUrl()}&to=${meetingLon},${meetingLat}${fromParam}`;
-  });
-
-  private getGeoVeloBaseUrl(): string {
-    const baseUrl = 'https://geovelo.app/fr/route/';
-    const params = new URLSearchParams({
-      'bike-type': 'own',
-      'e-bike': 'false',
-      zone: 'rennes',
-    });
-
-    return `${baseUrl}?${params.toString()}`;
-  }
+  readonly geoVeloToMeetingPointLink = computed(() =>
+    buildGeoVeloToMeetingPointLink(
+      this.meetingPoint().coordinates,
+      this.mapLocationService.currentPosition(),
+    ),
+  );
 }

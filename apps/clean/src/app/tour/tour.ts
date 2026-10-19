@@ -5,9 +5,9 @@ import { ActivatedRoute } from '@angular/router';
 import confetti from 'canvas-confetti';
 import { Position } from 'geojson';
 import type * as L from 'leaflet';
-import { forkJoin } from 'rxjs';
 import { FinishModal } from '../finish-modal/finish-modal';
 import { GpxService } from '../shared/gpx/gpx.service';
+import { getLineCoordinates } from '../shared/gpx/tour-geojson';
 import { loadLeaflet } from '../shared/map/leaflet-loader';
 import { MapArrowService } from '../shared/map/map-arrow.service';
 import { MapLocationService } from '../shared/map/map-location.service';
@@ -76,27 +76,24 @@ export class Tour implements AfterViewInit, OnDestroy {
     void this.initMap();
   }
 
-  // Load the 3 GPX files
+  // Load the tour map data (precomputed GeoJSON asset, or GPX fallback)
   private loadGpxFiles(): void {
     const tourId = this.tourService.tourId();
     if (!tourId) return;
 
-    forkJoin({
-      start: this.gpxService.loadGpxFile(tourId, 'start', this.zoneId),
-      tour: this.gpxService.loadGpxFile(tourId, undefined, this.zoneId),
-      end: this.gpxService.loadGpxFile(tourId, 'end', this.zoneId),
-    }).subscribe({
-      next: (files: { start: string; tour: string; end: string }) => {
-        this.gpxService.setAllGeoJson(files.start, files.tour, files.end);
+    this.gpxService
+      .loadTourGeoJson(tourId, this.zoneId)
+      .then((geoJsonSet) => {
+        if (!geoJsonSet) return;
+        this.gpxService.geoJson.set(geoJsonSet);
         this.gpxService.generateGeoVeloLinks();
         if (this.mapInitialized) {
           void this.updateMapContent();
         } else {
           void this.initMap();
         }
-      },
-      error: (err: Error) => console.error('Error loading GPX files:', err),
-    });
+      })
+      .catch((err: Error) => console.error('Error loading tour geometry:', err));
   }
 
   private async initMap(): Promise<void> {
@@ -143,11 +140,7 @@ export class Tour implements AfterViewInit, OnDestroy {
 
     await this.mapMarkerService.addStartEndMarkers(points.start, points.end, this.layerGroup);
 
-    const routeCoords = await this.gpxService.getCoordinatesFromGpx(
-      this.tourService.tourId()!,
-      gpxType,
-      this.zoneId,
-    );
+    const routeCoords = getLineCoordinates(geoJsonSet[gpxType]);
 
     if (routeCoords && routeCoords.length > 0) {
       await this.mapRouteService.drawCoordinatesRoute(
