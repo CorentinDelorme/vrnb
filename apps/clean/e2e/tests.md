@@ -49,7 +49,7 @@ Route: `/`
 | `should list all 13 walking tours (P1–P13)`                   | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13      |
 | `should display distance in km for V1 (1,1 km)`               | `goto('/')`                 | V1 row contains text "1,1 km"                                  |
 | `should display distance in meters for tours under 1km`       | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m"                             |
-| `should have play button on each tour row`                    | `goto('/')`                 | 34 buttons with `aria-label="Lancer le parcours"`              |
+| `should have play button on each tour row`                    | `goto('/')`                 | 47 buttons with `aria-label="Lancer le parcours"`              |
 | `should show "Voir tous les parcours" link for bike tours`    | `goto('/')` (desktop)       | Link visible in V section, href `/tours/bruz-sud/V`            |
 | `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop)       | Link visible in P section, href `/tours/bruz-sud/P`            |
 
@@ -236,7 +236,7 @@ Uses `test.use({ viewport: { width: 390, height: 844 } })` (iPhone 12 dimensions
 | Test name                                              | Steps                                             | Expected                            |
 | ------------------------------------------------------ | ------------------------------------------------- | ----------------------------------- |
 | `should hide "Voir tous les parcours" links on mobile` | `goto('/')`                                       | Links NOT visible (`max-sm:hidden`) |
-| `should still display all tour rows on mobile`         | `goto('/')`                                       | 34 play buttons present             |
+| `should still display all tour rows on mobile`         | `goto('/')`                                       | 47 play buttons present             |
 | `should render tour page with functional dock buttons` | `goto('/tour/bruz-sud/V1')`                       | "Précédent" and "Suivant" visible   |
 | `should allow step navigation on mobile`               | Full step flow → "Terminer"                       | Finish modal opens                  |
 | `should render map on mobile tours page`               | `goto('/tours/bruz-sud/V')`                       | `div#map` visible                   |

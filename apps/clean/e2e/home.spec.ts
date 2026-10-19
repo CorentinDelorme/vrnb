@@ -121,8 +121,8 @@ test.describe('Home page', () => {
     test('should have play button on each tour row', async ({ page }) => {
       await page.goto('/');
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-      // 15 bike (Bruz Sud) + 6 bike (Vau Gaillard) + 13 walking (Bruz Sud) = 34 total
-      await expect(playButtons).toHaveCount(34);
+      // 15 bike + 13 walking (Bruz Sud) + 6 bike (Vau Gaillard) + 13 bike (Ker Lann) = 47 total
+      await expect(playButtons).toHaveCount(47);
     });
 
     test('should show "Voir tous les parcours" link for bike tours', async ({ page }) => {
