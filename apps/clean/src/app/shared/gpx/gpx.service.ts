@@ -1,6 +1,5 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { FeatureCollection, Position } from 'geojson';
-import { from, Observable } from 'rxjs';
+import { FeatureCollection } from 'geojson';
 
 import { DEFAULT_ZONE_ID, getZone } from '../../zones';
 import { MapLocationService } from '../map/map-location.service';
@@ -13,6 +12,7 @@ import {
   getGeoJsonFromGpx,
   getStartAndEndPointsFromGeoJson,
 } from './gpx';
+import { fetchTourGeoJsonSet } from './tour-geojson';
 
 @Injectable({ providedIn: 'root' })
 export class GpxService {
@@ -30,35 +30,26 @@ export class GpxService {
     fromEnd: '',
   });
 
-  loadGpxFile(tourId: string, type?: 'start' | 'end', zoneId?: string): Observable<string> {
-    return from(fetchGpxFile(tourId, type, zoneId ?? this.zoneId()));
-  }
+  /**
+   * Load the map data for a parcours: the precomputed GeoJSON asset when it
+   * exists, otherwise the GPX files fetched and parsed at runtime.
+   */
+  async loadTourGeoJson(tourId: string, zoneId?: string): Promise<TourGeoJsonSet | null> {
+    const zone = zoneId ?? this.zoneId();
 
-  getGeoJsonFromGpx(gpxStr: string): FeatureCollection {
-    return getGeoJsonFromGpx(gpxStr);
-  }
+    const precomputed = await fetchTourGeoJsonSet(tourId, zone);
+    if (precomputed) return precomputed;
 
-  setAllGeoJson(start: string, tour: string, end: string): void {
-    this.geoJson.set({
-      start: this.getGeoJsonFromGpx(start),
-      tour: this.getGeoJsonFromGpx(tour),
-      end: this.getGeoJsonFromGpx(end),
-    });
-  }
-
-  async getCoordinatesFromGpx(
-    tourId: string,
-    type: 'start' | 'tour' | 'end',
-    zoneId?: string,
-  ): Promise<Position[]> {
-    const gpxStr = await fetchGpxFile(tourId, type === 'tour' ? undefined : type, zoneId);
-    if (!gpxStr) return [];
-    const geoJsonData = this.getGeoJsonFromGpx(gpxStr);
-    const feature = geoJsonData.features[0];
-    if (!feature || feature.geometry.type !== 'LineString') {
-      return [];
-    }
-    return feature.geometry.coordinates;
+    const [start, tour, end] = await Promise.all([
+      fetchGpxFile(tourId, 'start', zone),
+      fetchGpxFile(tourId, undefined, zone),
+      fetchGpxFile(tourId, 'end', zone),
+    ]);
+    return {
+      start: getGeoJsonFromGpx(start),
+      tour: getGeoJsonFromGpx(tour),
+      end: getGeoJsonFromGpx(end),
+    };
   }
 
   getStartAndEndPointsFromGeoJson(geoJson: FeatureCollection): StartEndPoints | undefined {
