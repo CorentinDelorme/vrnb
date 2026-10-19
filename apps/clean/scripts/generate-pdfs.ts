@@ -1,7 +1,7 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { join } from 'path';
 import { toBuffer as qrCodeToBuffer } from 'qrcode';
