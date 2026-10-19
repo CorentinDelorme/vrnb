@@ -96,10 +96,7 @@ async function requestAsset(url: string): Promise<FetchedAsset | null> {
  * Fetch the precomputed GeoJSON asset from the zone-scoped layout, falling
  * back to the legacy flat layout. Returns null when no asset exists.
  */
-async function fetchTourGeoJsonAsset(
-  tourId: string,
-  zoneId: string,
-): Promise<FetchedAsset | null> {
+async function fetchTourGeoJsonAsset(tourId: string, zoneId: string): Promise<FetchedAsset | null> {
   return (
     (await requestAsset(tourGeoJsonAssetUrl(zoneId, tourId))) ??
     (await requestAsset(legacyTourGeoJsonAssetUrl(tourId)))

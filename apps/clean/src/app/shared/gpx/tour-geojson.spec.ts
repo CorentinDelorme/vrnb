@@ -93,7 +93,9 @@ describe('parseTourGeoJsonAsset', () => {
     const set = parseTourGeoJsonAsset(asset);
 
     expect(set).not.toBeNull();
-    expect(set!.start.features).toEqual([expect.objectContaining({ properties: expect.objectContaining({ role: 'start' }) })]);
+    expect(set!.start.features).toEqual([
+      expect.objectContaining({ properties: expect.objectContaining({ role: 'start' }) }),
+    ]);
     expect(set!.tour.features[0].geometry).toEqual(TOUR_LINE.geometry);
     expect(set!.end.features[0].geometry).toEqual(END_LINE.geometry);
   });
