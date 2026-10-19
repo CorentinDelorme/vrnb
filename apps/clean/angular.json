@@ -30,8 +30,7 @@
               {
                 "glob": "**/*",
                 "input": "public"
-              },
-              "src/robots.txt"
+              }
             ],
             "styles": ["src/styles.css", "node_modules/leaflet/dist/leaflet.css"]
           },

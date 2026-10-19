@@ -30,6 +30,14 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
+  /* Start the Next.js dev server on port 4200 (parity with the former Angular dev server). */
+  webServer: {
+    command: 'bun run dev',
+    url: 'http://localhost:4200',
+    reuseExistingServer: !process.env['CI'],
+    timeout: 120_000,
+  },
+
   /* Configure projects for major browsers */
   projects: [
     {

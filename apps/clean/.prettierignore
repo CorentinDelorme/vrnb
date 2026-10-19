@@ -1,5 +1,6 @@
 dist
 .angular
+.next
 node_modules
 coverage
 test-results
