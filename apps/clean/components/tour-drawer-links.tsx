@@ -1,14 +1,9 @@
 'use client';
 
-import {
-  MapsLocationIcon,
-  Pdf02Icon,
-  Route02Icon,
-  Tree06Icon,
-} from '@hugeicons/core-free-icons';
+import { MapsLocationIcon, Pdf02Icon, Route02Icon, Tree06Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { tourGpxUrl, tourPdfUrl } from '../lib/tour-downloads';
 import {
@@ -19,6 +14,7 @@ import {
   type GeoVeloLinks,
 } from '../src/app/shared/gpx/gpx';
 import { fetchTourRouteGeoJson } from '../src/app/shared/gpx/tour-geojson';
+import { getCurrentPosition, subscribeCurrentPosition } from '../src/app/shared/map/map-position';
 import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
 
 /**
@@ -42,6 +38,15 @@ export function TourDrawerLinks() {
   const pathname = usePathname();
   const { zoneId, id } = parseTourPath(pathname);
   const meetingPoint = getZone(zoneId).meetingPoint;
+
+  // Last GPS position tracked by the tour map (parity with the Angular
+  // MapLocationService signal): the meeting-point link departs from it once
+  // available. The server snapshot is always "no position".
+  const currentPosition = useSyncExternalStore(
+    subscribeCurrentPosition,
+    getCurrentPosition,
+    () => null,
+  );
 
   // GeoVelo route links derive from the tour geometry (loaded client-side).
   const [routeLinks, setRouteLinks] = useState<GeoVeloLinks | null>(null);
@@ -81,7 +86,12 @@ export function TourDrawerLinks() {
 
       {id ? (
         <li>
-          <a download href={tourGpxUrl(zoneId, id, 'start')} rel="noopener noreferrer" target="_blank">
+          <a
+            download
+            href={tourGpxUrl(zoneId, id, 'start')}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             <HugeiconsIcon icon={Route02Icon} strokeWidth={1.5} />
             Télécharger le GPX vers le point de départ
           </a>
@@ -97,7 +107,12 @@ export function TourDrawerLinks() {
       ) : null}
       {id ? (
         <li>
-          <a download href={tourGpxUrl(zoneId, id, 'end')} rel="noopener noreferrer" target="_blank">
+          <a
+            download
+            href={tourGpxUrl(zoneId, id, 'end')}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
             <HugeiconsIcon icon={Tree06Icon} strokeWidth={1.5} />
             Télécharger le GPX pour retourner au lieu de rendez-vous
           </a>
@@ -107,12 +122,16 @@ export function TourDrawerLinks() {
       <div className="divider m-0" />
 
       <div className="flex justify-center">
-        <img alt="GeoVelo" className="h-8.5 w-45.5 sm:h-11.75 sm:w-63.75" src="/icons/geovelo.svg" />
+        <img
+          alt="GeoVelo"
+          className="h-8.5 w-45.5 sm:h-11.75 sm:w-63.75"
+          src="/icons/geovelo.svg"
+        />
       </div>
 
       <li>
         <a
-          href={buildGeoVeloToMeetingPointLink(meetingPoint.coordinates)}
+          href={buildGeoVeloToMeetingPointLink(meetingPoint.coordinates, currentPosition)}
           rel="noopener noreferrer"
           target="_blank"
         >
