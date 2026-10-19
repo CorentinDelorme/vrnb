@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 
 import { headerFlags, pageTitle } from '../lib/route-meta';
 import { MenuDrawer } from './menu-drawer';
+import { TourDrawerLinks } from './tour-drawer-links';
 
 /**
  * App header — port of the legacy Angular root template (`app.html`): back
@@ -31,7 +32,11 @@ export function AppHeader() {
 
       <h1 className="text-secondary text-2xl font-bold sm:text-4xl">{title}</h1>
 
-      {flags.menu ? <MenuDrawer className="ml-auto" variant={flags.menu} title={title} /> : null}
+      {flags.menu ? (
+        <MenuDrawer className="ml-auto" variant={flags.menu} title={title}>
+          {flags.menu === 'tour' ? <TourDrawerLinks /> : null}
+        </MenuDrawer>
+      ) : null}
     </header>
   );
 }
