@@ -6,7 +6,7 @@ import { join } from 'path';
 import { toursData } from '../src/app/tours-data';
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
 
-const rootDir = join(__dirname, '..');
+const rootDir = join(import.meta.dirname, '..');
 const gpxDir = join(rootDir, 'public/gpx');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
 

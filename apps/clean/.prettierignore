@@ -6,6 +6,9 @@ coverage
 test-results
 playwright-report
 scripts/.cache
+# Legacy Angular templates: frozen until the Angular sources are removed (ticket #13).
+# The Prettier `angular` parser was dropped with the Next.js migration.
+src/**/*.html
 # Third-party docs, kept as-is
 .claude
 README.md

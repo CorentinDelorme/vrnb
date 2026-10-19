@@ -63,5 +63,4 @@ test.describe('Cross-route navigation', () => {
     await banner.locator('button[aria-label="Lancer le parcours"]').click();
     await expect(page).toHaveURL('/tour/bruz-sud/V1');
   });
-
 });

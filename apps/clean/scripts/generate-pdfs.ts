@@ -10,7 +10,7 @@ import sharp from 'sharp';
 import { toursData } from '../src/app/tours-data';
 import { getZone } from '../src/app/zones';
 
-const rootDir = join(__dirname, '..');
+const rootDir = join(import.meta.dirname, '..');
 const pdfDir = join(rootDir, 'public/pdf');
 const gpxDir = join(rootDir, 'public/gpx');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');

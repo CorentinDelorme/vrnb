@@ -5,7 +5,7 @@ import { PDFDocument } from 'pdf-lib';
 
 import { ZONES } from '../src/app/zones';
 
-const rootDir = join(__dirname, '..');
+const rootDir = join(import.meta.dirname, '..');
 const pdfDir = join(rootDir, 'public/pdf');
 
 const TOUR_PDF_PATTERN = /^[VP]\d+\.pdf$/;
