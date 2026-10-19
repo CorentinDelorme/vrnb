@@ -78,10 +78,6 @@ export function headerFlags(pathname: string): HeaderFlags {
   return {
     showBack: !isHome,
     showLogo: isHome || pathname.startsWith('/manual'),
-    menu: pathname.startsWith('/tours/')
-      ? 'tours'
-      : pathname.startsWith('/tour/')
-        ? 'tour'
-        : null,
+    menu: pathname.startsWith('/tours/') ? 'tours' : pathname.startsWith('/tour/') ? 'tour' : null,
   };
 }
