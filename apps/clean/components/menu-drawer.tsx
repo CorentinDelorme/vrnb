@@ -6,8 +6,8 @@ import type { MenuVariant } from '../lib/route-meta';
 
 /**
  * Menu drawer shell shown in the header on `/tour/…` and `/tours/…` routes.
- * Markup and ids match the legacy Angular drawers (`tour-drawer.html`,
- * `tours-drawer.html`) so the E2E selectors keep working (spec #3).
+ * Markup and ids match the legacy Angular tour and zone drawers so the E2E
+ * selectors keep working (spec #3).
  *
  * The route-specific download links (PDF/GPX/GeoVelo) are passed as `children`
  * by the tour page (ticket #10) and the zone map page (ticket #9); the

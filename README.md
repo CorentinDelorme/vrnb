@@ -7,7 +7,7 @@ Dépôt principal du projet VRNB — un monorepo qui regroupe toutes les applica
 | Dossier | Description |
 |---|---|
 | `apps/web` | Site web de l'association (CMS Payload + Next.js + MongoDB) |
-| `apps/clean` | Application pour organiser des actions de nettoyage des déchets (Angular + Leaflet + cartes GPX) |
+| `apps/clean` | Application pour organiser des actions de nettoyage des déchets (Next.js + Leaflet + cartes GPX) |
 | `packages/ui` | Bibliothèque de composants visuels partagés (React + Storybook) |
 | `packages/web-db` | Service de base de données MongoDB (Docker) |
 | `packages/eslint-config` | Configuration partagée pour la qualité du code |

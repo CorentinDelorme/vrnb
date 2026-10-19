@@ -111,7 +111,9 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
           </form>
 
           <h3 className="text-lg font-bold">Merci pour votre participation !</h3>
-          <p className="py-4">Allez voir les organisateurs pour faire peser les déchets ramassés.</p>
+          <p className="py-4">
+            Allez voir les organisateurs pour faire peser les déchets ramassés.
+          </p>
         </div>
       </dialog>
     </div>

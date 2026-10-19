@@ -9,7 +9,7 @@ L'association qui organise les actions de ramassage de déchets à Bruz.
 _Avoid_: Vélo & Randonnée Nature Bruz
 
 **Parcours**:
-Une itinéraire de ramassage de déchets défini au sein d'une Zone, comportant un début, une section de nettoyage et une fin.
+Un itinéraire de ramassage de déchets défini au sein d'une Zone, comportant un début, une section de nettoyage et une fin.
 _Avoid_: Tour, route, itinéraire de vélo
 
 **Type de parcours**:
@@ -47,6 +47,14 @@ _Avoid_: parcours sauvegardé, progression
 **Fiche**:
 Le document PDF imprimable résumant un Parcours (carte, tracé, QR code).
 _Avoid_: PDF, dossier
+
+**Menu**:
+Le tiroir ouvert depuis l'en-tête par le bouton « Menu », qui regroupe les documents et les itinéraires d'un Parcours : Fiche, traces GPX et liens GeoVelo.
+_Avoid_: tiroir, drawer, barre latérale
+
+**GeoVelo**:
+Le service externe qui fournit les liens d'itinéraire à vélo (depuis ma position ou vers le Point de rendez-vous), proposés dans le Menu.
+_Avoid_: carte GPS, planificateur
 
 **Mode d'emploi**:
 Le guide illustré expliquant comment utiliser l'application pendant un Parcours.

@@ -7,7 +7,7 @@ import { pageTitle } from '../../lib/route-meta';
 
 /**
  * `/manual` — the illustrated mode d'emploi (spec #3, US 5 & 26). Faithful port
- * of the legacy Angular `src/app/manual/manual.html`: four cards (principle,
+ * of the legacy Angular manual page: four cards (principle,
  * P2 walkthrough with screenshots, resume later, Menu drawer), the seven
  * screenshots under `/manual/`, and the back-to-home button. The visible `<h1>`
  * comes from the root layout header; the `<title>` from `pageTitle('/manual')`.
@@ -33,12 +33,9 @@ export default function ManualPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
       <section className="card bg-base-100 shadow-md">
         <div className="card-body">
-          <h2 className="card-title text-secondary text-xl sm:text-2xl">
-            Le principe en 3 temps
-          </h2>
+          <h2 className="card-title text-secondary text-xl sm:text-2xl">Le principe en 3 temps</h2>
           <p className="text-sm sm:text-base">
-            Chaque parcours se fait en 3 temps :
-            <strong>aller</strong>
+            Chaque parcours se fait en 3 temps :<strong>aller</strong>
             jusqu&apos;au départ depuis le lieu de rendez-vous,
             <strong>nettoyer</strong>
             le parcours en ramassant les déchets, puis
@@ -160,8 +157,7 @@ export default function ManualPage() {
               <p className="pb-2 text-sm sm:text-base">
                 <strong>3. Deuxième étape : le nettoyage.</strong>
                 La carte vous montre le parcours de
-                <strong>800 mètres</strong>
-                : ramassez les déchets tout le long, puis appuyez sur
+                <strong>800 mètres</strong>: ramassez les déchets tout le long, puis appuyez sur
                 <strong>Suivant</strong>
                 en bas de l&apos;écran.
               </p>
@@ -182,8 +178,7 @@ export default function ManualPage() {
               <p className="pb-2 text-sm sm:text-base">
                 <strong>4. Troisième étape : le retour.</strong>
                 La carte vous montre le chemin pour revenir au
-                <strong>lieu de rendez-vous</strong>
-                : une fois arrivé, appuyez sur
+                <strong>lieu de rendez-vous</strong>: une fois arrivé, appuyez sur
                 <strong>Terminer</strong>
                 en bas de l&apos;écran pour valider.
               </p>
@@ -226,12 +221,11 @@ export default function ManualPage() {
           <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
             <li>
               Quand vous revenez sur l&apos;accueil, un
-              <strong>message apparaît tout en haut</strong>
-              : il vous propose de reprendre votre parcours.
+              <strong>message apparaît tout en haut</strong>: il vous propose de reprendre votre
+              parcours.
             </li>
             <li>
-              Le message vous dit où vous étiez :
-              <strong>étape 1 sur 3</strong>
+              Le message vous dit où vous étiez :<strong>étape 1 sur 3</strong>
               (le chemin pour aller au départ),
               <strong>étape 2 sur 3</strong>
               (le ramassage des déchets) ou
@@ -241,13 +235,12 @@ export default function ManualPage() {
             <li>
               Appuyez sur le
               <strong>bouton de lecture du message</strong>
-              <InlineIcon icon={PlayIcon} />
-              : vous retrouvez votre carte exactement là où vous l&apos;aviez laissée.
+              <InlineIcon icon={PlayIcon} />: vous retrouvez votre carte exactement là où vous
+              l&apos;aviez laissée.
             </li>
             <li>
               Une fois le parcours terminé, le message
-              <strong>disparaît</strong>
-              : il n&apos;y a plus rien à reprendre.
+              <strong>disparaît</strong>: il n&apos;y a plus rien à reprendre.
             </li>
           </ul>
         </div>
