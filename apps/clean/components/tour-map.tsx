@@ -1,13 +1,53 @@
+'use client';
+
+import type { Position } from 'geojson';
+import type * as L from 'leaflet';
+import { useEffect, useRef, useState } from 'react';
+
+import {
+  getFallbackRouteCoords,
+  getSegmentForStep,
+  getStepDistance,
+  parseDebugParams,
+} from '../lib/tour-map';
+import {
+  fetchGpxFile,
+  getGeoJsonFromGpx,
+  getStartAndEndPointsFromGeoJson,
+} from '../src/app/shared/gpx/gpx';
+import { fetchTourGeoJsonSet, getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
+import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
+import { createLayerGroup } from '../src/app/shared/map/map';
+import { addArrows } from '../src/app/shared/map/map-arrow';
+import { createLocationTracker, LocationTracker } from '../src/app/shared/map/map-location';
+import { addStartEndMarkers } from '../src/app/shared/map/map-marker';
+import { setCurrentPosition } from '../src/app/shared/map/map-position';
+import {
+  drawCoordinatesRoute,
+  getDashedRouteStyle,
+  getDefaultRouteStyle,
+} from '../src/app/shared/map/map-route';
+import type { TourGeoJsonSet } from '../src/app/shared/map/map.types';
+import { findTour } from '../src/app/tours-queries';
+import { getZone } from '../src/app/zones';
+import { LeafletMap } from './leaflet-map';
+
 /**
- * Map container of the tour page — the seam left open for ticket #11 (route
- * drawing, arrowheads, GPS tracking, debug simulation). It renders the exact
- * legacy markup (`tour.html`: `div#map` with the same height classes) so the
- * E2E selectors and layout keep working while the Leaflet wiring lands.
- *
- * #11 receives the parcours context through `zoneId`/`tourId`/`step` (the
- * step drives which segment — start / tour / end — is drawn) and owns the
- * client-side Leaflet lifecycle; nothing else on this page touches the map.
+ * Map of the tour page — port of the legacy Angular `tour/tour.ts` map wiring
+ * (spec #3, ticket #11): draws the segment of the current step (Début → start,
+ * Nettoyage → tour, Fin → end) with its start/end markers, direction arrows and
+ * a dashed fallback to the meeting point when the segment has no route
+ * coordinates; then tracks the GPS position (watch `map.locate` with an
+ * accuracy circle) or simulates it in debug mode (`?debug=true&timeout=<ms>`),
+ * walking along the step's coordinates.
  */
+
+/** Container height of the legacy tour template (`tour.html`). */
+const TOUR_MAP_CLASS = 'z-0 h-[calc(100dvh-208px)] w-full overflow-hidden sm:h-[calc(100vh-296px)]';
+
+/** Max zoom of the automatic view-following on each located position. */
+const TRACKING_MAX_ZOOM = 16;
+
 interface TourMapProps {
   readonly zoneId: string;
   readonly tourId: string;
@@ -15,14 +55,131 @@ interface TourMapProps {
   readonly step: number;
 }
 
+/**
+ * Load the parcours geometry: the precomputed GeoJSON asset when it exists,
+ * otherwise the three GPX traces fetched and parsed at runtime (parity with
+ * the legacy `GpxService.loadTourGeoJson`).
+ */
+async function loadTourGeoJsonSet(tourId: string, zoneId: string): Promise<TourGeoJsonSet> {
+  const precomputed = await fetchTourGeoJsonSet(tourId, zoneId);
+  if (precomputed) return precomputed;
+
+  const [start, tour, end] = await Promise.all([
+    fetchGpxFile(tourId, 'start', zoneId),
+    fetchGpxFile(tourId, undefined, zoneId),
+    fetchGpxFile(tourId, 'end', zoneId),
+  ]);
+  return {
+    start: getGeoJsonFromGpx(start),
+    tour: getGeoJsonFromGpx(tour),
+    end: getGeoJsonFromGpx(end),
+  };
+}
+
+/** Fit the view to the drawn route (parity with the Angular fitBounds helper). */
+async function fitBoundsToCoords(map: L.Map, coords: Position[]): Promise<void> {
+  const leaflet = await loadLeaflet();
+  const bounds = leaflet.latLngBounds(coords.map((c) => [c[1], c[0]] as [number, number]));
+  map.fitBounds(bounds);
+}
+
 export function TourMap({ zoneId, tourId, step }: TourMapProps) {
-  return (
-    <div
-      className="z-0 h-[calc(100dvh-208px)] w-full overflow-hidden sm:h-[calc(100vh-296px)]"
-      data-zone-id={zoneId}
-      data-step={step}
-      data-tour-id={tourId}
-      id="map"
-    />
-  );
+  const [map, setMap] = useState<L.Map | null>(null);
+  const [geoJsonSet, setGeoJsonSet] = useState<TourGeoJsonSet | null>(null);
+
+  // One tracker for the component's lifetime, mirroring the Angular root
+  // service singleton; it publishes positions to the shared store read by the
+  // tour drawer's GeoVelo "depuis ma position" link.
+  const trackerRef = useRef<LocationTracker | null>(null);
+  if (trackerRef.current === null) {
+    trackerRef.current = createLocationTracker({
+      onPositionFound: (latlng) => setCurrentPosition({ lat: latlng.lat, lng: latlng.lng }),
+    });
+  }
+  const tracker = trackerRef.current;
+
+  // Load the parcours geometry once per tour.
+  useEffect(() => {
+    let cancelled = false;
+
+    void loadTourGeoJsonSet(tourId, zoneId)
+      .then((set) => {
+        if (!cancelled && set.tour) setGeoJsonSet(set);
+      })
+      .catch((err: Error) => console.error('Error loading tour geometry:', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tourId, zoneId]);
+
+  // Draw the current step's segment and (re)start tracking whenever the map,
+  // the geometry or the step changes (parity with Angular updateMapContent).
+  useEffect(() => {
+    if (!map || !geoJsonSet) return;
+
+    let cancelled = false;
+    let layerGroup: L.LayerGroup | null = null;
+
+    void (async () => {
+      const segment = getSegmentForStep(step);
+      const segmentGeoJson = geoJsonSet[segment];
+      const points = getStartAndEndPointsFromGeoJson(segmentGeoJson);
+      if (!points) return;
+
+      const group = await createLayerGroup(map);
+      if (cancelled) {
+        map.removeLayer(group);
+        return;
+      }
+      layerGroup = group;
+      tracker.stopTracking();
+
+      try {
+        // 1. Start/end markers of the drawn segment.
+        await addStartEndMarkers(points.start, points.end, group);
+
+        // 2. Solid route + direction arrows, or dashed fallback to the
+        //    meeting point when the segment holds no route coordinates.
+        const routeCoords = getLineCoordinates(segmentGeoJson);
+        const hasRoute = routeCoords.length > 0;
+        const drawnCoords = hasRoute
+          ? routeCoords
+          : getFallbackRouteCoords(segment, getZone(zoneId).meetingPoint.coordinates, points);
+
+        await drawCoordinatesRoute(
+          drawnCoords,
+          group,
+          hasRoute ? getDefaultRouteStyle() : getDashedRouteStyle(),
+        );
+        if (hasRoute) {
+          const tour = findTour(zoneId, tourId);
+          await addArrows(routeCoords, group, { distanceKm: getStepDistance(tour, step) });
+        }
+
+        // 3. Fit the view to the drawn route.
+        await fitBoundsToCoords(map, drawnCoords);
+        if (cancelled) return;
+
+        // 4. GPS tracking, or debug simulation walking along the route.
+        const { debug, timeout } = parseDebugParams(window.location.search);
+        tracker.startTracking(map, {
+          debug,
+          debugTimeout: timeout,
+          maxZoom: TRACKING_MAX_ZOOM,
+          debugCoords: routeCoords,
+        });
+      } catch (err) {
+        console.error('Error drawing tour map:', err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      tracker.stopTracking();
+      if (layerGroup) map.removeLayer(layerGroup);
+    };
+  }, [map, geoJsonSet, step, tracker, zoneId, tourId]);
+
+  return <LeafletMap className={TOUR_MAP_CLASS} minZoom={13} onReady={setMap} />;
 }
