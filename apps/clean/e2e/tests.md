@@ -89,6 +89,20 @@ Routes: `/tours/bruz-sud/V`, `/tours/bruz-sud/P`
 | `should show PDF download link with correct href`     | Open drawer                 | `href="/pdf/bruz-sud/Suivi_parcours_a_pied.pdf"` |
 | `should show map PDF download link with correct href` | Open drawer                 | `href="/pdf/bruz-sud/Carte_parcours_a_pied.pdf"` |
 
+### `describe('Tours map — Drawing parity')`
+
+| Test name                                                                   | Steps                       | Expected                                                                                          |
+| --------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `should draw one distinctly colored route per tour with markers and labels` | `goto('/tours/bruz-sud/V')` | ≥15 polylines with ≥10 distinct stroke colors, ≥15 start pins, ≥15 end pins, ≥15 `div.tour-label` |
+| `should expose the fullscreen control`                                      | `goto('/tours/bruz-sud/V')` | `.leaflet-control-zoom-fullscreen` visible                                                        |
+
+### `describe('Tours map — Invalid params')`
+
+| Test name                                        | Steps                       | Expected                      |
+| ------------------------------------------------ | --------------------------- | ----------------------------- |
+| `should return 404 for an unknown zone`          | `goto('/tours/nowhere/V')`  | HTTP 404 + "Page introuvable" |
+| `should return 404 for an unknown practice type` | `goto('/tours/bruz-sud/X')` | HTTP 404 + "Page introuvable" |
+
 ---
 
 ## File: `e2e/tour.spec.ts`
