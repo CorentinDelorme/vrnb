@@ -2,48 +2,42 @@ import { Injectable } from '@angular/core';
 import { FeatureCollection, Position } from 'geojson';
 import type * as L from 'leaflet';
 
-import { loadLeaflet } from './leaflet-loader';
+import {
+  createRouteLine,
+  drawCoordinatesRoute,
+  drawGeoJsonRoute,
+  getDashedRouteStyle,
+  getDefaultRouteStyle,
+} from './map-route';
 import { RouteStyle } from './map.types';
 
 @Injectable({ providedIn: 'root' })
 export class MapRouteService {
   getDefaultRouteStyle(): RouteStyle {
-    return { color: '#0058ca', weight: 4 };
+    return getDefaultRouteStyle();
   }
 
   getDashedRouteStyle(): RouteStyle {
-    return { color: '#0058ca', weight: 4, dashArray: '10, 10' };
+    return getDashedRouteStyle();
   }
 
   createRouteLine(coords: Position[]): GeoJSON.Feature {
-    return {
-      type: 'Feature',
-      properties: {},
-      geometry: {
-        type: 'LineString',
-        coordinates: coords,
-      },
-    };
+    return createRouteLine(coords);
   }
 
-  async drawGeoJsonRoute(
+  drawGeoJsonRoute(
     geoJson: FeatureCollection | GeoJSON.Feature,
     target: L.Map | L.LayerGroup,
     style: RouteStyle,
   ): Promise<L.GeoJSON> {
-    const L = await loadLeaflet();
-    const layer = L.geoJSON(geoJson as GeoJSON.GeoJsonObject, {
-      style: () => style,
-    }).addTo(target);
-    return layer;
+    return drawGeoJsonRoute(geoJson, target, style);
   }
 
-  async drawCoordinatesRoute(
+  drawCoordinatesRoute(
     coords: Position[],
     target: L.Map | L.LayerGroup,
     style: RouteStyle,
   ): Promise<L.GeoJSON> {
-    const routeLine = this.createRouteLine(coords);
-    return this.drawGeoJsonRoute(routeLine, target, style);
+    return drawCoordinatesRoute(coords, target, style);
   }
 }

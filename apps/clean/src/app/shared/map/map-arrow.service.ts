@@ -2,38 +2,16 @@ import { Injectable } from '@angular/core';
 import { Position } from 'geojson';
 import type * as L from 'leaflet';
 
-import { loadLeaflet } from './leaflet-loader';
+import { addArrows, computeFrequency } from './map-arrow';
 import { ArrowOptions } from './map.types';
 
 @Injectable({ providedIn: 'root' })
 export class MapArrowService {
   computeFrequency(distanceKm: number): number {
-    const totalDistanceMeters = distanceKm * 1000;
-
-    if (totalDistanceMeters < 1000) {
-      return 125;
-    } else if (totalDistanceMeters < 1500) {
-      return 200;
-    } else if (totalDistanceMeters < 2000) {
-      return 250;
-    }
-    return 300;
+    return computeFrequency(distanceKm);
   }
 
-  async addArrows(
-    coords: Position[],
-    layerGroup: L.LayerGroup,
-    options: ArrowOptions,
-  ): Promise<void> {
-    const L = await loadLeaflet();
-    await import('leaflet-arrowheads');
-    const polyline = L.polyline(coords.map((c) => L.latLng(c[1], c[0]))).addTo(layerGroup);
-    const frequency = this.computeFrequency(options.distanceKm);
-
-    polyline.arrowheads({
-      frequency: `${frequency}m`,
-      size: '25%',
-      fill: true,
-    });
+  addArrows(coords: Position[], layerGroup: L.LayerGroup, options: ArrowOptions): Promise<void> {
+    return addArrows(coords, layerGroup, options);
   }
 }

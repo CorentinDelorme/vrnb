@@ -1,38 +1,32 @@
-import { TestBed } from '@angular/core/testing';
-import { MapRouteService } from './map-route.service';
+import { describe, expect, it } from 'vitest';
 
-describe('MapRouteService', () => {
-  let service: MapRouteService;
+import { createRouteLine, getDashedRouteStyle, getDefaultRouteStyle } from './map-route';
 
-  beforeEach(() => {
-    TestBed.configureTestingModule({});
-    service = TestBed.inject(MapRouteService);
-  });
-
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-
+describe('getDefaultRouteStyle', () => {
   it('should return default route style', () => {
-    const style = service.getDefaultRouteStyle();
+    const style = getDefaultRouteStyle();
     expect(style.color).toBe('#0058ca');
     expect(style.weight).toBe(4);
     expect(style.dashArray).toBeUndefined();
   });
+});
 
+describe('getDashedRouteStyle', () => {
   it('should return dashed route style', () => {
-    const style = service.getDashedRouteStyle();
+    const style = getDashedRouteStyle();
     expect(style.color).toBe('#0058ca');
     expect(style.weight).toBe(4);
     expect(style.dashArray).toBe('10, 10');
   });
+});
 
+describe('createRouteLine', () => {
   it('should create a valid GeoJSON Feature from coordinates', () => {
     const coords = [
       [-1.746, 48.016],
       [-1.747, 48.017],
     ];
-    const feature = service.createRouteLine(coords);
+    const feature = createRouteLine(coords);
 
     expect(feature.type).toBe('Feature');
     expect(feature.geometry.type).toBe('LineString');

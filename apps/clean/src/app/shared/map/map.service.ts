@@ -1,49 +1,22 @@
 import { Injectable } from '@angular/core';
 import type * as L from 'leaflet';
 
-import { loadLeaflet } from './leaflet-loader';
+import { clearLayers, createLayerGroup, createMap, MAX_BOUNDS } from './map';
 import type { MapInitOptions } from './map.types';
 
 @Injectable({ providedIn: 'root' })
 export class MapService {
-  readonly maxBounds: L.LatLngBoundsExpression = [
-    [47.974278, -1.789123], // Southwest corner
-    [48.062, -1.697445], // Northeast corner
-  ];
+  readonly maxBounds: L.LatLngBoundsExpression = MAX_BOUNDS;
 
-  async createMap(options: MapInitOptions): Promise<L.Map> {
-    const leaflet = await loadLeaflet();
-    const map = new leaflet.Map(options.elementId);
-
-    new leaflet.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: 'Map data &copy; <a href="http://www.osm.org">OpenStreetMap</a>',
-      minZoom: options.minZoom,
-      zIndex: 0,
-    }).addTo(map);
-
-    if (options.fullscreen) {
-      const { FullScreen } = await import('leaflet.fullscreen');
-      map.addControl(
-        new FullScreen({
-          position: 'topleft',
-        }),
-      );
-    }
-
-    map.setMaxBounds(options.maxBounds);
-
-    return map;
+  createMap(options: MapInitOptions): Promise<L.Map> {
+    return createMap(options);
   }
 
-  async createLayerGroup(map: L.Map): Promise<L.LayerGroup> {
-    const leaflet = await loadLeaflet();
-    const layerGroup = new leaflet.LayerGroup();
-    layerGroup.addTo(map);
-    return layerGroup;
+  createLayerGroup(map: L.Map): Promise<L.LayerGroup> {
+    return createLayerGroup(map);
   }
 
-  async clearLayers(map: L.Map, layerGroup: L.LayerGroup): Promise<L.LayerGroup> {
-    map.removeLayer(layerGroup);
-    return this.createLayerGroup(map);
+  clearLayers(map: L.Map, layerGroup: L.LayerGroup): Promise<L.LayerGroup> {
+    return clearLayers(map, layerGroup);
   }
 }
