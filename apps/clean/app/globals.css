@@ -1,6 +1,5 @@
-/* Global styles — ported from the legacy Angular `src/styles.css` (spec #3):
- * Leaflet CSS (global, was wired through angular.json), Tailwind 4 + DaisyUI 5
- * with the two vrnb themes, and the legacy page background. */
+/* Global styles — Leaflet CSS (global), Tailwind 4 + DaisyUI 5
+ * with the two vrnb themes, and the legacy page background (spec #3). */
 @import 'leaflet/dist/leaflet.css';
 @import 'leaflet.fullscreen/dist/Control.FullScreen.css';
 

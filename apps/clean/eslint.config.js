@@ -11,6 +11,6 @@ export default [
     },
   },
   {
-    ignores: ['.angular/**', 'out-tsc/**', 'test-results/**', 'playwright-report/**'],
+    ignores: ['out-tsc/**', 'test-results/**', 'playwright-report/**'],
   },
 ];
