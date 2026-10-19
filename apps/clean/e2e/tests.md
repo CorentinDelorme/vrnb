@@ -21,6 +21,45 @@
 
 ---
 
+## Migration notes (Angular → Next.js)
+
+Deltas to the original 88-test plan, each justified by an entry of spec #3:
+
+1. **`should have play button on each tour row` (home) and `should still display all tour rows on
+mobile`: expected count 34 → 47.** Stale assertion, not a migration change: commit `2155965`
+   (2026-10-18, "feat: add bruz ker lann tours") added the `bruz-ker-lann` zone and its 13 bike tours
+   to `ZONES` / `toursData` but the assertion, written in `222dcd9` (2026-10-16), was never updated.
+   Both commits predate the migration baseline `c2ae89e`, so the Angular reference itself rendered 47
+   play buttons at baseline: `tours-list.html` loops over **all** `tourService.zones` — 28 Bruz Sud
+   (15 V + 13 P) + 6 Vau Gaillard + 13 Ker Lann = 47 — with one `button[aria-label="Lancer le parcours"]`
+   per `li.list-row`. `src/app/tours-data.ts` confirms 47 tour entries (13 / 28 / 6 per zone). The
+   updated expectation matches both the Angular reference and the Next app.
+2. **New tests beyond the 88** (same seam — black-box page DOM, no new seam):
+   - `Tours map — Drawing parity` (2 tests): the original plan asserted only `div#map` visibility;
+     parity for US 8–12 needs evidence that each tour is drawn as a distinct colored trace with
+     start/end pins, labels and the fullscreen control.
+   - `Tours map — Invalid params` (2 tests) and `App` 404 test (1 test): cover the **only sanctioned
+     behavioral delta** (US 25 / route contract: unknown URL or invalid parameter → `notFound()`,
+     HTTP 404 + "Page introuvable"). The legacy SPA answered a broken 200 shell, so there is no legacy
+     behavior to preserve here.
+
+Totals: **93 tests per browser** (88 original + 5 added) × chromium + firefox = **186**.
+
+---
+
+## File: `e2e/app.spec.ts`
+
+Route: `/` (smoke) and unknown URLs (404)
+
+### `describe('App')`
+
+| Test name                                      | Steps                             | Expected                      |
+| ---------------------------------------------- | --------------------------------- | ----------------------------- |
+| `should load the home page`                    | `goto('/')`                       | `h1` visible                  |
+| `should return a clean 404 for an unknown URL` | `goto('/cette-page-nexiste-pas')` | HTTP 404 + "Page introuvable" |
+
+---
+
 ## File: `e2e/home.spec.ts`
 
 Route: `/`
