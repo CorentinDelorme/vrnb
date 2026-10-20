@@ -75,7 +75,7 @@ test.describe('Cross-route navigation', () => {
 
     const lastRow = page.locator('li.list-row').last();
     await lastRow.locator('button[aria-label="Lancer le parcours"]').click();
-    await expect(page).toHaveURL(/^\/tour\//);
+    await expect(page).toHaveURL(/\/tour\/[\w-]+\/[\w-]+/);
 
     // App Router default (parity intent: scroll restored to the top on each
     // navigation) — no custom scroll code, so browser-back is unaffected.
