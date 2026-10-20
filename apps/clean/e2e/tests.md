@@ -288,6 +288,20 @@ Uses `test.use({ viewport: { width: 390, height: 844 } })` (iPhone 12 dimensions
 
 ---
 
+## File: `e2e/manual.spec.ts`
+
+### `describe('Manual')`
+
+Guards the JSX whitespace pitfall (space stripped between an inline element and the
+following text when it contains `&apos;` — cf. the note in `app/manual/page.tsx`).
+Vitest cannot reproduce it (its JSX transform keeps the space), hence this E2E check.
+
+| Test name                                             | Steps             | Expected                                                     |
+| ----------------------------------------------------- | ----------------- | ------------------------------------------------------------ |
+| `keeps spaces around bold words in the rendered copy` | `goto('/manual')` | 15 spaced French phrases present in the rendered `main` text |
+
+---
+
 ## File: `e2e/accessibility.spec.ts`
 
 ### `describe('Accessibility')`
