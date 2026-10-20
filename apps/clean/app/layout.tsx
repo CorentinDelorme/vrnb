@@ -12,6 +12,11 @@ import './globals.css';
  * `<html lang="fr">`, the restrictive viewport (kept for map pinch-zoom and axe
  * parity), the favicon, the header, and the Vercel analytics/insights hooks.
  * The DaisyUI `vrnb`/`vrnb-dark` themes and Leaflet CSS load from `globals.css`.
+ *
+ * Scroll restoration: the App Router scrolls back to the top on every
+ * navigation (the spec #3 parity intent: scroll restored to the top when
+ * navigating), asserted by `e2e/navigation.spec.ts`. No custom scroll
+ * handling lives here, so browser-back keeps the browser's own restoration.
  */
 export const metadata: Metadata = {
   title: HOME_TITLE,
@@ -27,7 +32,11 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-export default function RootLayout({ children }: { readonly children: ReactNode }) {
+interface RootLayoutProps {
+  readonly children: ReactNode;
+}
+
+export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="fr" className="h-screen w-screen">
       <body className="h-screen w-screen">

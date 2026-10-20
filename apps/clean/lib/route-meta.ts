@@ -1,4 +1,7 @@
+import type { TourType } from '../src/app/tours-queries';
+import { isTourType } from '../src/app/tours-queries';
 import { ZONES } from '../src/app/zones';
+import { matchTourPath, matchZoneMapPath } from './route-paths';
 
 /**
  * Route-derived page metadata, equivalent of the legacy Angular `Title` service
@@ -15,7 +18,7 @@ export const HOME_TITLE = 'Action ramassage des déchets';
 const MANUAL_TITLE = `${HOME_TITLE} - Mode d'emploi`;
 
 /** `P` = à pied, `V` = à vélo (see GLOSSARY: Type de parcours). */
-const PRACTICE_LABELS: Record<string, string> = {
+const PRACTICE_LABELS: Record<TourType, string> = {
   P: 'à pied',
   V: 'à vélo',
 };
@@ -50,21 +53,21 @@ export function pageTitle(pathname: string): string {
     return MANUAL_TITLE;
   }
 
-  const zoneMapMatch = /^\/tours\/([^/]+)\/([^/]+)\/?$/.exec(pathname);
-  if (zoneMapMatch) {
-    const zone = ZONES.find((candidate) => candidate.id === zoneMapMatch[1]);
-    const practice = PRACTICE_LABELS[zoneMapMatch[2]];
+  const zoneMap = matchZoneMapPath(pathname);
+  if (zoneMap) {
+    const zone = ZONES.find((candidate) => candidate.id === zoneMap.zoneId);
+    const practice = isTourType(zoneMap.type) ? PRACTICE_LABELS[zoneMap.type] : undefined;
     if (zone && practice) {
       return `${zone.name} - Parcours ${practice}`;
     }
     return HOME_TITLE;
   }
 
-  const tourMatch = /^\/tour\/([^/]+)\/([^/]+)\/?$/.exec(pathname);
-  if (tourMatch) {
-    const zone = ZONES.find((candidate) => candidate.id === tourMatch[1]);
+  const tourPath = matchTourPath(pathname);
+  if (tourPath) {
+    const zone = ZONES.find((candidate) => candidate.id === tourPath.zoneId);
     if (zone) {
-      return `${zone.name} - Parcours ${tourMatch[2]}`;
+      return `${zone.name} - Parcours ${tourPath.id}`;
     }
     return HOME_TITLE;
   }

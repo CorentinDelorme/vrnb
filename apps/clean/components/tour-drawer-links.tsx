@@ -5,15 +5,14 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
+import { matchTourPath } from '../lib/route-paths';
 import { tourGpxUrl, tourPdfUrl } from '../lib/tour-downloads';
 import {
   buildGeoVeloToMeetingPointLink,
-  fetchGpxFile,
   generateGeoVeloLinks,
-  getGeoJsonFromGpx,
   type GeoVeloLinks,
 } from '../src/app/shared/gpx/gpx';
-import { fetchTourRouteGeoJson } from '../src/app/shared/gpx/tour-geojson';
+import { loadTourRouteGeoJson } from '../src/app/shared/gpx/tour-geometry';
 import { getCurrentPosition, subscribeCurrentPosition } from '../src/app/shared/map/map-position';
 import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
 
@@ -28,15 +27,14 @@ import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
  * on `/tour/…` routes (see `headerFlags`).
  */
 
-/** Zone and tour id parsed from the current "/tour/:zoneId/:id" pathname. */
-function parseTourPath(pathname: string): { zoneId: string; id?: string } {
-  const match = pathname.match(/\/tour\/([^/]+)\/([^/?]+)/);
-  return { zoneId: match?.[1] ?? DEFAULT_ZONE_ID, id: match?.[2] };
-}
-
 export function TourDrawerLinks() {
   const pathname = usePathname();
-  const { zoneId, id } = parseTourPath(pathname);
+  // The zone and tour id are parsed from the pathname exactly like the Angular
+  // drawer did from `router.url`; the DEFAULT_ZONE_ID fallback only applies
+  // off a `/tour/…` route, where the header mounts no drawer anyway.
+  const tourPath = matchTourPath(pathname);
+  const zoneId = tourPath?.zoneId ?? DEFAULT_ZONE_ID;
+  const id = tourPath?.id;
   const meetingPoint = getZone(zoneId).meetingPoint;
 
   // Last GPS position tracked by the tour map (parity with the Angular
@@ -57,11 +55,9 @@ export function TourDrawerLinks() {
 
     void (async () => {
       // Precomputed asset first, GPX runtime fallback (parity with GpxService).
-      const tourGeoJson =
-        (await fetchTourRouteGeoJson(id, zoneId)) ??
-        getGeoJsonFromGpx(await fetchGpxFile(id, undefined, zoneId));
-      const links = generateGeoVeloLinks(tourGeoJson, meetingPoint.coordinates);
-      if (!cancelled) setRouteLinks(links ?? null);
+      const tourGeoJson = await loadTourRouteGeoJson({ zoneId, tourId: id });
+      if (!tourGeoJson || cancelled) return;
+      setRouteLinks(generateGeoVeloLinks(tourGeoJson, meetingPoint.coordinates) ?? null);
     })().catch(() => {
       // Missing geometry: the two route links simply stay hidden (legacy `@if`).
     });

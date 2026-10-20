@@ -1,8 +1,8 @@
 import { gpx as gpxToGeoJson } from '@tmcw/togeojson';
-import { FeatureCollection, Position } from 'geojson';
+import type { FeatureCollection, Position } from 'geojson';
 
 import { DEFAULT_ZONE_ID } from '../../zones';
-import { StartEndPoints } from '../map/map.types';
+import type { StartEndPoints } from '../map/map.types';
 
 export interface GeoVeloLinks {
   readonly toStart: string;

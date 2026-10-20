@@ -6,6 +6,7 @@ import confetti from 'canvas-confetti';
 import { useEffect, useRef, useState } from 'react';
 
 import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage';
+import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
 
 /**
@@ -20,7 +21,7 @@ import { TourMap } from './tour-map';
 const STEP_LABELS = ['Début', 'Nettoyage', 'Fin'] as const;
 
 /** DaisyUI step classes: reached steps are secondary, the current one is too. */
-function stepClassName(step: number, index: number): string {
+function stepClassName(step: TourStep, index: number): string {
   const classes = ['step'];
   if (step >= index) classes.push('step-secondary');
   if (step === index) classes.push('text-secondary');
@@ -33,7 +34,7 @@ interface TourViewProps {
 }
 
 export function TourView({ zoneId, tourId }: TourViewProps) {
-  const [step, setStepState] = useState(0);
+  const [step, setStepState] = useState<TourStep>(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   // Restore the saved step when it matches this tour, otherwise record the
@@ -47,17 +48,18 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
     }
   }, [tourId, zoneId]);
 
-  const setStep = (next: number): void => {
+  const setStep = (next: TourStep): void => {
     setStepState(next);
     saveTour(tourId, next, zoneId);
   };
 
   const prevStep = (): void => {
-    if (step > 0) setStep(step - 1);
+    // The range guards keep the arithmetic inside the TourStep union.
+    if (step > 0) setStep((step - 1) as TourStep);
   };
 
   const nextStep = (): void => {
-    if (step < STEP_LABELS.length - 1) setStep(step + 1);
+    if (step < STEP_LABELS.length - 1) setStep((step + 1) as TourStep);
   };
 
   const finish = (): void => {

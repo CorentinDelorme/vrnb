@@ -1,10 +1,9 @@
 'use client';
 
-import type { FeatureCollection } from 'geojson';
 import type * as L from 'leaflet';
 
-import { fetchGpxFile, getGeoJsonFromGpx } from '../src/app/shared/gpx/gpx';
-import { fetchTourRouteGeoJson, getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
+import { getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
+import { loadTourRouteGeoJson } from '../src/app/shared/gpx/tour-geometry';
 import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
 import { addLabelMarker, addStartEndMarkers } from '../src/app/shared/map/map-marker';
 import { drawGeoJsonRoute } from '../src/app/shared/map/map-route';
@@ -18,6 +17,8 @@ import { LeafletMap } from './leaflet-map';
  * visual parity.
  */
 
+// Parity exception: Leaflet consumes literal colors only (no CSS variables),
+// so the legacy per-trace palette stays verbatim instead of DaisyUI tokens.
 const TOUR_COLORS: readonly string[] = [
   'rgb(239, 68, 68)', // warm - red
   'rgb(59, 130, 246)', // cool - blue
@@ -54,7 +55,7 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
 
     for (const [index, tourId] of tours.entries()) {
       const color = TOUR_COLORS[index % TOUR_COLORS.length];
-      const geoJson = await loadTourGeoJson(tourId, zoneId);
+      const geoJson = await loadTourRouteGeoJson({ zoneId, tourId });
       if (!geoJson) continue;
 
       try {
@@ -89,22 +90,4 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
   };
 
   return <LeafletMap onReady={drawTours} />;
-}
-
-/** Precomputed GeoJSON first, GPX parsing fallback (same as the legacy map). */
-async function loadTourGeoJson(tourId: string, zoneId: string): Promise<FeatureCollection | null> {
-  try {
-    const geoJson = await fetchTourRouteGeoJson(tourId, zoneId);
-    if (geoJson) return geoJson;
-  } catch (err) {
-    console.error(`Error loading precomputed GeoJSON for ${tourId}:`, err);
-  }
-
-  try {
-    const gpxStr = await fetchGpxFile(tourId, undefined, zoneId);
-    return getGeoJsonFromGpx(gpxStr);
-  } catch (err) {
-    console.error(`Error processing GPX for ${tourId}:`, err);
-    return null;
-  }
 }

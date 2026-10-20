@@ -1,13 +1,12 @@
 'use client';
 
-import { PlayIcon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { loadSavedTour, type SavedTour } from '../src/app/tour-storage';
+import type { SavedTour } from '../src/app/tour-storage';
+import { loadSavedTour } from '../src/app/tour-storage';
 import { findTour } from '../src/app/tours-queries';
 import { getZone } from '../src/app/zones';
+import { TourPlayButton } from './tour-play-button';
 
 /**
  * Resume banner — port of the legacy Angular `tours-list` saved-tour block
@@ -17,7 +16,6 @@ import { getZone } from '../src/app/zones';
  * stays hidden instead of linking to a dead `/tour/…` URL.
  */
 export function ResumeTourBanner() {
-  const router = useRouter();
   const [saved, setSaved] = useState<SavedTour | null>(null);
 
   useEffect(() => {
@@ -32,18 +30,12 @@ export function ResumeTourBanner() {
   return (
     <ul className="list bg-base-100 rounded-box mb-4 shadow-md sm:mb-8">
       <li className="list-row items-center">
-        <div className="text-base font-light text-black opacity-60 sm:text-xl">
+        <div className="text-base-content/60 text-base font-light sm:text-xl">
           Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}
           {saved.step + 1}/3)
         </div>
         <div className="list-col-grow flex justify-end">
-          <button
-            className="btn btn-square btn-ghost"
-            aria-label="Lancer le parcours"
-            onClick={() => router.push(`/tour/${saved.zoneId}/${saved.tourId}`)}
-          >
-            <HugeiconsIcon className="text-primary-content" icon={PlayIcon} strokeWidth={1.5} />
-          </button>
+          <TourPlayButton tour={saved} />
         </div>
       </li>
     </ul>

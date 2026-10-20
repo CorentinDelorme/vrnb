@@ -1,4 +1,4 @@
-import { findZoneTours, type TourType } from '../src/app/tours-queries';
+import { findZoneTours, isTourType, type TourType } from '../src/app/tours-queries';
 import { ZONES } from '../src/app/zones';
 
 /**
@@ -16,9 +16,7 @@ export interface TourMapParams {
 
 /** Whether the URL params denote a real zone map route (else `notFound()`). */
 export function isTourMapParams(zoneId: string, type: string): type is TourType {
-  return (
-    ZONES.some((zone) => zone.id === zoneId) && (TOUR_MAP_TYPES as readonly string[]).includes(type)
-  );
+  return ZONES.some((zone) => zone.id === zoneId) && isTourType(type);
 }
 
 /** `generateStaticParams()` source: ZONES × {P, V}. */

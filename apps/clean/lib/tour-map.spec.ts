@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { Tour } from '../src/app/tours-queries';
+import type { Tour } from '../src/app/tours-queries';
 import {
   getFallbackRouteCoords,
   getSegmentForStep,

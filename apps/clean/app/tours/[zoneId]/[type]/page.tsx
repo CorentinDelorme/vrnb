@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 
 import { ToursMap } from '../../../../components/tours-map';
 import { pageTitle } from '../../../../lib/route-meta';
+import type { TourMapParams } from '../../../../lib/tours-route';
 import { isTourMapParams, zoneMapStaticParams, zoneMapTours } from '../../../../lib/tours-route';
 
 /**
@@ -14,7 +15,7 @@ interface ToursMapPageProps {
   readonly params: Promise<{ readonly zoneId: string; readonly type: string }>;
 }
 
-export function generateStaticParams() {
+export function generateStaticParams(): TourMapParams[] {
   return zoneMapStaticParams();
 }
 

@@ -1,9 +1,13 @@
-import { FeatureCollection, Position } from 'geojson';
+import type { FeatureCollection, Position } from 'geojson';
 import type * as L from 'leaflet';
 
 import { loadLeaflet } from './leaflet-loader';
-import { RouteStyle } from './map.types';
+import type { RouteStyle } from './map.types';
 
+// Parity exception: Leaflet consumes literal colors only (no CSS variables),
+// so the legacy route palette stays verbatim for visual parity with the
+// Angular app — DaisyUI tokens don't apply to map layers (see also the
+// TOUR_COLORS palette of `components/tours-map.tsx`).
 export function getDefaultRouteStyle(): RouteStyle {
   return { color: '#0058ca', weight: 4 };
 }

@@ -1,12 +1,12 @@
 'use client';
 
-import { BicycleIcon, PlayIcon, WalkingIcon } from '@hugeicons/core-free-icons';
+import { BicycleIcon, WalkingIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 
 import type { Tour, TourType } from '../src/app/tours-queries';
+import { TourPlayButton } from './tour-play-button';
 
 /**
  * Tour list section — port of the legacy Angular `tour-list-section` component
@@ -43,7 +43,6 @@ interface TourListSectionProps {
 }
 
 export function TourListSection({ title, tours, type, zoneId }: TourListSectionProps) {
-  const router = useRouter();
   const typeIcon = type === 'V' ? BicycleIcon : WalkingIcon;
 
   return (
@@ -83,13 +82,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               {formatDistance(tour.distance)}
             </div>
             <div className="list-col-grow flex justify-end">
-              <button
-                className="btn btn-square btn-ghost"
-                aria-label="Lancer le parcours"
-                onClick={() => router.push(`/tour/${zoneId}/${tour.name}`)}
-              >
-                <HugeiconsIcon className="text-primary-content" icon={PlayIcon} strokeWidth={1.5} />
-              </button>
+              <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
             </div>
           </li>
         ))}

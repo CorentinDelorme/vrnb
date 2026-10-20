@@ -19,7 +19,7 @@ interface TourPageProps {
 }
 
 /** One static route per tour (parity with the Angular prerender: 47 pages). */
-export function generateStaticParams() {
+export function generateStaticParams(): { zoneId: string; id: string }[] {
   return ALL_TOURS.map((tour) => ({ zoneId: tour.zoneId, id: tour.name }));
 }
 

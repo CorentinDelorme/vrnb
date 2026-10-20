@@ -1,8 +1,8 @@
-import { Position } from 'geojson';
+import type { Position } from 'geojson';
 
-import { TourGeoJsonRole } from '../src/app/shared/gpx/tour-geojson';
-import { StartEndPoints } from '../src/app/shared/map/map.types';
-import { Tour } from '../src/app/tours-queries';
+import type { TourGeoJsonRole } from '../src/app/shared/gpx/tour-geojson';
+import type { StartEndPoints } from '../src/app/shared/map/map.types';
+import type { Tour } from '../src/app/tours-queries';
 
 /**
  * Pure helpers of the tour page map (`components/tour-map.tsx`) — port of the

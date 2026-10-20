@@ -10,16 +10,14 @@ import {
   getStepDistance,
   parseDebugParams,
 } from '../lib/tour-map';
-import {
-  fetchGpxFile,
-  getGeoJsonFromGpx,
-  getStartAndEndPointsFromGeoJson,
-} from '../src/app/shared/gpx/gpx';
-import { fetchTourGeoJsonSet, getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
+import { getStartAndEndPointsFromGeoJson } from '../src/app/shared/gpx/gpx';
+import { getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
+import { loadTourGeoJsonSet } from '../src/app/shared/gpx/tour-geometry';
 import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
 import { createLayerGroup } from '../src/app/shared/map/map';
 import { addArrows } from '../src/app/shared/map/map-arrow';
-import { createLocationTracker, LocationTracker } from '../src/app/shared/map/map-location';
+import type { LocationTracker } from '../src/app/shared/map/map-location';
+import { createLocationTracker } from '../src/app/shared/map/map-location';
 import { addStartEndMarkers } from '../src/app/shared/map/map-marker';
 import { setCurrentPosition } from '../src/app/shared/map/map-position';
 import {
@@ -28,6 +26,7 @@ import {
   getDefaultRouteStyle,
 } from '../src/app/shared/map/map-route';
 import type { TourGeoJsonSet } from '../src/app/shared/map/map.types';
+import type { TourStep } from '../src/app/tours-queries';
 import { findTour } from '../src/app/tours-queries';
 import { getZone } from '../src/app/zones';
 import { LeafletMap } from './leaflet-map';
@@ -51,29 +50,8 @@ const TRACKING_MAX_ZOOM = 16;
 interface TourMapProps {
   readonly zoneId: string;
   readonly tourId: string;
-  /** Current step of the 3-step state machine (0 = Début, 1 = Nettoyage, 2 = Fin). */
-  readonly step: number;
-}
-
-/**
- * Load the parcours geometry: the precomputed GeoJSON asset when it exists,
- * otherwise the three GPX traces fetched and parsed at runtime (parity with
- * the legacy `GpxService.loadTourGeoJson`).
- */
-async function loadTourGeoJsonSet(tourId: string, zoneId: string): Promise<TourGeoJsonSet> {
-  const precomputed = await fetchTourGeoJsonSet(tourId, zoneId);
-  if (precomputed) return precomputed;
-
-  const [start, tour, end] = await Promise.all([
-    fetchGpxFile(tourId, 'start', zoneId),
-    fetchGpxFile(tourId, undefined, zoneId),
-    fetchGpxFile(tourId, 'end', zoneId),
-  ]);
-  return {
-    start: getGeoJsonFromGpx(start),
-    tour: getGeoJsonFromGpx(tour),
-    end: getGeoJsonFromGpx(end),
-  };
+  /** Current step of the 3-step state machine (Début, Nettoyage, Fin). */
+  readonly step: TourStep;
 }
 
 /** Fit the view to the drawn route (parity with the Angular fitBounds helper). */
@@ -102,7 +80,7 @@ export function TourMap({ zoneId, tourId, step }: TourMapProps) {
   useEffect(() => {
     let cancelled = false;
 
-    void loadTourGeoJsonSet(tourId, zoneId)
+    void loadTourGeoJsonSet({ zoneId, tourId })
       .then((set) => {
         if (!cancelled && set.tour) setGeoJsonSet(set);
       })

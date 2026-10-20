@@ -1,7 +1,7 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
-import { FeatureCollection } from 'geojson';
+import type { FeatureCollection } from 'geojson';
 import { join } from 'path';
 
 import { buildTourGeoJsonAsset } from '../src/app/shared/gpx/tour-geojson';
@@ -148,8 +148,14 @@ function emitTourGeoJson(zoneId: string, tourId: string): void {
   });
 
   const outputDir = join(geoJsonDir, zoneId);
-  mkdirSync(outputDir, { recursive: true });
-  writeFileSync(join(outputDir, `${tourId}.geojson`), `${JSON.stringify(asset)}\n`);
+  try {
+    mkdirSync(outputDir, { recursive: true });
+    writeFileSync(join(outputDir, `${tourId}.geojson`), `${JSON.stringify(asset)}\n`);
+  } catch (error) {
+    throw new Error(
+      `cannot emit ${zoneId}/${tourId}.geojson: ${error instanceof Error ? error.message : error}`,
+    );
+  }
 }
 
 function parseArgValues(flag: string): Set<string> | undefined {
@@ -209,8 +215,17 @@ const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTour
 // Emit precomputed GeoJSON for every freshly computed tour only; tours kept
 // by the --tour/--zone merge keep their existing asset untouched.
 const freshTours = [...freshVTours, ...freshPTours];
+let emitFailures = 0;
 for (const tour of freshTours) {
-  emitTourGeoJson(tour.zoneId, tour.name);
+  try {
+    emitTourGeoJson(tour.zoneId, tour.name);
+  } catch (error) {
+    emitFailures += 1;
+    console.error(`fail ${tour.name}: ${error instanceof Error ? error.message : error}`);
+  }
+}
+if (emitFailures > 0) {
+  throw new Error(`${emitFailures} GeoJSON asset(s) failed to emit.`);
 }
 
 const content = `// Auto-generated from public/gpx folder (one folder per zone)

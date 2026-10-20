@@ -17,7 +17,11 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /** Decorative inline icon, equivalent of the legacy `<hugeicons-icon alt="">`. */
-function InlineIcon({ icon }: { readonly icon: typeof PlayIcon }) {
+interface InlineIconProps {
+  readonly icon: typeof PlayIcon;
+}
+
+function InlineIcon({ icon }: InlineIconProps) {
   return (
     <HugeiconsIcon
       aria-hidden

@@ -1,7 +1,7 @@
-import { Feature, FeatureCollection, Position } from 'geojson';
+import type { Feature, FeatureCollection, Position } from 'geojson';
 
 import { DEFAULT_ZONE_ID } from '../../zones';
-import { TourGeoJsonSet } from '../map/map.types';
+import type { TourGeoJsonSet } from '../map/map.types';
 
 /** Segment of a parcours identified in a precomputed GeoJSON asset. */
 export type TourGeoJsonRole = 'start' | 'tour' | 'end';
