@@ -42,8 +42,12 @@ mobile`: expected count 34 → 47.** Stale assertion, not a migration change: co
      behavioral delta** (US 25 / route contract: unknown URL or invalid parameter → `notFound()`,
      HTTP 404 + "Page introuvable"). The legacy SPA answered a broken 200 shell, so there is no legacy
      behavior to preserve here.
+   - `Cross-route navigation` scroll-restoration test (1 test): makes the spec #3 intent « scroll
+     restauré en haut de navigation » explicit and covered — navigate from the bottom of `/` to a
+     tour page, assert `window.scrollY` is back at the top. Relies on the App Router default (no
+     custom scroll code), so browser-back keeps its own restoration.
 
-Totals: **93 tests per browser** (88 original + 5 added) × chromium + firefox = **186**.
+Totals: **94 tests per browser** (88 original + 6 added) × chromium + firefox = **188**.
 
 ---
 
@@ -206,15 +210,16 @@ Routes: `/tour/bruz-sud/V1`, `/tour/bruz-sud/P3`
 
 ### `describe('Cross-route navigation')`
 
-| Test name                                              | Steps                                            | Expected                                                |
-| ------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------- |
-| `should navigate from home to tour V1 via play button` | `goto('/')` → click V1 play                      | URL `/tour/bruz-sud/V1`, title "Bruz Sud - Parcours V1" |
-| `should navigate from home to tour P3 via play button` | `goto('/')` → click P3 play                      | URL `/tour/bruz-sud/P3`, title "Bruz Sud - Parcours P3" |
-| `should navigate from home to bike tours map`          | `goto('/')` → click "Voir tous les parcours" (V) | URL `/tours/bruz-sud/V`                                 |
-| `should navigate from home to walking tours map`       | `goto('/')` → click "Voir tous les parcours" (P) | URL `/tours/bruz-sud/P`                                 |
-| `should navigate from tours map back to home`          | `goto('/tours/bruz-sud/V')` → back button        | URL `/`                                                 |
-| `should navigate from tour back to home`               | `goto('/tour/bruz-sud/V1')` → back button        | URL `/`                                                 |
-| `should navigate from saved tour banner to tour`       | Set saved tour → `goto('/')` → click banner play | URL `/tour/bruz-sud/V1`                                 |
+| Test name                                                         | Steps                                            | Expected                                                |
+| ----------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------- |
+| `should navigate from home to tour V1 via play button`            | `goto('/')` → click V1 play                      | URL `/tour/bruz-sud/V1`, title "Bruz Sud - Parcours V1" |
+| `should navigate from home to tour P3 via play button`            | `goto('/')` → click P3 play                      | URL `/tour/bruz-sud/P3`, title "Bruz Sud - Parcours P3" |
+| `should navigate from home to bike tours map`                     | `goto('/')` → click "Voir tous les parcours" (V) | URL `/tours/bruz-sud/V`                                 |
+| `should navigate from home to walking tours map`                  | `goto('/')` → click "Voir tous les parcours" (P) | URL `/tours/bruz-sud/P`                                 |
+| `should navigate from tours map back to home`                     | `goto('/tours/bruz-sud/V')` → back button        | URL `/`                                                 |
+| `should navigate from tour back to home`                          | `goto('/tour/bruz-sud/V1')` → back button        | URL `/`                                                 |
+| `should navigate from saved tour banner to tour`                  | Set saved tour → `goto('/')` → click banner play | URL `/tour/bruz-sud/V1`                                 |
+| `should restore scroll to the top when navigating to a tour page` | `goto('/')` → scroll to bottom → click last play | URL `/tour/…`, `window.scrollY === 0`                   |
 
 ### Selectors for play buttons
 

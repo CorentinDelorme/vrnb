@@ -63,4 +63,22 @@ test.describe('Cross-route navigation', () => {
     await banner.locator('button[aria-label="Lancer le parcours"]').click();
     await expect(page).toHaveURL('/tour/bruz-sud/V1');
   });
+
+  test('should restore scroll to the top when navigating to a tour page', async ({ page }) => {
+    await page.goto('/');
+
+    // Reach the bottom of the home page, then start the last tour row (which
+    // sits near the bottom), so the navigation really happens from a scrolled
+    // position.
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+
+    const lastRow = page.locator('li.list-row').last();
+    await lastRow.locator('button[aria-label="Lancer le parcours"]').click();
+    await expect(page).toHaveURL(/^\/tour\//);
+
+    // App Router default (parity intent: scroll restored to the top on each
+    // navigation) — no custom scroll code, so browser-back is unaffected.
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
+  });
 });

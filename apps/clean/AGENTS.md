@@ -163,7 +163,9 @@ const tours: any[] = [];
 
 ### Testing
 
-Unit tests — Vitest (jsdom, globals), colocated `*.spec.ts(x)`; component/page specs use `@testing-library/react`. No DI container: shared behavior is extracted into pure functions (that seam was validated in spec #3).
+Unit tests — Vitest (jsdom, globals), colocated `*.spec.ts(x)`; component/page specs use `@testing-library/react`. No DI container: shared behavior is extracted into pure functions — that seam (pure-TS modules, 25 tests) is what spec #3 validated; the component/page RTL specs go beyond the spec's minimal seam and were added during implementation as a safety net, not as spec-validated scope.
+
+- Migration note (implementation): the unit suite was expanded from the 25 pure-TS tests of the spec #3 seam to 128 tests with the addition of the component/page RTL specs (`app/page.spec.tsx`, `app/manual/page.spec.tsx`, `app/not-found.spec.tsx` and friends) — a deliberate safety net before the PR, documented like the E2E deltas in `e2e/tests.md`.
 
 ```ts
 import { describe, expect, it } from 'vitest';
