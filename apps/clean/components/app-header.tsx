@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Fragment } from 'react';
 
 import { headerFlags, pageTitle } from '../lib/route-meta';
 import { MenuDrawer } from './menu-drawer';
@@ -20,21 +21,55 @@ export function AppHeader() {
   const pathname = usePathname();
   const flags = headerFlags(pathname);
   const title = pageTitle(pathname);
+  // "Bruz Sud - Parcours P7" → ["Bruz Sud", "Parcours P7"]: the parts stack on
+  // two lines on mobile and rejoin with the dash on wider screens.
+  const titleParts = title.split(' - ');
 
   return (
-    <header className="flex items-center gap-4 pb-4 sm:pb-8">
-      {flags.showBack ? (
-        <Link className="btn btn-primary btn-sm" href="/" aria-label="Retour à l'accueil">
-          <HugeiconsIcon className="text-primary-content" icon={ArrowLeftIcon} strokeWidth={1.5} />
-        </Link>
-      ) : null}
+    <header className="grid grid-cols-[auto_1fr_auto] items-center gap-4 pb-4 sm:pb-8">
+      {/* Left controls share the first column so the title always sits on the
+          back button's row (placing them as separate grid items would stack
+          them — and drag the title along — on /manual). */}
+      <div className="col-start-1 flex items-center gap-4">
+        {flags.showBack ? (
+          <Link className="btn btn-primary btn-sm" href="/" aria-label="Retour à l'accueil">
+            <HugeiconsIcon
+              className="text-primary-content"
+              icon={ArrowLeftIcon}
+              strokeWidth={1.5}
+            />
+          </Link>
+        ) : null}
 
-      {flags.showLogo ? <img className="h-15.75 w-16" src="/icons/vrnb.png" alt="VRNB" /> : null}
+        {/* /manual shows the logo next to the back button on wide screens and
+            drops it on mobile to leave room for the title. */}
+        {flags.showLogo ? (
+          <img
+            className={flags.showBack ? 'hidden h-15.75 w-16 sm:block' : 'h-15.75 w-16'}
+            src="/icons/vrnb.png"
+            alt="VRNB"
+          />
+        ) : null}
+      </div>
 
-      <h1 className="text-secondary text-2xl font-bold sm:text-4xl">{title}</h1>
+      {/* Middle `1fr` column: the title spans the full width between the edge
+          controls. On mobile it stacks — zone name, then the Parcours label —
+          each line centered between the buttons; `aria-label` keeps the full
+          joined title as the accessible name. */}
+      <h1
+        aria-label={title}
+        className="text-secondary col-start-2 text-center text-lg font-bold sm:text-4xl"
+      >
+        {titleParts.map((part, index) => (
+          <Fragment key={part}>
+            {index > 0 ? <span className="hidden sm:inline"> - </span> : null}
+            <span className="block sm:inline">{part}</span>
+          </Fragment>
+        ))}
+      </h1>
 
       {flags.menu ? (
-        <MenuDrawer className="ml-auto" variant={flags.menu} title={title}>
+        <MenuDrawer className="col-start-3" variant={flags.menu} title={title}>
           {flags.menu === 'tours' ? <MenuLinks pathname={pathname} /> : null}
           {flags.menu === 'tour' ? <TourDrawerLinks /> : null}
         </MenuDrawer>

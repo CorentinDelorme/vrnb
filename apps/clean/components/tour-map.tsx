@@ -41,8 +41,13 @@ import { LeafletMap } from './leaflet-map';
  * walking along the step's coordinates.
  */
 
-/** Container height of the legacy tour template (`tour.html`). */
-const TOUR_MAP_CLASS = 'z-0 h-[calc(100dvh-208px)] w-full overflow-hidden sm:h-[calc(100vh-296px)]';
+/**
+ * Container height of the legacy tour template (`tour.html`), on mobile: main
+ * paddings + the two-line mobile header + steps row + gaps, clearing the fixed
+ * dock (16 + 72 + 16 + 48 + 16 + 16 + 48 = 232). The desktop `sm:` offset is
+ * the legacy one (single-line title).
+ */
+const TOUR_MAP_CLASS = 'z-0 h-[calc(100dvh-232px)] w-full overflow-hidden sm:h-[calc(100vh-296px)]';
 
 /** Max zoom of the automatic view-following on each located position. */
 const TRACKING_MAX_ZOOM = 16;

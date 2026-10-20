@@ -15,8 +15,12 @@ import { createMap, MAX_BOUNDS } from '../src/app/shared/map/map';
  * the container, `onReady` to draw into the map once it exists.
  */
 
-/** Container height of the legacy zone map template (`tours-map.html`). */
-export const ZONE_MAP_CLASS = 'z-0 h-[calc(100dvh-80px)] w-full sm:h-[calc(100vh-136px)]';
+/**
+ * Container height of the legacy zone map template (`tours-map.html`), on
+ * mobile: main paddings + the two-line mobile header + gap (16 + 72 + 16 =
+ * 104). The desktop `sm:` offset is the legacy one (single-line title).
+ */
+export const ZONE_MAP_CLASS = 'z-0 h-[calc(100dvh-104px)] w-full sm:h-[calc(100vh-136px)]';
 
 interface LeafletMapProps {
   /** Element class of the `#map` container (defaults to the zone map height). */
