@@ -1,9 +1,7 @@
-import { DEFAULT_ZONE_ID } from './zones';
+import type { TourRef, TourStep } from './tours-queries';
 
-export interface SavedTour {
-  tourId: string;
-  step: number;
-  zoneId: string;
+export interface SavedTour extends TourRef {
+  readonly step: TourStep;
 }
 
 export const TOUR_STORAGE_KEY = 'vrnb_tour';
@@ -21,11 +19,7 @@ export function loadSavedTour(): SavedTour | null {
 }
 
 /** Persist the in-progress tour. Returns null (and stores nothing) server-side. */
-export function saveTour(
-  tourId: string,
-  step: number,
-  zoneId: string = DEFAULT_ZONE_ID,
-): SavedTour | null {
+export function saveTour(tourId: string, step: TourStep, zoneId: string): SavedTour | null {
   if (typeof localStorage === 'undefined') return null;
   const data: SavedTour = { tourId, step, zoneId };
   localStorage.setItem(TOUR_STORAGE_KEY, JSON.stringify(data));

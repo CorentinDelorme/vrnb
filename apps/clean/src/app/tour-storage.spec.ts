@@ -15,10 +15,10 @@ describe('tour storage', () => {
     );
   });
 
-  it('should default the zone to the default zone when omitted', () => {
-    saveTour('P2', 2);
+  it('should persist the zone provided by the caller', () => {
+    saveTour('P2', 2, 'bruz-vau-gaillard');
 
-    expect(loadSavedTour()).toEqual({ tourId: 'P2', step: 2, zoneId: 'bruz-sud' });
+    expect(loadSavedTour()).toEqual({ tourId: 'P2', step: 2, zoneId: 'bruz-vau-gaillard' });
   });
 
   it('should return null when nothing was saved', () => {
