@@ -21,6 +21,54 @@
 
 ---
 
+## Migration notes (Angular → Next.js)
+
+Deltas to the original 88-test plan, each justified by an entry of spec #3:
+
+1. **`should have play button on each tour row` (home) and `should still display all tour rows on
+mobile`: expected count 34 → 47.** Stale assertion, not a migration change: commit `2155965`
+   (2026-10-18, "feat: add bruz ker lann tours") added the `bruz-ker-lann` zone and its 13 bike tours
+   to `ZONES` / `toursData` but the assertion, written in `222dcd9` (2026-10-16), was never updated.
+   Both commits predate the migration baseline `c2ae89e`, so the Angular reference itself rendered 47
+   play buttons at baseline: `tours-list.html` loops over **all** `tourService.zones` — 28 Bruz Sud
+   (15 V + 13 P) + 6 Vau Gaillard + 13 Ker Lann = 47 — with one `button[aria-label="Lancer le parcours"]`
+   per `li.list-row`. `src/app/tours-data.ts` confirms 47 tour entries (13 / 28 / 6 per zone). The
+   updated expectation matches both the Angular reference and the Next app.
+2. **New tests beyond the 88** (same seam — black-box page DOM, no new seam):
+   - `Tours map — Drawing parity` (2 tests): the original plan asserted only `div#map` visibility;
+     parity for US 8–12 needs evidence that each tour is drawn as a distinct colored trace with
+     start/end pins, labels and the fullscreen control.
+   - `Tours map — Invalid params` (2 tests) and `App` 404 test (1 test): cover the **only sanctioned
+     behavioral delta** (US 25 / route contract: unknown URL or invalid parameter → `notFound()`,
+     HTTP 404 + "Page introuvable"). The legacy SPA answered a broken 200 shell, so there is no legacy
+     behavior to preserve here.
+   - `Cross-route navigation` scroll-restoration test (1 test): makes the spec #3 intent « scroll
+     restauré en haut de navigation » explicit and covered — navigate from the bottom of `/` to a
+     tour page, assert `window.scrollY` is back at the top. Relies on the App Router default (no
+     custom scroll code), so browser-back keeps its own restoration.
+   - `Manual — keeps spaces around bold words in the rendered copy` (1 test): guards a JSX
+     whitespace pitfall (a space between an inline element and the following text is stripped when
+     it contains `&apos;` — cf. the note in `app/manual/page.tsx`). Migration rendering delta, not a
+     behavior change: Vitest keeps the space (different JSX transform), so only a run against the
+     served page catches it.
+
+Totals: **95 tests per browser** (88 original + 7 added) × chromium + firefox = **190**.
+
+---
+
+## File: `e2e/app.spec.ts`
+
+Route: `/` (smoke) and unknown URLs (404)
+
+### `describe('App')`
+
+| Test name                                      | Steps                             | Expected                      |
+| ---------------------------------------------- | --------------------------------- | ----------------------------- |
+| `should load the home page`                    | `goto('/')`                       | `h1` visible                  |
+| `should return a clean 404 for an unknown URL` | `goto('/cette-page-nexiste-pas')` | HTTP 404 + "Page introuvable" |
+
+---
+
 ## File: `e2e/home.spec.ts`
 
 Route: `/`
@@ -49,7 +97,7 @@ Route: `/`
 | `should list all 13 walking tours (P1–P13)`                   | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13      |
 | `should display distance in km for V1 (1,1 km)`               | `goto('/')`                 | V1 row contains text "1,1 km"                                  |
 | `should display distance in meters for tours under 1km`       | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m"                             |
-| `should have play button on each tour row`                    | `goto('/')`                 | 34 buttons with `aria-label="Lancer le parcours"`              |
+| `should have play button on each tour row`                    | `goto('/')`                 | 47 buttons with `aria-label="Lancer le parcours"`              |
 | `should show "Voir tous les parcours" link for bike tours`    | `goto('/')` (desktop)       | Link visible in V section, href `/tours/bruz-sud/V`            |
 | `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop)       | Link visible in P section, href `/tours/bruz-sud/P`            |
 
@@ -88,6 +136,20 @@ Routes: `/tours/bruz-sud/V`, `/tours/bruz-sud/P`
 | `should render map element`                           | `goto('/tours/bruz-sud/P')` | `div#map` visible                                |
 | `should show PDF download link with correct href`     | Open drawer                 | `href="/pdf/bruz-sud/Suivi_parcours_a_pied.pdf"` |
 | `should show map PDF download link with correct href` | Open drawer                 | `href="/pdf/bruz-sud/Carte_parcours_a_pied.pdf"` |
+
+### `describe('Tours map — Drawing parity')`
+
+| Test name                                                                   | Steps                       | Expected                                                                                          |
+| --------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| `should draw one distinctly colored route per tour with markers and labels` | `goto('/tours/bruz-sud/V')` | ≥15 polylines with ≥10 distinct stroke colors, ≥15 start pins, ≥15 end pins, ≥15 `div.tour-label` |
+| `should expose the fullscreen control`                                      | `goto('/tours/bruz-sud/V')` | `.leaflet-control-zoom-fullscreen` visible                                                        |
+
+### `describe('Tours map — Invalid params')`
+
+| Test name                                        | Steps                       | Expected                      |
+| ------------------------------------------------ | --------------------------- | ----------------------------- |
+| `should return 404 for an unknown zone`          | `goto('/tours/nowhere/V')`  | HTTP 404 + "Page introuvable" |
+| `should return 404 for an unknown practice type` | `goto('/tours/bruz-sud/X')` | HTTP 404 + "Page introuvable" |
 
 ---
 
@@ -153,15 +215,16 @@ Routes: `/tour/bruz-sud/V1`, `/tour/bruz-sud/P3`
 
 ### `describe('Cross-route navigation')`
 
-| Test name                                              | Steps                                            | Expected                                                |
-| ------------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------- |
-| `should navigate from home to tour V1 via play button` | `goto('/')` → click V1 play                      | URL `/tour/bruz-sud/V1`, title "Bruz Sud - Parcours V1" |
-| `should navigate from home to tour P3 via play button` | `goto('/')` → click P3 play                      | URL `/tour/bruz-sud/P3`, title "Bruz Sud - Parcours P3" |
-| `should navigate from home to bike tours map`          | `goto('/')` → click "Voir tous les parcours" (V) | URL `/tours/bruz-sud/V`                                 |
-| `should navigate from home to walking tours map`       | `goto('/')` → click "Voir tous les parcours" (P) | URL `/tours/bruz-sud/P`                                 |
-| `should navigate from tours map back to home`          | `goto('/tours/bruz-sud/V')` → back button        | URL `/`                                                 |
-| `should navigate from tour back to home`               | `goto('/tour/bruz-sud/V1')` → back button        | URL `/`                                                 |
-| `should navigate from saved tour banner to tour`       | Set saved tour → `goto('/')` → click banner play | URL `/tour/bruz-sud/V1`                                 |
+| Test name                                                         | Steps                                            | Expected                                                |
+| ----------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------- |
+| `should navigate from home to tour V1 via play button`            | `goto('/')` → click V1 play                      | URL `/tour/bruz-sud/V1`, title "Bruz Sud - Parcours V1" |
+| `should navigate from home to tour P3 via play button`            | `goto('/')` → click P3 play                      | URL `/tour/bruz-sud/P3`, title "Bruz Sud - Parcours P3" |
+| `should navigate from home to bike tours map`                     | `goto('/')` → click "Voir tous les parcours" (V) | URL `/tours/bruz-sud/V`                                 |
+| `should navigate from home to walking tours map`                  | `goto('/')` → click "Voir tous les parcours" (P) | URL `/tours/bruz-sud/P`                                 |
+| `should navigate from tours map back to home`                     | `goto('/tours/bruz-sud/V')` → back button        | URL `/`                                                 |
+| `should navigate from tour back to home`                          | `goto('/tour/bruz-sud/V1')` → back button        | URL `/`                                                 |
+| `should navigate from saved tour banner to tour`                  | Set saved tour → `goto('/')` → click banner play | URL `/tour/bruz-sud/V1`                                 |
+| `should restore scroll to the top when navigating to a tour page` | `goto('/')` → scroll to bottom → click last play | URL `/tour/…`, `window.scrollY === 0`                   |
 
 ### Selectors for play buttons
 
@@ -222,11 +285,25 @@ Uses `test.use({ viewport: { width: 390, height: 844 } })` (iPhone 12 dimensions
 | Test name                                              | Steps                                             | Expected                            |
 | ------------------------------------------------------ | ------------------------------------------------- | ----------------------------------- |
 | `should hide "Voir tous les parcours" links on mobile` | `goto('/')`                                       | Links NOT visible (`max-sm:hidden`) |
-| `should still display all tour rows on mobile`         | `goto('/')`                                       | 34 play buttons present             |
+| `should still display all tour rows on mobile`         | `goto('/')`                                       | 47 play buttons present             |
 | `should render tour page with functional dock buttons` | `goto('/tour/bruz-sud/V1')`                       | "Précédent" and "Suivant" visible   |
 | `should allow step navigation on mobile`               | Full step flow → "Terminer"                       | Finish modal opens                  |
 | `should render map on mobile tours page`               | `goto('/tours/bruz-sud/V')`                       | `div#map` visible                   |
 | `should open and close drawer on mobile`               | `goto('/tour/bruz-sud/V1')` → "Menu" → open/close | Drawer toggles correctly            |
+
+---
+
+## File: `e2e/manual.spec.ts`
+
+### `describe('Manual')`
+
+Guards the JSX whitespace pitfall (space stripped between an inline element and the
+following text when it contains `&apos;` — cf. the note in `app/manual/page.tsx`).
+Vitest cannot reproduce it (its JSX transform keeps the space), hence this E2E check.
+
+| Test name                                             | Steps             | Expected                                                     |
+| ----------------------------------------------------- | ----------------- | ------------------------------------------------------------ |
+| `keeps spaces around bold words in the rendered copy` | `goto('/manual')` | 15 spaced French phrases present in the rendered `main` text |
 
 ---
 

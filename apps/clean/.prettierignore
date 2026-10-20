@@ -1,10 +1,14 @@
 dist
-.angular
+.next
 node_modules
 coverage
 test-results
 playwright-report
 scripts/.cache
+# Generated GeoJSON assets (bun run generate:tours).
+public/geojson
+# Lockfile formatting is tool-managed.
+bun.lock
 # Third-party docs, kept as-is
 .claude
 README.md

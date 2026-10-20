@@ -4,9 +4,11 @@
   "globalEnv": [
     "CI",
     "DATABASE_URL",
+    "HOME",
     "PAYLOAD_SECRET",
     "PAYLOAD_USER_EMAIL",
-    "PAYLOAD_USER_PASSWORD"
+    "PAYLOAD_USER_PASSWORD",
+    "PLAYWRIGHT_TEST_BASE_URL"
   ],
   "tasks": {
     "build": {
@@ -17,7 +19,7 @@
     "clean#build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": ["dist/**"]
+      "outputs": [".next/**", "!.next/cache/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]

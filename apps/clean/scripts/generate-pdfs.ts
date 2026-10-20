@@ -1,7 +1,7 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { join } from 'path';
 import { toBuffer as qrCodeToBuffer } from 'qrcode';
@@ -10,7 +10,7 @@ import sharp from 'sharp';
 import { toursData } from '../src/app/tours-data';
 import { getZone } from '../src/app/zones';
 
-const rootDir = join(__dirname, '..');
+const rootDir = join(import.meta.dirname, '..');
 const pdfDir = join(rootDir, 'public/pdf');
 const gpxDir = join(rootDir, 'public/gpx');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');

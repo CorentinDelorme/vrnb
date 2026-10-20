@@ -96,3 +96,51 @@ test.describe('Tours map — Walking (P)', () => {
     await expect(pdfLink).toHaveAttribute('href', '/pdf/bruz-sud/Carte_parcours_a_pied.pdf');
   });
 });
+
+test.describe('Tours map — Drawing parity', () => {
+  test('should draw one distinctly colored route per tour with markers and labels', async ({
+    page,
+  }) => {
+    await page.goto('/tours/bruz-sud/V');
+
+    // 15 bike tours of Bruz Sud, each drawn as at least one colored polyline.
+    const routes = page.locator('.leaflet-overlay-pane path');
+    await expect.poll(() => routes.count(), { timeout: 30_000 }).toBeGreaterThanOrEqual(15);
+
+    // Distinct colors per parcours (20-color legacy palette).
+    const colors = await routes.evaluateAll((elements) =>
+      [...new Set(elements.map((element) => element.getAttribute('stroke')))].filter(Boolean),
+    );
+    expect(colors.length).toBeGreaterThanOrEqual(10);
+
+    // Small start/end pins and mid-trace labels for every tour.
+    await expect
+      .poll(() => page.locator('img[src="/media/pin-icon-start.png"]').count(), { timeout: 30_000 })
+      .toBeGreaterThanOrEqual(15);
+    await expect
+      .poll(() => page.locator('img[src="/media/pin-icon-end.png"]').count(), { timeout: 30_000 })
+      .toBeGreaterThanOrEqual(15);
+    await expect
+      .poll(() => page.locator('div.tour-label').count(), { timeout: 30_000 })
+      .toBeGreaterThanOrEqual(15);
+  });
+
+  test('should expose the fullscreen control', async ({ page }) => {
+    await page.goto('/tours/bruz-sud/V');
+    await expect(page.locator('.leaflet-control-zoom-fullscreen')).toBeVisible();
+  });
+});
+
+test.describe('Tours map — Invalid params', () => {
+  test('should return 404 for an unknown zone', async ({ page }) => {
+    const response = await page.goto('/tours/nowhere/V');
+    expect(response?.status()).toBe(404);
+    await expect(page.getByText('Page introuvable')).toBeVisible();
+  });
+
+  test('should return 404 for an unknown practice type', async ({ page }) => {
+    const response = await page.goto('/tours/bruz-sud/X');
+    expect(response?.status()).toBe(404);
+    await expect(page.getByText('Page introuvable')).toBeVisible();
+  });
+});

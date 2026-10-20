@@ -5,7 +5,7 @@ import { join } from 'path';
 
 import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
 
-const rootDir = join(__dirname, '..');
+const rootDir = join(import.meta.dirname, '..');
 const gpxDir = join(rootDir, 'public/gpx');
 
 const OSRM_BASE_URL = 'https://router.project-osrm.org/route/v1';

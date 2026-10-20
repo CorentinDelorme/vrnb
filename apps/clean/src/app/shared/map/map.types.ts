@@ -1,4 +1,4 @@
-import { FeatureCollection, Position } from 'geojson';
+import type { FeatureCollection, Position } from 'geojson';
 import type * as L from 'leaflet';
 
 export interface MapInitOptions {

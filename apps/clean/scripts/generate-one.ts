@@ -1,7 +1,7 @@
 import { spawnSync } from 'child_process';
 import { join } from 'path';
 
-const rootDir = join(__dirname, '..');
+const rootDir = join(import.meta.dirname, '..');
 
 function parseArgValues(flag: string): string[] {
   const arg = process.argv.find((a) => a.startsWith(`${flag}=`));

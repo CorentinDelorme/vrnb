@@ -1,4 +1,4 @@
-import { Position } from 'geojson';
+import type { Position } from 'geojson';
 
 export interface ZoneMeetingPoint {
   readonly name: string;
