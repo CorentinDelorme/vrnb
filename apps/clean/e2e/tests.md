@@ -46,8 +46,13 @@ mobile`: expected count 34 → 47.** Stale assertion, not a migration change: co
      restauré en haut de navigation » explicit and covered — navigate from the bottom of `/` to a
      tour page, assert `window.scrollY` is back at the top. Relies on the App Router default (no
      custom scroll code), so browser-back keeps its own restoration.
+   - `Manual — keeps spaces around bold words in the rendered copy` (1 test): guards a JSX
+     whitespace pitfall (a space between an inline element and the following text is stripped when
+     it contains `&apos;` — cf. the note in `app/manual/page.tsx`). Migration rendering delta, not a
+     behavior change: Vitest keeps the space (different JSX transform), so only a run against the
+     served page catches it.
 
-Totals: **94 tests per browser** (88 original + 6 added) × chromium + firefox = **188**.
+Totals: **95 tests per browser** (88 original + 7 added) × chromium + firefox = **190**.
 
 ---
 

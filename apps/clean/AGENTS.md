@@ -146,6 +146,10 @@ const tours: any[] = [];
 
 - Tailwind CSS utility classes inline; DaisyUI components (`btn`, `card`, `list`, `drawer`, `modal`…).
 - DaisyUI themes only: `vrnb` (light) and `vrnb-dark` (dark) — no hard-coded colors (monorepo rule).
+- Single exception, maps only: Leaflet options (the `TOUR_COLORS` palette, route stroke and GPS
+  accuracy circle in `src/app/shared/map/` and `components/*-map.tsx`) embed hex constants inherited
+  from the Angular app for exact visual parity (spec #3), each with an in-code parity comment. They
+  cannot be Tailwind/DaisyUI theme classes because Leaflet renders to SVG/canvas outside the DOM.
 - Global styles and theme imports live in `app/globals.css`.
 - Responsive and accessible by default: the app is used outdoors on mobile and audited with axe in the E2E suite.
 
