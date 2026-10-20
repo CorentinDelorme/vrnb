@@ -71,38 +71,6 @@ function tourGeoJsonAssetUrl(zoneId: string, tourId: string): string {
   return `/geojson/${zoneId}/${tourId}.geojson`;
 }
 
-/** Legacy (pre-zone) flat-layout URL of the precomputed GeoJSON asset. */
-function legacyTourGeoJsonAssetUrl(tourId: string): string {
-  return `/geojson/${tourId}.geojson`;
-}
-
-interface FetchedAsset {
-  readonly url: string;
-  readonly json: unknown;
-}
-
-async function requestAsset(url: string): Promise<FetchedAsset | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    return { url, json: await response.json() };
-  } catch {
-    // Treat network failures like a missing asset (fall through to legacy layout).
-    return null;
-  }
-}
-
-/**
- * Fetch the precomputed GeoJSON asset from the zone-scoped layout, falling
- * back to the legacy flat layout. Returns null when no asset exists.
- */
-async function fetchTourGeoJsonAsset(tourId: string, zoneId: string): Promise<FetchedAsset | null> {
-  return (
-    (await requestAsset(tourGeoJsonAssetUrl(zoneId, tourId))) ??
-    (await requestAsset(legacyTourGeoJsonAssetUrl(tourId)))
-  );
-}
-
 /**
  * Fetch the precomputed GeoJSON for a parcours and rebuild the segment set the
  * maps derive from GPX files. Returns null when no asset exists so callers can
@@ -112,12 +80,21 @@ export async function fetchTourGeoJsonSet(
   tourId: string,
   zoneId: string = DEFAULT_ZONE_ID,
 ): Promise<TourGeoJsonSet | null> {
-  const asset = await fetchTourGeoJsonAsset(tourId, zoneId);
-  if (!asset) return null;
+  const url = tourGeoJsonAssetUrl(zoneId, tourId);
+  let json: unknown;
 
-  const set = parseTourGeoJsonAsset(asset.json);
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    json = await response.json();
+  } catch {
+    // Treat network failures like a missing asset (fall through to GPX parsing).
+    return null;
+  }
+
+  const set = parseTourGeoJsonAsset(json);
   if (!set) {
-    throw new Error(`Invalid tour GeoJSON asset: ${asset.url}`);
+    throw new Error(`Invalid tour GeoJSON asset: ${url}`);
   }
   return set;
 }

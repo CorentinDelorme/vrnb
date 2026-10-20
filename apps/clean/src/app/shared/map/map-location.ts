@@ -1,8 +1,8 @@
-import { Position } from 'geojson';
+import type { Position } from 'geojson';
 import type * as L from 'leaflet';
 
 import { loadLeaflet } from './leaflet-loader';
-import { LocationTrackingOptions } from './map.types';
+import type { LocationTrackingOptions } from './map.types';
 
 /** Fallback position used by the debug simulation when no coords are available. */
 export const DEFAULT_MOCK_POSITION = { lat: 48.013572, lng: -1.749696 };

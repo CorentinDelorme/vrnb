@@ -1,8 +1,8 @@
-import { Position } from 'geojson';
+import type { Position } from 'geojson';
 import type * as L from 'leaflet';
 
 import { loadLeaflet } from './leaflet-loader';
-import { LabelMarkerOptions, MarkerSize } from './map.types';
+import type { LabelMarkerOptions, MarkerSize } from './map.types';
 
 interface IconSizeConfig {
   readonly iconSize: [number, number];

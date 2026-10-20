@@ -156,28 +156,13 @@ describe('fetchTourGeoJsonSet', () => {
     expect(fetchMock).toHaveBeenCalledWith('/geojson/bruz-sud/V1.geojson');
   });
 
-  it('should fall back to the legacy flat layout when the zone-scoped asset is missing', async () => {
-    const asset = buildTourGeoJsonAsset({
-      tour: { type: 'FeatureCollection', features: [TOUR_LINE] },
-    });
-    fetchMock
-      .mockResolvedValueOnce(new Response('Not found', { status: 404 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(asset), { status: 200 }));
-
-    const set = await fetchTourGeoJsonSet('V1', 'bruz-sud');
-
-    expect(set).not.toBeNull();
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/geojson/bruz-sud/V1.geojson');
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/geojson/V1.geojson');
-  });
-
   it('should return null when no asset exists so callers can fall back to GPX', async () => {
     fetchMock.mockResolvedValue(new Response('Not found', { status: 404 }));
 
     const set = await fetchTourGeoJsonSet('V1', 'bruz-sud');
 
     expect(set).toBeNull();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('should default to the default zone', async () => {

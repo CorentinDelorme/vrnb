@@ -1,8 +1,8 @@
-import { Position } from 'geojson';
+import type { Position } from 'geojson';
 import type * as L from 'leaflet';
 
 import { loadLeaflet } from './leaflet-loader';
-import { ArrowOptions } from './map.types';
+import type { ArrowOptions } from './map.types';
 
 /** Distance (in meters) between direction arrows, based on the route length. */
 export function computeFrequency(distanceKm: number): number {
