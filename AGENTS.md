@@ -50,7 +50,7 @@
 - Turbo pipeline/env wiring: `turbo.json` (`globalEnv`: `DATABASE_URL`, `PAYLOAD_SECRET`, auth vars).
 - Mongo service config: `packages/web-db/docker-compose.yml` (root/rootpassword, port 27017).
 - Web E2E helpers: `apps/web/tests/helpers/login.ts`, `apps/web/tests/helpers/seedUser.ts`.
-- Clean data generation: `apps/clean/scripts/generate-tours.ts` (tour data + precomputed GeoJSON), `apps/clean/scripts/generate-start-end-gpx.ts` (OSRM/Valhalla), `apps/clean/scripts/generate-pdfs.ts`.
+- Clean data generation: `apps/clean/scripts/generate-all.ts` (orchestrator: routes -> data -> Fiches), `apps/clean/scripts/generate-tours.ts` (tour data + precomputed GeoJSON), `apps/clean/scripts/generate-start-end-gpx.ts` (OSRM/Valhalla), `apps/clean/scripts/generate-pdfs.ts`; the versioned generation state: `apps/clean/scripts/generation-state.json`.
 
 ## Security
 - Admin access is controlled by referent membership (`site web`) via `apps/web/src/access/canAccessAdmin.ts`, not by role fields.
@@ -64,6 +64,7 @@
 - `apps/web/COLLECTIONS.md` — Full schema documentation
 - `apps/clean/src/app/tours-queries.ts` — Core tour queries (list, filtering)
 - `apps/clean/src/app/tours-data.ts` — Generated tour definitions (never edit by hand)
+- `apps/clean/scripts/generation-state.json` — Versioned generation state (fingerprints of the produced artefacts)
 - `apps/clean/GLOSSARY.md` — Domain vocabulary for the clean-up app
 - `packages/web-db/docker-compose.yml` — MongoDB service
 - `turbo.json` — Pipeline + env wiring

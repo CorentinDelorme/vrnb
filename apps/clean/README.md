@@ -41,24 +41,131 @@ Les modifications du code source sont prises en compte automatiquement (recharge
 | `bun run check-types` | Vérifier les types TypeScript (`tsc --noEmit`) |
 | `bun run test` | Lancer les tests unitaires (Vitest) — `bun run test:watch` en mode watch |
 | `bun run e2e` | Lancer les tests de bout en bout (Playwright, chromium + firefox) |
+| `bun run generate:all` | Régénérer les données (incrémental) — voir « Générer les données » |
 | `bun scripts/extract-inscriptions.ts` | Extraire les inscriptions de l'Édition en fiches de suivi (voir « Inscriptions des binômes ») |
 
 ## Générer les données
 
-Les données des parcours de nettoyage et les fiches PDF peuvent être régénérées avec ces commandes :
+Les données des parcours de nettoyage et les fiches PDF sont produites par la pipeline de
+génération. Elle est **incrémentale** : un run ne refait que ce qui a changé.
 
 ```sh
 bun run generate:routes # Régénérer les segments de début/fin (Point de rendez-vous, OSRM/Valhalla)
 bun run generate:tours  # Régénérer src/app/tours-data.ts + le GeoJSON précalculé
 bun run generate:pdfs   # Régénérer les fiches PDF
-bun run generate:all    # Tout régénérer (routes + tours + PDFs)
+bun run generate:all    # Les trois étapes : routes -> données -> fiches
+bun run generate:state  # Compléter l'état de génération avec les fiches présentes
 ```
+
+`bun run generate:all` enchaîne les trois étapes de la pipeline, dans cet ordre :
+
+1. **les segments de début et de fin** — le routage entre le Point de rendez-vous et les
+   extrémités du parcours (OSRM et Valhalla, interrogés en parallèle) ;
+2. **les données** — le catalogue `src/app/tours-data.ts` et le GeoJSON précalculé ;
+3. **les fiches** — la fiche de chaque parcours et la fiche de zone (la carte d'ensemble)
+   de chaque zone.
 
 `bun run generate:tours` régénère deux artefacts versionnés : `src/app/tours-data.ts`
 (généré, ne pas éditer à la main) **et** un asset GeoJSON précalculé par parcours dans
 `public/geojson/<zone>/<parcours>.geojson`, que les cartes fetchent au runtime (avec repli
 sur le parsing GPX). `bun run generate:routes` réécrit pour sa part les tracés GPX de
 `public/gpx/`.
+
+Les artefacts recalculés à chaque run (catalogue, GeoJSON, segments GPX, état de
+génération) ne sont écrits que si leur contenu a changé : un run qui ne change rien laisse
+le dépôt intact. Les fiches PDF, elles, ne sont pas ré-écrites du tout quand le plan les
+déclare à jour.
+
+### Génération incrémentale
+
+La pipeline s'appuie sur un **état de génération** versionné, `scripts/generation-state.json`
+(committé dans le dépôt). Pour chaque parcours, il garde l'empreinte (sha256) de la trace
+source, des segments de début et de fin et de la fiche produite. À partir de cet état et
+des empreintes trouvées sur le disque, la pipeline décide, pour chaque parcours :
+
+- les **segments de début et de fin** sont re-calculés si la trace source a changé, si le
+  parcours est inconnu de l'état, ou si ses segments manquent du disque ou de l'état ;
+- la **fiche** est re-rendue si les segments viennent d'être re-calculés, si la fiche est
+  absente du disque, si l'état ne connaît pas la fiche, ou si son contenu ne correspond
+  plus à celui enregistré ;
+- la **fiche de zone** (la carte d'ensemble d'une zone, pour un type de parcours) est
+  re-rendue dès qu'un parcours de la zone a changé, ou si elle est absente du disque.
+
+Sans état (fichier absent ou illisible), ou avec une constante de version différente de
+celle du code, tout est régénéré.
+
+Comme l'état est versionné, une copie fraîche du dépôt se comporte comme une copie de
+travail déjà à jour : le premier run ne refait rien. Un parcours en échec (routeur
+indisponible) n'est pas marqué comme à jour : le run suivant le rejoue.
+
+L'état porte une **constante de version** (`GENERATION_STATE_VERSION`, dans
+`scripts/generation-state.ts`) qui couvre l'algorithme de routage et le template de fiche :
+l'augmenter invalide tous les artefacts et impose une régénération complète. Pensez à
+l'augmenter quand vous modifiez l'un des deux.
+
+`bun run generate:state` (`scripts/refresh-generation-state.ts`) complète l'état avec
+l'empreinte des fiches déjà présentes dans `public/pdf/` — pour les parcours que l'état
+connaît mais dont la fiche n'y est pas encore enregistrée. Il n'écrase jamais une empreinte
+déjà enregistrée. Lancez-le sur une copie fraîche du dépôt (l'état doit déjà exister), ou
+après avoir remplacé des fiches à la main.
+
+### Forcer la régénération
+
+```sh
+bun run generate:all -- --force            # Tout régénérer, quel que soit l'état
+bun run generate:one -- --tour=V1 --force  # Un seul parcours, régénéré quoi qu'il arrive
+```
+
+`--force` est acceptée par toutes les étapes (`generate:routes`, `generate:tours`,
+`generate:pdfs`, `generate:one`, `generate:all`) : tout ce que les filtres (`--tour=`,
+`--zone=`) sélectionnent est régénéré, sans consulter l'état de génération.
+
+### Le bloc `[perf]` (chrono)
+
+Chaque script se termine par un bloc `[perf]` : la durée totale, la durée de chaque étape,
+les tuiles relues dans le cache et téléchargées, et les parcours régénérés et ignorés.
+
+```text
+[perf] generate-all
+  total duration: 21.4 s
+  step generate:routes: 12.3 s
+  step generate:tours: 0.4 s
+  step generate:pdfs: 8.1 s
+  tiles: 512 from cache, 37 downloaded
+  Parcours: 2 regenerated, 45 skipped
+  zone maps: 1 regenerated, 2 skipped
+```
+
+Un run qui ne change rien l'annonce : `nothing changed: no Parcours and no zone map was
+regenerated`. Les compteurs sont exacts, filtres `--tour` / `--zone` compris. Les rapports
+détaillés sont écrits en JSON dans `scripts/output/perf/` (dossier gitignoré) et fusionnés
+par l'orchestrateur.
+
+### Politesse envers les serveurs communautaires
+
+La pipeline interroge les serveurs communautaires (tuiles OSM, OSRM, Valhalla) sans jamais
+les marteler :
+
+- **une requête toutes les 400 ms par serveur**, et **deux connexions simultanées au
+  maximum** par serveur ;
+- **deux parcours routés à la fois**, OSRM et Valhalla interrogés en parallèle pour un
+  même segment (ils sont sur deux hôtes différents, ils ne se gênent donc pas) ;
+- **plusieurs fiches assemblées en parallèle** (trois à la fois), sans jamais dépasser les
+  deux connexions du serveur de tuiles ;
+- **un cache de tuiles partagé** sur le disque (`scripts/.cache/tiles/`, gitignoré) : une
+  tuile déjà téléchargée n'est pas retéléchargée, et une tuile demandée par deux fiches à
+  la fois n'est téléchargée qu'une fois.
+
+### Ce qui est publié sur le site
+
+Les **fiches** de parcours sont versionnées dans `public/pdf/<zone>/<parcours>.pdf`, et
+les **fiches de zone** (les cartes d'ensemble) dans
+`public/pdf/<zone>/Carte_parcours_a_velo.pdf` (ou `Carte_parcours_a_pied.pdf`). Le Menu ne
+propose que la carte de la zone (« Télécharger le PDF de la carte »).
+
+Les **fiches de suivi** ne sont plus publiées : elles sont produites localement par le
+script d'extraction des inscriptions (voir « Extraire les feuilles de suivi »), dans un
+dossier gitignoré, et ne sont jamais déployées.
 
 ### Tester sur un seul parcours ou une seule zone
 
@@ -70,13 +177,15 @@ bun run generate:one -- --zone=bruz-sud             # Tous les parcours d'une zo
 bun run generate:one -- --tour=V1 --zone=bruz-sud --skip-routes --skip-tours  # PDF seul, sans appels réseau
 ```
 
+`generate:one` suit exactement la même logique incrémentale qu'une génération complète :
+elle ne refait que ce qui a changé, et `--force` la force à tout régénérer.
+
 Les scripts acceptent aussi les filtres individuellement (`--tour=V1,V2`, `--zone=bruz-sud`) :
 `generate:routes`, `generate:tours` et `generate:pdfs`.
 Note : un même nom de parcours (ex. `V1`) peut exister dans plusieurs zones,
 précisez `--zone` pour lever l'ambiguïté.
-Note : `generate:one` écrit `src/app/tours-data.ts` sans le re-formater —
-lancez `bun run format` (ou `bun run lint:fix`) juste après, sinon `bun run format:check`
-échouera (`bun run generate:all` et `bun run generate:tours` se re-formatent eux-mêmes).
+Note : le catalogue `src/app/tours-data.ts` est écrit déjà formaté (Prettier) — il n'y a
+donc rien à reformater après un run, et `bun run format:check` reste vert.
 
 Chaque fiche PDF de parcours affiche en haut un QR code cliquable vers
 `https://clean.velorandonaturebruz.fr/tour/<zone>/<parcours>` (logo VRNB au centre,
