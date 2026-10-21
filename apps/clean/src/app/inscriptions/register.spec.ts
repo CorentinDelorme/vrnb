@@ -97,7 +97,6 @@ describe('parseInscriptionRegistration', () => {
     const registration = parseInscriptionRegistration(validBody({ firstName1: '  Léa  ' }));
     expect(registration?.firstName1).toBe('Léa');
     expect(parseInscriptionRegistration(validBody())).toEqual({
-      engaged: true,
       firstName1: 'Léa',
       firstName2: 'Marc',
       honeypot: '',
@@ -388,7 +387,7 @@ describe('handleInscriptionsPost', () => {
       },
     };
     const response = await handleInscriptionsPost(
-      { edition: EDITION, now: () => NOW, store },
+      { edition: EDITION, now: () => NOW, parcours, store },
       request(validBody()),
     );
 

@@ -1,8 +1,8 @@
 import { CURRENT_EDITION } from '../../../src/app/inscriptions/edition';
 import { handleInscriptionsGet } from '../../../src/app/inscriptions/public-state';
 import { handleInscriptionsPost } from '../../../src/app/inscriptions/register';
-import { parcoursExists } from '../../../src/app/tours-queries';
 import { createUpstashInscriptionsStore } from '../../../src/app/inscriptions/upstash-kv';
+import { parcoursExists } from '../../../src/app/tours-queries';
 
 /**
  * `/api/inscriptions` — thin adapters over the pure handlers in

@@ -85,12 +85,9 @@ describe('parseInscriptionKey', () => {
     });
   });
 
-  it('should keep tour names containing a colon', () => {
-    expect(parseInscriptionKey('inscriptions:2027:z:very:long:name')).toEqual({
-      tourId: 'very:long:name',
-      year: 2027,
-      zoneId: 'z',
-    });
+  it('should reject a key with more than four segments', () => {
+    // No Parcours id contains a colon: a key with extra segments is garbage.
+    expect(parseInscriptionKey('inscriptions:2027:z:very:long:name')).toBeNull();
   });
 
   it('should reject keys of any other namespace', () => {

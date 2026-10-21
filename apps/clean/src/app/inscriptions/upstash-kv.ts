@@ -33,22 +33,17 @@ export interface ParsedInscriptionKey {
 }
 
 /**
- * Strictly parse a stored key; `null` whenever the segments are not a valid
- * inscription key of any year (wrong namespace, missing parts, garbage). The
- * tour name may itself contain `:`, so only the first three segments are fixed.
+ * Strictly parse a stored key; `null` whenever the key is not a valid
+ * inscription key of any year (wrong namespace, missing parts, garbage). A
+ * key has exactly four colon-separated segments — `inscriptions:<year>:<zone>
+ * <tour>` — because no Parcours id contains a colon.
  */
 export function parseInscriptionKey(key: string): ParsedInscriptionKey | null {
-  const [prefix, rawYear, zoneId, ...tourParts] = key.split(':');
-  if (
-    prefix !== INSCRIPTIONS_KEY_PREFIX ||
-    typeof rawYear !== 'string' ||
-    typeof zoneId !== 'string' ||
-    tourParts.length === 0
-  ) {
-    return null;
-  }
+  const segments = key.split(':');
+  if (segments.length !== 4) return null;
+  const [prefix, rawYear, zoneId, tourId] = segments;
+  if (prefix !== INSCRIPTIONS_KEY_PREFIX) return null;
   if (!/^\d+$/.test(rawYear)) return null;
-  const tourId = tourParts.join(':');
   if (!zoneId || !tourId) return null;
   return { tourId, year: Number.parseInt(rawYear, 10), zoneId };
 }

@@ -46,7 +46,7 @@ export function TourRegisterButton({ available, tour }: TourRegisterButtonProps)
     <>
       {available ? (
         <button
-          aria-label={`S'inscrire en binôme pour le parcours ${tour.tourId}`}
+          aria-label={`S'inscrire en Binôme pour le parcours ${tour.tourId}`}
           className="btn btn-outline btn-secondary max-sm:btn-xs max-sm:max-w-none btn-sm sm:btn-md"
           onClick={() => {
             setEverOpened(true);

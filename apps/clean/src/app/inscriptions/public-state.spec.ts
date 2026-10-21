@@ -31,10 +31,12 @@ const KNOWN_PAIRS = new Set([
   'bruz-sud:V1',
   'zh:Kept',
   'zh:Kept1',
+  'zh:T',
   'zh:T2',
   'zh:T3',
   'zh:T11',
   'zh:T20',
+  'zh:V1',
   'zi:T20',
   'ze:KeptArray',
 ]);
@@ -230,7 +232,11 @@ describe('readInscriptionEntry', () => {
     ).toBeNull();
     expect(readInscriptionEntry(entry(2027, 'zh', 'V1', 'garbage'), 2027, parcours)).toBeNull();
     expect(
-      readInscriptionEntry({ key: 'not-an-inscription-key', value: '{"binome":{}}' }, 2027, parcours),
+      readInscriptionEntry(
+        { key: 'not-an-inscription-key', value: '{"binome":{}}' },
+        2027,
+        parcours,
+      ),
     ).toBeNull();
   });
 

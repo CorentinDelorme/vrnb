@@ -118,7 +118,6 @@ export function parseInscriptionRegistration(payload: unknown): BinomeRegistrati
   const honeypot = body['honeypot'] === undefined ? '' : body['honeypot'];
   if (typeof honeypot !== 'string') return null;
   return {
-    engaged: true,
     firstName1,
     firstName2,
     honeypot: '',

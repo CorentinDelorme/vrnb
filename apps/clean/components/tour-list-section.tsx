@@ -75,11 +75,7 @@ function isCoveredInscriptions(
  * Parcours loses it. A closed registration window keeps the button — the
  * modal explains that « l'action est passée » and disables its form.
  */
-function isRegisteringAvailable(
-  status: InscriptionsStatus,
-  zoneId: string,
-  tourId: string,
-): boolean {
+function isUncovered(status: InscriptionsStatus, zoneId: string, tourId: string): boolean {
   return !isCoveredInscriptions(status, zoneId, tourId);
 }
 
@@ -137,7 +133,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             </div>
             <div className="list-col-grow flex justify-end">
               <TourRegisterButton
-                available={isRegisteringAvailable(status, zoneId, tour.name)}
+                available={isUncovered(status, zoneId, tour.name)}
                 tour={{ tourId: tour.name, zoneId }}
               />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />

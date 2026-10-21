@@ -23,7 +23,7 @@ import { CURRENT_EDITION } from '../src/app/inscriptions/edition';
 import { createUpstashInscriptionsStore } from '../src/app/inscriptions/upstash-kv';
 import { parcoursExists } from '../src/app/tours-queries';
 import {
-  type FicheFileSink,
+  type FicheDeSuiviFileSink,
   type InscriptionsExtractionOutcome,
   extractInscriptionSheets,
   fetchWithTimeout,
@@ -42,7 +42,7 @@ const MISSING_ENV_MESSAGE = [
 ].join(' ');
 
 /** Real filesystem sink: writes the fiches under the gitignored output folder. */
-const fileSink: FicheFileSink = {
+const fileSink: FicheDeSuiviFileSink = {
   ensureDir: async (dir) => {
     await mkdir(dir, { recursive: true });
   },

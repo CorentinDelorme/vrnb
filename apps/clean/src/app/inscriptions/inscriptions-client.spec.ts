@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { BinomeRegistration } from './validation';
 import {
   fetchInscriptionsOutcome,
   parseInscriptionsState,
   postRegistration,
   registrationRequestBody,
 } from './inscriptions-client';
+import type { BinomeRegistration } from './validation';
 
 /**
  * Browser client of the inscriptions endpoints: relative-URL fetch with an

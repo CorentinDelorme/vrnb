@@ -5,7 +5,7 @@
  * The module produces the per-Zone markdown « Fiche de suivi » files and is
  * fully injectable so the extraction runs without a network or a filesystem:
  * the KV listing comes in through the `InscriptionsStore` port defined by
- * ticket #16 and file writing through the `FicheFileSink` port. The thin CLI
+ * ticket #16 and file writing through the `FicheDeSuiviFileSink` port. The thin CLI
  * adapter in `extract-inscriptions.ts` wires the Upstash REST store and the
  * real filesystem (env credentials, REST timeouts, console recap).
  *
@@ -75,7 +75,7 @@ export function parseInscriptionBinome(value: string): BinomeIdentity | null {
 export interface CollectedInscriptions {
   readonly inscriptions: readonly BinomeInscription[];
   readonly warnings: readonly string[];
-  /** How many pairs the catalogue does not know (skipped, never a fiche). */
+  /** How many pairs the catalogue does not know (skipped, never a Fiche de suivi). */
   readonly unknownParcoursCount: number;
 }
 
@@ -161,7 +161,7 @@ export function groupInscriptionsByZone(
   for (const inscription of inscriptions) {
     if (!ZONES.some((zone) => zone.id === inscription.zoneId)) {
       warnings.push(
-        `clé placée dans une Zone inconnue (fiche générée sous « ${inscription.zoneId} ») : ${inscription.key}`,
+        `clé placée dans une Zone inconnue (Fiche de suivi générée sous « ${inscription.zoneId} ») : ${inscription.key}`,
       );
     }
     const bucket = byZoneId.get(inscription.zoneId) ?? [];
@@ -184,7 +184,7 @@ export function groupInscriptionsByZone(
 }
 
 /** `Dimanche 14 février 2027` for an `YYYY-MM-DD` action date, in the Édition zone. */
-export function formatEditionactionDate(actionDate: string): string {
+export function formatEditionActionDate(actionDate: string): string {
   const instant = new Date(`${actionDate}T12:00:00Z`);
   if (Number.isNaN(instant.getTime())) {
     throw new Error(`Date de l'action de l'Édition invalide : ${actionDate}`);
@@ -212,21 +212,21 @@ function memberDisplay(firstName: string, lastName: string): string {
   return `${markdownCell(firstName)} ${markdownCell(lastName).toUpperCase()}`;
 }
 
-/** The two Binôme identities joined for the fiche's Binôme column. */
-export function binomeDisplay(fields: BinomeFields): string {
+/** The two Binôme identities joined for the Fiche de suivi's Binôme column. */
+export function binomeDisplay(fields: BinomeIdentity): string {
   return [
     memberDisplay(fields.firstName1, fields.lastName1),
     memberDisplay(fields.firstName2, fields.lastName2),
   ].join(' — ');
 }
 
-/** File name of one Zone's fiche: `Fiche_de_suivi_<zoneId>_<year>.md`. */
-export function zoneFicheFileName(zoneId: string, year: number): string {
+/** File name of one Zone's Fiche de suivi: `Fiche_de_suivi_<zoneId>_<year>.md`. */
+export function zoneFicheDeSuiviFileName(zoneId: string, year: number): string {
   return `Fiche_de_suivi_${zoneId}_${year}.md`;
 }
 
-/** File name of the empty-Édition state: `Fiche_de_suivi_<year>.md`. */
-export function emptyEditionFicheFileName(year: number): string {
+/** File name of the empty-Édition Fiche de suivi: `Fiche_de_suivi_<year>.md`. */
+export function emptyEditionFicheDeSuiviFileName(year: number): string {
   return `Fiche_de_suivi_${year}.md`;
 }
 
@@ -237,7 +237,7 @@ const RETENTION_FOOTER =
 const EDITION_LINES = (edition: Edition): string =>
   [
     'Édition : ' + edition.year,
-    "Date de l'action : " + formatEditionactionDate(edition.actionDate),
+    "Date de l'action : " + formatEditionActionDate(edition.actionDate),
   ].join('\n');
 
 /** Markdown content of one Zone's « Fiche de suivi ». */
@@ -277,10 +277,10 @@ export function renderEmptyEditionContent(edition: Edition): string {
 // --- Sheet writing ---
 
 /** Writing port: keeps the generation free of `node:fs` so tests record in memory. */
-export interface FicheFileSink {
+export interface FicheDeSuiviFileSink {
   /** Create the output directory if it is missing. */
   readonly ensureDir: (dir: string) => Promise<void>;
-  /** Save one fiche into the output directory; returns its path for the recap. */
+  /** Save one Fiche de suivi into the output directory; returns its path for the recap. */
   readonly saveFile: (dir: string, fileName: string, content: string) => Promise<string>;
 }
 
@@ -288,9 +288,9 @@ export interface FicheFileSink {
 export interface InscriptionsExtractionDeps {
   readonly store: InscriptionsStore;
   readonly edition: Edition;
-  /** Local (gitignored) folder receiving the fiches. */
+  /** Local (gitignored) folder receiving the Fiches de suivi. */
   readonly outputDir: string;
-  readonly sink: FicheFileSink;
+  readonly sink: FicheDeSuiviFileSink;
   /**
    * The Parcours catalogue: a (Zone, Parcours) pair it does not know is
    * skipped (with a warning), never turned into a Fiche de suivi.
@@ -298,8 +298,8 @@ export interface InscriptionsExtractionDeps {
   readonly parcours: ParcoursLookup;
 }
 
-/** One written fiche, for the CLI recap. */
-export interface GeneratedFiche {
+/** One written Fiche de suivi, for the CLI recap. */
+export interface GeneratedFicheDeSuivi {
   readonly fileName: string;
   readonly path: string;
   /** `null` for the whole-Édition empty state, which is not Zone-specific. */
@@ -311,13 +311,13 @@ export interface GeneratedFiche {
 export interface InscriptionsExtractionOutcome {
   readonly inscriptions: readonly BinomeInscription[];
   readonly warnings: readonly string[];
-  readonly fiches: readonly GeneratedFiche[];
-  /** How many pairs the catalogue does not know (skipped, never a fiche). */
+  readonly fiches: readonly GeneratedFicheDeSuivi[];
+  /** How many pairs the catalogue does not know (skipped, never a Fiche de suivi). */
   readonly unknownParcoursCount: number;
 }
 
 /**
- * Extract the Édition Inscriptions and write the fiches de suivi: one file
+ * Extract the Édition Inscriptions and write the Fiches de suivi: one file
  * per Zone with at least one inscription, or a single empty-Édition file
  * when nothing usable is registered (so the run always leaves a tangible
  * trace). All KV reads happen before the first write: a store failure leaves
@@ -331,9 +331,9 @@ export async function extractInscriptionSheets(
   const collected = collectInscriptions(listings, deps.edition.year, deps.parcours);
   const grouped = groupInscriptionsByZone(collected.inscriptions);
   await deps.sink.ensureDir(deps.outputDir);
-  const fiches: GeneratedFiche[] = [];
+  const fiches: GeneratedFicheDeSuivi[] = [];
   if (grouped.sheets.length === 0) {
-    const fileName = emptyEditionFicheFileName(deps.edition.year);
+    const fileName = emptyEditionFicheDeSuiviFileName(deps.edition.year);
     const path = await deps.sink.saveFile(
       deps.outputDir,
       fileName,
@@ -342,7 +342,7 @@ export async function extractInscriptionSheets(
     fiches.push({ fileName, inscriptionCount: 0, path, zoneId: null });
   }
   for (const sheet of grouped.sheets) {
-    const fileName = zoneFicheFileName(sheet.zoneId, deps.edition.year);
+    const fileName = zoneFicheDeSuiviFileName(sheet.zoneId, deps.edition.year);
     const path = await deps.sink.saveFile(
       deps.outputDir,
       fileName,

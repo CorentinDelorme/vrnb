@@ -10,9 +10,12 @@ import {
   INSCRIPTIONS_RETENTION_DAYS,
   isRegistrationOpen,
 } from '../src/app/inscriptions/edition';
-import type { BinomeRegistration } from '../src/app/inscriptions/validation';
 import { postRegistration } from '../src/app/inscriptions/inscriptions-client';
-import type { IdentityField, IdentityFieldError } from '../src/app/inscriptions/validation';
+import type {
+  BinomeRegistration,
+  IdentityField,
+  IdentityFieldError,
+} from '../src/app/inscriptions/validation';
 import {
   IDENTITY_FIELD_LABELS,
   IDENTITY_FIELD_MAX_LENGTH,
@@ -111,7 +114,7 @@ const OUTCOME_ALERTS: Readonly<
   taken: {
     className: 'alert alert-warning mt-4 text-sm',
     message:
-      "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
+      "Ce parcours vient d'être couvert par un autre Binôme : vous pouvez choisir un autre parcours libre.",
   },
   invalid: {
     className: 'alert alert-error mt-4 text-sm',
@@ -221,7 +224,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
           </button>
         </form>
 
-        <h3 className="text-xl font-bold">Inscription du binôme</h3>
+        <h3 className="text-xl font-bold">Inscription du Binôme</h3>
         <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
           Parcours <span className="text-base-content font-medium">{tour.tourId}</span> — Zone{' '}
           <span className="text-base-content font-medium">{zone.name}</span>
@@ -231,7 +234,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
           <>
             <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
               <span>
-                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
+                <strong>Votre Binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
                 {ACTION_DATE_LABEL} au point de rendez-vous ci-dessous.
               </span>
             </div>
@@ -363,7 +366,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                   disabled={!complete || outcome === 'submitting' || windowClosed}
                   type="submit"
                 >
-                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
+                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon Binôme'}
                 </button>
               </div>
             </form>
