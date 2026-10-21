@@ -24,6 +24,20 @@ import {
   zoneMapPdfPath,
   zonePdfDir,
 } from './generation-helpers';
+import type { PlanCandidate } from './generation-plan';
+import { planGeneration, zoneMapKey } from './generation-plan';
+import type { ParcoursStateUpdate } from './generation-state';
+import {
+  GENERATION_STATE_VERSION,
+  fingerprintDocument,
+  fingerprintParcoursArtefacts,
+  generationStatePath,
+  nextGenerationState,
+  parcoursStateKey,
+  readGenerationState,
+  withFicheFingerprint,
+  writeGenerationState,
+} from './generation-state';
 
 const rootDir = join(import.meta.dirname, '..');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
@@ -779,6 +793,45 @@ async function forEachConcurrently<T>(
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
 }
 
+// --- The plan of the run: what must be rendered again ---
+
+/** A Parcours of the run, with the fingerprints of the files it reads. */
+function toCandidate(tour: TourDistances): PlanCandidate {
+  return {
+    zoneId: tour.zoneId,
+    tourId: tour.name,
+    fingerprints: fingerprintParcoursArtefacts(rootDir, tour.zoneId, tour.name),
+  };
+}
+
+/**
+ * The fingerprints of the overview maps of the Zones of the run.
+ *
+ * The plan reads the map of the Zone and the practice type it decides
+ * for; a map that is missing, empty or unreadable has no fingerprint.
+ */
+function zoneMapFingerprintsOf(
+  tours: readonly TourDistances[],
+): Record<string, string | undefined> {
+  const fingerprints: Record<string, string | undefined> = {};
+
+  for (const zoneId of new Set(tours.map((tour) => tour.zoneId))) {
+    for (const kind of ['V', 'P'] as const) {
+      fingerprints[zoneMapKey(zoneId, kind)] = fingerprintDocument(
+        zoneMapPdfPath(rootDir, zoneId, kind),
+      );
+    }
+  }
+
+  return fingerprints;
+}
+
+/** Every Parcours of a Zone, whatever the filters of the run: the map shows them all. */
+function toursOfZone(zoneId: string, kind: 'V' | 'P'): TourDistances[] {
+  const tours = kind === 'V' ? toursData.vTours : toursData.pTours;
+  return tours.filter((tour) => tour.zoneId === zoneId);
+}
+
 async function main(): Promise<void> {
   mkdirSync(pdfRootDir(rootDir), { recursive: true });
   mkdirSync(tileCacheDir, { recursive: true });
@@ -799,23 +852,95 @@ async function main(): Promise<void> {
     throw new Error('No tours match the --tour/--zone filter.');
   }
 
+  // The plan decides what the run must render: the Fiche of the Parcours
+  // that changed, and the overview map of the Zones that changed.
+  const statePath = generationStatePath(rootDir);
+  const state = readGenerationState(statePath);
+  const plan = planGeneration({
+    state,
+    currentVersion: GENERATION_STATE_VERSION,
+    candidates: allTours.map(toCandidate),
+    zoneMapFingerprints: zoneMapFingerprintsOf(allTours),
+    filters,
+    force,
+  });
+
   const logo = await loadLogo();
 
-  await forEachConcurrently(allTours, FICHE_CONCURRENCY, (tour) => generateTourPdf(tour, logo));
+  const toursByKey = new Map(
+    allTours.map((tour) => [parcoursStateKey(tour.zoneId, tour.name), tour]),
+  );
+  const rendered = new Set<string>();
+  let failures = 0;
 
-  if (!isFilterActive(filters.tourIds)) {
-    const zoneIds = [...new Set(allTours.map((t) => t.zoneId))].sort();
-    const vTours = toursData.vTours.filter((t) => zoneIds.includes(t.zoneId));
-    const pTours = toursData.pTours.filter((t) => zoneIds.includes(t.zoneId));
+  for (const decision of plan.decisions) {
+    if (!decision.regenerateFiche) {
+      console.log(`skip ${decision.tourId} (${decision.ficheReason})`);
+    }
+  }
 
-    const zoneMaps = zoneIds.flatMap((zoneId) => [
-      { zoneId, kind: 'V' as const, tours: vTours.filter((t) => t.zoneId === zoneId) },
-      { zoneId, kind: 'P' as const, tours: pTours.filter((t) => t.zoneId === zoneId) },
-    ]);
+  await forEachConcurrently(
+    plan.decisions.filter((decision) => decision.regenerateFiche),
+    FICHE_CONCURRENCY,
+    async (decision) => {
+      const tour = toursByKey.get(parcoursStateKey(decision.zoneId, decision.tourId));
+      if (!tour) {
+        return;
+      }
+      try {
+        await generateTourPdf(tour, logo);
+        rendered.add(parcoursStateKey(tour.zoneId, tour.name));
+      } catch (error) {
+        failures += 1;
+        console.error(`fail ${tour.name}: ${error instanceof Error ? error.message : error}`);
+      }
+    },
+  );
 
-    await forEachConcurrently(zoneMaps, FICHE_CONCURRENCY, (zoneMap) =>
-      generateZoneMapPdf(zoneMap.zoneId, zoneMap.kind, zoneMap.tours, logo),
-    );
+  for (const decision of plan.zoneDecisions) {
+    if (!decision.regenerateZoneMap) {
+      console.log(`skip ${decision.zoneId} ${decision.kind} map (${decision.reason})`);
+    }
+  }
+
+  await forEachConcurrently(
+    plan.zoneDecisions.filter((decision) => decision.regenerateZoneMap),
+    FICHE_CONCURRENCY,
+    async (decision) => {
+      try {
+        await generateZoneMapPdf(
+          decision.zoneId,
+          decision.kind,
+          toursOfZone(decision.zoneId, decision.kind),
+          logo,
+        );
+      } catch (error) {
+        failures += 1;
+        console.error(
+          `fail ${decision.zoneId} map: ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    },
+  );
+
+  // The state remembers the Fiches that were rendered: the next run knows
+  // they are up to date. A Fiche that failed keeps no fingerprint, so the
+  // next run renders it again.
+  const updates: ParcoursStateUpdate[] = [];
+  for (const decision of plan.decisions) {
+    if (!decision.regenerateFiche) {
+      continue;
+    }
+    const key = parcoursStateKey(decision.zoneId, decision.tourId);
+    const fiche = rendered.has(key)
+      ? fingerprintDocument(tourPdfPath(rootDir, decision.zoneId, decision.tourId))
+      : undefined;
+    updates.push({ key, record: withFicheFingerprint(state?.parcours[key], fiche) });
+  }
+  writeGenerationState(statePath, nextGenerationState(state, updates));
+
+  if (failures > 0) {
+    throw new Error(`${failures} Fiche(s) failed.`);
   }
 }
 

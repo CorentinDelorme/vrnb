@@ -245,6 +245,10 @@ async function main(): Promise<void> {
 /**
  * The updates the state of the next run holds: the Parcours that were
  * routed get their new fingerprints, the Parcours that failed get none.
+ *
+ * A Parcours that was routed has no Fiche fingerprint anymore: its Fiche
+ * was rendered from the previous segments, so it is out of date and the
+ * Fiche step renders it again.
  */
 function stateUpdates(
   entries: ReadonlyMap<string, ParcoursEntry>,
@@ -258,7 +262,7 @@ function stateUpdates(
     if (failed.has(key) || !routed.has(key) || !entry) {
       return { key };
     }
-    return { key, record: fingerprintParcoursFiles(entry) };
+    return { key, record: { ...fingerprintParcoursFiles(entry), fiche: undefined } };
   });
 }
 

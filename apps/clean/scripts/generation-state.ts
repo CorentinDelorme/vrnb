@@ -17,11 +17,11 @@
  */
 
 import { createHash } from 'crypto';
-import { mkdirSync, readFileSync } from 'fs';
+import { mkdirSync, readFileSync, statSync } from 'fs';
 import { dirname, join } from 'path';
 
 import type { ParcoursEntry } from './generation-helpers';
-import { writeFileIfChanged } from './generation-helpers';
+import { resolveGpxTracePath, tourPdfPath, writeFileIfChanged } from './generation-helpers';
 
 /**
  * Version of the generation state: the single source of truth of what the
@@ -69,6 +69,11 @@ export interface ParcoursFingerprints {
   readonly startSegment: string | undefined;
   /** Fingerprint of the end segment, `undefined` when the file is missing. */
   readonly endSegment: string | undefined;
+  /**
+   * Fingerprint of the produced Fiche, `undefined` when the file is
+   * missing, empty or unreadable.
+   */
+  readonly fiche?: string;
 }
 
 /** What the pipeline produced for a Parcours during a run. */
@@ -108,6 +113,23 @@ export function fingerprintFile(path: string): string | undefined {
 }
 
 /**
+ * Fingerprint of a produced document (a Fiche or an overview map).
+ *
+ * `undefined` when the file is missing, empty or unreadable: an empty
+ * document is not a document, and the pipeline must render it again.
+ */
+export function fingerprintDocument(path: string): string | undefined {
+  try {
+    if (statSync(path).size === 0) {
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  return fingerprintFile(path);
+}
+
+/**
  * The fingerprints of the files of a Parcours, as they are on the disk: its
  * source trace and its two segments.
  */
@@ -116,6 +138,23 @@ export function fingerprintParcoursFiles(entry: ParcoursEntry): ParcoursFingerpr
     trace: fingerprintFile(entry.tracePath),
     startSegment: fingerprintFile(entry.startSegmentPath),
     endSegment: fingerprintFile(entry.endSegmentPath),
+  };
+}
+
+/**
+ * The fingerprints of every file of a Parcours, as they are on the disk:
+ * its source trace, its two segments and its Fiche.
+ */
+export function fingerprintParcoursArtefacts(
+  rootDir: string,
+  zoneId: string,
+  tourId: string,
+): ParcoursFingerprints {
+  return {
+    trace: fingerprintFile(resolveGpxTracePath(rootDir, zoneId, tourId, '')),
+    startSegment: fingerprintFile(resolveGpxTracePath(rootDir, zoneId, tourId, '_start')),
+    endSegment: fingerprintFile(resolveGpxTracePath(rootDir, zoneId, tourId, '_end')),
+    fiche: fingerprintDocument(tourPdfPath(rootDir, zoneId, tourId)),
   };
 }
 
@@ -142,6 +181,42 @@ export function nextGenerationState(
   }
 
   return { version: GENERATION_STATE_VERSION, parcours: records };
+}
+
+/**
+ * The record of a Parcours whose Fiche was rendered: the fingerprints the
+ * state knew, with the one of the Fiche that was just written.
+ *
+ * A `undefined` fingerprint means the Fiche was not rendered: the record
+ * then holds no Fiche fingerprint, and the next run renders it again.
+ */
+export function withFicheFingerprint(
+  record: ParcoursGenerationRecord | undefined,
+  fiche: string | undefined,
+): ParcoursGenerationRecord {
+  return { ...record, fiche };
+}
+
+/**
+ * The state with the fingerprint of the Fiche of every Parcours that has
+ * none yet.
+ *
+ * A working copy whose Fiches were committed before the state tracked them
+ * gets them recorded, so a fresh clone does not render every Fiche again.
+ * The fingerprints already recorded are never overwritten: the state must
+ * not claim a Fiche is up to date when it was rendered from another trace.
+ */
+export function withMissingFicheFingerprints(
+  state: GenerationState,
+  fingerprints: Readonly<Record<string, string | undefined>>,
+): GenerationState {
+  const parcours: Record<string, ParcoursGenerationRecord> = {};
+
+  for (const [key, record] of Object.entries(state.parcours)) {
+    parcours[key] = record.fiche ? record : withFicheFingerprint(record, fingerprints[key]);
+  }
+
+  return { version: state.version, parcours };
 }
 
 /**

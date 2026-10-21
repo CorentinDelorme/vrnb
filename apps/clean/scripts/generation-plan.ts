@@ -1,9 +1,11 @@
 /**
- * The generation plan (ticket #26, spec #21).
+ * The generation plan (tickets #26 and #27, spec #21).
  *
  * The plan is the pure decision of what a generation run must regenerate:
  * for every Parcours of the run, whether its start and end segments have
- * to be routed again, and why.
+ * to be routed again and whether its Fiche has to be rendered again, and
+ * for every Zone of the run, whether its overview map (the « Fiche de
+ * zone ») has to be rendered again.
  *
  * It never touches the network, nor the filesystem: the fingerprints of
  * the files are computed by the caller and passed in, so the plan is
@@ -15,16 +17,30 @@
  *   version constant changed, when its source trace changed, when its
  *   segments are missing from the disk or from the state, or when the run
  *   is forced;
+ * - the Fiche of a Parcours is rendered again when the Parcours changed
+ *   (its trace or its segments changed, so its segments are routed
+ *   again), when the Fiche file is missing, empty or unreadable, when the
+ *   state records no Fiche fingerprint, when the Fiche on the disk
+ *   differs from the one the state recorded, or when the run is forced;
+ * - the overview map of a Zone is rendered again when one of its Parcours
+ *   is not up to date (its trace or its segments changed, or its Fiche
+ *   must be rendered again), when the map file is missing, empty or
+ *   unreadable, or when the run is forced;
  * - a Parcours that is up to date is left alone: its segments are not
- *   routed again and its trace is not touched.
+ *   routed again, its Fiche is not rendered again and its trace is not
+ *   touched.
  *
- * The decisions of the Fiche (ticket #27) will join this module: the
- * record of a decision already carries what a Fiche decision needs.
+ * Every decision carries the reason it was taken: the run tells what it
+ * regenerated and what it left alone, and why.
  */
 
 import type { GenerationFilters } from './generation-helpers';
 import { matchesFilters } from './generation-helpers';
-import type { GenerationState, ParcoursFingerprints } from './generation-state';
+import type {
+  GenerationState,
+  ParcoursFingerprints,
+  ParcoursGenerationRecord,
+} from './generation-state';
 import { parcoursStateKey } from './generation-state';
 
 /** Why the plan decided what it decided for a Parcours. */
@@ -45,6 +61,32 @@ export type GenerationReason =
   | 'missing-segments'
   /** The Parcours is up to date: nothing to regenerate. */
   | 'unchanged';
+
+/** Why the plan decided to render the Fiche of a Parcours again. */
+export type FicheReason =
+  /** The run was forced: every Fiche of the selection is rendered. */
+  | 'forced'
+  /** The Parcours changed: its trace or its segments changed. */
+  | 'parcours-changed'
+  /** The Fiche is missing, empty or unreadable on disk. */
+  | 'missing-fiche'
+  /** The state records no Fiche fingerprint for the Parcours. */
+  | 'no-fiche-state'
+  /** The Fiche on the disk differs from the one the state recorded. */
+  | 'fiche-changed'
+  /** The Fiche is up to date: nothing to render. */
+  | 'up-to-date';
+
+/** Why the plan decided to render the overview map of a Zone again. */
+export type ZoneReason =
+  /** The run was forced: every overview map of the selection is rendered. */
+  | 'forced'
+  /** At least one Parcours of the Zone is not up to date. */
+  | 'parcours-changed'
+  /** The overview map is missing, empty or unreadable on disk. */
+  | 'missing-zone-map'
+  /** The overview map is up to date: nothing to render. */
+  | 'up-to-date';
 
 /** The fingerprints of the files of a Parcours, as found on the disk. */
 export type { ParcoursFingerprints } from './generation-state';
@@ -67,6 +109,12 @@ export interface PlanGenerationInput {
   readonly currentVersion: number;
   /** The Parcours of the run, with the fingerprints of their files. */
   readonly candidates: readonly PlanCandidate[];
+  /**
+   * The fingerprints of the overview maps of the Zones, keyed by
+   * `zoneMapKey`. A map that is missing, empty or unreadable has no
+   * fingerprint.
+   */
+  readonly zoneMapFingerprints?: Readonly<Record<string, string | undefined>>;
   /** The `--tour` and `--zone` filters of the run. */
   readonly filters?: GenerationFilters;
   /** Whether the run is forced. */
@@ -83,12 +131,35 @@ export interface ParcoursDecision {
   readonly rerouteSegments: boolean;
   /** Why the plan decided this. */
   readonly reason: GenerationReason;
+  /** Whether the Fiche must be rendered again. */
+  readonly regenerateFiche: boolean;
+  /** Why the plan decided this. */
+  readonly ficheReason: FicheReason;
+}
+
+/** What the plan decided for the overview map of one Zone. */
+export interface ZoneDecision {
+  /** Zone of the overview map. */
+  readonly zoneId: string;
+  /** Practice type of the overview map: `V` (bike) or `P` (walk). */
+  readonly kind: 'V' | 'P';
+  /** Whether the overview map must be rendered again. */
+  readonly regenerateZoneMap: boolean;
+  /** Why the plan decided this. */
+  readonly reason: ZoneReason;
 }
 
 /** The decisions of a generation run. */
 export interface GenerationPlan {
   /** One decision per Parcours of the run, in the order of the run. */
   readonly decisions: readonly ParcoursDecision[];
+  /** One decision per overview map of the run, in the order of the run. */
+  readonly zoneDecisions: readonly ZoneDecision[];
+}
+
+/** Key of an overview map in the fingerprints of the plan: `<zoneId>/<kind>`. */
+export function zoneMapKey(zoneId: string, kind: 'V' | 'P'): string {
+  return `${zoneId}/${kind}`;
 }
 
 /**
@@ -102,10 +173,13 @@ export function planGeneration(input: PlanGenerationInput): GenerationPlan {
     matchesFilters(input.filters, candidate.zoneId, candidate.tourId),
   );
 
+  const decisions = candidates.map((candidate) =>
+    decideParcours(candidate, input.state, input.currentVersion, input.force ?? false),
+  );
+
   return {
-    decisions: candidates.map((candidate) =>
-      decideParcours(candidate, input.state, input.currentVersion, input.force ?? false),
-    ),
+    decisions,
+    zoneDecisions: decideZoneMaps(decisions, input.zoneMapFingerprints ?? {}, input.force ?? false),
   };
 }
 
@@ -115,32 +189,43 @@ function decideParcours(
   currentVersion: number,
   force: boolean,
 ): ParcoursDecision {
-  const decision = (rerouteSegments: boolean, reason: GenerationReason): ParcoursDecision => ({
+  const routing = decideRouting(candidate, state, currentVersion, force);
+  const fiche = decideFiche(candidate, routing, state, force);
+
+  return {
     zoneId: candidate.zoneId,
     tourId: candidate.tourId,
-    rerouteSegments,
-    reason,
-  });
+    ...routing,
+    ...fiche,
+  };
+}
 
+/** Whether the segments of the Parcours must be routed again, and why. */
+function decideRouting(
+  candidate: PlanCandidate,
+  state: GenerationState | undefined,
+  currentVersion: number,
+  force: boolean,
+): { readonly rerouteSegments: boolean; readonly reason: GenerationReason } {
   if (force) {
-    return decision(true, 'forced');
+    return { rerouteSegments: true, reason: 'forced' };
   }
   if (!state) {
-    return decision(true, 'no-state');
+    return { rerouteSegments: true, reason: 'no-state' };
   }
   if (state.version !== currentVersion) {
-    return decision(true, 'version-changed');
+    return { rerouteSegments: true, reason: 'version-changed' };
   }
 
   const record = state.parcours[parcoursStateKey(candidate.zoneId, candidate.tourId)];
   if (!record) {
-    return decision(true, 'no-state-entry');
+    return { rerouteSegments: true, reason: 'no-state-entry' };
   }
   if (!candidate.fingerprints.trace) {
-    return decision(true, 'missing-trace');
+    return { rerouteSegments: true, reason: 'missing-trace' };
   }
   if (record.trace !== candidate.fingerprints.trace) {
-    return decision(true, 'trace-changed');
+    return { rerouteSegments: true, reason: 'trace-changed' };
   }
   if (
     !record.startSegment ||
@@ -148,8 +233,139 @@ function decideParcours(
     !candidate.fingerprints.startSegment ||
     !candidate.fingerprints.endSegment
   ) {
-    return decision(true, 'missing-segments');
+    return { rerouteSegments: true, reason: 'missing-segments' };
   }
 
-  return decision(false, 'unchanged');
+  return { rerouteSegments: false, reason: 'unchanged' };
+}
+
+/** Whether the Fiche of the Parcours must be rendered again, and why. */
+function decideFiche(
+  candidate: PlanCandidate,
+  routing: { readonly rerouteSegments: boolean },
+  state: GenerationState | undefined,
+  force: boolean,
+): { readonly regenerateFiche: boolean; readonly ficheReason: FicheReason } {
+  if (force) {
+    return { regenerateFiche: true, ficheReason: 'forced' };
+  }
+  // The Fiche shows the trace and the two segments: a Parcours whose
+  // segments are routed again has a Fiche that is out of date.
+  if (routing.rerouteSegments) {
+    return { regenerateFiche: true, ficheReason: 'parcours-changed' };
+  }
+
+  const record = state?.parcours[parcoursStateKey(candidate.zoneId, candidate.tourId)];
+  if (record && segmentsChanged(record, candidate.fingerprints)) {
+    return { regenerateFiche: true, ficheReason: 'parcours-changed' };
+  }
+  if (!candidate.fingerprints.fiche) {
+    return { regenerateFiche: true, ficheReason: 'missing-fiche' };
+  }
+  if (!record?.fiche) {
+    return { regenerateFiche: true, ficheReason: 'no-fiche-state' };
+  }
+  if (record.fiche !== candidate.fingerprints.fiche) {
+    return { regenerateFiche: true, ficheReason: 'fiche-changed' };
+  }
+
+  return { regenerateFiche: false, ficheReason: 'up-to-date' };
+}
+
+/**
+ * Whether the segments of the Parcours changed since the state recorded
+ * them.
+ *
+ * The routing decision only compares the trace: a segment written by hand,
+ * or by a run that failed before it could record it, leaves a Fiche that
+ * is out of date.
+ */
+function segmentsChanged(
+  record: ParcoursGenerationRecord,
+  fingerprints: ParcoursFingerprints,
+): boolean {
+  return (
+    record.startSegment !== fingerprints.startSegment ||
+    record.endSegment !== fingerprints.endSegment
+  );
+}
+
+/** The Zone of the run, with the practice types it holds. */
+interface ZoneOfRun {
+  readonly zoneId: string;
+  readonly kind: 'V' | 'P';
+  /** Whether one of the Parcours of the Zone is not up to date. */
+  changed: boolean;
+}
+
+/**
+ * Decide the overview maps of the run: one per Zone and practice type
+ * the run holds.
+ *
+ * Only the Zones of the run are considered: a Zone the filters leave out
+ * is not part of the run.
+ */
+function decideZoneMaps(
+  decisions: readonly ParcoursDecision[],
+  zoneMapFingerprints: Readonly<Record<string, string | undefined>>,
+  force: boolean,
+): ZoneDecision[] {
+  const zones = new Map<string, ZoneOfRun>();
+
+  for (const decision of decisions) {
+    const kind = practiceTypeOf(decision.tourId);
+    const key = zoneMapKey(decision.zoneId, kind);
+    const zone = zones.get(key);
+    if (zone) {
+      zone.changed = zone.changed || decision.rerouteSegments || decision.regenerateFiche;
+      continue;
+    }
+    zones.set(key, {
+      zoneId: decision.zoneId,
+      kind,
+      changed: decision.rerouteSegments || decision.regenerateFiche,
+    });
+  }
+
+  return [...zones.values()]
+    .sort((a, b) => a.zoneId.localeCompare(b.zoneId) || compareKinds(a.kind, b.kind))
+    .map((zone) => decideZoneMap(zone, zoneMapFingerprints, force));
+}
+
+function decideZoneMap(
+  zone: ZoneOfRun,
+  zoneMapFingerprints: Readonly<Record<string, string | undefined>>,
+  force: boolean,
+): ZoneDecision {
+  const decision = (regenerateZoneMap: boolean, reason: ZoneReason): ZoneDecision => ({
+    zoneId: zone.zoneId,
+    kind: zone.kind,
+    regenerateZoneMap,
+    reason,
+  });
+
+  if (force) {
+    return decision(true, 'forced');
+  }
+  if (zone.changed) {
+    return decision(true, 'parcours-changed');
+  }
+  if (!zoneMapFingerprints[zoneMapKey(zone.zoneId, zone.kind)]) {
+    return decision(true, 'missing-zone-map');
+  }
+
+  return decision(false, 'up-to-date');
+}
+
+/** The practice type of a Parcours, from its id: `V` (bike) or `P` (walk). */
+function practiceTypeOf(tourId: string): 'V' | 'P' {
+  return tourId.startsWith('P') ? 'P' : 'V';
+}
+
+/** The overview maps of a Zone, the bike one first, like the zone packs. */
+function compareKinds(a: 'V' | 'P', b: 'V' | 'P'): number {
+  if (a === b) {
+    return 0;
+  }
+  return a === 'V' ? -1 : 1;
 }

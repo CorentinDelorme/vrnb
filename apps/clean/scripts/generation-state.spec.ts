@@ -4,14 +4,18 @@ import { dirname, join } from 'path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { listParcours } from './generation-helpers';
+import { listParcours, tourPdfPath } from './generation-helpers';
 import {
   GENERATION_STATE_VERSION,
+  fingerprintDocument,
   fingerprintFile,
+  fingerprintParcoursArtefacts,
   fingerprintParcoursFiles,
   generationStatePath,
   nextGenerationState,
   readGenerationState,
+  withFicheFingerprint,
+  withMissingFicheFingerprints,
   writeGenerationState,
 } from './generation-state';
 
@@ -76,6 +80,129 @@ describe('fingerprintFile', () => {
 describe('generationStatePath', () => {
   it('should point to the state file of the scripts folder', () => {
     expect(generationStatePath('/app')).toBe(join('/app', 'scripts/generation-state.json'));
+  });
+});
+
+describe('fingerprintDocument', () => {
+  it('should return the fingerprint of the document', () => {
+    const rootDir = createFixture({ 'V1.pdf': 'hello' });
+
+    expect(fingerprintDocument(join(rootDir, 'V1.pdf'))).toBe(
+      fingerprintFile(join(rootDir, 'V1.pdf')),
+    );
+  });
+
+  it('should return undefined when the document is missing', () => {
+    const rootDir = createFixture({});
+
+    expect(fingerprintDocument(join(rootDir, 'V1.pdf'))).toBeUndefined();
+  });
+
+  it('should return undefined when the document is empty', () => {
+    const rootDir = createFixture({ 'V1.pdf': '' });
+
+    expect(fingerprintDocument(join(rootDir, 'V1.pdf'))).toBeUndefined();
+  });
+
+  it('should return undefined when the document cannot be read', () => {
+    const rootDir = createFixture({});
+    mkdirSync(join(rootDir, 'V1.pdf'));
+
+    expect(fingerprintDocument(join(rootDir, 'V1.pdf'))).toBeUndefined();
+  });
+});
+
+describe('fingerprintParcoursArtefacts', () => {
+  it('should fingerprint the trace, the segments and the Fiche of a Parcours', () => {
+    const rootDir = createFixture({
+      'public/gpx/bruz-sud/V1/V1.gpx': 'trace',
+      'public/gpx/bruz-sud/V1/V1_start.gpx': 'start',
+      'public/gpx/bruz-sud/V1/V1_end.gpx': 'end',
+      'public/pdf/bruz-sud/V1.pdf': 'fiche',
+    });
+
+    expect(fingerprintParcoursArtefacts(rootDir, 'bruz-sud', 'V1')).toEqual({
+      trace: fingerprintFile(join(rootDir, 'public/gpx/bruz-sud/V1/V1.gpx')),
+      startSegment: fingerprintFile(join(rootDir, 'public/gpx/bruz-sud/V1/V1_start.gpx')),
+      endSegment: fingerprintFile(join(rootDir, 'public/gpx/bruz-sud/V1/V1_end.gpx')),
+      fiche: fingerprintFile(join(rootDir, 'public/pdf/bruz-sud/V1.pdf')),
+    });
+  });
+
+  it('should tell a missing Fiche from a known one', () => {
+    const rootDir = createFixture({
+      'public/gpx/bruz-sud/V1/V1.gpx': 'trace',
+      'public/gpx/bruz-sud/V1/V1_start.gpx': 'start',
+      'public/gpx/bruz-sud/V1/V1_end.gpx': 'end',
+    });
+
+    expect(fingerprintParcoursArtefacts(rootDir, 'bruz-sud', 'V1').fiche).toBeUndefined();
+  });
+});
+
+describe('withFicheFingerprint', () => {
+  it('should record the Fiche of a Parcours, keeping the other fingerprints', () => {
+    const record = { trace: 'trace', startSegment: 'start', endSegment: 'end' };
+
+    expect(withFicheFingerprint(record, 'fiche')).toEqual({
+      trace: 'trace',
+      startSegment: 'start',
+      endSegment: 'end',
+      fiche: 'fiche',
+    });
+  });
+
+  it('should drop the Fiche of a Parcours that failed to render', () => {
+    const record = { trace: 'trace', startSegment: 'start', endSegment: 'end', fiche: 'old' };
+
+    expect(withFicheFingerprint(record, undefined)).toEqual({
+      trace: 'trace',
+      startSegment: 'start',
+      endSegment: 'end',
+      fiche: undefined,
+    });
+  });
+
+  it('should record the Fiche of a Parcours the state knows nothing about', () => {
+    expect(withFicheFingerprint(undefined, 'fiche')).toEqual({ fiche: 'fiche' });
+  });
+});
+
+describe('withMissingFicheFingerprints', () => {
+  it('should record the Fiche of the Parcours the state knows nothing about', () => {
+    const state = {
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace' } },
+    };
+
+    expect(withMissingFicheFingerprints(state, { 'bruz-sud/V1': 'fiche' })).toEqual({
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace', fiche: 'fiche' } },
+    });
+  });
+
+  it('should never overwrite the Fiche the state recorded', () => {
+    const state = {
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace', fiche: 'recorded' } },
+    };
+
+    expect(withMissingFicheFingerprints(state, { 'bruz-sud/V1': 'other' })).toEqual({
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace', fiche: 'recorded' } },
+    });
+  });
+
+  it('should leave a Parcours without a Fiche on the disk without one', () => {
+    const state = {
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace' } },
+    };
+
+    expect(withMissingFicheFingerprints(state, {}).parcours['bruz-sud/V1']).toEqual({
+      trace: 'trace',
+      fiche: undefined,
+    });
   });
 });
 
@@ -269,5 +396,22 @@ describe('readGenerationState', () => {
       version: GENERATION_STATE_VERSION,
       parcours: {},
     });
+  });
+});
+
+describe('the committed generation state', () => {
+  it('should record the fingerprint of every Fiche committed in public/pdf', () => {
+    const rootDir = join(import.meta.dirname, '..');
+    const state = readGenerationState(generationStatePath(rootDir));
+
+    expect(state).toBeDefined();
+
+    for (const [key, record] of Object.entries(state?.parcours ?? {})) {
+      const [zoneId, tourId] = key.split('/');
+      const fingerprint = fingerprintDocument(tourPdfPath(rootDir, zoneId, tourId));
+
+      expect(record.fiche, `no Fiche fingerprint recorded for ${key}`).toBeDefined();
+      expect(record.fiche).toBe(fingerprint);
+    }
   });
 });
