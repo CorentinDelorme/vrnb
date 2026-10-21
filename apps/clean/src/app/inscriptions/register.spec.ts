@@ -28,7 +28,7 @@ const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 const NOW = new Date('2027-02-01T09:00:00Z');
 
 /** The day after the action date: the registration window is closed. */
-const AFTER_ACTION_DATE = new Date('2027-02-15T09:00:00Z');
+const AFTER_ACTION_DATE = new Date('2027-02-16T09:00:00Z');
 
 /** One valid registration body, tweakable per test. */
 function validBody(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {

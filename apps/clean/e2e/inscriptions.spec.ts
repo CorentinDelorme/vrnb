@@ -38,6 +38,12 @@ const CLOSED_STATE = { edition: EDITION, inscriptions: [], registrationOpen: fal
  */
 const AFTER_ACTION_DATE = new Date('2027-02-20T09:00:00Z');
 
+/**
+ * An instant of the action day itself (2027-02-14, Paris): the registration
+ * window is still open that day.
+ */
+const ACTION_DAY = new Date('2027-02-14T12:00:00Z');
+
 /** The exact POST contract the registering client sends (ticket #17). */
 const CONTRACT_BODY = {
   engaged: true,
@@ -355,6 +361,23 @@ test.describe('Closed registration window', () => {
     const modal = await openRegistrationModal(page, 'V2');
     await expect(modal).toContainText("L'action est passée");
     await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeDisabled();
+  });
+
+  test('should keep the window open during the action day itself', async ({ page }) => {
+    // The action day is still a registration day: the local clock fallback
+    // (the public state cannot be loaded) says the window is open.
+    await page.clock.setFixedTime(ACTION_DAY);
+    await page.route('**/api/inscriptions', (route) =>
+      route.fulfill({ json: { error: 'inscriptions-unavailable' }, status: 502 }),
+    );
+    await page.goto('/');
+
+    const modal = await openRegistrationModal(page, 'V2');
+    await expect(modal).not.toContainText("L'action est passée");
+    await expect(modal.getByLabel('Prénom du membre 1', { exact: true })).toBeEnabled();
+
+    await fillRegistration(page, CONTRACT_BODY);
+    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeEnabled();
   });
 });
 

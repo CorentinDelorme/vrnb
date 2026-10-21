@@ -20,8 +20,10 @@ const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 
 /** 2027-02-13 late morning in Paris — registration still open. */
 const OPEN_CLOCK = new Date('2027-02-13T09:00:00Z');
-/** 2027-02-14 — the action day, registration closed. */
-const CLOSED_CLOCK = new Date('2027-02-14T09:00:00Z');
+/** 2027-02-14 late morning in Paris — the action day, registration still open. */
+const ACTION_DAY_CLOCK = new Date('2027-02-14T09:00:00Z');
+/** 2027-02-16 — the day after the action date, registration closed. */
+const CLOSED_CLOCK = new Date('2027-02-16T09:00:00Z');
 
 /** Scripted raw store entry, keyed through the adapter's key builder. */
 function entry(year: number, zoneId: string, tourId: string, value: string): RawInscriptionEntry {
@@ -111,6 +113,10 @@ describe('getInscriptionsState', () => {
 
   it('should derive registrationOpen from the Édition config and the injected clock', async () => {
     await expect(getInscriptionsState(deps([], OPEN_CLOCK))).resolves.toMatchObject({
+      registrationOpen: true,
+    });
+    // The action day itself still accepts registrations.
+    await expect(getInscriptionsState(deps([], ACTION_DAY_CLOCK))).resolves.toMatchObject({
       registrationOpen: true,
     });
     await expect(getInscriptionsState(deps([], CLOSED_CLOCK))).resolves.toMatchObject({

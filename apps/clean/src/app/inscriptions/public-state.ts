@@ -32,7 +32,7 @@ export interface InscriptionsStore {
 /** Public body of `GET /api/inscriptions` — no personal names, ever. */
 export interface InscriptionsPublicState {
   readonly edition: Edition;
-  /** Registration for the Édition is open until the action day starts. */
+  /** Registration for the Édition is open until the day after the action day. */
   readonly registrationOpen: boolean;
   /** Names-free list of covered (zone, Parcours) pairs, sorted for stability. */
   readonly inscriptions: readonly TourRef[];

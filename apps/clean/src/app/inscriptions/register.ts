@@ -16,8 +16,8 @@
  *
  * - the anti-bot honeypot: a filled hidden field means a bot → 400
  *   `honeypot-triggered`;
- * - the registration window: after the action date the Édition is closed →
- *   400 `registration-closed`;
+ * - the registration window: the day after the action date the Édition is
+ *   closed → 400 `registration-closed`;
  * - the identity validation: the four names are required, trimmed and
  *   bounded (see `validation.ts`, the bounds shared with the client), and the
  *   engagement statement must be literally `true` → 400 `invalid-inscription`.
@@ -192,8 +192,9 @@ export async function handleInscriptionsPost(
   // The anti-bot guard comes first: a filled honeypot is a bot, whatever else
   // it sent. Nothing is stored.
   if (hasFilledHoneypot(payload)) return respond(400, HONEYPOT);
-  // The registration window of the Édition: closed once the action date is
-  // past. Nothing is stored.
+  // The registration window of the Édition: closed the day after the action
+  // date (the action day itself still accepts registrations). Nothing is
+  // stored.
   if (!isRegistrationOpen(deps.edition, deps.now())) return respond(400, CLOSED);
   const registration = parseInscriptionRegistration(payload);
   if (registration === null) return respond(400, INVALID);

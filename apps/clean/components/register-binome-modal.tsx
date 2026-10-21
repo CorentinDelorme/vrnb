@@ -43,9 +43,9 @@ import { useInscriptionsReload, useInscriptionsStatus } from './inscriptions-sta
  *
  * - the hidden anti-bot honeypot (present in the DOM, invisible to humans):
  *   a filled one is refused by the server with 400 and nothing is stored;
- * - the closed window: once the action date is past, the modal says « L'action
- *   est passée » and disables its form (the server refuses the same requests
- *   with 400);
+ * - the closed window: the day after the action date, the modal says «
+ *   L'action est passée » and disables its form (the server refuses the same
+ *   requests with 400);
  * - the shared identity bounds (2 to 60 characters per name, see
  *   `validation.ts`): the submit is enabled as soon as the form is complete
  *   and valid, and each field shows its own error message.
