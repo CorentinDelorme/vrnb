@@ -54,6 +54,22 @@ export interface UpstashConfig {
   readonly token: string;
 }
 
+/**
+ * Read the Upstash REST credentials from the environment; `null` when either
+ * variable is missing or blank. Shared by the API route adapter and the
+ * referent extraction script, so the env var names live in one place only.
+ */
+export function readUpstashConfig(
+  env: Readonly<Record<string, string | undefined>>,
+): UpstashConfig | null {
+  const url = env['UPSTASH_REDIS_REST_URL']?.trim();
+  const token = env['UPSTASH_REDIS_REST_TOKEN']?.trim();
+  if (!url || !token) {
+    return null;
+  }
+  return { token, url };
+}
+
 /** Injectable fetch so tests script the REST exchange without a network. */
 export type RestFetch = typeof fetch;
 

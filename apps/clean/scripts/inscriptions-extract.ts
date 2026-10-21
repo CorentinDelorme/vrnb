@@ -7,7 +7,9 @@
  * the KV listing comes in through the `InscriptionsStore` port defined by
  * ticket #16 and file writing through the `FicheDeSuiviFileSink` port. The thin CLI
  * adapter in `extract-inscriptions.ts` wires the Upstash REST store and the
- * real filesystem (env credentials, REST timeouts, console recap).
+ * real filesystem (env credentials, REST timeouts, console recap); its
+ * CLI-side helpers live in `extract-inscriptions-cli.ts` (the core stays pure:
+ * no `process.env`, no `node:fs`).
  *
  * Defensive policy — the stored value shape is owned by the POST side
  * (ticket #17), so only the four Binôme identity fields are read when
@@ -20,9 +22,11 @@
  */
 
 import type { Edition } from '../src/app/inscriptions/edition';
-import { EDITION_TIME_ZONE } from '../src/app/inscriptions/edition';
+import {
+  INSCRIPTIONS_RETENTION_DAYS,
+  formatActionDateLabel,
+} from '../src/app/inscriptions/edition';
 import type { InscriptionsStore, RawInscriptionEntry } from '../src/app/inscriptions/public-state';
-import type { RestFetch, UpstashConfig } from '../src/app/inscriptions/upstash-kv';
 import { parseInscriptionKey } from '../src/app/inscriptions/upstash-kv';
 import type { BinomeIdentity, ParcoursLookup } from '../src/app/inscriptions/validation';
 import { ZONES } from '../src/app/zones';
@@ -183,22 +187,6 @@ export function groupInscriptionsByZone(
   };
 }
 
-/** `Dimanche 14 février 2027` for an `YYYY-MM-DD` action date, in the Édition zone. */
-export function formatEditionActionDate(actionDate: string): string {
-  const instant = new Date(`${actionDate}T12:00:00Z`);
-  if (Number.isNaN(instant.getTime())) {
-    throw new Error(`Date de l'action de l'Édition invalide : ${actionDate}`);
-  }
-  const label = new Intl.DateTimeFormat('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    timeZone: EDITION_TIME_ZONE,
-    weekday: 'long',
-    year: 'numeric',
-  }).format(instant);
-  return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
-}
-
 /**
  * Markdown table cell: pipes are escaped and control characters collapsed, so
  * a volunteer's name can never break the table layout.
@@ -232,12 +220,17 @@ export function emptyEditionFicheDeSuiviFileName(year: number): string {
 
 const RETENTION_FOOTER =
   'Une seule inscription par Parcours ; les prénoms et noms des Binômes sont ' +
-  "effacés automatiquement 90 jours après la date de l'action.";
+  `effacés automatiquement ${INSCRIPTIONS_RETENTION_DAYS} jours après la date de l'action.`;
+
+/** First letter capitalized: the sheet line starts with the day name. */
+function capitalizeFirst(text: string): string {
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
 
 const EDITION_LINES = (edition: Edition): string =>
   [
     'Édition : ' + edition.year,
-    "Date de l'action : " + formatEditionActionDate(edition.actionDate),
+    "Date de l'action : " + capitalizeFirst(formatActionDateLabel(edition.actionDate)),
   ].join('\n');
 
 /** Markdown content of one Zone's « Fiche de suivi ». */
@@ -361,57 +354,4 @@ export async function extractInscriptionSheets(
     unknownParcoursCount: collected.unknownParcoursCount,
     warnings: [...collected.warnings, ...grouped.warnings],
   };
-}
-
-// --- CLI-config helpers (pure, unit-tested here; the CLI wires them) ---
-
-/** The KV credentials of the extraction: env-var names shared with the API. */
-export function readInscriptionsKvConfig(
-  env: Readonly<Record<string, string | undefined>>,
-): UpstashConfig | null {
-  const url = env['UPSTASH_REDIS_REST_URL']?.trim();
-  const token = env['UPSTASH_REDIS_REST_TOKEN']?.trim();
-  if (!url || !token) {
-    return null;
-  }
-  return { token, url };
-}
-
-/**
- * Fetch with a hard timeout: the Upstash REST adapter has no per-command
- * deadline of its own (ticket #16 reuse), so the CLI wraps its injected
- * fetch — a wedged REST call (dropped connection, stalled proxy) aborts the
- * extraction with a controlled error instead of freezing it forever.
- */
-export function fetchWithTimeout(restFetch: RestFetch, timeoutMs: number): RestFetch {
-  return (input, init) => restFetch(input, { ...init, signal: AbortSignal.timeout(timeoutMs) });
-}
-
-/** Parsed `--out-dir=DIR` options of the extraction command. */
-export interface ExtractedCliArgs {
-  readonly outDir: string | null;
-}
-
-const OUT_DIR_FLAG = '--out-dir=';
-/** Usage line printed verbatim in the unknown-argument error. */
-export const EXTRACT_USAGE = 'Usage : bun scripts/extract-inscriptions.ts [--out-dir=DIR]';
-
-/** Parse the CLI options; only `--out-dir` is overridable, the Édition defines the year. */
-export function parseInscriptionsExtractArgs(argv: readonly string[]): ExtractedCliArgs {
-  let outDir: string | null = null;
-  for (const arg of argv) {
-    if (arg.startsWith(OUT_DIR_FLAG)) {
-      const value = arg.slice(OUT_DIR_FLAG.length).trim();
-      if (outDir !== null) {
-        throw new Error(`Option --out-dir dupliquée. ${EXTRACT_USAGE}`);
-      }
-      if (!value) {
-        throw new Error(`Option --out-dir vide (dossier de sortie attendu). ${EXTRACT_USAGE}`);
-      }
-      outDir = value;
-      continue;
-    }
-    throw new Error(`Argument inconnu : « ${arg} ». ${EXTRACT_USAGE}`);
-  }
-  return { outDir };
 }

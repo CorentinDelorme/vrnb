@@ -1,7 +1,11 @@
 import { CURRENT_EDITION } from '../../../src/app/inscriptions/edition';
 import { handleInscriptionsGet } from '../../../src/app/inscriptions/public-state';
 import { handleInscriptionsPost } from '../../../src/app/inscriptions/register';
-import { createUpstashInscriptionsStore } from '../../../src/app/inscriptions/upstash-kv';
+import type { UpstashConfig } from '../../../src/app/inscriptions/upstash-kv';
+import {
+  createUpstashInscriptionsStore,
+  readUpstashConfig,
+} from '../../../src/app/inscriptions/upstash-kv';
 import { parcoursExists } from '../../../src/app/tours-queries';
 
 /**
@@ -38,10 +42,12 @@ export function POST(request: Request): Promise<Response> {
   );
 }
 
-/** REST credentials of the Édition's KV store, read from the environment. */
-function restConfig(): { token: string; url: string } {
-  return {
-    token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
-    url: process.env['UPSTASH_REDIS_REST_URL'] ?? '',
-  };
+/**
+ * REST credentials of the Édition's KV store, read from the environment
+ * (bracket-form env access, per repo convention). A missing environment never
+ * crashes the route: the adapter validates the credentials at call time, so
+ * the handlers degrade to their JSON 502/500.
+ */
+function restConfig(): UpstashConfig {
+  return readUpstashConfig(process.env) ?? { token: '', url: '' };
 }

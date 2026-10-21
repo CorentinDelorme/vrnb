@@ -5,13 +5,15 @@ import {
   createUpstashInscriptionsStore,
   inscriptionKey,
   parseInscriptionKey,
+  readUpstashConfig,
 } from './upstash-kv';
 
 /**
- * Upstash REST read adapter: key building/parsing and the REST exchange
- * (URL/token/fetch injection, command paths, envelope parsing, defensive
- * skipping of unusable values). A recording scripted fetch replaces the
- * network; value validation lives in `public-state.spec.ts`.
+ * Upstash REST read adapter: key building/parsing, the environment reader of
+ * the REST credentials and the REST exchange (URL/token/fetch injection,
+ * command paths, envelope parsing, defensive skipping of unusable values). A
+ * recording scripted fetch replaces the network; the public-state validation
+ * lives in `public-state.spec.ts`.
  */
 
 /** One scripted Upstash REST exchange. */
@@ -105,6 +107,25 @@ describe('parseInscriptionKey', () => {
     expect(parseInscriptionKey('inscriptions:2027:bruz-sud')).toBeNull();
     expect(parseInscriptionKey('inscriptions')).toBeNull();
     expect(parseInscriptionKey('')).toBeNull();
+  });
+});
+
+describe('readUpstashConfig', () => {
+  it('should read the Upstash REST URL and token from the environment', () => {
+    expect(
+      readUpstashConfig({
+        UPSTASH_REDIS_REST_TOKEN: 'tok',
+        UPSTASH_REDIS_REST_URL: 'https://rest.example//',
+      }),
+    ).toEqual({ token: 'tok', url: 'https://rest.example//' });
+  });
+
+  it('should return null when either variable is missing or blank', () => {
+    expect(readUpstashConfig({})).toBeNull();
+    expect(readUpstashConfig({ UPSTASH_REDIS_REST_URL: 'https://rest.example' })).toBeNull();
+    expect(
+      readUpstashConfig({ UPSTASH_REDIS_REST_TOKEN: 'tok', UPSTASH_REDIS_REST_URL: '  ' }),
+    ).toBeNull();
   });
 });
 

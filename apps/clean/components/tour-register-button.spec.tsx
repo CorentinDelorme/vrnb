@@ -19,9 +19,11 @@ const showModal = vi.hoisted(() => vi.fn());
 /**
  * The modal reads the registration window from the provider (ticket #18): the
  * public state answers an open window, so the modal never depends on the
- * wall clock of the test runner.
+ * wall clock of the test runner. The real module is kept (only the hooks are
+ * mocked): the modal reads the window through the shared rule of the provider.
  */
-vi.mock('./inscriptions-status-provider', () => ({
+vi.mock('./inscriptions-status-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./inscriptions-status-provider')>()),
   useInscriptionsReload: () => vi.fn(),
   useInscriptionsStatus: () => ({
     state: {

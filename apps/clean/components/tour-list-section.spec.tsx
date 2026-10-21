@@ -10,7 +10,10 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 /** Mutable fixture: each test sets the status the hook reports. */
 const status = vi.hoisted(() => ({ current: undefined as unknown }));
-vi.mock('./inscriptions-status-provider', () => ({
+// The real module is kept (only the hook is mocked): the section reads the
+// registration window through the shared rule of the provider.
+vi.mock('./inscriptions-status-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./inscriptions-status-provider')>()),
   useInscriptionsStatus: () => status.current as InscriptionsStatus,
 }));
 

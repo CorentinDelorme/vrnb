@@ -3,11 +3,24 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
+import { CURRENT_EDITION, isRegistrationOpen } from '../src/app/inscriptions/edition';
 import type { InscriptionsOutcome } from '../src/app/inscriptions/inscriptions-client';
 import { fetchInscriptionsOutcome } from '../src/app/inscriptions/inscriptions-client';
 
 /** Tri-state of the statuses loading: `loading` until the effect resolves. */
 export type InscriptionsStatus = InscriptionsOutcome | { readonly status: 'loading' };
+
+/**
+ * Whether the registration window is open, from ONE rule: the server's answer
+ * when the public state loaded (the client and the server always agree), the
+ * local clock otherwise (the safety net of a page whose public state could
+ * not be loaded). Pure: the clock is injected, never read.
+ */
+export function isRegistrationWindowOpen(status: InscriptionsStatus, now: Date): boolean {
+  return status.status === 'success'
+    ? status.state.registrationOpen
+    : isRegistrationOpen(CURRENT_EDITION, now);
+}
 
 const InscriptionsStatusContext = createContext<InscriptionsStatus>({ status: 'loading' });
 

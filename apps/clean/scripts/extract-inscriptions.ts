@@ -14,21 +14,25 @@
  * The extraction core is pure (`scripts/inscriptions-extract.ts`): this file
  * only wires the environment, the Upstash REST store (REST reads are
  * time-boxed so a wedged call cannot freeze the run), the filesystem sink
- * and the console recap — which never prints a stored value or a name.
+ * and the console recap — which never prints a stored value or a name. The
+ * CLI-side helpers (option parsing, REST timeout) live in
+ * `scripts/extract-inscriptions-cli.ts`, and the KV credentials are read by
+ * the shared `readUpstashConfig` of `src/app/inscriptions/upstash-kv.ts`.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { CURRENT_EDITION } from '../src/app/inscriptions/edition';
-import { createUpstashInscriptionsStore } from '../src/app/inscriptions/upstash-kv';
+import {
+  createUpstashInscriptionsStore,
+  readUpstashConfig,
+} from '../src/app/inscriptions/upstash-kv';
 import { parcoursExists } from '../src/app/tours-queries';
+import { fetchWithTimeout, parseInscriptionsExtractArgs } from './extract-inscriptions-cli';
 import {
   type FicheDeSuiviFileSink,
   type InscriptionsExtractionOutcome,
   extractInscriptionSheets,
-  fetchWithTimeout,
-  parseInscriptionsExtractArgs,
-  readInscriptionsKvConfig,
 } from './inscriptions-extract';
 
 /** Per-REST-call deadline; a stuck connection fails the run with a clear error. */
@@ -55,7 +59,7 @@ const fileSink: FicheDeSuiviFileSink = {
 
 async function main(argv: readonly string[]): Promise<void> {
   const options = parseInscriptionsExtractArgs(argv);
-  const config = readInscriptionsKvConfig(process.env);
+  const config = readUpstashConfig(process.env);
   if (config === null) {
     throw new Error(MISSING_ENV_MESSAGE);
   }

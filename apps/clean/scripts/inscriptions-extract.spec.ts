@@ -6,14 +6,9 @@ import {
   binomeDisplay,
   collectInscriptions,
   emptyEditionFicheDeSuiviFileName,
-  EXTRACT_USAGE,
   extractInscriptionSheets,
-  fetchWithTimeout,
-  formatEditionActionDate,
   groupInscriptionsByZone,
   parseInscriptionBinome,
-  parseInscriptionsExtractArgs,
-  readInscriptionsKvConfig,
   renderEmptyEditionContent,
   renderZoneInscriptionsContent,
   zoneFicheDeSuiviFileName,
@@ -25,10 +20,10 @@ import {
 /**
  * Pure extraction core of the referent script (ticket #19): BINOME parsing of
  * the stored values, key-truth collection over the `InscriptionsStore` port,
- * per-Zone markdown « Fiche de suivi » rendering, and the CLI-config helpers
- * (env credentials, REST timeout wrapper, `--out-dir` parsing). The fiches
- * are written through an in-memory sink and the REST path is scripted with a
- * recording fetch (Upstash `{"result": …}` envelopes), so no network runs.
+ * per-Zone markdown « Fiche de suivi » rendering. The fiches are written
+ * through an in-memory sink and the REST path is scripted with a recording
+ * fetch (Upstash `{"result": …}` envelopes), so no network runs. The CLI-side
+ * helpers live in `extract-inscriptions-cli.spec.ts`.
  */
 
 const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
@@ -311,18 +306,6 @@ describe('groupInscriptionsByZone', () => {
 
 // --- Fiche rendering ---
 
-describe('formatEditionActionDate', () => {
-  it('should render the Édition action date in French, in the Édition timezone', () => {
-    expect(formatEditionActionDate(EDITION.actionDate)).toBe('Dimanche 14 février 2027');
-  });
-
-  it('should refuse an invalid configured date with a French error', () => {
-    expect(() => formatEditionActionDate('not-a-date')).toThrow(
-      "Date de l'action de l'Édition invalide",
-    );
-  });
-});
-
 describe('binomeDisplay', () => {
   it('should render both members as `Prénom NOM` joined by an em dash', () => {
     expect(
@@ -540,64 +523,5 @@ describe('extractInscriptionSheets over the Upstash REST adapter', () => {
     ).rejects.toThrow('Upstash REST command failed');
     expect(dirEnsured).toEqual([]);
     expect(files.size).toBe(0);
-  });
-});
-
-// --- CLI-side helpers ---
-
-describe('readInscriptionsKvConfig', () => {
-  it('should read the Upstash REST URL and token from the environment', () => {
-    expect(
-      readInscriptionsKvConfig({
-        UPSTASH_REDIS_REST_TOKEN: 'tok',
-        UPSTASH_REDIS_REST_URL: 'https://rest.example//',
-      }),
-    ).toEqual({ token: 'tok', url: 'https://rest.example//' });
-  });
-
-  it('should return null when either variable is missing or blank', () => {
-    expect(readInscriptionsKvConfig({})).toBeNull();
-    expect(readInscriptionsKvConfig({ UPSTASH_REDIS_REST_URL: 'https://rest.example' })).toBeNull();
-    expect(
-      readInscriptionsKvConfig({ UPSTASH_REDIS_REST_TOKEN: 'tok', UPSTASH_REDIS_REST_URL: '  ' }),
-    ).toBeNull();
-  });
-});
-
-describe('fetchWithTimeout', () => {
-  it('should wrap every REST call with an abort deadline, keeping the input and init', async () => {
-    const seen: { init?: RequestInit; url: string }[] = [];
-    const base = (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
-      seen.push({ init, url: String(input) });
-      return new Response('{"result":null}');
-    }) as typeof fetch;
-    const wrapped = fetchWithTimeout(base, 1234);
-
-    await wrapped('https://rest.example/scan/0/count/100', {
-      headers: { authorization: 'Bearer t' },
-    });
-    expect(seen[0]?.url).toBe('https://rest.example/scan/0/count/100');
-    expect(seen[0]?.init?.signal).toBeDefined();
-    expect(new Headers(seen[0]?.init?.headers).get('authorization')).toBe('Bearer t');
-  });
-});
-
-describe('parseInscriptionsExtractArgs', () => {
-  it('should keep the default output directory when no option is given', () => {
-    expect(parseInscriptionsExtractArgs([])).toEqual({ outDir: null });
-  });
-
-  it('should read a single --out-dir override', () => {
-    expect(parseInscriptionsExtractArgs(['--out-dir=/tmp/fiches'])).toEqual({
-      outDir: '/tmp/fiches',
-    });
-  });
-
-  it('should refuse a duplicate, empty or unknown argument with the usage line', () => {
-    expect(() => parseInscriptionsExtractArgs(['--out-dir=a', '--out-dir=b'])).toThrow(
-      '--out-dir dupliquée',
-    );
-    expect(() => parseInscriptionsExtractArgs(['--out-dir='])).toThrow('--out-dir vide');
-    expect(() => parseInscriptionsExtractArgs(['--year=2030'])).toThrow(EXTRACT_USAGE);
   });
 });

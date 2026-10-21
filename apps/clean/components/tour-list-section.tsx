@@ -7,7 +7,7 @@ import type * as React from 'react';
 
 import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
-import { useInscriptionsStatus } from './inscriptions-status-provider';
+import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
 import { TourRegisterButton } from './tour-register-button';
 
@@ -73,15 +73,6 @@ function isCoveredInscriptions(
   );
 }
 
-/**
- * Whether the row offers its register button (ticket #18): a covered Parcours
- * loses it, and so does a closed registration window (the caller also checks
- * the window).
- */
-function isUncovered(status: InscriptionsStatus, zoneId: string, tourId: string): boolean {
-  return !isCoveredInscriptions(status, zoneId, tourId);
-}
-
 interface TourListSectionProps {
   readonly title: string;
   readonly tours: readonly Tour[];
@@ -102,12 +93,13 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
    */
   const statusKnown = status.status === 'success';
   /**
-   * Whether the registration window is open, as the server answers it: the
-   * window closes 3 days before the action date (the organizers need that
-   * time to print the tracking sheets and organize the day), and the register
-   * button disappears with it.
+   * Whether the registration window is open, from the ONE rule of the provider
+   * (the server's answer when the public state loaded, the local clock
+   * otherwise): the window closes 3 days before the action date (the
+   * organizers need that time to print the tracking sheets and organize the
+   * day), and the register button disappears with it.
    */
-  const windowOpen = statusKnown && status.state.registrationOpen;
+  const windowOpen = isRegistrationWindowOpen(status, new Date());
 
   return (
     <app-tour-list-section>
@@ -150,7 +142,9 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
                 <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
               ) : null}
               <TourRegisterButton
-                available={statusKnown && windowOpen && isUncovered(status, zoneId, tour.name)}
+                available={
+                  statusKnown && windowOpen && !isCoveredInscriptions(status, zoneId, tour.name)
+                }
                 tour={{ tourId: tour.name, zoneId }}
               />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />

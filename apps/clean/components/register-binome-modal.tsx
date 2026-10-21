@@ -6,10 +6,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import {
   CURRENT_EDITION,
-  EDITION_TIME_ZONE,
   INSCRIPTIONS_RETENTION_DAYS,
   REGISTRATION_CLOSURE_DAYS,
-  isRegistrationOpen,
+  formatActionDateLabel,
 } from '../src/app/inscriptions/edition';
 import { postRegistration } from '../src/app/inscriptions/inscriptions-client';
 import type {
@@ -25,7 +24,11 @@ import {
 } from '../src/app/inscriptions/validation';
 import type { TourRef } from '../src/app/tours-queries';
 import { getZone } from '../src/app/zones';
-import { useInscriptionsReload, useInscriptionsStatus } from './inscriptions-status-provider';
+import {
+  isRegistrationWindowOpen,
+  useInscriptionsReload,
+  useInscriptionsStatus,
+} from './inscriptions-status-provider';
 
 /**
  * DaisyUI registration modal of one Parcours (tickets #17 + #18): it shows the
@@ -83,19 +86,8 @@ const IDENTITY_INPUTS = [
   { id: 'register-last-name-2', key: 'lastName2' },
 ] as const satisfies readonly { readonly id: string; readonly key: IdentityField }[];
 
-/** "samedi 14 février 2027" — the action day labeled in the modal context. */
-function formatDateFrench(calendarDate: string): string {
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    timeZone: EDITION_TIME_ZONE,
-    weekday: 'long',
-    year: 'numeric',
-  }).format(new Date(`${calendarDate}T00:00:00Z`));
-}
-
 /** French long-form date of the Édition action day (module-scope constant). */
-const ACTION_DATE_LABEL = formatDateFrench(CURRENT_EDITION.actionDate);
+const ACTION_DATE_LABEL = formatActionDateLabel(CURRENT_EDITION.actionDate);
 
 /** The message of the closed registration window (also the 400 answer). */
 const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se ferme ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action.`;
@@ -183,15 +175,11 @@ export function RegisterBinomeModal({
 
   const zone = getZone(tour.zoneId);
   /**
-   * The registration window of the Édition: the server's answer wins (the
-   * public state carries `registrationOpen`), so the client and the server
-   * always agree. The local clock is only a fallback while the public state
-   * is not loaded yet (or failed to load).
+   * The registration window of the Édition, from the ONE rule of the provider
+   * (the server's answer when the public state loaded, the local clock
+   * otherwise): the client and the server always agree.
    */
-  const registrationOpen =
-    status.status === 'success'
-      ? status.state.registrationOpen
-      : isRegistrationOpen(CURRENT_EDITION, now);
+  const registrationOpen = isRegistrationWindowOpen(status, now);
   const windowClosed = !registrationOpen;
   const { errors, values: trimmed } = checkIdentityFields(values);
   /** The submit is enabled as soon as the form is complete and valid. */

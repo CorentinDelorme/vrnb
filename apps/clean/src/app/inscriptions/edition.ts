@@ -55,6 +55,33 @@ export function isRegistrationOpen(edition: Edition, now: Date): boolean {
 export const INSCRIPTIONS_RETENTION_DAYS = 90;
 
 /**
+ * French long date of a calendar date of the Édition — « dimanche 14 février
+ * 2027 ». Client-safe pure helper: the registration modal (browser) and the
+ * referent extraction script (Node) format the action day through it, so the
+ * label never drifts between the two.
+ *
+ * The date is read at noon UTC so the calendar day never shifts, whatever the
+ * timezone of the host. The weekday keeps its lowercase French form: the
+ * callers embed it in a sentence (the modal) or capitalize it themselves (the
+ * « Fiche de suivi » line).
+ *
+ * The error stays French: it surfaces in the referent's console.
+ */
+export function formatActionDateLabel(calendarDate: string): string {
+  const instant = new Date(`${calendarDate}T12:00:00Z`);
+  if (Number.isNaN(instant.getTime())) {
+    throw new Error(`Date de l'action de l'Édition invalide : ${calendarDate}`);
+  }
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: EDITION_TIME_ZONE,
+    weekday: 'long',
+    year: 'numeric',
+  }).format(instant);
+}
+
+/**
  * The instant every created inscription must expire at: the midnight starting
  * `actionDate + INSCRIPTIONS_RETENTION_DAYS` in the Édition timezone. The
  * creation-time `EX` TTL reaches it from "now", so the stored Binôme identity

@@ -4,6 +4,7 @@ import {
   CURRENT_EDITION,
   INSCRIPTIONS_RETENTION_DAYS,
   REGISTRATION_CLOSURE_DAYS,
+  formatActionDateLabel,
   inscriptionsExpiryInstant,
   isRegistrationOpen,
   ttlSecondsUntil,
@@ -71,6 +72,23 @@ describe('inscriptionsExpiryInstant', () => {
     );
     expect(inscriptionsExpiryInstant({ actionDate: '2027-12-01', year: 2027 }).toISOString()).toBe(
       '2028-02-28T23:00:00.000Z',
+    );
+  });
+});
+
+/**
+ * The French long date of the action day (shared by the registration modal and
+ * the referent extraction script): « dimanche 14 février 2027 », rendered in
+ * the Édition timezone.
+ */
+describe('formatActionDateLabel', () => {
+  it('should render the Édition action date in French, in the Édition timezone', () => {
+    expect(formatActionDateLabel(CURRENT_EDITION.actionDate)).toBe('dimanche 14 février 2027');
+  });
+
+  it('should refuse an invalid configured date with a French error', () => {
+    expect(() => formatActionDateLabel('not-a-date')).toThrow(
+      "Date de l'action de l'Édition invalide",
     );
   });
 });

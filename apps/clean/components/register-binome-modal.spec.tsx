@@ -31,10 +31,14 @@ const mocks = vi.hoisted(() => ({
 const status = vi.hoisted(() => ({ current: undefined as unknown }));
 
 vi.mock('../src/app/inscriptions/inscriptions-client', () => ({
+  fetchInscriptionsOutcome: async () => ({ status: 'error' }) as const,
   postRegistration: mocks.postRegistration,
 }));
 
-vi.mock('./inscriptions-status-provider', () => ({
+// The real module is kept (only the hooks are mocked): the modal reads the
+// registration window through the shared rule of the provider.
+vi.mock('./inscriptions-status-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./inscriptions-status-provider')>()),
   useInscriptionsReload: () => mocks.reload,
   useInscriptionsStatus: () => status.current as InscriptionsStatus,
 }));
