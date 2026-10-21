@@ -47,14 +47,14 @@ export function TourRegisterButton({ available, tour }: TourRegisterButtonProps)
       {available ? (
         <button
           aria-label={`S'inscrire en Binôme pour le parcours ${tour.tourId}`}
-          className="btn btn-outline btn-secondary max-sm:btn-xs max-sm:max-w-none btn-sm sm:btn-md"
+          className="btn btn-outline btn-secondary btn-xs gap-1 sm:btn-sm"
           onClick={() => {
             setEverOpened(true);
             setVisible(true);
           }}
           type="button"
         >
-          <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={1.5} />
+          <HugeiconsIcon className="size-4" icon={UserAdd01Icon} strokeWidth={1.5} />
           S&apos;inscrire
         </button>
       ) : null}

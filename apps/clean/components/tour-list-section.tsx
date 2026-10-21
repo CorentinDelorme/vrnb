@@ -19,9 +19,11 @@ import { TourRegisterButton } from './tour-register-button';
  * kept as the wrapper element because the E2E suite scopes its locators on it.
  *
  * Ticket #16: a Parcours covered by the Édition's inscriptions shows the
- * « Binôme inscrit » badge next to its title once the statuses have loaded
- * after hydration (the public state carries no names); uncovered rows and the
- * loading/error states render exactly like before.
+ * « Binôme inscrit » badge once the statuses have loaded after hydration (the
+ * public state carries no names); uncovered rows and the loading/error states
+ * render exactly like before. The badge stands where the register button
+ * would be — next to the play button — so a covered row reads as a single
+ * action slot: the state of the Parcours, then its play button.
  *
  * Ticket #17: every uncovered Parcours row also shows the register button
  * right before the play button. While the statuses are loading (or on a
@@ -122,16 +124,14 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             className="list-row items-center bg-base-100 border-base-200 rounded-lg border"
             key={tour.name}
           >
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
-              {isCoveredInscriptions(status, zoneId, tour.name) ? (
-                <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
-              ) : null}
-            </div>
+            <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
             <div className="text-base-content/70 text-base font-light sm:text-xl">
               {formatDistance(tour.distance)}
             </div>
-            <div className="list-col-grow flex justify-end">
+            <div className="list-col-grow flex items-center justify-end gap-2">
+              {isCoveredInscriptions(status, zoneId, tour.name) ? (
+                <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
+              ) : null}
               <TourRegisterButton
                 available={isUncovered(status, zoneId, tour.name)}
                 tour={{ tourId: tour.name, zoneId }}
