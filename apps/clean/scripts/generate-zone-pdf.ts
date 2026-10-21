@@ -4,18 +4,19 @@ import { PDFDocument } from 'pdf-lib';
 
 import { ZONES } from '../src/app/zones';
 
+import {
+  compareParcoursIds,
+  matchesZoneFilter,
+  parseGenerationFilters,
+  zoneMapPdfPath,
+  zonePdfDir,
+} from './generation-helpers';
+
 const rootDir = join(import.meta.dirname, '..');
-const pdfDir = join(rootDir, 'public/pdf');
 
 const TOUR_PDF_PATTERN = /^[VP]\d+\.pdf$/;
-const MAP_PDFS = ['Carte_parcours_a_velo.pdf', 'Carte_parcours_a_pied.pdf'];
-
-function sortTourFiles(a: string, b: string): number {
-  if (a[0] !== b[0]) {
-    return a[0] < b[0] ? -1 : 1;
-  }
-  return parseInt(a.slice(1)) - parseInt(b.slice(1));
-}
+/** Overview maps of a Zone, in the order of the pack: vélo then pied. */
+const ZONE_MAP_KINDS = ['V', 'P'] as const;
 
 /**
  * All PDFs belonging to a zone: overview maps, then tour sheets (V then P).
@@ -24,38 +25,27 @@ function sortTourFiles(a: string, b: string): number {
  * (`scripts/extract-inscriptions.ts`), outside the site.
  */
 function getZoneFiles(zoneId: string): string[] {
-  const zoneDir = join(pdfDir, zoneId);
-  if (!existsSync(zoneDir)) {
+  const zoneFolder = zonePdfDir(rootDir, zoneId);
+  if (!existsSync(zoneFolder)) {
     return [];
   }
 
   const files: string[] = [];
-  for (const mapPdf of MAP_PDFS) {
-    const mapPath = join(zoneDir, mapPdf);
+  for (const kind of ZONE_MAP_KINDS) {
+    const mapPath = zoneMapPdfPath(rootDir, zoneId, kind);
     if (existsSync(mapPath)) {
       files.push(mapPath);
     }
   }
 
-  const tourPdfs = readdirSync(zoneDir)
+  const tourPdfs = readdirSync(zoneFolder)
     .filter((file) => TOUR_PDF_PATTERN.test(file))
-    .sort(sortTourFiles);
+    .sort(compareParcoursIds);
   for (const tourPdf of tourPdfs) {
-    files.push(join(zoneDir, tourPdf));
+    files.push(join(zoneFolder, tourPdf));
   }
 
   return files;
-}
-
-function parseZoneFilter(): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith('--zone='));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice('--zone='.length)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
 }
 
 /**
@@ -96,9 +86,9 @@ async function mergeZone(zoneId: string, outDir: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const zoneFilter = parseZoneFilter();
+  const filters = parseGenerationFilters(process.argv);
   const outDir = parseOutDir();
-  const zoneIds = ZONES.map((zone) => zone.id).filter((id) => !zoneFilter || zoneFilter.has(id));
+  const zoneIds = ZONES.map((zone) => zone.id).filter((id) => matchesZoneFilter(filters, id));
 
   if (zoneIds.length === 0) {
     throw new Error('No zones match the --zone filter.');

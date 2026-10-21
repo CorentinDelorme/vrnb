@@ -12,9 +12,19 @@ import { getZone } from '../src/app/zones';
 import { createNetworkScheduler } from './network-scheduler';
 import { createTileFetcher } from './tile-fetcher';
 
+import type { GpxSegmentSuffix } from './generation-helpers';
+import {
+  isFilterActive,
+  matchesFilters,
+  parseGenerationFilters,
+  pdfRootDir,
+  resolveGpxTracePath,
+  tourPdfPath,
+  zoneMapPdfPath,
+  zonePdfDir,
+} from './generation-helpers';
+
 const rootDir = join(import.meta.dirname, '..');
-const pdfDir = join(rootDir, 'public/pdf');
-const gpxDir = join(rootDir, 'public/gpx');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
 const tileCacheDir = join(rootDir, 'scripts', '.cache', 'tiles');
 
@@ -487,10 +497,8 @@ const MAP_COLORS: [number, number, number][] = [
 ];
 
 /** GPX path for a tour file, with fallback to the legacy flat layout (pre-zone files). */
-function tourGpxPath(tour: TourDistances, suffix: string): string {
-  const zoned = join(gpxDir, tour.zoneId, tour.name, `${tour.name}${suffix}.gpx`);
-  if (existsSync(zoned)) return zoned;
-  return join(gpxDir, tour.name, `${tour.name}${suffix}.gpx`);
+function tourGpxPath(tour: TourDistances, suffix: GpxSegmentSuffix): string {
+  return resolveGpxTracePath(rootDir, tour.zoneId, tour.name, suffix);
 }
 
 async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined): Promise<void> {
@@ -611,9 +619,9 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   doc.text('Cartes © OpenStreetMap', pageWidth - margin, 282, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
-  const zonePdfDir = join(pdfDir, tour.zoneId);
-  mkdirSync(zonePdfDir, { recursive: true });
-  const outputPath = join(zonePdfDir, `${tour.name}.pdf`);
+  const zoneFolder = zonePdfDir(rootDir, tour.zoneId);
+  mkdirSync(zoneFolder, { recursive: true });
+  const outputPath = tourPdfPath(rootDir, tour.zoneId, tour.name);
   ensureWritable(outputPath);
   doc.save(outputPath);
   console.log(`Generated: ${outputPath}`);
@@ -745,32 +753,12 @@ async function generateZoneMapPdf(
   doc.text('Cartes © OpenStreetMap', pageWidth - margin, footerY, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
-  const filename = kind === 'V' ? 'Carte_parcours_a_velo.pdf' : 'Carte_parcours_a_pied.pdf';
-  const zonePdfDir = join(pdfDir, zoneId);
-  mkdirSync(zonePdfDir, { recursive: true });
-  const outputPath = join(zonePdfDir, filename);
+  const zoneFolder = zonePdfDir(rootDir, zoneId);
+  mkdirSync(zoneFolder, { recursive: true });
+  const outputPath = zoneMapPdfPath(rootDir, zoneId, kind);
   ensureWritable(outputPath);
   doc.save(outputPath);
   console.log(`Generated: ${outputPath}`);
-}
-
-function parseArgValues(flag: string): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
-}
-
-function parseTourFilter(): Set<string> | undefined {
-  return parseArgValues('--tour');
-}
-
-function parseZoneFilter(): Set<string> | undefined {
-  return parseArgValues('--zone');
 }
 
 /** Run the workers in parallel, at most `limit` of them at a time. */
@@ -791,16 +779,18 @@ async function forEachConcurrently<T>(
 }
 
 async function main(): Promise<void> {
-  mkdirSync(pdfDir, { recursive: true });
+  mkdirSync(pdfRootDir(rootDir), { recursive: true });
   mkdirSync(tileCacheDir, { recursive: true });
 
-  const tourFilter = parseTourFilter();
-  const zoneFilter = parseZoneFilter();
-  const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter(
-    (t) => (!tourFilter || tourFilter.has(t.name)) && (!zoneFilter || zoneFilter.has(t.zoneId)),
+  const filters = parseGenerationFilters(process.argv);
+  const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter((tour) =>
+    matchesFilters(filters, tour.zoneId, tour.name),
   );
 
-  if ((tourFilter || zoneFilter) && allTours.length === 0) {
+  if (
+    (isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds)) &&
+    allTours.length === 0
+  ) {
     throw new Error('No tours match the --tour/--zone filter.');
   }
 
@@ -808,7 +798,7 @@ async function main(): Promise<void> {
 
   await forEachConcurrently(allTours, FICHE_CONCURRENCY, (tour) => generateTourPdf(tour, logo));
 
-  if (!tourFilter) {
+  if (!isFilterActive(filters.tourIds)) {
     const zoneIds = [...new Set(allTours.map((t) => t.zoneId))].sort();
     const vTours = toursData.vTours.filter((t) => zoneIds.includes(t.zoneId));
     const pTours = toursData.pTours.filter((t) => zoneIds.includes(t.zoneId));
