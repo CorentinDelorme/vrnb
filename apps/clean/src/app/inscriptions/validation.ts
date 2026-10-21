@@ -143,7 +143,8 @@ export function checkIdentityFields(
  *   statement, unknown (Zone, Parcours) pair, filled anti-bot honeypot — the
  *   honeypot is refused silently, without any dedicated code, so a bot
  *   cannot fingerprint it);
- * - `registration-closed`: the action date is past, the window is closed.
+ * - `registration-closed`: the registration window is closed — it closes 3
+ *   days before the action date of the Édition.
  */
 export type RegistrationRejection = 'invalid-inscription' | 'registration-closed';
 

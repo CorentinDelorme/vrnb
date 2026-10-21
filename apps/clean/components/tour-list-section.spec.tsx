@@ -89,10 +89,11 @@ describe('TourListSection inscriptions badge', () => {
  * play button, hidden on the covered rows. The action slot stays empty while
  * the statuses are loading, so the button never turns into a badge under the
  * volunteer's eyes; once the public state answered, the button and the badge
- * are shown at the same time. On a failed request the coverage is unknown, so
- * the button stays offered.
- * Ticket #18 keeps the button on the uncovered rows of a closed registration
- * window too: the modal itself explains that the window is closed.
+ * are shown at the same time. A failed request leaves the coverage unknown
+ * too: neither the badge nor the button is shown, because the site never
+ * offers a registration it cannot honor.
+ * Ticket #18 hides the button on every row once the registration window is
+ * closed (3 days before the action date).
  */
 describe('TourListSection inscriptions register button', () => {
   /** Render with the given status and return the RTL result. */

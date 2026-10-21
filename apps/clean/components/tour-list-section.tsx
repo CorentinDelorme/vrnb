@@ -26,13 +26,13 @@ import { TourRegisterButton } from './tour-register-button';
  * action slot: the state of the Parcours, then its play button.
  *
  * Ticket #17: every uncovered Parcours row also shows the register button
- * right before the play button. While the statuses are loading (or on a
- * fetch error) the coverage is unknown, and the unknown tours stay open for
- * registration — exactly the badge-less state of #16, so a late-covered row
- * is resolved by the modal's own 409 race guard. The gating hides the button
- * through a prop (rather than unmounting the component) so a modal opened
- * while a row was uncoverable keeps displaying its confirmation or conflict
- * message once the row turns covered.
+ * right before the play button. The action slot stays EMPTY while the
+ * statuses are loading and on a fetch error: the coverage is then unknown,
+ * and the site never offers a registration it cannot honor — the same
+ * degraded state as the badge of #16. The gating hides the button through a
+ * prop (rather than unmounting the component) so a modal opened while a row
+ * was uncoverable keeps displaying its confirmation or conflict message once
+ * the row turns covered.
  *
  * Ticket #18: a closed registration window (the window closes 3 days before
  * the action date) hides the register button — the organizers need that time

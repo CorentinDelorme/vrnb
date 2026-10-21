@@ -17,8 +17,9 @@
  * - the anti-bot honeypot: a filled hidden field means a bot → the SAME 400
  *   as any other invalid input (`invalid-inscription`), silently: the answer
  *   never names the honeypot, so a bot cannot fingerprint the trap;
- * - the registration window: 3 days before the action date the Édition is
- *   closed → 400 `registration-closed`;
+ * - the registration window: the window closes 3 days before the action date
+ *   (the last registration day is `actionDate - 3`, the action day itself is
+ *   closed too) → 400 `registration-closed`;
  * - the identity validation: the four names are required, trimmed and
  *   bounded (see `validation.ts`, the bounds shared with the client), the
  *   (Zone, Parcours) pair must exist in the Parcours catalogue, and the
@@ -170,9 +171,9 @@ export async function handleInscriptionsPost(
   } catch {
     return respond(400, INVALID);
   }
-  // The registration window of the Édition: closed 3 days before the action
-  // date (the action day itself still accepts registrations). Nothing is
-  // stored.
+  // The registration window of the Édition: it closes 3 days before the
+  // action date (the last registration day is `actionDate - 3`, and the action
+  // day itself is closed too). Nothing is stored.
   if (!isRegistrationOpen(deps.edition, deps.now())) return respond(400, CLOSED);
   // The body validation: the anti-bot honeypot, the four identity fields, the
   // engagement statement and the (Zone, Parcours) pair. A filled honeypot is
