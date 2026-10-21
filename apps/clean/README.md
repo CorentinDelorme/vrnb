@@ -106,13 +106,18 @@ bouton de lecture du parcours), via les deux endpoints de l'API :
 
 - `GET /api/inscriptions` — l'état public de l'Édition : l'année, la date de
   l'action, l'ouverture de la fenêtre d'inscription et la liste des Parcours
-  couverts ;
+  couverts (**200**) ; si le KV est injoignable, la réponse est un **502**
+  `{"error":"inscriptions-unavailable"}` ;
 - `POST /api/inscriptions` — l'inscription d'un binôme sur un Parcours (les
   deux membres et l'engagement à participer ensemble).
 
 Aucun de ces endpoints ne renvoie de nom : ils exposent uniquement les couples
 (Zone, Parcours). Les noms restent dans le KV et ne sont lus que par le script
 d'extraction local, décrit plus bas.
+
+C'est la **clé** du KV qui couvre un Parcours, pas la valeur stockée : une clé
+créée manuellement dans la console Upstash compte donc aussi, et le Parcours
+correspondant apparaît sur le site sous forme de badge « Binôme inscrit ».
 
 ### Variables d'environnement du KV
 
