@@ -177,6 +177,47 @@ export function zoneMapPdfPath(rootDir: string, zoneId: string, kind: 'V' | 'P')
   return join(zonePdfDir(rootDir, zoneId), zoneMapPdfName(kind));
 }
 
+/**
+ * Pattern of the Fiche PDFs of a Zone: a practice type letter followed by
+ * the number of the Parcours (`V1.pdf`, `P13.pdf`).
+ */
+const TOUR_PDF_PATTERN = /^[VP]\d+\.pdf$/;
+
+/**
+ * The published documents of a Zone, in the order of the zone packs: the
+ * overview maps (vélo then pied), then the Fiches of the Parcours.
+ *
+ * The pack is built from the published documents: a Fiche that was not
+ * rendered again is still in the folder, and the pack picks it up.
+ *
+ * The tracking sheets are not part of the pack anymore: the « Fiches de
+ * suivi » are generated from the real inscriptions by the referent script
+ * (`scripts/extract-inscriptions.ts`), outside the site.
+ */
+export function zonePackFiles(rootDir: string, zoneId: string): string[] {
+  const zoneFolder = zonePdfDir(rootDir, zoneId);
+  if (!existsSync(zoneFolder)) {
+    return [];
+  }
+
+  const files: string[] = [];
+  for (const kind of ['V', 'P'] as const) {
+    const mapPath = zoneMapPdfPath(rootDir, zoneId, kind);
+    if (existsSync(mapPath)) {
+      files.push(mapPath);
+    }
+  }
+
+  const tourPdfs = readdirSync(zoneFolder)
+    .filter((file) => TOUR_PDF_PATTERN.test(file))
+    .sort(compareParcoursIds);
+  for (const tourPdf of tourPdfs) {
+    files.push(join(zoneFolder, tourPdf));
+  }
+
+  return files;
+}
+
 // --- Inventory of the Zones and the Parcours ---
 
 /**

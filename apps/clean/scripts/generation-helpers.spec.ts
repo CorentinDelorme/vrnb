@@ -18,6 +18,7 @@ import {
   tourPdfPath,
   writeFileIfChanged,
   zoneMapPdfPath,
+  zonePackFiles,
 } from './generation-helpers';
 
 /**
@@ -222,6 +223,53 @@ describe('zoneMapPdfPath', () => {
     expect(zoneMapPdfPath('/app', 'bruz-sud', 'P')).toBe(
       join('/app', 'public/pdf/bruz-sud/Carte_parcours_a_pied.pdf'),
     );
+  });
+});
+
+describe('zonePackFiles', () => {
+  it('should list the overview maps first, then the Fiches of the Parcours', () => {
+    const rootDir = createFixture({
+      'public/pdf/bruz-sud/Carte_parcours_a_velo.pdf': '',
+      'public/pdf/bruz-sud/Carte_parcours_a_pied.pdf': '',
+      'public/pdf/bruz-sud/V1.pdf': '',
+      'public/pdf/bruz-sud/P2.pdf': '',
+    });
+
+    expect(zonePackFiles(rootDir, 'bruz-sud')).toEqual([
+      join(rootDir, 'public/pdf/bruz-sud/Carte_parcours_a_velo.pdf'),
+      join(rootDir, 'public/pdf/bruz-sud/Carte_parcours_a_pied.pdf'),
+      join(rootDir, 'public/pdf/bruz-sud/P2.pdf'),
+      join(rootDir, 'public/pdf/bruz-sud/V1.pdf'),
+    ]);
+  });
+
+  it('should pick up the Fiche that was not rendered again', () => {
+    const rootDir = createFixture({
+      'public/pdf/bruz-sud/V1.pdf': '',
+      'public/pdf/bruz-sud/V2.pdf': '',
+    });
+
+    expect(zonePackFiles(rootDir, 'bruz-sud')).toEqual([
+      join(rootDir, 'public/pdf/bruz-sud/V1.pdf'),
+      join(rootDir, 'public/pdf/bruz-sud/V2.pdf'),
+    ]);
+  });
+
+  it('should leave out the documents that are not Fiches nor overview maps', () => {
+    const rootDir = createFixture({
+      'public/pdf/bruz-sud/V1.pdf': '',
+      'public/pdf/bruz-sud/Suivi_parcours_a_pied.pdf': '',
+    });
+
+    expect(zonePackFiles(rootDir, 'bruz-sud')).toEqual([
+      join(rootDir, 'public/pdf/bruz-sud/V1.pdf'),
+    ]);
+  });
+
+  it('should return nothing when the Zone has no document', () => {
+    const rootDir = createFixture({});
+
+    expect(zonePackFiles(rootDir, 'bruz-sud')).toEqual([]);
   });
 });
 
