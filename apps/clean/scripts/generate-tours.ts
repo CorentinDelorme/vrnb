@@ -1,8 +1,9 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import type { FeatureCollection } from 'geojson';
 import { join } from 'path';
+import { format, resolveConfig } from 'prettier';
 
 import { buildTourGeoJsonAsset } from '../src/app/shared/gpx/tour-geojson';
 import { toursData } from '../src/app/tours-data';
@@ -14,7 +15,9 @@ import {
   geoJsonRootDir,
   isFilterActive,
   listParcours,
+  parseForceFlag,
   parseGenerationFilters,
+  writeFileIfChanged,
 } from './generation-helpers';
 
 const rootDir = join(import.meta.dirname, '..');
@@ -91,23 +94,34 @@ function readTourDistances(entry: ParcoursEntry): GeneratedTour {
 }
 
 /**
- * Emit the precomputed GeoJSON asset for a tour (public/geojson/<zone>/<tour>
- * .geojson): the route plus the start/end segments, each feature tagged with
- * its role, so maps fetch precomputed data at runtime instead of parsing GPX.
+ * The content of the precomputed GeoJSON asset of a Parcours
+ * (public/geojson/<zone>/<tour>.geojson): the route plus the start/end
+ * segments, each feature tagged with its role, so maps fetch precomputed
+ * data at runtime instead of parsing GPX.
  */
-function emitTourGeoJson(entry: ParcoursEntry): void {
+function buildTourGeoJson(entry: ParcoursEntry): string {
   const asset = buildTourGeoJsonAsset({
     start: readGpxCollection(entry.startSegmentPath),
     tour: readGpxCollection(entry.tracePath),
     end: readGpxCollection(entry.endSegmentPath),
   });
 
-  const outputDir = join(geoJsonRootDir(rootDir), entry.zoneId);
+  return `${JSON.stringify(asset)}\n`;
+}
+
+/**
+ * Write the precomputed GeoJSON asset of a Parcours, when its content
+ * changed.
+ *
+ * Returns whether the asset was written.
+ */
+function emitTourGeoJson(entry: ParcoursEntry): boolean {
   try {
+    const outputDir = join(geoJsonRootDir(rootDir), entry.zoneId);
     mkdirSync(outputDir, { recursive: true });
-    writeFileSync(
+    return writeFileIfChanged(
       geoJsonAssetPath(rootDir, entry.zoneId, entry.tourId),
-      `${JSON.stringify(asset)}\n`,
+      buildTourGeoJson(entry),
     );
   } catch (error) {
     throw new Error(
@@ -134,48 +148,85 @@ function mergeTours(existing: GeneratedTour[], fresh: GeneratedTour[]): Generate
   return [...kept, ...fresh].sort(sortTours);
 }
 
-const filters = parseGenerationFilters(process.argv);
-const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
-
-const inventory = listParcours(rootDir, filters);
-const zoneIds = inventory.zoneIds;
-if (filtered && zoneIds.length === 0) {
-  throw new Error('No zones match the --tour/--zone filter.');
-}
-const freshTours = inventory.parcours.map(readTourDistances);
-const freshVTours = freshTours.filter((tour) => tour.name.startsWith('V'));
-const freshPTours = freshTours.filter((tour) => tour.name.startsWith('P'));
-if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
-  throw new Error('No tours match the --tour/--zone filter.');
-}
-
-const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
-const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
-
-// Emit precomputed GeoJSON for every freshly computed tour only; tours kept
-// by the --tour/--zone merge keep their existing asset untouched.
-let emitFailures = 0;
-for (const entry of inventory.parcours) {
-  try {
-    emitTourGeoJson(entry);
-  } catch (error) {
-    emitFailures += 1;
-    console.error(`fail ${entry.tourId}: ${error instanceof Error ? error.message : error}`);
-  }
-}
-if (emitFailures > 0) {
-  throw new Error(`${emitFailures} GeoJSON asset(s) failed to emit.`);
-}
-
-const content = `// Auto-generated from public/gpx folder (one folder per zone)
+/**
+ * The catalogue of the Parcours, as it is written in the repository.
+ *
+ * The file is formatted the way Prettier formats it, so the generated file
+ * is always the file the linters expect — and so the comparison with the
+ * file already on the disk tells whether the data of the Parcours changed.
+ */
+async function buildToursData(vTours: GeneratedTour[], pTours: GeneratedTour[]): Promise<string> {
+  const content = `// Auto-generated from public/gpx folder (one folder per zone)
 export const toursData = {
   vTours: ${JSON.stringify(vTours, null, 2).replace(/"/g, "'")},
   pTours: ${JSON.stringify(pTours, null, 2).replace(/"/g, "'")},
 };
 `;
 
-writeFileSync(outputFile, content);
-console.log(
-  `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
-);
-console.log(`Emitted ${inventory.parcours.length} precomputed GeoJSON files under public/geojson/`);
+  const config = await resolveConfig(outputFile);
+  return format(content, { ...config, filepath: outputFile });
+}
+
+async function main(): Promise<void> {
+  const filters = parseGenerationFilters(process.argv);
+  const force = parseForceFlag(process.argv);
+  const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
+
+  if (force) {
+    console.log('Force mode: the catalogue and the GeoJSON assets are regenerated anyway.');
+  }
+
+  const inventory = listParcours(rootDir, filters);
+  const zoneIds = inventory.zoneIds;
+  if (filtered && zoneIds.length === 0) {
+    throw new Error('No zones match the --tour/--zone filter.');
+  }
+  const freshTours = inventory.parcours.map(readTourDistances);
+  const freshVTours = freshTours.filter((tour) => tour.name.startsWith('V'));
+  const freshPTours = freshTours.filter((tour) => tour.name.startsWith('P'));
+  if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
+    throw new Error('No tours match the --tour/--zone filter.');
+  }
+
+  const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
+  const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
+
+  // Emit precomputed GeoJSON for every freshly computed tour only; tours kept
+  // by the --tour/--zone merge keep their existing asset untouched. The asset
+  // is written only when its content changed, so a run that changed nothing
+  // leaves no diff behind.
+  let emitFailures = 0;
+  let emitted = 0;
+  for (const entry of inventory.parcours) {
+    try {
+      if (emitTourGeoJson(entry)) {
+        emitted += 1;
+      }
+    } catch (error) {
+      emitFailures += 1;
+      console.error(`fail ${entry.tourId}: ${error instanceof Error ? error.message : error}`);
+    }
+  }
+  if (emitFailures > 0) {
+    throw new Error(`${emitFailures} GeoJSON asset(s) failed to emit.`);
+  }
+
+  // The catalogue is written only when its content changed.
+  if (writeFileIfChanged(outputFile, await buildToursData(vTours, pTours))) {
+    console.log('Updated src/app/tours-data.ts.');
+  } else {
+    console.log('Tours data unchanged: src/app/tours-data.ts left as is.');
+  }
+
+  console.log(
+    `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
+  );
+  console.log(
+    `Emitted ${emitted} precomputed GeoJSON file(s) under public/geojson/ (${inventory.parcours.length} computed)`,
+  );
+}
+
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});

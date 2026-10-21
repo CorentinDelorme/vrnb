@@ -13,7 +13,7 @@
  * fixture tree instead of the real `public/` folders.
  */
 
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
@@ -63,6 +63,33 @@ export function parseGenerationFilters(argv: readonly string[]): GenerationFilte
 
 function toFilterSet(values: string[] | undefined): ReadonlySet<string> | undefined {
   return values === undefined ? undefined : new Set(values);
+}
+
+/**
+ * Whether the run is forced: the `--force` flag asks the pipeline to
+ * regenerate everything the filters select, whatever the generation state
+ * says.
+ */
+export function parseForceFlag(argv: readonly string[]): boolean {
+  return argv.includes('--force');
+}
+
+/**
+ * Write a file only when its content changes.
+ *
+ * The generated files (the catalogue of the Parcours, the precomputed
+ * GeoJSON assets) are computed on every run, but writing them again when
+ * their content did not change would leave an empty diff in the
+ * repository after every run.
+ *
+ * Returns whether the file was written.
+ */
+export function writeFileIfChanged(path: string, content: string): boolean {
+  if (existsSync(path) && readFileSync(path, 'utf-8') === content) {
+    return false;
+  }
+  writeFileSync(path, content);
+  return true;
 }
 
 // --- Layout of the generated data ---

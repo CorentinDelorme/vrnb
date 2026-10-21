@@ -1,6 +1,6 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { existsSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
 import { getZone } from '../src/app/zones';
@@ -9,7 +9,25 @@ import { createRouterClient } from './router-client';
 import { buildSegmentGpx } from './segment-gpx';
 
 import type { ParcoursEntry } from './generation-helpers';
-import { gpxRootDir, listParcours, parseGenerationFilters } from './generation-helpers';
+import {
+  gpxRootDir,
+  listParcours,
+  parseForceFlag,
+  parseGenerationFilters,
+  writeFileIfChanged,
+} from './generation-helpers';
+import type { ParcoursDecision, PlanCandidate } from './generation-plan';
+import { planGeneration } from './generation-plan';
+import type { ParcoursStateUpdate } from './generation-state';
+import {
+  GENERATION_STATE_VERSION,
+  fingerprintParcoursFiles,
+  generationStatePath,
+  nextGenerationState,
+  parcoursStateKey,
+  readGenerationState,
+  writeGenerationState,
+} from './generation-state';
 import type { LonLat, ParcoursRoute } from './route-parcours';
 import {
   PARCOURS_ROUTING_CONCURRENCY,
@@ -52,19 +70,63 @@ function getTourEndpoints(entry: ParcoursEntry): { start: LonLat; end: LonLat } 
   return { start: [first[0], first[1]], end: [last[0], last[1]] };
 }
 
+/** The fingerprints of the files of a Parcours, as they are on the disk. */
+function toCandidate(entry: ParcoursEntry): PlanCandidate {
+  return {
+    zoneId: entry.zoneId,
+    tourId: entry.tourId,
+    fingerprints: fingerprintParcoursFiles(entry),
+  };
+}
+
+/** The key of a Parcours in the generation state. */
+function keyOf(decision: ParcoursDecision): string {
+  return parcoursStateKey(decision.zoneId, decision.tourId);
+}
+
 async function main(): Promise<void> {
   const filters = parseGenerationFilters(process.argv);
+  const force = parseForceFlag(process.argv);
   const gpxRoot = gpxRootDir(rootDir);
   if (!existsSync(gpxRoot)) {
     throw new Error(`GPX directory not found: ${gpxRoot}`);
   }
 
-  const inventory = listParcours(rootDir, filters);
-  const zones = inventory.zones;
+  const inventory = listParcours(rootDir);
+  const entries = new Map(
+    inventory.parcours.map((entry) => [parcoursStateKey(entry.zoneId, entry.tourId), entry]),
+  );
 
-  if (zones.length === 0 || zones.every((zone) => zone.parcours.length === 0)) {
+  const statePath = generationStatePath(rootDir);
+  const state = readGenerationState(statePath);
+
+  // The plan decides what the run must route: the Parcours whose source
+  // trace changed, and only them.
+  const plan = planGeneration({
+    state,
+    currentVersion: GENERATION_STATE_VERSION,
+    candidates: inventory.parcours.map(toCandidate),
+    filters,
+    force,
+  });
+
+  if (plan.decisions.length === 0) {
     throw new Error('No tours found to process.');
   }
+
+  const toRoute = plan.decisions.filter((decision) => decision.rerouteSegments);
+  for (const decision of plan.decisions) {
+    if (!decision.rerouteSegments) {
+      console.log(`skip ${decision.tourId} (${decision.reason})`);
+    }
+  }
+
+  if (toRoute.length === 0) {
+    console.log('Nothing to route: every Parcours of the run is up to date.');
+    return;
+  }
+
+  const toRouteKeys = new Set(toRoute.map(keyOf));
 
   /**
    * The scheduler every routing request goes through: one request every
@@ -80,31 +142,40 @@ async function main(): Promise<void> {
   const routerClient = createRouterClient({ scheduler });
 
   let failures = 0;
+  /** The Parcours that were routed, and the ones that failed. */
+  const routed = new Set<string>();
+  const failed = new Set<string>();
 
-  for (const zone of zones) {
+  for (const zone of inventory.zones) {
     const zoneId = zone.zoneId;
+    const zoneEntries = zone.parcours.filter((entry) =>
+      toRouteKeys.has(parcoursStateKey(entry.zoneId, entry.tourId)),
+    );
+    if (zoneEntries.length === 0) {
+      continue;
+    }
+
     const meetingPoint = getZone(zoneId).meetingPoint;
     const meetingCoords: LonLat = [meetingPoint.coordinates[0], meetingPoint.coordinates[1]];
 
     console.log(
       `Zone ${zoneId} — meeting point: ${meetingPoint.name} (${meetingCoords[1]}, ${meetingCoords[0]})`,
     );
-    console.log(`Generating start/end GPX for ${zone.parcours.length} tours...`);
+    console.log(`Generating start/end GPX for ${zoneEntries.length} tours...`);
 
     // The Parcours whose trace cannot be read are reported right away; the
     // other ones are routed two at a time.
-    const entries = new Map<string, ParcoursEntry>();
     const parcours: ParcoursRoute[] = [];
-    for (const entry of zone.parcours) {
+    for (const entry of zoneEntries) {
       const endpoints = getTourEndpoints(entry);
       if (!endpoints) {
         failures += 1;
+        failed.add(parcoursStateKey(entry.zoneId, entry.tourId));
         console.error(
           `fail ${entry.tourId}: cannot read endpoints from ${entry.tourId}/${entry.tourId}.gpx`,
         );
         continue;
       }
-      entries.set(entry.tourId, entry);
       parcours.push({
         tourId: entry.tourId,
         profile: profileForParcours(entry.tourId),
@@ -116,11 +187,11 @@ async function main(): Promise<void> {
       routeSegment: routerClient.routeSegment,
       concurrency: PARCOURS_ROUTING_CONCURRENCY,
       onRouted: (outcome) => {
-        const entry = entries.get(outcome.tourId);
+        const entry = zoneEntries.find((candidate) => candidate.tourId === outcome.tourId);
         if (!entry) {
           throw new Error(`Unknown parcours: ${outcome.tourId}`);
         }
-        writeFileSync(
+        writeFileIfChanged(
           entry.startSegmentPath,
           buildSegmentGpx(
             `${meetingPoint.name} vers le parcours ${outcome.tourId}`,
@@ -129,7 +200,7 @@ async function main(): Promise<void> {
             outcome.start.source,
           ),
         );
-        writeFileSync(
+        writeFileIfChanged(
           entry.endSegmentPath,
           buildSegmentGpx(
             `Fin du parcours ${outcome.tourId} vers ${meetingPoint.name}`,
@@ -138,6 +209,7 @@ async function main(): Promise<void> {
             outcome.end.source,
           ),
         );
+        routed.add(parcoursStateKey(entry.zoneId, entry.tourId));
         console.log(
           `ok ${outcome.tourId} (${outcome.profile.osrm}): start ${outcome.start.coords.length} pts` +
             ` ${Math.round(outcome.start.distanceM)}m [${outcome.start.source}],` +
@@ -147,6 +219,7 @@ async function main(): Promise<void> {
       },
       onFailure: (failure) => {
         failures += 1;
+        failed.add(parcoursStateKey(zoneId, failure.tourId));
         console.error(
           `fail ${failure.tourId}: ${failure.error instanceof Error ? failure.error.message : failure.error}`,
         );
@@ -154,11 +227,39 @@ async function main(): Promise<void> {
     });
   }
 
+  // The state remembers what the pipeline produced: a Parcours that was
+  // routed is up to date, a Parcours that failed is dropped, so the next
+  // run routes it again.
+  writeGenerationState(
+    statePath,
+    nextGenerationState(state, stateUpdates(entries, toRoute, routed, failed)),
+  );
+
   if (failures > 0) {
     throw new Error(`${failures} tour(s) failed.`);
   }
 
   console.log('Done. Run `bun run generate:tours` to refresh distances.');
+}
+
+/**
+ * The updates the state of the next run holds: the Parcours that were
+ * routed get their new fingerprints, the Parcours that failed get none.
+ */
+function stateUpdates(
+  entries: ReadonlyMap<string, ParcoursEntry>,
+  toRoute: readonly ParcoursDecision[],
+  routed: ReadonlySet<string>,
+  failed: ReadonlySet<string>,
+): ParcoursStateUpdate[] {
+  return toRoute.map((decision) => {
+    const key = keyOf(decision);
+    const entry = entries.get(key);
+    if (failed.has(key) || !routed.has(key) || !entry) {
+      return { key };
+    }
+    return { key, record: fingerprintParcoursFiles(entry) };
+  });
 }
 
 main().catch((error: unknown) => {
