@@ -13,10 +13,12 @@
  * fixture tree instead of the real `public/` folders.
  */
 
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
-import { join } from 'path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'fs';
+import { basename, dirname, join } from 'path';
 
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
+
+import type { PerfReport } from './generation-perf';
 
 /**
  * Values of a `--flag=a,b` option: the first matching argument wins, the
@@ -90,6 +92,98 @@ export function writeFileIfChanged(path: string, content: string): boolean {
   }
   writeFileSync(path, content);
   return true;
+}
+
+// --- The reports of the runs ---
+
+/**
+ * Folder holding the `[perf]` reports of the steps of the last run.
+ *
+ * The folder is inside the gitignored `scripts/output` folder: the
+ * reports are the output of a run, not a source of truth.
+ */
+export function perfReportsDir(rootDir: string): string {
+  return join(rootDir, 'scripts', 'output', 'perf');
+}
+
+/** Report of a step of a run: `scripts/output/perf/<step>.json`. */
+export function perfReportPath(rootDir: string, script: string): string {
+  return join(perfReportsDir(rootDir), `${script}.json`);
+}
+
+/**
+ * Write the `[perf]` report of a step, so the orchestrators can read the
+ * counters of the steps they ran.
+ *
+ * Returns whether the report was written.
+ */
+export function writePerfReport(path: string, report: PerfReport): boolean {
+  mkdirSync(dirname(path), { recursive: true });
+  return writeFileIfChanged(path, `${JSON.stringify(report, null, 2)}\n`);
+}
+
+/**
+ * Read the `[perf]` report of a step.
+ *
+ * `undefined` when the report is missing or unreadable: an orchestrator
+ * then knows nothing about that step.
+ */
+export function readPerfReport(path: string): PerfReport | undefined {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(readFileSync(path, 'utf-8'));
+  } catch {
+    return undefined;
+  }
+  if (!isRecord(raw)) {
+    return undefined;
+  }
+
+  const steps = Array.isArray(raw.steps) ? raw.steps : [];
+  return {
+    script: typeof raw.script === 'string' ? raw.script : '',
+    totalMs: typeof raw.totalMs === 'number' ? raw.totalMs : 0,
+    steps: steps.flatMap((step) =>
+      isRecord(step) && typeof step.name === 'string' && typeof step.durationMs === 'number'
+        ? [{ name: step.name, durationMs: step.durationMs }]
+        : [],
+    ),
+    tiles: {
+      fromCache:
+        isRecord(raw.tiles) && typeof raw.tiles.fromCache === 'number' ? raw.tiles.fromCache : 0,
+      downloaded:
+        isRecord(raw.tiles) && typeof raw.tiles.downloaded === 'number' ? raw.tiles.downloaded : 0,
+    },
+    parcours: {
+      regenerated: readIds(raw.parcours, 'regenerated'),
+      skipped: readIds(raw.parcours, 'skipped'),
+    },
+    zoneMaps: {
+      regenerated: readIds(raw.zoneMaps, 'regenerated'),
+      skipped: readIds(raw.zoneMaps, 'skipped'),
+    },
+  };
+}
+
+/**
+ * Drop the reports of the previous run, so an orchestrator never reads
+ * the report of a step it did not run.
+ */
+export function clearPerfReports(rootDir: string): void {
+  rmSync(perfReportsDir(rootDir), { recursive: true, force: true });
+}
+
+/** The ids of a counter of a report. */
+function readIds(value: unknown, key: string): string[] {
+  if (!isRecord(value) || !Array.isArray(value[key])) {
+    return [];
+  }
+  return value[key].filter((id): id is string => typeof id === 'string');
+}
+
+/** Whether a value is a JSON object. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 // --- Layout of the generated data ---
@@ -216,6 +310,18 @@ export function zonePackFiles(rootDir: string, zoneId: string): string[] {
   }
 
   return files;
+}
+
+/**
+ * The Parcours whose Fiche is part of the pack of a Zone, as
+ * `<zone>/<parcours>` ids.
+ *
+ * The overview maps of the Zone are not Parcours: they are left out.
+ */
+export function zonePackParcours(rootDir: string, zoneId: string): string[] {
+  return zonePackFiles(rootDir, zoneId)
+    .filter((file) => TOUR_PDF_PATTERN.test(basename(file)))
+    .map((file) => `${zoneId}/${basename(file, '.pdf')}`);
 }
 
 // --- Inventory of the Zones and the Parcours ---

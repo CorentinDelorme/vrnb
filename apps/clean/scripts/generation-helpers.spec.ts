@@ -14,12 +14,17 @@ import {
   parseFilterValues,
   parseForceFlag,
   parseGenerationFilters,
+  perfReportPath,
+  readPerfReport,
   resolveGpxTracePath,
   tourPdfPath,
   writeFileIfChanged,
+  writePerfReport,
   zoneMapPdfPath,
   zonePackFiles,
+  zonePackParcours,
 } from './generation-helpers';
+import { buildPerfReport } from './generation-perf';
 
 /**
  * Shared helpers of the data-generation scripts (ticket #23): the CLI filter
@@ -384,5 +389,51 @@ describe('listParcours', () => {
     const rootDir = createFixture({});
 
     expect(listParcours(rootDir)).toEqual({ zoneIds: [], zones: [], parcours: [] });
+  });
+});
+
+describe('writePerfReport', () => {
+  it('should write the report of a step and read it back', () => {
+    const rootDir = createFixture({});
+    const report = buildPerfReport({
+      script: 'generate-pdfs',
+      totalMs: 1_000,
+      steps: [{ name: 'Fiches', durationMs: 900 }],
+      tiles: { fromCache: 10, downloaded: 2 },
+      parcours: { regenerated: ['bruz-sud/V1'], skipped: ['bruz-sud/V2'] },
+    });
+
+    expect(writePerfReport(perfReportPath(rootDir, 'generate-pdfs'), report)).toBe(true);
+    expect(readPerfReport(perfReportPath(rootDir, 'generate-pdfs'))).toEqual(report);
+  });
+
+  it('should return undefined when the report of a step is missing', () => {
+    const rootDir = createFixture({});
+
+    expect(readPerfReport(perfReportPath(rootDir, 'generate-pdfs'))).toBeUndefined();
+  });
+
+  it('should return undefined when the report of a step is unreadable', () => {
+    const rootDir = createFixture({ 'scripts/output/perf/generate-pdfs.json': 'not json' });
+
+    expect(readPerfReport(perfReportPath(rootDir, 'generate-pdfs'))).toBeUndefined();
+  });
+});
+
+describe('zonePackParcours', () => {
+  it('should list the Parcours whose Fiche is part of the pack of a Zone', () => {
+    const rootDir = createFixture({
+      'public/pdf/bruz-sud/V1.pdf': '',
+      'public/pdf/bruz-sud/P1.pdf': '',
+      'public/pdf/bruz-sud/Carte_parcours_a_velo.pdf': '',
+    });
+
+    expect(zonePackParcours(rootDir, 'bruz-sud')).toEqual(['bruz-sud/P1', 'bruz-sud/V1']);
+  });
+
+  it('should return an empty list when the Zone holds no document', () => {
+    const rootDir = createFixture({});
+
+    expect(zonePackParcours(rootDir, 'bruz-sud')).toEqual([]);
   });
 });

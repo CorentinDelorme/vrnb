@@ -17,11 +17,24 @@ import {
   listParcours,
   parseForceFlag,
   parseGenerationFilters,
+  perfReportPath,
   writeFileIfChanged,
+  writePerfReport,
 } from './generation-helpers';
+import type { PerfRecorder } from './generation-perf';
+import {
+  buildPerfReport,
+  countersFromIds,
+  createPerfRecorder,
+  formatPerfReport,
+} from './generation-perf';
+import { parcoursStateKey } from './generation-state';
 
 const rootDir = join(import.meta.dirname, '..');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
+
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-tours';
 
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
@@ -168,61 +181,131 @@ export const toursData = {
 }
 
 async function main(): Promise<void> {
-  const filters = parseGenerationFilters(process.argv);
-  const force = parseForceFlag(process.argv);
-  const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
+  const perf = createPerfRecorder();
+  /** The Parcours of the run, and the ones whose data changed. */
+  let scope: string[] = [];
+  const changed = new Set<string>();
 
-  if (force) {
-    console.log('Force mode: the catalogue and the GeoJSON assets are regenerated anyway.');
-  }
+  try {
+    const filters = parseGenerationFilters(process.argv);
+    const force = parseForceFlag(process.argv);
+    const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
 
-  const inventory = listParcours(rootDir, filters);
-  const zoneIds = inventory.zoneIds;
-  if (filtered && zoneIds.length === 0) {
-    throw new Error('No zones match the --tour/--zone filter.');
-  }
-  const freshTours = inventory.parcours.map(readTourDistances);
-  const freshVTours = freshTours.filter((tour) => tour.name.startsWith('V'));
-  const freshPTours = freshTours.filter((tour) => tour.name.startsWith('P'));
-  if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
-    throw new Error('No tours match the --tour/--zone filter.');
-  }
-
-  const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
-  const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
-
-  // Emit precomputed GeoJSON for every freshly computed tour only; tours kept
-  // by the --tour/--zone merge keep their existing asset untouched. The asset
-  // is written only when its content changed, so a run that changed nothing
-  // leaves no diff behind.
-  let emitFailures = 0;
-  let emitted = 0;
-  for (const entry of inventory.parcours) {
-    try {
-      if (emitTourGeoJson(entry)) {
-        emitted += 1;
-      }
-    } catch (error) {
-      emitFailures += 1;
-      console.error(`fail ${entry.tourId}: ${error instanceof Error ? error.message : error}`);
+    if (force) {
+      console.log('Force mode: the catalogue and the GeoJSON assets are regenerated anyway.');
     }
-  }
-  if (emitFailures > 0) {
-    throw new Error(`${emitFailures} GeoJSON asset(s) failed to emit.`);
-  }
 
-  // The catalogue is written only when its content changed.
-  if (writeFileIfChanged(outputFile, await buildToursData(vTours, pTours))) {
-    console.log('Updated src/app/tours-data.ts.');
-  } else {
-    console.log('Tours data unchanged: src/app/tours-data.ts left as is.');
-  }
+    const inventory = listParcours(rootDir, filters);
+    const zoneIds = inventory.zoneIds;
+    if (filtered && zoneIds.length === 0) {
+      throw new Error('No zones match the --tour/--zone filter.');
+    }
+    scope = inventory.parcours.map((entry) => parcoursStateKey(entry.zoneId, entry.tourId));
+    const freshTours = await perf.measure('distances', async () =>
+      inventory.parcours.map(readTourDistances),
+    );
+    const freshVTours = freshTours.filter((tour) => tour.name.startsWith('V'));
+    const freshPTours = freshTours.filter((tour) => tour.name.startsWith('P'));
+    if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
+      throw new Error('No tours match the --tour/--zone filter.');
+    }
 
-  console.log(
-    `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
-  );
-  console.log(
-    `Emitted ${emitted} precomputed GeoJSON file(s) under public/geojson/ (${inventory.parcours.length} computed)`,
+    const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
+    const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
+
+    // A Parcours whose distances changed is regenerated, even when its
+    // GeoJSON asset did not change: the catalogue holds its new distances.
+    const existingTours = new Map(
+      [...toursData.vTours, ...toursData.pTours].map((tour) => [
+        parcoursStateKey(tour.zoneId, tour.name),
+        tour,
+      ]),
+    );
+    for (const fresh of freshTours) {
+      if (distancesChanged(existingTours.get(parcoursStateKey(fresh.zoneId, fresh.name)), fresh)) {
+        changed.add(parcoursStateKey(fresh.zoneId, fresh.name));
+      }
+    }
+
+    // Emit precomputed GeoJSON for every freshly computed tour only; tours kept
+    // by the --tour/--zone merge keep their existing asset untouched. The asset
+    // is written only when its content changed, so a run that changed nothing
+    // leaves no diff behind.
+    let emitFailures = 0;
+    let emitted = 0;
+    await perf.measure('GeoJSON', async () => {
+      for (const entry of inventory.parcours) {
+        try {
+          if (emitTourGeoJson(entry)) {
+            emitted += 1;
+            changed.add(parcoursStateKey(entry.zoneId, entry.tourId));
+          }
+        } catch (error) {
+          emitFailures += 1;
+          console.error(`fail ${entry.tourId}: ${error instanceof Error ? error.message : error}`);
+        }
+      }
+    });
+    if (emitFailures > 0) {
+      throw new Error(`${emitFailures} GeoJSON asset(s) failed to emit.`);
+    }
+
+    // The catalogue is written only when its content changed.
+    await perf.measure('catalogue', async () => {
+      if (writeFileIfChanged(outputFile, await buildToursData(vTours, pTours))) {
+        console.log('Updated src/app/tours-data.ts.');
+      } else {
+        console.log('Tours data unchanged: src/app/tours-data.ts left as is.');
+      }
+    });
+
+    console.log(
+      `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
+    );
+    console.log(
+      `Emitted ${emitted} precomputed GeoJSON file(s) under public/geojson/ (${inventory.parcours.length} computed)`,
+    );
+  } finally {
+    reportRun(perf, scope, changed);
+  }
+}
+
+/**
+ * Show the `[perf]` block of the run: how long it took, how long each step
+ * took, and how many Parcours changed.
+ *
+ * The data step reads no tile: the tile counters of a run are the ones of
+ * the Fiche step.
+ */
+function reportRun(
+  perf: PerfRecorder,
+  scope: readonly string[],
+  changed: ReadonlySet<string>,
+): void {
+  const report = buildPerfReport({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    tiles: { fromCache: 0, downloaded: 0 },
+    parcours: countersFromIds([...changed], scope),
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
+}
+
+/**
+ * Whether the distances of a Parcours changed since the catalogue on the
+ * disk.
+ */
+function distancesChanged(existing: GeneratedTour | undefined, fresh: GeneratedTour): boolean {
+  if (!existing) {
+    return true;
+  }
+  return (
+    existing.distance !== fresh.distance ||
+    existing.startDistance !== fresh.startDistance ||
+    existing.endDistance !== fresh.endDistance
   );
 }
 
