@@ -192,6 +192,8 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
               </div>
             </div>
 
+            <form className="mt-4 grid gap-3" onSubmit={(event) => void submit(event)}>
+
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {(
                 [
@@ -251,12 +253,13 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
             <div className="modal-action">
               <button
                 className="btn btn-primary max-sm:btn-sm sm:btn-md"
-                disabled={outcome === 'submitting'}
+                disabled={!complete || outcome === 'submitting'}
                 type="submit"
               >
                 {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
               </button>
             </div>
+            </form>
           </>
         )}
       </div>
