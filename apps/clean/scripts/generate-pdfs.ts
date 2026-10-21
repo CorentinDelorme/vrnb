@@ -786,7 +786,7 @@ async function main(): Promise<void> {
   const filters = parseGenerationFilters(process.argv);
   const force = parseForceFlag(process.argv);
   if (force) {
-    console.log('Force mode: every Fiche of the selection is rendered.');
+    console.log('Force mode requested: every Fiche of the selection is rendered.');
   }
   const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter((tour) =>
     matchesFilters(filters, tour.zoneId, tour.name),
