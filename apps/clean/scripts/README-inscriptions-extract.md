@@ -1,13 +1,23 @@
-# Extraction des inscriptions — Fiches de suivi
+# Extraction des inscriptions — Suivi des parcours
 
 Le script `extract-inscriptions.ts` lit les inscriptions de l'Édition en cours
-dans le KV (Upstash) via son API REST, et génère une **Fiche de suivi** en
-markdown par Zone raccrochant au moins une inscription
-(`Fiche_de_suivi_<zoneId>_<année>.md`) : Édition et date de l'action, Zone,
-parcours inscrits et les deux Binômes avec leurs prénoms et noms. Le nom de
-fichier utilise l'identifiant de la Zone, son contenu le libellé français
-(`Bruz Sud`). Le format markdown reste lisible partout et peut être imprimé
-tel quel.
+dans le KV (Upstash) via son API REST, et génère les **feuilles de suivi** en
+PDF : une par Zone et par type de parcours, dans un sous-dossier par Zone :
+
+```
+scripts/output/inscriptions/<année>/<zoneId>/Suivi_parcours_a_velo.pdf
+scripts/output/inscriptions/<année>/<zoneId>/Suivi_parcours_a_pied.pdf
+```
+
+Chaque feuille reprend le gabarit des anciennes feuilles publiées par le site
+(`public/pdf/<zone>/Suivi_parcours_a_*.pdf`, retirées depuis) : le titre de la
+Zone, le tableau des Parcours avec les deux colonnes « Prénom NOM » — **renseignées
+avec les Binômes inscrits** — puis les colonnes de pesée (Ordures / Tri / Verre)
+et le tableau des totaux, à remplir le jour de l'action. Un pied de page rappelle
+l'Édition et la durée de conservation des données.
+
+Les feuilles contiennent des données personnelles : elles sont écrites dans un
+dossier **gitignoré**, jamais versionnées, jamais publiées ni déployées.
 
 - **Qui** : le référent de l'association (accès au tableau de bord Upstash et à
   ce dépôt).
@@ -15,9 +25,10 @@ tel quel.
   complètes — relancer le script en rafraîchissant les fiches à chaque vague
   d'inscriptions (chaque exécution réécrit les fichiers de la sortie).
 - **Où** : dans un dossier local gitignoré, **jamais publié** :
-  `scripts/output/inscriptions/<année>/` par défaut, surchargeable avec
-  `--out-dir`. Les fiches contiennent des données personnelles : elles ne
-  doivent **jamais** être copiées sous `public/` ni déployées avec le site.
+  `scripts/output/inscriptions/<année>/<zoneId>/` par défaut, surchargeable
+  avec `--out-dir`. Les feuilles contiennent des données personnelles : elles
+  ne doivent **jamais** être committées, copiées sous `public/` ni déployées
+  avec le site.
 
 ## Prérequis
 
@@ -43,12 +54,15 @@ bun scripts/extract-inscriptions.ts                       # Édition configurée
 bun scripts/extract-inscriptions.ts --out-dir=/tmp/fiches  # autre dossier de sortie
 ```
 
-Sortie par défaut : `apps/clean/scripts/output/inscriptions/<année>/`, avec :
+Sortie par défaut : `apps/clean/scripts/output/inscriptions/<année>/<zoneId>/`,
+avec une feuille par Zone et par type de parcours qui a des parcours :
 
-| Cas                                          | Fichiers générés                                                                     |
-| -------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Zone avec au moins une inscription           | `Fiche_de_suivi_<zoneId>_<année>.md` (une par zone concernée)                        |
-| Aucune inscription utilisable pour l'Édition | `Fiche_de_suivi_<année>.md`, contenant « Aucune inscription pour l'édition <année> » |
+| Cas                               | Fichiers générés                                                                         |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| Zone avec des parcours            | `Suivi_parcours_a_velo.pdf` et/ou `Suivi_parcours_a_pied.pdf` (un sous-dossier par Zone) |
+| Parcours inscrit                  | Les deux colonnes « Prénom NOM » de la ligne sont renseignées                            |
+| Parcours libre                    | Les deux colonnes restent vides                                                          |
+| Aucune inscription pour l'Édition | Les feuilles sont générées **vides** (elles servent de support de pesée)                 |
 
 Le récapitulatif de la console (nombre d'inscriptions, clés ignorées, chemins)
 n'affiche **jamais** de valeur stockée ni de nom : les données personnelles ne
@@ -62,7 +76,7 @@ Supprimer la clé `inscriptions:<année>:<zoneId>:<parcours>` (ex.
 `inscriptions:2027:bruz-sud:V1`) d'une inscription depuis la console Upstash
 (<https://console.upstash.com>) : onglet **Data Browser** de la base REST,
 rechercher la clé, **Delete**. Le parcours redevient disponible sur le site et
-la prochaine extraction ne le liste plus dans les fiches ; aucun outil
+la prochaine extraction ne le liste plus dans la feuille ; aucun outil
 d'administration spécifique n'existe pour cette opération rare.
 
 ## Expiration automatique (à la création de chaque clé)
@@ -79,6 +93,6 @@ cron ni purge manuelle, et un changement d'année dans `CURRENT_EDITION` suffit
 | Quand                                          | Qui        | Quoi                                                                                         |
 | ---------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------- |
 | À l'annonce de l'Édition                       | Mainteneur | Mettre à jour `year` et `actionDate` dans `src/app/inscriptions/edition.ts` (un seul commit) |
-| Avant l'action (à chaque vague d'inscriptions) | Référent   | Régénérer et imprimer les fiches (`bun scripts/extract-inscriptions.ts`)                     |
+| Avant l'action (à chaque vague d'inscriptions) | Référent   | Régénérer et imprimer les feuilles de suivi (`bun scripts/extract-inscriptions.ts`)          |
 | À tout moment                                  | Référent   | Traiter un désistement (supprimer la clé du parcours dans la console Upstash)                |
 | 90 jours après la date de l'action             | —          | Rien : les clés (et les noms) expirent automatiquement du KV                                 |

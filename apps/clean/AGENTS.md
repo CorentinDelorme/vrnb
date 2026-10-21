@@ -30,7 +30,7 @@ The Inscriptions feature lets a **Binôme** cover a Parcours for the current Éd
 - **Retention** — every key is created with a TTL reaching `actionDate + INSCRIPTIONS_RETENTION_DAYS` (90) days in `EDITION_TIME_ZONE`, so the personal data expires with no cron and no manual purge.
 - **Environment** — `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` feed the Upstash REST adapter (names only, never values in the repo).
 - **Anti-bot** — the modal carries a hidden honeypot field (`website`); a filled one is refused with the same 400 as any other invalid input (`invalid-inscription`), silently, and nothing is stored.
-- **Human operations** — `bun scripts/extract-inscriptions.ts` writes the per-Zone « Fiche de suivi » files (runbook: `scripts/README-inscriptions-extract.md`); a deregistration is the deletion of the `inscriptions:<year>:<zoneId>:<tourId>` key in the Upstash console (the site has no admin UI).
+- **Human operations** — `bun scripts/extract-inscriptions.ts` writes the « Suivi » sheets (one PDF per Zone and practice type, with the binômes of the registered Parcours filled in) into a gitignored folder, never into `public/` (runbook: `scripts/README-inscriptions-extract.md`); a deregistration is the deletion of the `inscriptions:<year>:<zoneId>:<tourId>` key in the Upstash console (the site has no admin UI).
 
 ## Build/Lint/Test Commands
 
@@ -270,6 +270,7 @@ apps/clean/
 - `components/register-binome-modal.tsx` — Binôme registration modal (identity, honeypot, GDPR notice)
 - `public/geojson/<zone>/<tour>.geojson` — precomputed asset (see GLOSSARY)
 - `scripts/generate-tours.ts` — data pipeline (tours-data + GeoJSON)
-- `scripts/README-inscriptions-extract.md` — referent runbook of the « Fiche de suivi » extraction
+- `scripts/README-inscriptions-extract.md` — referent runbook of the « Suivi » extraction
+- `scripts/suivi-pdf.ts` — PDF renderer of the « Suivi » sheets (the printed tracking sheets)
 - `e2e/tests.md` — E2E test plan
 - `GLOSSARY.md` — domain vocabulary; `README.md` — commands and data generation

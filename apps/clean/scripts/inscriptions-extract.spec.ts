@@ -3,24 +3,20 @@ import { describe, expect, it, vi } from 'vitest';
 import type { RawInscriptionEntry } from '../src/app/inscriptions/public-state';
 import { createUpstashInscriptionsStore, inscriptionKey } from '../src/app/inscriptions/upstash-kv';
 import {
-  binomeDisplay,
+  buildSuiviSheets,
   collectInscriptions,
-  emptyEditionFicheDeSuiviFileName,
-  extractInscriptionSheets,
-  groupInscriptionsByZone,
+  extractSuiviSheets,
   parseInscriptionBinome,
-  renderEmptyEditionContent,
-  renderZoneInscriptionsContent,
-  zoneFicheDeSuiviFileName,
-  type BinomeInscription,
-  type FicheDeSuiviFileSink,
-  type ZoneInscriptionSheet,
+  type CatalogueTour,
+  type SuiviSheet,
+  type SuiviSheetSink,
 } from './inscriptions-extract';
 
 /**
  * Pure extraction core of the referent script (ticket #19): BINOME parsing of
- * the stored values, key-truth collection over the `InscriptionsStore` port,
- * per-Zone markdown « Fiche de suivi » rendering. The fiches are written
+ * the stored values, key-truth collection over the `InscriptionsStore` port and
+ * the « Suivi » sheets (the printed tracking sheets, one per Zone and practice
+ * type, with the binômes of the registered Parcours). The sheets are written
  * through an in-memory sink and the REST path is scripted with a recording
  * fetch (Upstash `{"result": …}` envelopes), so no network runs. The CLI-side
  * helpers live in `extract-inscriptions-cli.spec.ts`.
@@ -34,6 +30,7 @@ const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
  */
 const KNOWN_PAIRS = new Set([
   'bruz-ker-lann:P3',
+  'unknown-zone-2:V1',
   'bruz-sud:Corrupt',
   'bruz-sud:V1',
   'zh:BadJson',
@@ -69,13 +66,13 @@ function binomeValue(
   });
 }
 
-/** In-memory sink recording (folder, fileName, content) triples. */
+/** In-memory sink recording the written sheets, per file name. */
 function createMemorySink(): {
-  readonly sink: FicheDeSuiviFileSink;
-  readonly files: Map<string, string>;
+  readonly sink: SuiviSheetSink;
+  readonly files: Map<string, SuiviSheet>;
   readonly dirEnsured: string[];
 } {
-  const files = new Map<string, string>();
+  const files = new Map<string, SuiviSheet>();
   const dirEnsured: string[] = [];
   return {
     dirEnsured,
@@ -84,9 +81,9 @@ function createMemorySink(): {
       ensureDir: async (dir) => {
         dirEnsured.push(dir);
       },
-      saveFile: async (dir, fileName, content) => {
-        files.set(fileName, content);
-        return `${dir}/${fileName}`;
+      saveSheet: async (dir, sheet) => {
+        files.set(`${dir}/${sheet.fileName}`, sheet);
+        return `${dir}/${sheet.fileName}`;
       },
     },
   };
@@ -262,115 +259,74 @@ describe('collectInscriptions', () => {
   });
 });
 
-// --- Zone grouping ---
+// --- Suivi sheets (the printed tracking sheets) ---
 
-describe('groupInscriptionsByZone', () => {
-  function inscription(zoneId: string, tourId: string): BinomeInscription {
-    return {
-      firstName1: 'Léa',
-      firstName2: 'Yann',
-      key: inscriptionKey(2027, zoneId, tourId),
-      lastName1: 'Dupont',
-      lastName2: 'Tanguy',
-      tourId,
-      zoneId,
-    };
-  }
+describe('buildSuiviSheets', () => {
+  const CATALOGUE: readonly CatalogueTour[] = [
+    { practice: 'V', tourId: 'V1', zoneId: 'bruz-sud' },
+    { practice: 'V', tourId: 'V2', zoneId: 'bruz-sud' },
+    { practice: 'P', tourId: 'P1', zoneId: 'bruz-sud' },
+    { practice: 'V', tourId: 'V30', zoneId: 'bruz-ker-lann' },
+  ];
 
-  it('should group inscriptions per Zone with the French zone name, sorted', () => {
-    const grouped = groupInscriptionsByZone([
-      inscription('bruz-ker-lann', 'P2'),
-      inscription('bruz-sud', 'V1'),
-      inscription('bruz-sud', 'P1'),
-    ]);
-    expect(grouped.sheets.map((sheet) => [sheet.zoneId, sheet.zoneName])).toEqual([
-      ['bruz-ker-lann', 'Bruz Ker Lann'],
-      ['bruz-sud', 'Bruz Sud'],
-    ]);
-    expect(grouped.sheets[1]?.inscriptions.map((line) => line.tourId)).toEqual(['P1', 'V1']);
-    expect(grouped.warnings).toEqual([]);
-  });
-
-  it('should sort Parcours of one Zone numerically (V2 before V10)', () => {
-    const grouped = groupInscriptionsByZone([inscription('zh', 'V10'), inscription('zh', 'V2')]);
-    expect(grouped.sheets[0]?.inscriptions.map((line) => line.tourId)).toEqual(['V2', 'V10']);
-  });
-
-  it('should fall back to the raw zone id for an unknown Zone, with a warning', () => {
-    const grouped = groupInscriptionsByZone([inscription('unknown-zone', 'V1')]);
-    expect(grouped.sheets[0]?.zoneName).toBe('unknown-zone');
-    expect(grouped.warnings).toHaveLength(1);
-    expect(grouped.warnings[0]).toContain('Zone inconnue');
-  });
-});
-
-// --- Fiche rendering ---
-
-describe('binomeDisplay', () => {
-  it('should render both members as `Prénom NOM` joined by an em dash', () => {
-    expect(
-      binomeDisplay({
-        firstName1: 'Léa',
-        firstName2: 'Yann',
-        lastName1: 'Dupont',
-        lastName2: 'Tanguy',
-      }),
-    ).toBe('Léa DUPONT — Yann TANGUY');
-  });
-
-  it('should keep the fiche cell safe: escape pipes and collapse newlines', () => {
-    expect(
-      binomeDisplay({
-        firstName1: 'Ana|s',
-        firstName2: 'Hugo',
-        lastName1: 'Mar\ntin',
-        lastName2: 'Bernard',
-      }),
-    ).toBe('Ana\\|s MAR TIN — Hugo BERNARD');
-  });
-});
-
-describe('renderZoneInscriptionsContent', () => {
-  const LEA_FIELDS = {
+  const LEA = {
     firstName1: 'Léa',
     firstName2: 'Yann',
+    key: inscriptionKey(2027, 'bruz-sud', 'V1'),
     lastName1: 'Dupont',
     lastName2: 'Tanguy',
-  } as const;
-  const sheet: ZoneInscriptionSheet = {
-    inscriptions: [
-      { ...LEA_FIELDS, key: 'inscriptions:2027:bruz-sud:V1', tourId: 'V1', zoneId: 'bruz-sud' },
-    ],
+    tourId: 'V1',
     zoneId: 'bruz-sud',
-    zoneName: 'Bruz Sud',
-  };
+  } as const;
 
-  it('should render the French fiche: Édition year, action date, Zone, Parcours, Binôme', () => {
-    const content = renderZoneInscriptionsContent(sheet, EDITION);
-    expect(content).toContain('# Fiche de suivi — Bruz Sud');
-    expect(content).toContain('Édition : 2027');
-    expect(content).toContain("Date de l'action : Dimanche 14 février 2027");
-    expect(content).toContain('| Parcours | Binôme |');
-    expect(content).toContain('| V1 | Léa DUPONT — Yann TANGUY |');
-    expect(content).toContain('90 jours');
+  it('should build one sheet per Zone and practice type of the catalogue', () => {
+    const sheets = buildSuiviSheets(CATALOGUE, [LEA], EDITION);
+
+    expect(sheets.map((sheet) => [sheet.zoneId, sheet.practice, sheet.fileName])).toEqual([
+      ['bruz-sud', 'V', 'Suivi_parcours_a_velo.pdf'],
+      ['bruz-sud', 'P', 'Suivi_parcours_a_pied.pdf'],
+      ['bruz-ker-lann', 'V', 'Suivi_parcours_a_velo.pdf'],
+    ]);
+    expect(sheets[0]?.zoneName).toBe('Bruz Sud');
+    expect(sheets[0]?.edition).toEqual(EDITION);
+  });
+
+  it('should list every tour of the Zone, in the catalogue order', () => {
+    const sheets = buildSuiviSheets(CATALOGUE, [LEA], EDITION);
+    expect(sheets[0]?.rows.map((row) => row.tourId)).toEqual(['V1', 'V2']);
+    expect(sheets[1]?.rows.map((row) => row.tourId)).toEqual(['P1']);
+  });
+
+  it('should fill the two name columns of the registered Parcours only', () => {
+    const sheets = buildSuiviSheets(CATALOGUE, [LEA], EDITION);
+
+    expect(sheets[0]?.rows[0]).toEqual({
+      member1: 'Léa DUPONT',
+      member2: 'Yann TANGUY',
+      tourId: 'V1',
+    });
+    // A free Parcours keeps its two empty name columns.
+    expect(sheets[0]?.rows[1]).toEqual({ member1: '', member2: '', tourId: 'V2' });
+    // The walking sheet has no binôme at all.
+    expect(sheets[1]?.rows[0]).toEqual({ member1: '', member2: '', tourId: 'P1' });
+  });
+
+  it('should fall back to the raw zone id for an unknown Zone', () => {
+    const sheets = buildSuiviSheets(
+      [{ practice: 'V', tourId: 'V1', zoneId: 'unknown-zone' }],
+      [],
+      EDITION,
+    );
+    expect(sheets[0]?.zoneName).toBe('unknown-zone');
   });
 });
 
-describe('renderEmptyEditionContent', () => {
-  it('should render the French no-inscription message for the Édition', () => {
-    const content = renderEmptyEditionContent(EDITION);
-    expect(content).toContain("Aucune inscription pour l'édition 2027.");
-    expect(content).toContain('Édition : 2027');
-    expect(content).not.toContain('Parcours');
-  });
-});
+// --- Whole extraction through the store port and the sheet sink ---
 
-// --- Whole extraction through the store port and the file sink ---
-
-describe('extractInscriptionSheets', () => {
-  it('should write one fiche per covered Zone with the folder layout per zone', async () => {
+describe('extractSuiviSheets', () => {
+  it('should write one sheet per Zone and practice type, in a folder per Zone', async () => {
     const { sink, files, dirEnsured } = createMemorySink();
-    const outcome = await extractInscriptionSheets({
+    const outcome = await extractSuiviSheets({
       edition: EDITION,
       outputDir: OUT_DIR,
       parcours,
@@ -381,54 +337,38 @@ describe('extractInscriptionSheets', () => {
           storedInscription('bruz-ker-lann', 'P3', ['Anaïs', 'Martin', 'Hugo', 'Bernard']),
         ],
       },
+      tours: [
+        { practice: 'V', tourId: 'V1', zoneId: 'bruz-sud' },
+        { practice: 'V', tourId: 'V30', zoneId: 'bruz-ker-lann' },
+      ],
     });
 
-    expect(dirEnsured).toEqual([OUT_DIR]);
+    expect(dirEnsured).toEqual([`${OUT_DIR}/bruz-sud`, `${OUT_DIR}/bruz-ker-lann`]);
     expect([...files.keys()]).toEqual([
-      zoneFicheDeSuiviFileName('bruz-ker-lann', 2027),
-      zoneFicheDeSuiviFileName('bruz-sud', 2027),
+      `${OUT_DIR}/bruz-sud/Suivi_parcours_a_velo.pdf`,
+      `${OUT_DIR}/bruz-ker-lann/Suivi_parcours_a_velo.pdf`,
     ]);
-    expect(outcome.fiches).toEqual([
+    expect(outcome.sheets).toEqual([
       expect.objectContaining({
+        fileName: 'Suivi_parcours_a_velo.pdf',
         inscriptionCount: 1,
-        path: `${OUT_DIR}/${zoneFicheDeSuiviFileName('bruz-ker-lann', 2027)}`,
-        zoneId: 'bruz-ker-lann',
-      }),
-      expect.objectContaining({
-        inscriptionCount: 1,
-        path: `${OUT_DIR}/${zoneFicheDeSuiviFileName('bruz-sud', 2027)}`,
+        path: `${OUT_DIR}/bruz-sud/Suivi_parcours_a_velo.pdf`,
+        practice: 'V',
         zoneId: 'bruz-sud',
       }),
+      expect.objectContaining({
+        fileName: 'Suivi_parcours_a_velo.pdf',
+        inscriptionCount: 0,
+        path: `${OUT_DIR}/bruz-ker-lann/Suivi_parcours_a_velo.pdf`,
+        practice: 'V',
+        zoneId: 'bruz-ker-lann',
+      }),
     ]);
-    expect(files.get(zoneFicheDeSuiviFileName('bruz-sud', 2027))).toContain('Bruz Sud');
   });
 
-  it('should produce a single empty-Édition fiche when nothing is usable', async () => {
+  it('should keep going with malformed entries and still write the sheets', async () => {
     const { sink, files } = createMemorySink();
-    const outcome = await extractInscriptionSheets({
-      edition: EDITION,
-      outputDir: OUT_DIR,
-      parcours,
-      sink,
-      store: { listAll: async () => [] },
-    });
-
-    expect(outcome.inscriptions).toEqual([]);
-    expect(outcome.fiches).toHaveLength(1);
-    expect(outcome.fiches[0]).toEqual({
-      fileName: emptyEditionFicheDeSuiviFileName(2027),
-      inscriptionCount: 0,
-      path: `${OUT_DIR}/${emptyEditionFicheDeSuiviFileName(2027)}`,
-      zoneId: null,
-    });
-    expect(files.get(emptyEditionFicheDeSuiviFileName(2027))).toContain(
-      "Aucune inscription pour l'édition 2027.",
-    );
-  });
-
-  it('should keep going with malformed entries and still write the Zone fiches', async () => {
-    const { sink, files } = createMemorySink();
-    const outcome = await extractInscriptionSheets({
+    const outcome = await extractSuiviSheets({
       edition: EDITION,
       outputDir: OUT_DIR,
       parcours,
@@ -439,13 +379,37 @@ describe('extractInscriptionSheets', () => {
           storedInscription('bruz-sud', 'V1', ['Léa', 'Dupont', 'Yann', 'Tanguy']),
         ],
       },
+      tours: [{ practice: 'V', tourId: 'V1', zoneId: 'bruz-sud' }],
     });
 
     expect(outcome.warnings).toEqual([
       'clé ignorée (valeur illisible ou Binôme incomplet) : inscriptions:2027:bruz-sud:Corrupt',
     ]);
-    expect(outcome.fiches).toHaveLength(1);
-    expect(files.get(zoneFicheDeSuiviFileName('bruz-sud', 2027))).toContain('| V1 |');
+    expect(outcome.sheets).toHaveLength(1);
+    expect(files.get(`${OUT_DIR}/bruz-sud/Suivi_parcours_a_velo.pdf`)?.rows[0]?.member1).toBe(
+      'Léa DUPONT',
+    );
+  });
+
+  it('should warn about a Zone the catalogue does not know', async () => {
+    const { sink } = createMemorySink();
+    const outcome = await extractSuiviSheets({
+      edition: EDITION,
+      outputDir: OUT_DIR,
+      parcours,
+      sink,
+      store: {
+        listAll: async () => [
+          storedInscription('unknown-zone-2', 'V1', ['Anaïs', 'Martin', 'Hugo', 'Bernard']),
+        ],
+      },
+      tours: [{ practice: 'V', tourId: 'V1', zoneId: 'unknown-zone-2' }],
+    });
+
+    expect(outcome.warnings).toHaveLength(1);
+    expect(outcome.warnings[0]).toContain('Zone inconnue');
+    // The warning names the key only: no personal data leaks.
+    expect(JSON.stringify(outcome.warnings)).not.toContain('Anaïs');
   });
 });
 
@@ -478,8 +442,8 @@ const scanEnvelope = (keys: string[]) => ({ payload: { result: ['0', keys] } });
 const mgetEnvelope = (values: string[]) => ({ payload: { result: values } });
 const REST_CONFIG = { token: 'rest-token', url: 'https://rest-upstash.example' } as const;
 
-describe('extractInscriptionSheets over the Upstash REST adapter', () => {
-  it('should SCAN the édition pattern then MGET the values and write the fiches', async () => {
+describe('extractSuiviSheets over the Upstash REST adapter', () => {
+  it('should SCAN the édition pattern then MGET the values and write the sheets', async () => {
     const rest = createScriptedRestFetch();
     rest.enqueue(scanEnvelope(['inscriptions:2027:bruz-sud:V1', 'inscriptions:2026:bruz-sud:V9']));
     rest.enqueue(
@@ -490,38 +454,42 @@ describe('extractInscriptionSheets over the Upstash REST adapter', () => {
     );
     const { sink, files } = createMemorySink();
 
-    const outcome = await extractInscriptionSheets({
+    const outcome = await extractSuiviSheets({
       edition: EDITION,
       outputDir: OUT_DIR,
       parcours,
       sink,
       store: createUpstashInscriptionsStore(REST_CONFIG, rest.fetchImpl),
+      tours: [{ practice: 'V', tourId: 'V1', zoneId: 'bruz-sud' }],
     });
 
-    expect(rest.calls[0]?.url).toBe(
-      'https://rest-upstash.example/scan/0/match/inscriptions%3A2027%3A*/count/100',
-    );
-    expect(outcome.inscriptions).toEqual([
-      expect.objectContaining({ firstName1: 'Léa', tourId: 'V1', zoneId: 'bruz-sud' }),
-    ]);
-    expect([...files.keys()]).toEqual([zoneFicheDeSuiviFileName('bruz-sud', 2027)]);
+    expect(rest.calls[0]?.url).toContain('scan/0/match/inscriptions%3A2027%3A*');
+    expect(outcome.inscriptions).toHaveLength(1);
+    expect(outcome.sheets).toHaveLength(1);
+    expect(files.get(`${OUT_DIR}/bruz-sud/Suivi_parcours_a_velo.pdf`)?.rows[0]).toEqual({
+      member1: 'Léa DUPONT',
+      member2: 'Yann TANGUY',
+      tourId: 'V1',
+    });
   });
 
-  it('should fail the extraction on an Upstash error envelope (no partial output)', async () => {
-    const rest = createScriptedRestFetch();
-    rest.enqueue({ payload: { error: 'ERR invalid token' } });
-    const { sink, files, dirEnsured } = createMemorySink();
+  it('should leave no output when the KV listing fails', async () => {
+    const { sink, files } = createMemorySink();
+    const outcome = await extractSuiviSheets({
+      edition: EDITION,
+      outputDir: OUT_DIR,
+      parcours,
+      sink,
+      store: {
+        listAll: async () => {
+          throw new Error('KV unreachable');
+        },
+      },
+      tours: [{ practice: 'V', tourId: 'V1', zoneId: 'bruz-sud' }],
+    }).catch((error: unknown) => error);
 
-    await expect(
-      extractInscriptionSheets({
-        edition: EDITION,
-        outputDir: OUT_DIR,
-        parcours,
-        sink,
-        store: createUpstashInscriptionsStore(REST_CONFIG, rest.fetchImpl),
-      }),
-    ).rejects.toThrow('Upstash REST command failed');
-    expect(dirEnsured).toEqual([]);
+    expect(outcome).toBeInstanceOf(Error);
+    // No KV read, no write: the run leaves no partial output.
     expect(files.size).toBe(0);
   });
 });

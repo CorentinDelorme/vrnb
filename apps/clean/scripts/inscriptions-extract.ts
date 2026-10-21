@@ -2,12 +2,14 @@
  * Extraction of the current Édition's Inscriptions from the KV store — the
  * pure core of `scripts/extract-inscriptions.ts` (ticket #19).
  *
- * The module produces the per-Zone markdown « Fiche de suivi » files and is
- * fully injectable so the extraction runs without a network or a filesystem:
- * the KV listing comes in through the `InscriptionsStore` port defined by
- * ticket #16 and file writing through the `FicheDeSuiviFileSink` port. The thin CLI
- * adapter in `extract-inscriptions.ts` wires the Upstash REST store and the
- * real filesystem (env credentials, REST timeouts, console recap); its
+ * The module produces the per-Zone « Suivi » sheets (the printed tracking
+ * sheets, with the binômes of the registered Parcours) and is fully
+ * injectable so the extraction runs without a network or a filesystem: the KV
+ * listing comes in through the `InscriptionsStore` port defined by ticket #16,
+ * the Parcours catalogue through `CatalogueTour[]` and the writing through the
+ * `SuiviSheetSink` port. The thin CLI adapter in `extract-inscriptions.ts`
+ * wires the Upstash REST store, the PDF renderer (`scripts/suivi-pdf.ts`) and
+ * the real filesystem (env credentials, REST timeouts, console recap); its
  * CLI-side helpers live in `extract-inscriptions-cli.ts` (the core stays pure:
  * no `process.env`, no `node:fs`).
  *
@@ -21,11 +23,9 @@
  * Édition) context — the value only contributes the names.
  */
 
+import { join } from 'node:path';
+
 import type { Edition } from '../src/app/inscriptions/edition';
-import {
-  INSCRIPTIONS_RETENTION_DAYS,
-  formatActionDateLabel,
-} from '../src/app/inscriptions/edition';
 import type { InscriptionsStore, RawInscriptionEntry } from '../src/app/inscriptions/public-state';
 import { parseInscriptionKey } from '../src/app/inscriptions/upstash-kv';
 import type { BinomeIdentity, ParcoursLookup } from '../src/app/inscriptions/validation';
@@ -137,221 +137,193 @@ export function collectInscriptions(
   return { inscriptions, unknownParcoursCount, warnings };
 }
 
-// --- Zone grouping and sheet rendering ---
+// --- Suivi sheets (the printed tracking sheets, PDF) ---
 
-/** Inscriptions of one Zone, sorted by Parcours, under its display name. */
-export interface ZoneInscriptionSheet {
+/**
+ * One tour of the Parcours catalogue, with its practice type: the sheets list
+ * every tour of a Zone, the registered ones carrying their binôme.
+ */
+export interface CatalogueTour {
   readonly zoneId: string;
-  /**
-   * French display name of the Zone; the raw zone id when the key targets a
-   * Zone that `ZONES` does not know (preserved so no registration is lost).
-   */
-  readonly zoneName: string;
-  readonly inscriptions: readonly BinomeInscription[];
-}
-
-/** Zone grouping outcome: the sheets plus the unknown-Zone warnings. */
-export interface GroupedInscriptions {
-  readonly sheets: readonly ZoneInscriptionSheet[];
-  readonly warnings: readonly string[];
-}
-
-/** Group the Inscriptions by their Zone, sorted; unknown Zones keep their id. */
-export function groupInscriptionsByZone(
-  inscriptions: readonly BinomeInscription[],
-): GroupedInscriptions {
-  const warnings: string[] = [];
-  const byZoneId = new Map<string, BinomeInscription[]>();
-  for (const inscription of inscriptions) {
-    if (!ZONES.some((zone) => zone.id === inscription.zoneId)) {
-      warnings.push(
-        `clé placée dans une Zone inconnue (Fiche de suivi générée sous « ${inscription.zoneId} ») : ${inscription.key}`,
-      );
-    }
-    const bucket = byZoneId.get(inscription.zoneId) ?? [];
-    bucket.push(inscription);
-    byZoneId.set(inscription.zoneId, bucket);
-  }
-  const sortedZoneIds = [...byZoneId.keys()].sort((a, b) =>
-    a.localeCompare(b, 'en', { numeric: true }),
-  );
-  return {
-    sheets: sortedZoneIds.map((zoneId) => ({
-      inscriptions: (byZoneId.get(zoneId) ?? []).sort((a, b) =>
-        a.tourId.localeCompare(b.tourId, 'en', { numeric: true }),
-      ),
-      zoneId,
-      zoneName: ZONES.find((zone) => zone.id === zoneId)?.name ?? zoneId,
-    })),
-    warnings,
-  };
+  /** `V` = à vélo, `P` = à pied. */
+  readonly practice: 'V' | 'P';
+  readonly tourId: string;
 }
 
 /**
- * Markdown table cell: pipes are escaped and control characters collapsed, so
- * a volunteer's name can never break the table layout.
+ * One row of a Suivi sheet: the tour and the two members of the binôme that
+ * covers it. Both members are empty when the Parcours is still free.
  */
-function markdownCell(text: string): string {
-  return text.replace(/\s+/g, ' ').replace(/\|/g, '\\|').trim();
+export interface SuiviSheetRow {
+  readonly tourId: string;
+  readonly member1: string;
+  readonly member2: string;
 }
 
-/** `Prénom NOM` display of one Binôme member, like the printed sheet header. */
+/** One Suivi sheet: a Zone, a practice type and the rows to print. */
+export interface SuiviSheet {
+  readonly zoneId: string;
+  /** French display name of the Zone; the raw zone id for an unknown Zone. */
+  readonly zoneName: string;
+  readonly practice: 'V' | 'P';
+  /** File name of the sheet: `Suivi_parcours_a_velo.pdf` / `..._a_pied.pdf`. */
+  readonly fileName: string;
+  readonly rows: readonly SuiviSheetRow[];
+  readonly edition: Edition;
+}
+
+/** `Prénom NOM` display of one binôme member, like the printed sheet header. */
 function memberDisplay(firstName: string, lastName: string): string {
-  return `${markdownCell(firstName)} ${markdownCell(lastName).toUpperCase()}`;
+  const first = firstName.replace(/\s+/g, ' ').trim();
+  const last = lastName.replace(/\s+/g, ' ').trim().toUpperCase();
+  return `${first} ${last}`.trim();
 }
 
-/** The two Binôme identities joined for the Fiche de suivi's Binôme column. */
-export function binomeDisplay(fields: BinomeIdentity): string {
-  return [
-    memberDisplay(fields.firstName1, fields.lastName1),
-    memberDisplay(fields.firstName2, fields.lastName2),
-  ].join(' — ');
+/** File name of one Zone's tracking sheet for a practice type. */
+export function suiviSheetFileName(practice: 'V' | 'P'): string {
+  return practice === 'V' ? 'Suivi_parcours_a_velo.pdf' : 'Suivi_parcours_a_pied.pdf';
 }
 
-/** File name of one Zone's Fiche de suivi: `Fiche_de_suivi_<zoneId>_<year>.md`. */
-export function zoneFicheDeSuiviFileName(zoneId: string, year: number): string {
-  return `Fiche_de_suivi_${zoneId}_${year}.md`;
-}
-
-/** File name of the empty-Édition Fiche de suivi: `Fiche_de_suivi_<year>.md`. */
-export function emptyEditionFicheDeSuiviFileName(year: number): string {
-  return `Fiche_de_suivi_${year}.md`;
-}
-
-const RETENTION_FOOTER =
-  'Une seule inscription par Parcours ; les prénoms et noms des Binômes sont ' +
-  `effacés automatiquement ${INSCRIPTIONS_RETENTION_DAYS} jours après la date de l'action.`;
-
-/** First letter capitalized: the sheet line starts with the day name. */
-function capitalizeFirst(text: string): string {
-  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
-}
-
-const EDITION_LINES = (edition: Edition): string =>
-  [
-    'Édition : ' + edition.year,
-    "Date de l'action : " + capitalizeFirst(formatActionDateLabel(edition.actionDate)),
-  ].join('\n');
-
-/** Markdown content of one Zone's « Fiche de suivi ». */
-export function renderZoneInscriptionsContent(
-  sheet: ZoneInscriptionSheet,
+/**
+ * Build the Suivi sheets of the Édition: one per Zone and practice type that
+ * has tours — like the tracking sheets the site used to publish, but filled
+ * with the binômes of the real inscriptions and never published.
+ *
+ * The catalogue drives the rows (every tour of the Zone, in the catalogue
+ * order); the inscriptions only fill the two name columns.
+ */
+export function buildSuiviSheets(
+  tours: readonly CatalogueTour[],
+  inscriptions: readonly BinomeInscription[],
   edition: Edition,
-): string {
-  const rows = sheet.inscriptions.map(
-    (inscription) => `| ${markdownCell(inscription.tourId)} | ${binomeDisplay(inscription)} |`,
-  );
-  return [
-    `# Fiche de suivi — ${markdownCell(sheet.zoneName)}`,
-    '',
-    EDITION_LINES(edition),
-    '',
-    '| Parcours | Binôme |',
-    '| -------- | ------ |',
-    ...rows,
-    '',
-    RETENTION_FOOTER,
-    '',
-  ].join('\n');
-}
+): SuiviSheet[] {
+  const byParcours = new Map<string, BinomeInscription>();
+  for (const inscription of inscriptions) {
+    byParcours.set(`${inscription.zoneId}:${inscription.tourId}`, inscription);
+  }
 
-/** Markdown content of the whole-Édition empty state (no registration yet). */
-export function renderEmptyEditionContent(edition: Edition): string {
-  return [
-    `# Fiche de suivi — Édition ${edition.year}`,
-    '',
-    EDITION_LINES(edition),
-    '',
-    `Aucune inscription pour l'édition ${edition.year}.`,
-    '',
-  ].join('\n');
+  const grouped = new Map<string, CatalogueTour[]>();
+  for (const tour of tours) {
+    const key = `${tour.zoneId}:${tour.practice}`;
+    const bucket = grouped.get(key) ?? [];
+    bucket.push(tour);
+    grouped.set(key, bucket);
+  }
+
+  const sheets: SuiviSheet[] = [];
+  for (const [key, zoneTours] of grouped) {
+    const [zoneId, practice] = key.split(':') as [string, 'V' | 'P'];
+    sheets.push({
+      edition,
+      fileName: suiviSheetFileName(practice),
+      practice,
+      rows: zoneTours.map((tour) => {
+        const inscription = byParcours.get(`${tour.zoneId}:${tour.tourId}`);
+        return {
+          member1:
+            inscription === undefined
+              ? ''
+              : memberDisplay(inscription.firstName1, inscription.lastName1),
+          member2:
+            inscription === undefined
+              ? ''
+              : memberDisplay(inscription.firstName2, inscription.lastName2),
+          tourId: tour.tourId,
+        };
+      }),
+      zoneId,
+      zoneName: ZONES.find((zone) => zone.id === zoneId)?.name ?? zoneId,
+    });
+  }
+  return sheets;
 }
 
 // --- Sheet writing ---
 
-/** Writing port: keeps the generation free of `node:fs` so tests record in memory. */
-export interface FicheDeSuiviFileSink {
+/**
+ * Writing port: keeps the generation free of `node:fs` and of the PDF
+ * renderer, so the tests record the sheets in memory.
+ */
+export interface SuiviSheetSink {
   /** Create the output directory if it is missing. */
   readonly ensureDir: (dir: string) => Promise<void>;
-  /** Save one Fiche de suivi into the output directory; returns its path for the recap. */
-  readonly saveFile: (dir: string, fileName: string, content: string) => Promise<string>;
+  /** Render one sheet as a PDF and save it; returns its path for the recap. */
+  readonly saveSheet: (dir: string, sheet: SuiviSheet) => Promise<string>;
 }
 
 /** Injected ports and configuration of the extraction. */
 export interface InscriptionsExtractionDeps {
   readonly store: InscriptionsStore;
   readonly edition: Edition;
-  /** Local (gitignored) folder receiving the Fiches de suivi. */
+  /** Local (gitignored) folder receiving the Suivi sheets. */
   readonly outputDir: string;
-  readonly sink: FicheDeSuiviFileSink;
+  readonly sink: SuiviSheetSink;
+  /** The Parcours catalogue: the sheets list its tours, in its order. */
+  readonly tours: readonly CatalogueTour[];
   /**
-   * The Parcours catalogue: a (Zone, Parcours) pair it does not know is
-   * skipped (with a warning), never turned into a Fiche de suivi.
+   * The Parcours catalogue lookup: a (Zone, Parcours) pair it does not know is
+   * skipped (with a warning), never written in a sheet.
    */
   readonly parcours: ParcoursLookup;
 }
 
-/** One written Fiche de suivi, for the CLI recap. */
-export interface GeneratedFicheDeSuivi {
+/** One written Suivi sheet, for the CLI recap. */
+export interface GeneratedSuiviSheet {
   readonly fileName: string;
   readonly path: string;
-  /** `null` for the whole-Édition empty state, which is not Zone-specific. */
-  readonly zoneId: string | null;
+  readonly zoneId: string;
+  readonly practice: 'V' | 'P';
+  /** How many binômes the sheet carries (the covered tours). */
   readonly inscriptionCount: number;
 }
 
-/** Extraction result: every written file plus the warnings and counts. */
+/** Extraction result: every written sheet plus the warnings and counts. */
 export interface InscriptionsExtractionOutcome {
   readonly inscriptions: readonly BinomeInscription[];
   readonly warnings: readonly string[];
-  readonly fiches: readonly GeneratedFicheDeSuivi[];
-  /** How many pairs the catalogue does not know (skipped, never a Fiche de suivi). */
+  readonly sheets: readonly GeneratedSuiviSheet[];
+  /** How many pairs the catalogue does not know (skipped, never a sheet). */
   readonly unknownParcoursCount: number;
 }
 
 /**
- * Extract the Édition Inscriptions and write the Fiches de suivi: one file
- * per Zone with at least one inscription, or a single empty-Édition file
- * when nothing usable is registered (so the run always leaves a tangible
- * trace). All KV reads happen before the first write: a store failure leaves
- * no partial output.
+ * Extract the Édition Inscriptions and write the Suivi sheets: one PDF per
+ * Zone and practice type, with the binômes of the registered Parcours filled
+ * in. All KV reads happen before the first write: a store failure leaves no
+ * partial output.
  */
-export async function extractInscriptionSheets(
+export async function extractSuiviSheets(
   deps: InscriptionsExtractionDeps,
 ): Promise<InscriptionsExtractionOutcome> {
   // All KV reads happen before the first write: an inventory failure leaves no partial output.
   const listings = await deps.store.listAll(deps.edition.year);
   const collected = collectInscriptions(listings, deps.edition.year, deps.parcours);
-  const grouped = groupInscriptionsByZone(collected.inscriptions);
-  await deps.sink.ensureDir(deps.outputDir);
-  const fiches: GeneratedFicheDeSuivi[] = [];
-  if (grouped.sheets.length === 0) {
-    const fileName = emptyEditionFicheDeSuiviFileName(deps.edition.year);
-    const path = await deps.sink.saveFile(
-      deps.outputDir,
-      fileName,
-      renderEmptyEditionContent(deps.edition),
-    );
-    fiches.push({ fileName, inscriptionCount: 0, path, zoneId: null });
+  const warnings = [...collected.warnings];
+  for (const inscription of collected.inscriptions) {
+    if (!ZONES.some((zone) => zone.id === inscription.zoneId)) {
+      warnings.push(
+        `clé placée dans une Zone inconnue (Suivi générée sous « ${inscription.zoneId} ») : ${inscription.key}`,
+      );
+    }
   }
-  for (const sheet of grouped.sheets) {
-    const fileName = zoneFicheDeSuiviFileName(sheet.zoneId, deps.edition.year);
-    const path = await deps.sink.saveFile(
-      deps.outputDir,
-      fileName,
-      renderZoneInscriptionsContent(sheet, deps.edition),
-    );
-    fiches.push({
-      fileName,
-      inscriptionCount: sheet.inscriptions.length,
+  const sheets = buildSuiviSheets(deps.tours, collected.inscriptions, deps.edition);
+  const written: GeneratedSuiviSheet[] = [];
+  for (const sheet of sheets) {
+    const zoneDir = join(deps.outputDir, sheet.zoneId);
+    await deps.sink.ensureDir(zoneDir);
+    const path = await deps.sink.saveSheet(zoneDir, sheet);
+    written.push({
+      fileName: sheet.fileName,
+      inscriptionCount: sheet.rows.filter((row) => row.member1 !== '').length,
       path,
+      practice: sheet.practice,
       zoneId: sheet.zoneId,
     });
   }
   return {
-    fiches,
     inscriptions: collected.inscriptions,
+    sheets: written,
     unknownParcoursCount: collected.unknownParcoursCount,
-    warnings: [...collected.warnings, ...grouped.warnings],
+    warnings,
   };
 }

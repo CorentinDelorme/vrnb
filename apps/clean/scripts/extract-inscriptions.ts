@@ -1,9 +1,9 @@
 /**
  * Referent command: extracts the configured Édition's Inscriptions from the
- * KV store (Upstash REST) and writes the per-Zone « Fiche de suivi » markdown
- * files into a local gitignored folder — never into `public/`, never deployed
- * (they contain volunteer identities). See `scripts/README-inscriptions-extract.md`
- * for the operations runbook.
+ * KV store (Upstash REST) and writes the per-Zone « Suivi » PDF sheets into a
+ * local gitignored folder — never into `public/`, never committed, never
+ * deployed (they carry the volunteers' names). See
+ * `scripts/README-inscriptions-extract.md` for the operations runbook.
  *
  * Usage: bun scripts/extract-inscriptions.ts [--out-dir=DIR]
  *
@@ -13,11 +13,12 @@
  *
  * The extraction core is pure (`scripts/inscriptions-extract.ts`): this file
  * only wires the environment, the Upstash REST store (REST reads are
- * time-boxed so a wedged call cannot freeze the run), the filesystem sink
- * and the console recap — which never prints a stored value or a name. The
- * CLI-side helpers (option parsing, REST timeout) live in
- * `scripts/extract-inscriptions-cli.ts`, and the KV credentials are read by
- * the shared `readUpstashConfig` of `src/app/inscriptions/upstash-kv.ts`.
+ * time-boxed so a wedged call cannot freeze the run), the PDF renderer
+ * (`scripts/suivi-pdf.ts`), the filesystem sink and the console recap — which
+ * never prints a stored value or a name. The CLI-side helpers (option parsing,
+ * REST timeout) live in `scripts/extract-inscriptions-cli.ts`, and the KV
+ * credentials are read by the shared `readUpstashConfig` of
+ * `src/app/inscriptions/upstash-kv.ts`.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -27,13 +28,17 @@ import {
   createUpstashInscriptionsStore,
   readUpstashConfig,
 } from '../src/app/inscriptions/upstash-kv';
+import { toursData } from '../src/app/tours-data';
 import { parcoursExists } from '../src/app/tours-queries';
 import { fetchWithTimeout, parseInscriptionsExtractArgs } from './extract-inscriptions-cli';
 import {
-  type FicheDeSuiviFileSink,
+  type CatalogueTour,
   type InscriptionsExtractionOutcome,
-  extractInscriptionSheets,
+  type SuiviSheet,
+  type SuiviSheetSink,
+  extractSuiviSheets,
 } from './inscriptions-extract';
+import { renderSuiviSheetPdf } from './suivi-pdf';
 
 /** Per-REST-call deadline; a stuck connection fails the run with a clear error. */
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -45,14 +50,28 @@ const MISSING_ENV_MESSAGE = [
   'ne peuvent pas exécuter SCAN. Voir scripts/README-inscriptions-extract.md.',
 ].join(' ');
 
-/** Real filesystem sink: writes the fiches under the gitignored output folder. */
-const fileSink: FicheDeSuiviFileSink = {
+/** The catalogue of the Parcours, in the order of the generated data. */
+const CATALOGUE: readonly CatalogueTour[] = [
+  ...toursData.vTours.map((tour) => ({
+    practice: 'V' as const,
+    tourId: tour.name,
+    zoneId: tour.zoneId,
+  })),
+  ...toursData.pTours.map((tour) => ({
+    practice: 'P' as const,
+    tourId: tour.name,
+    zoneId: tour.zoneId,
+  })),
+];
+
+/** Real filesystem sink: renders the sheet as a PDF and writes it. */
+const sheetSink: SuiviSheetSink = {
   ensureDir: async (dir) => {
     await mkdir(dir, { recursive: true });
   },
-  saveFile: async (dir, fileName, content) => {
-    const path = join(dir, fileName);
-    await writeFile(path, content, 'utf8');
+  saveSheet: async (dir, sheet: SuiviSheet) => {
+    const path = join(dir, sheet.fileName);
+    await writeFile(path, renderSuiviSheetPdf(sheet));
     return path;
   },
 };
@@ -70,12 +89,13 @@ async function main(argv: readonly string[]): Promise<void> {
   const outputDir =
     options.outDir ??
     join(import.meta.dirname, 'output', 'inscriptions', String(CURRENT_EDITION.year));
-  const outcome: InscriptionsExtractionOutcome = await extractInscriptionSheets({
+  const outcome: InscriptionsExtractionOutcome = await extractSuiviSheets({
     edition: CURRENT_EDITION,
     outputDir,
     parcours: parcoursExists,
-    sink: fileSink,
+    sink: sheetSink,
     store,
+    tours: CATALOGUE,
   });
 
   // Recap and warnings go to the console without any personal data.
@@ -91,10 +111,10 @@ async function main(argv: readonly string[]): Promise<void> {
       `Paires (Zone, Parcours) inconnues du catalogue ignorées : ${outcome.unknownParcoursCount}`,
     );
   }
-  console.log(`Fiches de suivi générées : ${outcome.fiches.length}`);
-  for (const fiche of outcome.fiches) {
+  console.log(`Suivi générés : ${outcome.sheets.length}`);
+  for (const sheet of outcome.sheets) {
     console.log(
-      `  - ${fiche.path} (${fiche.inscriptionCount} inscription${fiche.inscriptionCount === 1 ? '' : 's'})`,
+      `  - ${sheet.path} (${sheet.inscriptionCount} binôme${sheet.inscriptionCount === 1 ? '' : 's'})`,
     );
   }
   console.log(`Dossier de sortie : ${outputDir}`);

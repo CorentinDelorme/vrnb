@@ -94,9 +94,9 @@ bun run generate:zone-pdf -- --out-dir=/tmp/packs     # Dossier de sortie person
 ```
 
 Le pack contient les cartes de zone et les fiches des parcours. Il ne contient
-plus de fiche de suivi : celles-ci sont générées à partir des **inscriptions
-réelles** par le script d'extraction (voir « Extraire les fiches de suivi »),
-et ne sont pas publiées sur le site.
+plus de feuille de suivi : celles-ci sont générées à partir des
+**inscriptions réelles** par le script d'extraction (voir « Extraire les
+feuilles de suivi »), et ne sont jamais publiées sur le site.
 
 ## Inscriptions des binômes
 
@@ -147,13 +147,12 @@ Elles doivent être renseignées à deux endroits :
 Le jeton doit être un **jeton standard** Upstash : les jetons en lecture seule
 ne peuvent pas exécuter le `SCAN` nécessaire à l'extraction.
 
-### Extraire les fiches de suivi (avant l'action)
+### Extraire les feuilles de suivi (avant l'action)
 
 Les prénoms et les noms ne quittent le KV que par le script d'extraction local,
-qui écrit une **Fiche de suivi** par Zone (Parcours inscrits et binômes). C'est
-la seule source des fiches de suivi : les anciens PDF de suivi (les feuilles
-blanches `Suivi_parcours_a_*.pdf`, sans les noms) ne sont plus générés ni
-publiés, et le lien « Télécharger le PDF de suivi » a été retiré du menu :
+qui écrit les **feuilles de suivi** en PDF : une par Zone et par type de
+parcours, avec les deux colonnes « Prénom NOM » renseignées par les Binômes
+inscrits (les colonnes de pesée se remplissent le jour de l'action).
 
 ```sh
 # depuis apps/clean/
@@ -161,10 +160,15 @@ bun scripts/extract-inscriptions.ts                       # Édition configurée
 bun scripts/extract-inscriptions.ts --out-dir=/tmp/fiches  # autre dossier de sortie
 ```
 
-Par défaut, les fiches sont écrites dans `scripts/output/inscriptions/<année>/` :
-un dossier gitignoré, **jamais publié ni déployé** (les fiches contiennent des
-données personnelles). Le runbook complet — format des fichiers, cas
-particuliers, exemple de désistement — est dans
+Par défaut, les feuilles sont écrites dans
+`scripts/output/inscriptions/<année>/<zoneId>/` : un dossier gitignoré,
+**jamais commité, publié ni déployé** (elles contiennent des données
+personnelles). C'est la seule source des feuilles de suivi : les anciennes
+feuilles blanches `Suivi_parcours_a_*.pdf` de `public/pdf/` ont été retirées,
+et le lien « Télécharger le PDF de suivi » a été retiré du menu.
+
+Le runbook complet — format des fichiers, cas particuliers, exemple de
+désistement — est dans
 [scripts/README-inscriptions-extract.md](./scripts/README-inscriptions-extract.md).
 
 ### Opérations humaines
