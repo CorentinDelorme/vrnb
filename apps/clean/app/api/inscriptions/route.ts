@@ -1,24 +1,42 @@
 import { CURRENT_EDITION } from '../../../src/app/inscriptions/edition';
+import { handleInscriptionsPost } from '../../../src/app/inscriptions/register';
 import { handleInscriptionsGet } from '../../../src/app/inscriptions/public-state';
 import { createUpstashInscriptionsStore } from '../../../src/app/inscriptions/upstash-kv';
 
 /**
- * `GET /api/inscriptions` — thin adapter over the pure handler in
- * `src/app/inscriptions/public-state.ts`. It only injects the ports: the
- * Upstash REST KV reading port built from the environment (bracket-form env
- * access, per repo convention) and the Édition config. Credentials are
- * validated at call time by the adapter, so a missing environment degrades to
- * the handler's JSON 502 instead of a crash. No caching is opted into (no
- * `force-static` / `revalidate`): the handler stays dynamic and never runs at
- * build time.
+ * `/api/inscriptions` — thin adapters over the pure handlers in
+ * `src/app/inscriptions/` (public-state.ts for GET, register.ts for POST):
+ * they only inject the ports and the Édition config. The Upstash REST KV
+ * adapter is built from the environment (bracket-form env access, per repo
+ * convention) and serves both directions; credentials are validated at call
+ * time by the adapter, so a missing environment degrades to the handlers'
+ * JSON 502/500 instead of a crash. No caching is opted into (no
+ * `force-static` / `revalidate`): the handlers stay dynamic and never run at
+ * build time, and the POST is never statically prefetched.
  */
 export function GET(): Promise<Response> {
   return handleInscriptionsGet({
     edition: CURRENT_EDITION,
     now: () => new Date(),
-    store: createUpstashInscriptionsStore({
-      token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
-      url: process.env['UPSTASH_REDIS_REST_URL'] ?? '',
-    }),
+    store: createUpstashInscriptionsStore(restConfig()),
   });
+}
+
+export function POST(request: Request): Promise<Response> {
+  return handleInscriptionsPost(
+    {
+      edition: CURRENT_EDITION,
+      now: () => new Date(),
+      store: createUpstashInscriptionsStore(restConfig()),
+    },
+    request,
+  );
+}
+
+/** REST credentials of the Édition's KV store, read from the environment. */
+function restConfig(): { token: string; url: string } {
+  return {
+    token: process.env['UPSTASH_REDIS_REST_TOKEN'] ?? '',
+    url: process.env['UPSTASH_REDIS_REST_URL'] ?? '',
+  };
 }

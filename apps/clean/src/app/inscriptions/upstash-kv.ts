@@ -1,14 +1,18 @@
 /**
- * Upstash KV read adapter for the inscriptions feature — pure `fetch` against
- * the Upstash REST API (no SDK), following the Redis-proto convention
+ * Upstash KV adapter for the inscriptions feature — pure `fetch` against the
+ * Upstash REST API (no SDK), following the Redis-proto convention
  * `REST_URL/COMMAND/arg1/…/argN` with the REST token as a Bearer header.
  *
  * Covered Parcours are stored as string keys
  * `inscriptions:<year>:<zone>:<tour-name>` holding a JSON blob of the Binôme.
- * For #16 the value contents are irrelevant (names never leave the store):
- * the adapter only lists keys for the Édition year and returns the raw
- * entries; the pure handler in `public-state.ts` validates and maps them.
- * Ticket #17 adds the SET/NX write side to this module, not before.
+ * For #16 the adapter only lists keys for the Édition year and returns the
+ * raw entries; the pure handler in `public-state.ts` validates and maps them.
+ * Ticket #17 adds the write side: `setIfAbsent` issues the single REST call
+ * `POST /set/<key>?NX&EX=<seconds>` with the JSON value as the request body
+ * (Upstash appends the body as the last Redis argument and takes the extra
+ * `SET` options as query parameters — a `?nx=true` boolean-style flag is NOT
+ * accepted by the REST API: `NX` alone is). The value must be sent in the
+ * body per the Upstash REST docs to keep JSON escaping out of the URL.
  */
 
 import type { InscriptionsStore, RawInscriptionEntry } from './public-state';
@@ -72,17 +76,25 @@ const MAX_SCAN_PAGES = 256;
 const MGET_BATCH = 100;
 
 /**
- * Adapter factory for the pure handler's reading port: lists every stored
- * entry of an Édition year (scan + MGET, validated defensively). Both the
- * base URL and the token are required at call time, so a missing environment
- * becomes a controlled failure inside the handler (JSON 502) instead of a
- * crash at import time. The REST fetch is injectable for unit tests.
+ * Adapter factory for the pure handlers' KV ports: the reading port (every
+ * stored entry of an Édition year, scan + MGET, validated defensively) and
+ * the atomic write port of `register.ts` (`SET … NX EX` in one REST call).
+ * Both the base URL and the token are required at call time, so a missing
+ * environment becomes a controlled failure inside the handlers (JSON 502 /
+ * JSON 500) instead of a crash at import time. The REST fetch is injectable
+ * for unit tests.
  */
 export function createUpstashInscriptionsStore(
   config: UpstashConfig,
   restFetch: RestFetch = fetch,
 ): InscriptionsStore {
-  async function request(command: string): Promise<unknown> {
+  /** Extra call shape for `request`: defaults to a plain GET without body. */
+  interface RestCallOptions {
+    readonly body?: string;
+    readonly method?: 'GET' | 'POST';
+  }
+
+  async function request(command: string, options: RestCallOptions = {}): Promise<unknown> {
     if (!config.url || !config.token) {
       throw new Error(
         'Upstash REST credentials missing: set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN',
@@ -90,7 +102,9 @@ export function createUpstashInscriptionsStore(
     }
     const base = config.url.replace(/\/+$/, '');
     const response = await restFetch(`${base}/${command}`, {
+      body: options.body,
       headers: { authorization: `Bearer ${config.token}` },
+      method: options.method ?? 'GET',
     });
     if (!response.ok) throw new Error(`Upstash REST request failed: HTTP ${response.status}`);
     const envelope: unknown = await response.json();
@@ -150,6 +164,25 @@ export function createUpstashInscriptionsStore(
       const keys = await scanInscriptionKeys(year);
       if (keys.length === 0) return [];
       return readRawValues(keys);
+    },
+
+    /**
+     * `SET key value NX EX <seconds>` in one REST call: the JSON value rides
+     * in the request body, `NX` and `EX` ride as query parameters besides it
+     * (exact REST serialization verified against Upstash: a boolean-style
+     * `?nx=true` is rejected with `ERR syntax error`, the bare `?NX` flag is
+     * the accepted form). An `OK` reply means this caller won the first-come
+     * reservation, a null reply (NX miss on an existing key) is a plain
+     * `false`; any other reply is an adapter failure. The TTL is rounded up
+     * to whole seconds so the key never expires early.
+     */
+    async setIfAbsent(key: string, value: string, expiresIn: number): Promise<boolean> {
+      const seconds = Math.max(1, Math.ceil(expiresIn));
+      const command = `set/${encodeURIComponent(key)}?NX&EX=${seconds}`;
+      const result = await request(command, { body: value, method: 'POST' });
+      if (result === 'OK') return true;
+      if (result === null) return false;
+      throw new Error(`Upstash SET NX reply is not OK nor null: ${JSON.stringify(result)}`);
     },
   };
 }

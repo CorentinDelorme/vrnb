@@ -1,10 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { fetchInscriptionsOutcome, parseInscriptionsState } from './inscriptions-client';
+import type { BinomeRegistration } from './inscriptions-client';
+import {
+  fetchInscriptionsOutcome,
+  parseInscriptionsState,
+  postRegistration,
+  registrationRequestBody,
+} from './inscriptions-client';
 
 /**
- * Browser client of `GET /api/inscriptions`: relative-URL fetch with an
- * injectable fetch, strict deserialization to success/error outcomes.
+ * Browser client of the inscriptions endpoints: relative-URL fetch with an
+ * injectable fetch and strict deserialization. GET degrades every failure to
+ * the error outcome; POST maps the handler's status codes to the distinct
+ * registration outcomes (created/taken/invalid/error).
  */
 
 const STATE = {
@@ -93,5 +101,86 @@ describe('parseInscriptionsState', () => {
         registrationOpen: true,
       }),
     ).toBeNull();
+  });
+});
+
+/** One complete registration fixture, tweakable per test. */
+const REGISTRATION: BinomeRegistration = {
+  firstName1: 'Léa',
+  firstName2: 'Marc',
+  lastName1: 'Dupont',
+  lastName2: 'Martin',
+  tourId: 'V1',
+  zoneId: 'bruz-sud',
+};
+
+describe('registrationRequestBody', () => {
+  it('should serialize the exact POST contract keys', () => {
+    expect(registrationRequestBody(REGISTRATION)).toBe(
+      '{"engaged":true,"firstName1":"Léa","firstName2":"Marc","honeypot":"",' +
+        '"lastName1":"Dupont","lastName2":"Martin","tourId":"V1","zoneId":"bruz-sud"}',
+    );
+  });
+});
+
+describe('postRegistration', () => {
+  it('should POST the contract payload to the inscriptions URL', async () => {
+    const fetchImpl = vi.fn(
+      async () => new Response('{"inscription":{"tourId":"V1","zoneId":"bruz-sud"}}', { status: 201 }),
+    );
+
+    const outcome = await postRegistration(REGISTRATION, fetchImpl);
+
+    expect(outcome).toEqual({ status: 'created' });
+    const [url, init] = fetchImpl.mock.calls[0] ?? [];
+    expect(url).toBe('/api/inscriptions');
+    expect(init).toMatchObject({
+      body: registrationRequestBody(REGISTRATION),
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      method: 'POST',
+    });
+  });
+
+  it('should map the created status to the created outcome, body unneeded', async () => {
+    const outcome = await postRegistration(
+      REGISTRATION,
+      async () => new Response('', { status: 201 }),
+    );
+    expect(outcome).toEqual({ status: 'created' });
+  });
+
+  it('should map 409 to the taken outcome and 400 to the invalid outcome', async () => {
+    const taken = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"inscriptions-conflict"}', { status: 409 }),
+    );
+    expect(taken).toEqual({ status: 'taken' });
+
+    const invalid = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"invalid-inscription"}', { status: 400 }),
+    );
+    expect(invalid).toEqual({ status: 'invalid' });
+  });
+
+  it('should map any other HTTP status to the error outcome', async () => {
+    const serverError = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"inscriptions-unavailable"}', { status: 500 }),
+    );
+    expect(serverError).toEqual({ status: 'error' });
+
+    const unauthorized = await postRegistration(
+      REGISTRATION,
+      async () => new Response('', { status: 403 }),
+    );
+    expect(unauthorized).toEqual({ status: 'error' });
+  });
+
+  it('should map a network failure to the error outcome', async () => {
+    const outcome = await postRegistration(REGISTRATION, async () => {
+      throw new Error('offline');
+    });
+    expect(outcome).toEqual({ status: 'error' });
   });
 });
