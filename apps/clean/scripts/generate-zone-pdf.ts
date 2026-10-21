@@ -64,21 +64,26 @@ async function mergeZone(zoneId: string, outDir: string): Promise<void> {
 
 async function main(): Promise<void> {
   const perf = createPerfRecorder();
-  const filters = parseGenerationFilters(process.argv);
-  const outDir = parseOutDir();
-  const zoneIds = ZONES.map((zone) => zone.id).filter((id) => matchesZoneFilter(filters, id));
+  /** The Zones of the run, and the Parcours their pack reuses. */
+  let zoneIds: string[] = [];
 
-  if (zoneIds.length === 0) {
-    throw new Error('No zones match the --zone filter.');
+  try {
+    const filters = parseGenerationFilters(process.argv);
+    const outDir = parseOutDir();
+    zoneIds = ZONES.map((zone) => zone.id).filter((id) => matchesZoneFilter(filters, id));
+
+    if (zoneIds.length === 0) {
+      throw new Error('No zones match the --zone filter.');
+    }
+
+    for (const zoneId of zoneIds) {
+      await perf.measure(zoneId, async () => {
+        await mergeZone(zoneId, outDir);
+      });
+    }
+  } finally {
+    reportRun(perf, zoneIds);
   }
-
-  for (const zoneId of zoneIds) {
-    await perf.measure(zoneId, async () => {
-      await mergeZone(zoneId, outDir);
-    });
-  }
-
-  reportRun(perf, zoneIds);
 }
 
 /**
