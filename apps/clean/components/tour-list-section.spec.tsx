@@ -116,9 +116,16 @@ describe('TourListSection inscriptions register button', () => {
     unmount();
   });
 
-  it('should offer the register button on every row when the public state failed', () => {
+  it('should hide the register button and the badge when the public state failed', () => {
     const { container, unmount } = renderSection({ status: 'error' });
+    // The site never offers a registration it cannot honor: neither the
+    // register button nor the « Binôme inscrit » badge.
     expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+      0,
+    );
+    expect(container.querySelectorAll('.badge-success')).toHaveLength(0);
+    // The play buttons stay: the degraded state never touches the legacy DOM.
+    expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(
       TOURS.length,
     );
     unmount();

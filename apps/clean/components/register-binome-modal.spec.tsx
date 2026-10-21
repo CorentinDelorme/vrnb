@@ -88,6 +88,14 @@ function renderModal() {
   return { ...render_, onClose };
 }
 
+/** Render the modal open at a given instant (the local clock fallback). */
+function renderModalAt(now: Date) {
+  const onClose = vi.fn();
+  installDialogueStub(onClose);
+  const render_ = render(<RegisterBinomeModal now={now} onClose={onClose} tour={TOUR} visible />);
+  return { ...render_, onClose };
+}
+
 const submitButton = (): HTMLButtonElement =>
   screen.getByRole('button', { name: /Inscrire mon binôme/ }) as HTMLButtonElement;
 
@@ -346,5 +354,33 @@ describe('RegisterBinomeModal closed window', () => {
 
     fireEvent.click(submitButton());
     expect(mocks.postRegistration).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The local clock fallback of the modal: when the public state could not be
+ * loaded, the modal falls back on its own clock to know whether the window is
+ * open. The clock is injected, so the test does not depend on the wall clock
+ * of the runner.
+ */
+describe('RegisterBinomeModal local clock fallback', () => {
+  beforeEach(() => {
+    mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
+    mocks.reload.mockReset();
+    status.current = { status: 'error' };
+  });
+
+  it('should close the window on its own clock when the public state failed', () => {
+    renderModalAt(new Date('2027-02-12T09:00:00Z'));
+
+    expect(screen.getByRole('alert').textContent).toContain('Les inscriptions sont closes');
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should keep the window open on its own clock on the last registration day', () => {
+    renderModalAt(new Date('2027-02-11T09:00:00Z'));
+
+    expect(screen.queryByText(/Les inscriptions sont closes/)).toBeNull();
+    expect(identityInputs()[0]?.disabled).toBe(false);
   });
 });

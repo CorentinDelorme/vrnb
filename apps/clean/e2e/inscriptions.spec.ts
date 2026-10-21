@@ -180,8 +180,12 @@ test.describe('Public inscriptions statuses', () => {
       await page.goto('/');
 
       await expect(badgeLocator(page)).toHaveCount(0);
-      // A failed fetch just means "unknown coverage": no badge, and the play
-      // button DOM contract (47 rows × 1 button) stays untouched.
+      // A failed fetch means an unknown state: the site offers neither the
+      // badge nor the register button, and the play button DOM contract
+      // (47 rows × 1 button) stays untouched.
+      await expect(
+        page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+      ).toHaveCount(0);
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
       await expect(playButtons).toHaveCount(47);
     });
@@ -347,37 +351,35 @@ test.describe('Closed registration window', () => {
     await expect(page.locator('button[aria-label="Lancer le parcours"]')).toHaveCount(47);
   });
 
-  test('should close the window on the local clock when the public state is unavailable', async ({
+  test('should hide the register button when the public state cannot be loaded', async ({
     page,
   }) => {
-    // The public state cannot be loaded: the client falls back to its own
-    // clock, which says the window is closed.
+    // The public state is unknown: the site offers neither the badge nor the
+    // register button, so the modal cannot be reached from the home page.
     await page.clock.setFixedTime(AFTER_CLOSURE_DATE);
     await page.route('**/api/inscriptions', (route) =>
       route.fulfill({ json: { error: 'inscriptions-unavailable' }, status: 502 }),
     );
     await page.goto('/');
 
-    const modal = await openRegistrationModal(page, 'V2');
-    await expect(modal).toContainText('Les inscriptions sont closes');
-    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeDisabled();
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+    ).toHaveCount(0);
+    await expect(badgeLocator(page)).toHaveCount(0);
+    // The play buttons stay: the degraded state never touches the legacy DOM.
+    await expect(page.locator('button[aria-label="Lancer le parcours"]')).toHaveCount(47);
   });
 
-  test('should keep the window open on the last registration day', async ({ page }) => {
-    // 3 days before the action is still a registration day: the local clock
-    // fallback (the public state cannot be loaded) says the window is open.
+  test('should offer the register button on the last registration day', async ({ page }) => {
+    // 3 days before the action is still a registration day: the window the
+    // server answers is open, so the button shows.
     await page.clock.setFixedTime(LAST_REGISTRATION_DAY);
-    await page.route('**/api/inscriptions', (route) =>
-      route.fulfill({ json: { error: 'inscriptions-unavailable' }, status: 502 }),
-    );
+    await page.route('**/api/inscriptions', (route) => route.fulfill({ json: OPEN_STATE }));
     await page.goto('/');
 
-    const modal = await openRegistrationModal(page, 'V2');
-    await expect(modal).not.toContainText('Les inscriptions sont closes');
-    await expect(modal.getByLabel('Prénom du membre 1', { exact: true })).toBeEnabled();
-
-    await fillRegistration(page, CONTRACT_BODY);
-    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+    ).toBeVisible();
   });
 });
 

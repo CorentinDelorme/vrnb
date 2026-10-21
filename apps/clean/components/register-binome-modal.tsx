@@ -141,12 +141,23 @@ const FIELD_ERROR_MESSAGES: Readonly<Record<IdentityFieldError, string>> = {
 interface RegisterBinomeModalProps {
   /** Called when the dialog closes, whatever the way (button, Escape, backdrop). */
   readonly onClose: () => void;
+  /**
+   * The instant the local clock reads, when the public state could not be
+   * loaded and the modal falls back on its own clock. Injectable so the
+   * fallback is testable without depending on the wall clock of the runner.
+   */
+  readonly now?: Date;
   readonly tour: TourRef;
   /** When true, the dialog is displayed (native `showModal`). */
   readonly visible: boolean;
 }
 
-export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeModalProps) {
+export function RegisterBinomeModal({
+  now = new Date(),
+  onClose,
+  tour,
+  visible,
+}: RegisterBinomeModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [values, setValues] = useState<BinomeFormValues>(EMPTY_BINOME);
   const [touched, setTouched] = useState<Readonly<Partial<Record<IdentityField, boolean>>>>({});
@@ -180,7 +191,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
   const registrationOpen =
     status.status === 'success'
       ? status.state.registrationOpen
-      : isRegistrationOpen(CURRENT_EDITION, new Date());
+      : isRegistrationOpen(CURRENT_EDITION, now);
   const windowClosed = !registrationOpen;
   const { errors, values: trimmed } = checkIdentityFields(values);
   /** The submit is enabled as soon as the form is complete and valid. */

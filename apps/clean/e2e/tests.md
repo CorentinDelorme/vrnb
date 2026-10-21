@@ -200,14 +200,17 @@ notre participation à ce parcours de nettoyage. »
 A closed window hides the register button: the window closes 3 days **before**
 the action date, so the organizers can print the tracking sheets and organize
 the day; the last registration day is still open. The modal keeps its closed
-state as a safety net (a page opened before the closure), covered by the unit
-suite. A covered Parcours loses its button too (see the row above).
+state as a safety net (a page opened before the closure, or a public state
+that could not be loaded), covered by the unit suite. A covered Parcours
+loses its button too (see the row above). A public state that could not be
+loaded leaves the site in a degraded mode: neither the badge nor the register
+button is shown, so the site never offers a registration it cannot honor.
 
-| Test name                                                                         | Steps                                                                                                                                                                                       | Expected                                                                                                                                                                     |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `should disable the modal and announce the closed window`                         | Fix the clock 2 days before the action date, mock GET with `registrationOpen: false`, `goto('/')`, open V2's button                                                                         | The modal contains « Les inscriptions sont closes » and « 3 jours avant la date de l'action »; the submit, the four identity inputs and the engagement checkbox are disabled |
-| `should close the window on the local clock when the public state is unavailable` | Fix the clock after the action date, mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`, open V2's button                                                              | The client falls back to its own clock: the same closed window and the same disabled submit                                                                                  |
-| `should keep the window open on the last registration day`                        | Fix the clock on the last registration day (2027-02-11, 3 days before the action), mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`, open V2's button, fill the form | The client falls back to its own clock: no « Les inscriptions sont closes », the identity inputs and the submit stay enabled                                                 |
+| Test name                                                                | Steps                                                                                                                        | Expected                                                                                              |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `should hide the register button once the window is closed`              | Fix the clock 2 days before the action date, mock GET with `registrationOpen: false`, `goto('/')`                            | No register button on the rows (the window closes 3 days before the action); the 47 play buttons stay |
+| `should hide the register button when the public state cannot be loaded` | Fix the clock after the closure, mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`                     | No register button, no badge; the 47 play buttons stay                                                |
+| `should offer the register button on the last registration day`          | Fix the clock on the last registration day (2027-02-11, 3 days before the action), mock GET with the open state, `goto('/')` | The register button of V2 is visible                                                                  |
 
 ### `describe('Anti-bot honeypot and GDPR notice')` (ticket #18)
 

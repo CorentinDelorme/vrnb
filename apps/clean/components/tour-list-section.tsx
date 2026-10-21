@@ -96,18 +96,18 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
    * Whether the coverage of the rows is known: the action slot (badge or
    * register button) stays empty until the public state answered, so the
    * register button never turns into a « Binôme inscrit » badge under the
-   * volunteer's eyes. A failed request keeps the button (the coverage is
-   * unknown, and the registration is still attempted).
+   * volunteer's eyes. A failed request leaves the state unknown too, so
+   * neither the badge nor the button is shown: the site never offers a
+   * registration it cannot honor.
    */
-  const statusKnown = status.status !== 'loading';
+  const statusKnown = status.status === 'success';
   /**
    * Whether the registration window is open, as the server answers it: the
    * window closes 3 days before the action date (the organizers need that
    * time to print the tracking sheets and organize the day), and the register
-   * button disappears with it. A failed request leaves the window unknown, so
-   * the button stays — the server refuses the registration anyway.
+   * button disappears with it.
    */
-  const windowOpen = status.status === 'success' ? status.state.registrationOpen : true;
+  const windowOpen = statusKnown && status.state.registrationOpen;
 
   return (
     <app-tour-list-section>
