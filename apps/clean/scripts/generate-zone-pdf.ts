@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
 import { join } from 'path';
 import { PDFDocument } from 'pdf-lib';
 
@@ -10,7 +9,6 @@ const pdfDir = join(rootDir, 'public/pdf');
 
 const TOUR_PDF_PATTERN = /^[VP]\d+\.pdf$/;
 const MAP_PDFS = ['Carte_parcours_a_velo.pdf', 'Carte_parcours_a_pied.pdf'];
-const TRACKING_PDFS = ['Suivi_parcours_a_velo.pdf', 'Suivi_parcours_a_pied.pdf'];
 
 function sortTourFiles(a: string, b: string): number {
   if (a[0] !== b[0]) {
@@ -20,7 +18,10 @@ function sortTourFiles(a: string, b: string): number {
 }
 
 /**
- * All PDFs belonging to a zone: overview maps, tracking sheets, then tour sheets (V then P).
+ * All PDFs belonging to a zone: overview maps, then tour sheets (V then P).
+ * The tracking sheets are not part of the pack anymore: the « Fiches de
+ * suivi » are generated from the real inscriptions by the referent script
+ * (`scripts/extract-inscriptions.ts`), outside the site.
  */
 function getZoneFiles(zoneId: string): string[] {
   const zoneDir = join(pdfDir, zoneId);
@@ -33,13 +34,6 @@ function getZoneFiles(zoneId: string): string[] {
     const mapPath = join(zoneDir, mapPdf);
     if (existsSync(mapPath)) {
       files.push(mapPath);
-    }
-  }
-
-  for (const trackingPdf of TRACKING_PDFS) {
-    const trackingPath = join(zoneDir, trackingPdf);
-    if (existsSync(trackingPath)) {
-      files.push(trackingPath);
     }
   }
 
@@ -64,13 +58,18 @@ function parseZoneFilter(): Set<string> | undefined {
   return ids.length > 0 ? new Set(ids) : undefined;
 }
 
+/**
+ * Output folder of the packs: the local `scripts/output/` tree, like the
+ * Inscriptions extraction — a gitignored folder, never committed and never
+ * deployed. `--out-dir=` overrides it.
+ */
 function parseOutDir(): string {
   const arg = process.argv.find((a) => a.startsWith('--out-dir='));
   if (arg) {
     const dir = arg.slice('--out-dir='.length).trim();
     if (dir) return dir;
   }
-  return join(process.env['HOME'] || homedir(), 'Documents');
+  return join(import.meta.dirname, 'output', 'packs');
 }
 
 async function mergeZone(zoneId: string, outDir: string): Promise<void> {

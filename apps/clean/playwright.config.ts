@@ -34,6 +34,17 @@ export default defineConfig({
   webServer: {
     command: 'bun run dev',
     url: 'http://localhost:4200',
+    /*
+     * The E2E suite never touches a real KV: the Inscriptions API degrades to
+     * a 502 (no credentials) and the Inscriptions specs mock the endpoint
+     * with `page.route` anyway. Without this, a developer's `apps/clean/.env.local`
+     * would make the suite depend on the live inscriptions — and a stray POST
+     * would write into the real database.
+     */
+    env: {
+      UPSTASH_REDIS_REST_TOKEN: '',
+      UPSTASH_REDIS_REST_URL: '',
+    },
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,
   },

@@ -34,12 +34,16 @@ test.describe('Accessibility', () => {
   test.describe('Manual a11y checks', () => {
     test('should have aria-labels on all icon buttons', async ({ page }) => {
       await page.goto('/');
-      // All play buttons should have aria-label
-      const playButtons = page.locator('li.list-row button');
-      const count = await playButtons.count();
-      for (let i = 0; i < count; i++) {
-        await expect(playButtons.nth(i)).toHaveAttribute('aria-label');
-      }
+      // All the row buttons (play and register) carry an aria-label. The
+      // check is atomic on purpose: the register button of a covered Parcours
+      // disappears once the statuses load, so an index-based loop would race
+      // with the hydration and fail on a shrinking list.
+      const buttonsWithoutLabel = await page
+        .locator('li.list-row button')
+        .evaluateAll(
+          (buttons) => buttons.filter((button) => !button.getAttribute('aria-label')).length,
+        );
+      expect(buttonsWithoutLabel).toBe(0);
     });
 
     test('should have alt text on VRNB logo', async ({ page }) => {

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
 import { TourListSection } from '../components/tour-list-section';
 import { findZoneTours } from '../src/app/tours-queries';
@@ -11,7 +12,8 @@ import { ZONES } from '../src/app/zones';
  * a tour is in progress, one open accordion per zone listing its bike and
  * walking tours, the Ouest-France press collapse, and the footer. The visible
  * `<h1>` and `<title>` come from the root layout header (spec #3); everything
- * here is statically prerendered and the resume banner hydrates client-side.
+ * here is statically prerendered, and the resume banner as well as the public
+ * inscriptions statuses (ticket #16) hydrate client-side.
  */
 
 /** Press articles shown in the home collapse (content, kept verbatim). */
@@ -46,56 +48,58 @@ export default function HomePage() {
 
       <ResumeTourBanner />
 
-      {ZONES.map((zone) => {
-        const bikeTours = findZoneTours(zone.id, 'V');
-        const walkingTours = findZoneTours(zone.id, 'P');
-        const hasTours = bikeTours.length > 0 || walkingTours.length > 0;
-        const hasBothTypes = bikeTours.length > 0 && walkingTours.length > 0;
+      <InscriptionsStatusProvider>
+        {ZONES.map((zone) => {
+          const bikeTours = findZoneTours(zone.id, 'V');
+          const walkingTours = findZoneTours(zone.id, 'P');
+          const hasTours = bikeTours.length > 0 || walkingTours.length > 0;
+          const hasBothTypes = bikeTours.length > 0 && walkingTours.length > 0;
 
-        return (
-          <details
-            className="collapse collapse-arrow bg-base-100 border border-base-300 mb-4 shadow-md sm:mb-8"
-            aria-label={`Zone ${zone.name}`}
-            key={zone.id}
-            open
-          >
-            <summary className="collapse-title flex items-center gap-3 sm:gap-4">
-              <h2 className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
-                {zone.name}
-              </h2>
-              <span className="badge badge-secondary badge-md sm:badge-lg">
-                {bikeTours.length + walkingTours.length} parcours
-              </span>
-            </summary>
-            <div className="collapse-content">
-              {hasTours ? (
-                <div
-                  className={`grid grid-cols-1 gap-4 pt-2 sm:gap-8${
-                    hasBothTypes ? ' lg:grid-cols-2' : ''
-                  }`}
-                >
-                  {bikeTours.length > 0 ? (
-                    <TourListSection
-                      title="Parcours à vélo"
-                      tours={bikeTours}
-                      type="V"
-                      zoneId={zone.id}
-                    />
-                  ) : null}
-                  {walkingTours.length > 0 ? (
-                    <TourListSection
-                      title="Parcours à pied"
-                      tours={walkingTours}
-                      type="P"
-                      zoneId={zone.id}
-                    />
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-          </details>
-        );
-      })}
+          return (
+            <details
+              className="collapse collapse-arrow bg-base-100 border border-base-300 mb-4 shadow-md sm:mb-8"
+              aria-label={`Zone ${zone.name}`}
+              key={zone.id}
+              open
+            >
+              <summary className="collapse-title flex items-center gap-3 sm:gap-4">
+                <h2 className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
+                  {zone.name}
+                </h2>
+                <span className="badge badge-secondary badge-md sm:badge-lg">
+                  {bikeTours.length + walkingTours.length} parcours
+                </span>
+              </summary>
+              <div className="collapse-content">
+                {hasTours ? (
+                  <div
+                    className={`grid grid-cols-1 gap-4 pt-2 sm:gap-8${
+                      hasBothTypes ? ' lg:grid-cols-2' : ''
+                    }`}
+                  >
+                    {bikeTours.length > 0 ? (
+                      <TourListSection
+                        title="Parcours à vélo"
+                        tours={bikeTours}
+                        type="V"
+                        zoneId={zone.id}
+                      />
+                    ) : null}
+                    {walkingTours.length > 0 ? (
+                      <TourListSection
+                        title="Parcours à pied"
+                        tours={walkingTours}
+                        type="P"
+                        zoneId={zone.id}
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </details>
+          );
+        })}
+      </InscriptionsStatusProvider>
 
       <div className="mb-4 sm:mb-8">
         <details className="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm">

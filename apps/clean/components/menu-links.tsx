@@ -1,12 +1,11 @@
-import { MapsLocationIcon, Pdf02Icon } from '@hugeicons/core-free-icons';
+import { MapsLocationIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 
 import type { MenuLinkKind } from '../lib/menu-links';
 import { menuLinks } from '../lib/menu-links';
 
 /** Icon per drawer link kind, matching the legacy drawer templates. */
-const LINK_ICONS: Record<MenuLinkKind, typeof Pdf02Icon> = {
-  'pdf-suivi': Pdf02Icon,
+const LINK_ICONS: Record<MenuLinkKind, typeof MapsLocationIcon> = {
   'pdf-carte': MapsLocationIcon,
 };
 

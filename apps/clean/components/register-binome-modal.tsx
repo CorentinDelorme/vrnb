@@ -1,0 +1,386 @@
+'use client';
+
+import { CalendarDaysIcon, CancelIcon, Location01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { useEffect, useRef, useState } from 'react';
+
+import {
+  CURRENT_EDITION,
+  INSCRIPTIONS_RETENTION_DAYS,
+  REGISTRATION_CLOSURE_DAYS,
+  formatActionDateLabel,
+} from '../src/app/inscriptions/edition';
+import { postRegistration } from '../src/app/inscriptions/inscriptions-client';
+import type {
+  BinomeRegistration,
+  IdentityField,
+  IdentityFieldError,
+} from '../src/app/inscriptions/validation';
+import {
+  IDENTITY_FIELD_LABELS,
+  IDENTITY_FIELD_MAX_LENGTH,
+  IDENTITY_FIELD_MIN_LENGTH,
+  checkIdentityFields,
+} from '../src/app/inscriptions/validation';
+import type { TourRef } from '../src/app/tours-queries';
+import { getZone } from '../src/app/zones';
+import {
+  isRegistrationWindowOpen,
+  useInscriptionsReload,
+  useInscriptionsStatus,
+} from './inscriptions-status-provider';
+
+/**
+ * DaisyUI registration modal of one Parcours (tickets #17 + #18): it shows the
+ * selected tour context — Zone name, Parcours name, action date and the Zone
+ * meeting point — and collects the two Binôme identities plus the required
+ * engagement statement. `showModal()` is called by effect when the host makes
+ * it visible, and the dialog answers its native `close` event (X button,
+ * backdrop, Escape) by telling the host it closed.
+ *
+ * Submitting posts the registration and degrades on every outcome: created →
+ * confirmation + statuses reload, taken (covered meanwhile) → last-resort
+ * guard + statuses reload, and each refusal gets its own explicit French
+ * message (400 saisie invalide / fenêtre fermée, 409 parcours déjà couvert,
+ * 500 et erreur réseau). The identity inputs keep their values over
+ * close/reopen — the host keeps this component mounted and only toggles
+ * `visible` — while nothing resets except a fresh mount.
+ *
+ * Ticket #18 adds the three guards of the registration window:
+ *
+ * - the hidden anti-bot honeypot (present in the DOM, invisible to humans):
+ *   a filled one is refused by the server with 400 and nothing is stored —
+ *   silently, like any other invalid input, so the modal never reveals the
+ *   trap;
+ * - the closed window: 3 days before the action date, the modal says «
+ *   Les inscriptions sont closes » and disables its form (the server refuses
+ *   the same requests with 400);
+ * - the shared identity bounds (2 to 60 characters per name, see
+ *   `validation.ts`): the submit is enabled as soon as the form is complete
+ *   and valid, and each field shows its own error message.
+ */
+
+/** The four identity fields of the Binôme form, as controlled inputs. */
+interface BinomeFormValues {
+  readonly firstName1: string;
+  readonly firstName2: string;
+  readonly lastName1: string;
+  readonly lastName2: string;
+}
+
+/** Lifecycle of a registration inside the modal (idle → submitting → outcome). */
+type ModalOutcome = 'idle' | 'submitting' | 'created' | 'taken' | 'invalid' | 'closed' | 'error';
+
+const EMPTY_BINOME: BinomeFormValues = {
+  firstName1: '',
+  firstName2: '',
+  lastName1: '',
+  lastName2: '',
+};
+
+/** The identity inputs of the modal: their id and their field key. */
+const IDENTITY_INPUTS = [
+  { id: 'register-first-name-1', key: 'firstName1' },
+  { id: 'register-last-name-1', key: 'lastName1' },
+  { id: 'register-first-name-2', key: 'firstName2' },
+  { id: 'register-last-name-2', key: 'lastName2' },
+] as const satisfies readonly { readonly id: string; readonly key: IdentityField }[];
+
+/** French long-form date of the Édition action day (module-scope constant). */
+const ACTION_DATE_LABEL = formatActionDateLabel(CURRENT_EDITION.actionDate);
+
+/** The message of the closed registration window (also the 400 answer). */
+const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se ferme ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action.`;
+
+/**
+ * The data retention notice of the modal (GDPR): the names only build the
+ * « Fiches de suivi » of the action, and the data is erased 90 days after it.
+ * Built as a single string: the JSX compiler would glue the number to the
+ * following text when the text carries an HTML entity (spacing pitfall).
+ */
+const GDPR_NOTICE = `Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
+
+/** The explicit French feedback of each refusal of the server (ticket #18). */
+const OUTCOME_ALERTS: Readonly<
+  Partial<Record<ModalOutcome, { readonly className: string; readonly message: string }>>
+> = {
+  taken: {
+    className: 'alert alert-warning mt-4 text-sm',
+    message:
+      "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
+  },
+  invalid: {
+    className: 'alert alert-error mt-4 text-sm',
+    message: "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
+  },
+  closed: {
+    className: 'alert alert-warning mt-4 text-sm',
+    message: CLOSED_WINDOW_MESSAGE,
+  },
+  error: {
+    className: 'alert alert-error mt-4 text-sm',
+    message: 'Une erreur est survenue : réessayez dans quelques instants.',
+  },
+};
+
+/** The inline French feedback of each identity field error. */
+const FIELD_ERROR_MESSAGES: Readonly<Record<IdentityFieldError, string>> = {
+  required: 'Champ obligatoire.',
+  'too-short': `${IDENTITY_FIELD_MIN_LENGTH} caractères minimum.`,
+  'too-long': `${IDENTITY_FIELD_MAX_LENGTH} caractères maximum.`,
+};
+
+interface RegisterBinomeModalProps {
+  /** Called when the dialog closes, whatever the way (button, Escape, backdrop). */
+  readonly onClose: () => void;
+  /**
+   * The instant the local clock reads, when the public state could not be
+   * loaded and the modal falls back on its own clock. Injectable so the
+   * fallback is testable without depending on the wall clock of the runner.
+   */
+  readonly now?: Date;
+  readonly tour: TourRef;
+  /** When true, the dialog is displayed (native `showModal`). */
+  readonly visible: boolean;
+}
+
+export function RegisterBinomeModal({
+  now = new Date(),
+  onClose,
+  tour,
+  visible,
+}: RegisterBinomeModalProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [values, setValues] = useState<BinomeFormValues>(EMPTY_BINOME);
+  const [touched, setTouched] = useState<Readonly<Partial<Record<IdentityField, boolean>>>>({});
+  const [engaged, setEngaged] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
+  const [outcome, setOutcome] = useState<ModalOutcome>('idle');
+  const reloadStatuses = useInscriptionsReload();
+  const status = useInscriptionsStatus();
+
+  useEffect(() => {
+    if (visible) dialogRef.current?.showModal();
+  }, [visible]);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const handleDialogClose = (): void => onClose();
+    dialog.addEventListener('close', handleDialogClose);
+    return () => {
+      dialog.removeEventListener('close', handleDialogClose);
+    };
+  }, [onClose]);
+
+  const zone = getZone(tour.zoneId);
+  /**
+   * The registration window of the Édition, from the ONE rule of the provider
+   * (the server's answer when the public state loaded, the local clock
+   * otherwise): the client and the server always agree.
+   */
+  const registrationOpen = isRegistrationWindowOpen(status, now);
+  const windowClosed = !registrationOpen;
+  const { errors, values: trimmed } = checkIdentityFields(values);
+  /** The submit is enabled as soon as the form is complete and valid. */
+  const complete = Object.keys(errors).length === 0 && engaged;
+  const identity: BinomeRegistration = {
+    firstName1: trimmed.firstName1,
+    firstName2: trimmed.firstName2,
+    honeypot,
+    lastName1: trimmed.lastName1,
+    lastName2: trimmed.lastName2,
+    tourId: tour.tourId,
+    zoneId: tour.zoneId,
+  };
+
+  const close = (): void => dialogRef.current?.close();
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
+    event.preventDefault();
+    if (!complete || outcome === 'submitting' || windowClosed) return;
+    setOutcome('submitting');
+    const registration = await postRegistration(identity);
+    setOutcome(registration.status);
+    if (registration.status === 'created' || registration.status === 'taken') {
+      // Badge + button disappearance without a page reload; on `taken` this
+      // reload is also the 409 race guard: the tour is covered by another
+      // Binôme, and the list state now says so.
+      reloadStatuses();
+    }
+  };
+
+  const outcomeAlert = OUTCOME_ALERTS[outcome];
+
+  return (
+    <dialog className="modal" id={`register_modal_${tour.tourId}`} ref={dialogRef}>
+      <div className="modal-box max-h-[90dvh] w-11/12 max-w-md overflow-y-auto sm:max-w-xl">
+        <form method="dialog">
+          <button
+            aria-label="Fermer"
+            className="btn btn-sm btn-ghost btn-circle absolute top-2 right-2"
+          >
+            <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
+          </button>
+        </form>
+
+        <h3 className="text-xl font-bold">Inscription du binôme</h3>
+        <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
+          Zone <span className="text-base-content font-medium">{zone.name}</span> — Parcours{' '}
+          <span className="text-base-content font-medium">{tour.tourId}</span>
+        </p>
+
+        {outcome === 'created' ? (
+          <>
+            <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
+              <span>
+                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
+                {ACTION_DATE_LABEL} au point de rendez-vous ci-dessous.
+              </span>
+            </div>
+            <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
+              <HugeiconsIcon
+                icon={Location01Icon}
+                strokeWidth={1.5}
+                className="text-secondary mt-0.5 size-5 shrink-0"
+              />
+              <span>
+                Point de rendez-vous&nbsp;: <strong>{zone.meetingPoint.name}</strong>
+              </span>
+            </div>
+            <div className="modal-action">
+              <button className="btn btn-primary" onClick={close}>
+                Fermer
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mt-3 space-y-1.5 text-sm sm:text-base">
+              <div className="flex items-start gap-2">
+                <HugeiconsIcon
+                  icon={CalendarDaysIcon}
+                  strokeWidth={1.5}
+                  className="text-secondary mt-0.5 size-5 shrink-0"
+                />
+                <span>Jour de l&apos;action&nbsp;: {ACTION_DATE_LABEL}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <HugeiconsIcon
+                  icon={Location01Icon}
+                  strokeWidth={1.5}
+                  className="text-secondary mt-0.5 size-5 shrink-0"
+                />
+                <span>Point de rendez-vous&nbsp;: {zone.meetingPoint.name}</span>
+              </div>
+            </div>
+
+            {windowClosed && outcome !== 'closed' ? (
+              <div className="alert alert-warning mt-4 text-sm sm:text-base" role="alert">
+                {CLOSED_WINDOW_MESSAGE}
+              </div>
+            ) : null}
+
+            <form className="mt-4 grid gap-3" onSubmit={(event) => void submit(event)}>
+              <div className="mt-4 grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
+                {IDENTITY_INPUTS.map((field) => {
+                  const error = errors[field.key];
+                  // A missing name is only pointed out once the field has been
+                  // left; a length overrun is shown as soon as it happens.
+                  const showError =
+                    error !== undefined && (error !== 'required' || touched[field.key] === true);
+                  return (
+                    <label className="grid min-w-0 gap-1" htmlFor={field.id} key={field.id}>
+                      <span className="text-sm">{IDENTITY_FIELD_LABELS[field.key]}</span>
+                      <input
+                        aria-describedby={showError ? `${field.id}-error` : undefined}
+                        aria-invalid={showError ? true : undefined}
+                        className="input w-full min-w-0"
+                        disabled={windowClosed}
+                        id={field.id}
+                        onBlur={() => setTouched((current) => ({ ...current, [field.key]: true }))}
+                        onChange={(event) =>
+                          setValues((current) => ({ ...current, [field.key]: event.target.value }))
+                        }
+                        required
+                        type="text"
+                        value={values[field.key]}
+                      />
+                      {/*
+                        The error line is always rendered (empty when the
+                        field is valid) so every field keeps the same height:
+                        an error under one field must not push the next row's
+                        inputs down and break the alignment of the columns.
+                      */}
+                      <span className="text-error min-h-4 text-xs" id={`${field.id}-error`}>
+                        {showError ? FIELD_ERROR_MESSAGES[error] : ''}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {/*
+                `whitespace-normal` is mandatory: the DaisyUI `.label` class
+                sets `white-space: nowrap`, and the engagement statement would
+                then overflow the modal box on a narrow screen. `items-center`
+                keeps the checkbox and its label on the same line.
+              */}
+              <label className="label mt-4 w-full min-w-0 items-center gap-2 whitespace-normal">
+                <input
+                  checked={engaged}
+                  className="checkbox"
+                  disabled={windowClosed}
+                  id="register-engaged"
+                  onChange={(event) => setEngaged(event.target.checked)}
+                  required
+                  type="checkbox"
+                />
+                <span className="text-sm">
+                  Nous confirmons notre participation à ce parcours de nettoyage.
+                </span>
+              </label>
+
+              {/*
+                Anti-bot honeypot (ticket #18): the field is in the DOM — a bot
+                filling every input of the form fills it — but a human never
+                sees it (hidden) and never reaches it (out of the tab order and
+                of the accessibility tree). A filled honeypot is refused by the
+                server with a 400 and nothing is stored.
+              */}
+              <input
+                aria-hidden="true"
+                autoComplete="off"
+                hidden
+                id="register-website"
+                name="website"
+                onChange={(event) => setHoneypot(event.target.value)}
+                tabIndex={-1}
+                type="text"
+                value={honeypot}
+              />
+
+              <p className="text-base-content/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
+
+              {outcomeAlert ? (
+                <div className={outcomeAlert.className} role="alert">
+                  {outcomeAlert.message}
+                </div>
+              ) : null}
+
+              <div className="modal-action">
+                <button
+                  className="btn btn-primary max-sm:btn-sm sm:btn-md"
+                  disabled={!complete || outcome === 'submitting' || windowClosed}
+                  type="submit"
+                >
+                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+      </div>
+    </dialog>
+  );
+}

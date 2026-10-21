@@ -6,7 +6,10 @@ import Link from 'next/link';
 import type * as React from 'react';
 
 import type { Tour, TourType } from '../src/app/tours-queries';
+import type { InscriptionsStatus } from './inscriptions-status-provider';
+import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
+import { TourRegisterButton } from './tour-register-button';
 
 /**
  * Tour list section — port of the legacy Angular `tour-list-section` component
@@ -14,6 +17,27 @@ import { TourPlayButton } from './tour-play-button';
  * badge, "Voir tous les parcours" map link) and one `list-row` per tour with
  * its distance and play button. The legacy `app-tour-list-section` selector is
  * kept as the wrapper element because the E2E suite scopes its locators on it.
+ *
+ * Ticket #16: a Parcours covered by the Édition's inscriptions shows the
+ * « Binôme inscrit » badge once the statuses have loaded after hydration (the
+ * public state carries no names); uncovered rows and the loading/error states
+ * render exactly like before. The badge stands where the register button
+ * would be — next to the play button — so a covered row reads as a single
+ * action slot: the state of the Parcours, then its play button.
+ *
+ * Ticket #17: every uncovered Parcours row also shows the register button
+ * right before the play button. The action slot stays EMPTY while the
+ * statuses are loading and on a fetch error: the coverage is then unknown,
+ * and the site never offers a registration it cannot honor — the same
+ * degraded state as the badge of #16. The gating hides the button through a
+ * prop (rather than unmounting the component) so a modal opened while a row
+ * was uncoverable keeps displaying its confirmation or conflict message once
+ * the row turns covered.
+ *
+ * Ticket #18: a closed registration window (the window closes 3 days before
+ * the action date) hides the register button — the organizers need that time
+ * to print the tracking sheets and organize the day. A covered Parcours
+ * loses its button too, replaced by the « Binôme inscrit » badge.
  */
 
 declare module 'react' {
@@ -35,6 +59,20 @@ function formatDistance(distance: number): string {
   return `${distance.toString().replace('.', ',')} km`;
 }
 
+/** Whether the loaded inscriptions cover the given (zone, Parcours) pair. */
+function isCoveredInscriptions(
+  status: InscriptionsStatus,
+  zoneId: string,
+  tourId: string,
+): boolean {
+  return (
+    status.status === 'success' &&
+    status.state.inscriptions.some(
+      (inscription) => inscription.zoneId === zoneId && inscription.tourId === tourId,
+    )
+  );
+}
+
 interface TourListSectionProps {
   readonly title: string;
   readonly tours: readonly Tour[];
@@ -44,6 +82,24 @@ interface TourListSectionProps {
 
 export function TourListSection({ title, tours, type, zoneId }: TourListSectionProps) {
   const typeIcon = type === 'V' ? BicycleIcon : WalkingIcon;
+  const status = useInscriptionsStatus();
+  /**
+   * Whether the coverage of the rows is known: the action slot (badge or
+   * register button) stays empty until the public state answered, so the
+   * register button never turns into a « Binôme inscrit » badge under the
+   * volunteer's eyes. A failed request leaves the state unknown too, so
+   * neither the badge nor the button is shown: the site never offers a
+   * registration it cannot honor.
+   */
+  const statusKnown = status.status === 'success';
+  /**
+   * Whether the registration window is open, from the ONE rule of the provider
+   * (the server's answer when the public state loaded, the local clock
+   * otherwise): the window closes 3 days before the action date (the
+   * organizers need that time to print the tracking sheets and organize the
+   * day), and the register button disappears with it.
+   */
+  const windowOpen = isRegistrationWindowOpen(status, new Date());
 
   return (
     <app-tour-list-section>
@@ -81,7 +137,16 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             <div className="text-base-content/70 text-base font-light sm:text-xl">
               {formatDistance(tour.distance)}
             </div>
-            <div className="list-col-grow flex justify-end">
+            <div className="list-col-grow flex items-center justify-end gap-2">
+              {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
+                <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
+              ) : null}
+              <TourRegisterButton
+                available={
+                  statusKnown && windowOpen && !isCoveredInscriptions(status, zoneId, tour.name)
+                }
+                tour={{ tourId: tour.name, zoneId }}
+              />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
             </div>
           </li>
