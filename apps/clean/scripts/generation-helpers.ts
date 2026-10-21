@@ -222,6 +222,13 @@ export interface ParcoursInventory {
  * Parcours folders of a Zone (as `generate-start-end-gpx.ts` did). Both
  * patterns agree on the real data, where every Parcours folder is named
  * after the naming rule.
+ *
+ * The Parcours of a Zone are ordered by practice type (P before V) then
+ * by number, the order of the generated catalogue and of the PDF packs.
+ * `generate-start-end-gpx.ts` used to order them by number only, which
+ * left the Parcours sharing a number (a walking and a bike one) in the
+ * order of the directory listing; the shared order makes the run
+ * deterministic, without changing the files it writes.
  */
 export function listParcours(rootDir: string, filters?: GenerationFilters): ParcoursInventory {
   const gpxRoot = gpxRootDir(rootDir);
@@ -298,6 +305,10 @@ export function compareParcoursIds(a: string, b: string): number {
   return parseInt(a.slice(1)) - parseInt(b.slice(1));
 }
 
+/**
+ * Order of the Zones: the order of the generated catalogue (and of the
+ * routing runs), which compares the Zone ids with the locale.
+ */
 function compareZoneIds(a: string, b: string): number {
   return a.localeCompare(b);
 }
@@ -310,16 +321,16 @@ function compareParcoursEntries(a: ParcoursEntry, b: ParcoursEntry): number {
 }
 
 function groupByZone(parcours: readonly ParcoursEntry[]): ZoneParcours[] {
-  const zones: ZoneParcours[] = [];
+  const grouped = new Map<string, ParcoursEntry[]>();
   for (const entry of parcours) {
-    const zone = zones[zones.length - 1];
-    if (zone && zone.zoneId === entry.zoneId) {
-      zones[zones.length - 1] = { zoneId: zone.zoneId, parcours: [...zone.parcours, entry] };
+    const zone = grouped.get(entry.zoneId);
+    if (zone) {
+      zone.push(entry);
       continue;
     }
-    zones.push({ zoneId: entry.zoneId, parcours: [entry] });
+    grouped.set(entry.zoneId, [entry]);
   }
-  return zones;
+  return [...grouped].map(([zoneId, entries]) => ({ zoneId, parcours: entries }));
 }
 
 /**

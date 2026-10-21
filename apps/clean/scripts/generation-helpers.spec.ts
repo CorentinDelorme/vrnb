@@ -1,14 +1,16 @@
-import { mkdirSync, mkdtempSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import {
   geoJsonAssetPath,
   gpxTracePath,
+  isFilterActive,
   legacyGpxTracePath,
   listParcours,
+  matchesFilters,
   parseFilterValues,
   parseGenerationFilters,
   resolveGpxTracePath,
@@ -23,12 +25,15 @@ import {
  * without any network.
  */
 
+const fixtures: string[] = [];
+
 /**
  * Build a temporary tree of empty files: the helpers only look at the
  * names, never at the content.
  */
 function createFixture(files: Record<string, string>): string {
   const rootDir = mkdtempSync(join(tmpdir(), 'vrnb-generation-'));
+  fixtures.push(rootDir);
   for (const [path, content] of Object.entries(files)) {
     const filePath = join(rootDir, path);
     mkdirSync(dirname(filePath), { recursive: true });
@@ -36,6 +41,12 @@ function createFixture(files: Record<string, string>): string {
   }
   return rootDir;
 }
+
+afterEach(() => {
+  for (const rootDir of fixtures.splice(0)) {
+    rmSync(rootDir, { recursive: true, force: true });
+  }
+});
 
 describe('parseFilterValues', () => {
   it('should return undefined when the flag is absent', () => {
@@ -78,6 +89,30 @@ describe('parseGenerationFilters', () => {
     expect(filters.tourIds).toBeDefined();
     expect(filters.tourIds?.size).toBe(0);
     expect(filters.zoneIds).toBeUndefined();
+  });
+});
+
+describe('isFilterActive', () => {
+  it('should treat an absent filter and an empty one as no filter at all', () => {
+    expect(isFilterActive(undefined)).toBe(false);
+    expect(isFilterActive(new Set())).toBe(false);
+    expect(isFilterActive(new Set(['V1']))).toBe(true);
+  });
+});
+
+describe('matchesFilters', () => {
+  it('should keep the Parcours matching both filters', () => {
+    const filters = parseGenerationFilters(['--tour=V1', '--zone=bruz-sud']);
+
+    expect(matchesFilters(filters, 'bruz-sud', 'V1')).toBe(true);
+    expect(matchesFilters(filters, 'bruz-sud', 'V2')).toBe(false);
+    expect(matchesFilters(filters, 'bruz-ker-lann', 'V1')).toBe(false);
+  });
+
+  it('should keep every Parcours when a filter holds no value', () => {
+    const filters = parseGenerationFilters(['--tour=', '--zone=']);
+
+    expect(matchesFilters(filters, 'bruz-ker-lann', 'V30')).toBe(true);
   });
 });
 
