@@ -54,3 +54,6 @@ Thumbs.db
 
 # Generated tile cache for scripts/generate-pdfs.ts (OSM tiles, refetchable)
 scripts/.cache/
+
+# Generated « Fiches de suivi » for scripts/extract-inscriptions.ts (personal data, never deployed)
+scripts/output/
