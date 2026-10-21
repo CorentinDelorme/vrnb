@@ -1,7 +1,7 @@
 import { join } from 'path';
 
 import { parseFilterValues } from './generation-helpers';
-import { runGenerationSteps } from './generation-steps';
+import { runGenerationSteps, selectGenerationSteps } from './generation-steps';
 
 const rootDir = join(import.meta.dirname, '..');
 
@@ -31,15 +31,10 @@ Options:
  * step, so a single Parcours follows the same logic as a full run.
  */
 function selectedSteps(): string[] {
-  const steps: string[] = [];
-  if (!hasFlag('--skip-routes')) {
-    steps.push('generate-start-end-gpx.ts');
-  }
-  if (!hasFlag('--skip-tours')) {
-    steps.push('generate-tours.ts');
-  }
-  steps.push('generate-pdfs.ts');
-  return steps;
+  return selectGenerationSteps({
+    skipRoutes: hasFlag('--skip-routes'),
+    skipTours: hasFlag('--skip-tours'),
+  });
 }
 
 function main(): void {

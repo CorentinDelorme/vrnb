@@ -21,6 +21,29 @@ export const GENERATION_STEPS = [
 ] as const;
 
 /**
+ * The steps of a run that skips some of them.
+ *
+ * A single Parcours or a single Zone runs the same steps as a full
+ * generation, minus the ones the referent asked to skip.
+ */
+export function selectGenerationSteps(options: {
+  /** Whether the routing of the start and end segments is skipped. */
+  readonly skipRoutes: boolean;
+  /** Whether the refresh of the catalogue is skipped. */
+  readonly skipTours: boolean;
+}): string[] {
+  const steps: string[] = [];
+  if (!options.skipRoutes) {
+    steps.push('generate-start-end-gpx.ts');
+  }
+  if (!options.skipTours) {
+    steps.push('generate-tours.ts');
+  }
+  steps.push('generate-pdfs.ts');
+  return steps;
+}
+
+/**
  * Run the steps of the pipeline, one after the other, streaming their
  * output.
  *
