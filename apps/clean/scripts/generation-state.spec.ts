@@ -4,10 +4,13 @@ import { dirname, join } from 'path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { listParcours } from './generation-helpers';
 import {
   GENERATION_STATE_VERSION,
   fingerprintFile,
+  fingerprintParcoursFiles,
   generationStatePath,
+  nextGenerationState,
   readGenerationState,
   writeGenerationState,
 } from './generation-state';
@@ -76,6 +79,72 @@ describe('generationStatePath', () => {
   });
 });
 
+describe('fingerprintParcoursFiles', () => {
+  it('should fingerprint the trace and the two segments of a Parcours', () => {
+    const rootDir = createFixture({
+      'public/gpx/bruz-sud/V1/V1.gpx': 'trace',
+      'public/gpx/bruz-sud/V1/V1_start.gpx': 'start',
+      'public/gpx/bruz-sud/V1/V1_end.gpx': 'end',
+    });
+    const entry = listParcours(rootDir).parcours[0];
+
+    expect(fingerprintParcoursFiles(entry!)).toEqual({
+      trace: fingerprintFile(join(rootDir, 'public/gpx/bruz-sud/V1/V1.gpx')),
+      startSegment: fingerprintFile(join(rootDir, 'public/gpx/bruz-sud/V1/V1_start.gpx')),
+      endSegment: fingerprintFile(join(rootDir, 'public/gpx/bruz-sud/V1/V1_end.gpx')),
+    });
+  });
+
+  it('should tell a missing segment from a known one', () => {
+    const rootDir = createFixture({ 'public/gpx/bruz-sud/V1/V1.gpx': 'trace' });
+    const entry = listParcours(rootDir).parcours[0];
+
+    expect(fingerprintParcoursFiles(entry!).startSegment).toBeUndefined();
+    expect(fingerprintParcoursFiles(entry!).trace).toBeDefined();
+  });
+});
+
+describe('nextGenerationState', () => {
+  it('should record the fingerprints of a Parcours the run regenerated', () => {
+    const state = nextGenerationState(
+      { version: GENERATION_STATE_VERSION, parcours: { 'bruz-sud/V1': { trace: 'old' } } },
+      [{ key: 'bruz-sud/V1', record: { trace: 'new', startSegment: 'start', endSegment: 'end' } }],
+    );
+
+    expect(state.parcours['bruz-sud/V1']).toEqual({
+      trace: 'new',
+      startSegment: 'start',
+      endSegment: 'end',
+    });
+  });
+
+  it('should drop a Parcours the run failed on, so the next run tries it again', () => {
+    const state = nextGenerationState(
+      { version: GENERATION_STATE_VERSION, parcours: { 'bruz-sud/V1': { trace: 'old' } } },
+      [{ key: 'bruz-sud/V1' }],
+    );
+
+    expect(state.parcours['bruz-sud/V1']).toBeUndefined();
+  });
+
+  it('should leave the Parcours the run did not touch untouched', () => {
+    const state = nextGenerationState(
+      { version: GENERATION_STATE_VERSION, parcours: { 'bruz-sud/V2': { trace: 'kept' } } },
+      [{ key: 'bruz-sud/V1', record: { trace: 'new' } }],
+    );
+
+    expect(state.parcours['bruz-sud/V2']).toEqual({ trace: 'kept' });
+    expect(state.parcours['bruz-sud/V1']).toEqual({ trace: 'new' });
+  });
+
+  it('should write the current version of the state', () => {
+    const state = nextGenerationState(undefined, []);
+
+    expect(state.version).toBe(GENERATION_STATE_VERSION);
+    expect(state.parcours).toEqual({});
+  });
+});
+
 describe('writeGenerationState', () => {
   it('should write the version and the records of every Parcours', () => {
     const rootDir = createFixture({});
@@ -108,6 +177,36 @@ describe('writeGenerationState', () => {
     expect(JSON.parse(readFileSync(statePath, 'utf-8')).parcours['bruz-sud/V1']).toEqual({
       trace: 'trace-v1',
     });
+  });
+
+  it('should leave the state file untouched when the state did not change', () => {
+    const rootDir = createFixture({});
+    const statePath = join(rootDir, 'generation-state.json');
+    const state = {
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace-v1' } },
+    };
+
+    writeGenerationState(statePath, state);
+    const written = writeGenerationState(statePath, state);
+
+    expect(written).toBe(false);
+  });
+
+  it('should write the state file when the state changed', () => {
+    const rootDir = createFixture({});
+    const statePath = join(rootDir, 'generation-state.json');
+
+    writeGenerationState(statePath, {
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace-v1' } },
+    });
+    const written = writeGenerationState(statePath, {
+      version: GENERATION_STATE_VERSION,
+      parcours: { 'bruz-sud/V1': { trace: 'trace-v2' } },
+    });
+
+    expect(written).toBe(true);
   });
 });
 

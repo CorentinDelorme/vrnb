@@ -17,8 +17,11 @@
  */
 
 import { createHash } from 'crypto';
-import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync } from 'fs';
 import { dirname, join } from 'path';
+
+import type { ParcoursEntry } from './generation-helpers';
+import { writeFileIfChanged } from './generation-helpers';
 
 /**
  * Version of the generation state: the single source of truth of what the
@@ -58,6 +61,27 @@ export interface GenerationState {
   readonly parcours: Readonly<Record<string, ParcoursGenerationRecord>>;
 }
 
+/** The fingerprints of the files of a Parcours, as found on the disk. */
+export interface ParcoursFingerprints {
+  /** Fingerprint of the source trace, `undefined` when the file is missing. */
+  readonly trace: string | undefined;
+  /** Fingerprint of the start segment, `undefined` when the file is missing. */
+  readonly startSegment: string | undefined;
+  /** Fingerprint of the end segment, `undefined` when the file is missing. */
+  readonly endSegment: string | undefined;
+}
+
+/** What the pipeline produced for a Parcours during a run. */
+export interface ParcoursStateUpdate {
+  /** Key of the Parcours (`<zone>/<parcours>`). */
+  readonly key: string;
+  /**
+   * The new record of the Parcours, `undefined` when the run failed: a
+   * Parcours that failed is not marked as up to date.
+   */
+  readonly record?: ParcoursGenerationRecord;
+}
+
 /** Key of a Parcours in the state: `<zone>/<parcours>`. */
 export function parcoursStateKey(zoneId: string, tourId: string): string {
   return `${zoneId}/${tourId}`;
@@ -81,6 +105,43 @@ export function fingerprintFile(path: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * The fingerprints of the files of a Parcours, as they are on the disk: its
+ * source trace and its two segments.
+ */
+export function fingerprintParcoursFiles(entry: ParcoursEntry): ParcoursFingerprints {
+  return {
+    trace: fingerprintFile(entry.tracePath),
+    startSegment: fingerprintFile(entry.startSegmentPath),
+    endSegment: fingerprintFile(entry.endSegmentPath),
+  };
+}
+
+/**
+ * The state of the next run.
+ *
+ * The records of the Parcours the run regenerated hold their new
+ * fingerprints, the records of the Parcours the run failed on are dropped
+ * (so the next run tries them again), and the records of the other
+ * Parcours are left untouched.
+ */
+export function nextGenerationState(
+  state: GenerationState | undefined,
+  updates: readonly ParcoursStateUpdate[],
+): GenerationState {
+  const records: Record<string, ParcoursGenerationRecord> = { ...state?.parcours };
+
+  for (const update of updates) {
+    if (!update.record) {
+      delete records[update.key];
+      continue;
+    }
+    records[update.key] = update.record;
+  }
+
+  return { version: GENERATION_STATE_VERSION, parcours: records };
 }
 
 /**
@@ -113,10 +174,17 @@ export function readGenerationState(path: string): GenerationState | undefined {
   return { version: raw.version, parcours };
 }
 
-/** Write the generation state, creating its folder when needed. */
-export function writeGenerationState(path: string, state: GenerationState): void {
+/**
+ * Write the generation state, creating its folder when needed.
+ *
+ * The file is written only when its content changes, so a run that
+ * regenerated nothing leaves the repository untouched.
+ *
+ * Returns whether the file was written.
+ */
+export function writeGenerationState(path: string, state: GenerationState): boolean {
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`);
+  return writeFileIfChanged(path, `${JSON.stringify(state, null, 2)}\n`);
 }
 
 function readRecord(record: Record<string, unknown>): ParcoursGenerationRecord {

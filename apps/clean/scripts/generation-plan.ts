@@ -24,7 +24,7 @@
 
 import type { GenerationFilters } from './generation-helpers';
 import { matchesFilters } from './generation-helpers';
-import type { GenerationState } from './generation-state';
+import type { GenerationState, ParcoursFingerprints } from './generation-state';
 import { parcoursStateKey } from './generation-state';
 
 /** Why the plan decided what it decided for a Parcours. */
@@ -47,14 +47,7 @@ export type GenerationReason =
   | 'unchanged';
 
 /** The fingerprints of the files of a Parcours, as found on the disk. */
-export interface ParcoursFingerprints {
-  /** Fingerprint of the source trace, `undefined` when the file is missing. */
-  readonly trace: string | undefined;
-  /** Fingerprint of the start segment, `undefined` when the file is missing. */
-  readonly startSegment: string | undefined;
-  /** Fingerprint of the end segment, `undefined` when the file is missing. */
-  readonly endSegment: string | undefined;
-}
+export type { ParcoursFingerprints } from './generation-state';
 
 /** A Parcours of the run, with the fingerprints of its files. */
 export interface PlanCandidate {

@@ -14,7 +14,9 @@ import {
   geoJsonRootDir,
   isFilterActive,
   listParcours,
+  parseForceFlag,
   parseGenerationFilters,
+  writeFileIfChanged,
 } from './generation-helpers';
 
 const rootDir = join(import.meta.dirname, '..');
@@ -91,23 +93,34 @@ function readTourDistances(entry: ParcoursEntry): GeneratedTour {
 }
 
 /**
- * Emit the precomputed GeoJSON asset for a tour (public/geojson/<zone>/<tour>
- * .geojson): the route plus the start/end segments, each feature tagged with
- * its role, so maps fetch precomputed data at runtime instead of parsing GPX.
+ * The content of the precomputed GeoJSON asset of a Parcours
+ * (public/geojson/<zone>/<tour>.geojson): the route plus the start/end
+ * segments, each feature tagged with its role, so maps fetch precomputed
+ * data at runtime instead of parsing GPX.
  */
-function emitTourGeoJson(entry: ParcoursEntry): void {
+function buildTourGeoJson(entry: ParcoursEntry): string {
   const asset = buildTourGeoJsonAsset({
     start: readGpxCollection(entry.startSegmentPath),
     tour: readGpxCollection(entry.tracePath),
     end: readGpxCollection(entry.endSegmentPath),
   });
 
-  const outputDir = join(geoJsonRootDir(rootDir), entry.zoneId);
+  return `${JSON.stringify(asset)}\n`;
+}
+
+/**
+ * Write the precomputed GeoJSON asset of a Parcours, when its content
+ * changed.
+ *
+ * Returns whether the asset was written.
+ */
+function emitTourGeoJson(entry: ParcoursEntry): boolean {
   try {
+    const outputDir = join(geoJsonRootDir(rootDir), entry.zoneId);
     mkdirSync(outputDir, { recursive: true });
-    writeFileSync(
+    return writeFileIfChanged(
       geoJsonAssetPath(rootDir, entry.zoneId, entry.tourId),
-      `${JSON.stringify(asset)}\n`,
+      buildTourGeoJson(entry),
     );
   } catch (error) {
     throw new Error(
@@ -134,8 +147,31 @@ function mergeTours(existing: GeneratedTour[], fresh: GeneratedTour[]): Generate
   return [...kept, ...fresh].sort(sortTours);
 }
 
+/** Whether two lists of Parcours hold the same data. */
+function sameTours(a: readonly GeneratedTour[], b: readonly GeneratedTour[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((tour, index) => {
+      const other = b[index];
+      return (
+        other !== undefined &&
+        tour.name === other.name &&
+        tour.distance === other.distance &&
+        tour.startDistance === other.startDistance &&
+        tour.endDistance === other.endDistance &&
+        tour.zoneId === other.zoneId
+      );
+    })
+  );
+}
+
 const filters = parseGenerationFilters(process.argv);
+const force = parseForceFlag(process.argv);
 const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
+
+if (force) {
+  console.log('Force mode: the catalogue and the GeoJSON assets are regenerated anyway.');
+}
 
 const inventory = listParcours(rootDir, filters);
 const zoneIds = inventory.zoneIds;
@@ -153,11 +189,16 @@ const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTour
 const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
 
 // Emit precomputed GeoJSON for every freshly computed tour only; tours kept
-// by the --tour/--zone merge keep their existing asset untouched.
+// by the --tour/--zone merge keep their existing asset untouched. The asset
+// is written only when its content changed, so a run that changed nothing
+// leaves no diff behind.
 let emitFailures = 0;
+let emitted = 0;
 for (const entry of inventory.parcours) {
   try {
-    emitTourGeoJson(entry);
+    if (emitTourGeoJson(entry)) {
+      emitted += 1;
+    }
   } catch (error) {
     emitFailures += 1;
     console.error(`fail ${entry.tourId}: ${error instanceof Error ? error.message : error}`);
@@ -174,8 +215,17 @@ export const toursData = {
 };
 `;
 
-writeFileSync(outputFile, content);
+// The catalogue is written only when the data of the Parcours changed.
+if (sameTours(toursData.vTours, vTours) && sameTours(toursData.pTours, pTours)) {
+  console.log('Tours data unchanged: src/app/tours-data.ts left as is.');
+} else {
+  writeFileSync(outputFile, content);
+  console.log('Updated src/app/tours-data.ts.');
+}
+
 console.log(
   `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
 );
-console.log(`Emitted ${inventory.parcours.length} precomputed GeoJSON files under public/geojson/`);
+console.log(
+  `Emitted ${emitted} precomputed GeoJSON file(s) under public/geojson/ (${inventory.parcours.length} computed)`,
+);
