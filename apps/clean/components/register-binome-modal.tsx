@@ -28,7 +28,7 @@ import { useInscriptionsReload, useInscriptionsStatus } from './inscriptions-sta
 
 /**
  * DaisyUI registration modal of one Parcours (tickets #17 + #18): it shows the
- * selected tour context — Parcours name, Zone, action date and the Zone
+ * selected tour context — Zone name, Parcours name, action date and the Zone
  * meeting point — and collects the two Binôme identities plus the required
  * engagement statement. `showModal()` is called by effect when the host makes
  * it visible, and the dialog answers its native `close` event (X button,
@@ -105,7 +105,7 @@ const CLOSED_WINDOW_MESSAGE = "L'action est passée — les inscriptions sont cl
  * Built as a single string: the JSX compiler would glue the number to the
  * following text when the text carries an HTML entity (spacing pitfall).
  */
-const GDPR_NOTICE = `Vos noms servent à établir les fiches de suivi de l'action. Les données sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
+const GDPR_NOTICE = `Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
 
 /** The explicit French feedback of each refusal of the server (ticket #18). */
 const OUTCOME_ALERTS: Readonly<
@@ -214,7 +214,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
 
   return (
     <dialog className="modal" id={`register_modal_${tour.tourId}`} ref={dialogRef}>
-      <div className="modal-box">
+      <div className="modal-box max-h-[90dvh] w-11/12 max-w-md overflow-y-auto sm:max-w-xl">
         <form method="dialog">
           <button
             aria-label="Fermer"
@@ -226,8 +226,8 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
 
         <h3 className="text-xl font-bold">Inscription du Binôme</h3>
         <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
-          Parcours <span className="text-base-content font-medium">{tour.tourId}</span> — Zone{' '}
-          <span className="text-base-content font-medium">{zone.name}</span>
+          Zone <span className="text-base-content font-medium">{zone.name}</span> — Parcours{' '}
+          <span className="text-base-content font-medium">{tour.tourId}</span>
         </p>
 
         {outcome === 'created' ? (
@@ -271,9 +271,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                   strokeWidth={1.5}
                   className="text-secondary mt-0.5 size-5 shrink-0"
                 />
-                <span>
-                  Point de rendez-vous&nbsp;: {zone.meetingPoint.name} ({zone.name})
-                </span>
+                <span>Point de rendez-vous&nbsp;: {zone.meetingPoint.name}</span>
               </div>
             </div>
 
@@ -284,7 +282,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
             ) : null}
 
             <form className="mt-4 grid gap-3" onSubmit={(event) => void submit(event)}>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
                 {IDENTITY_INPUTS.map((field) => {
                   const error = errors[field.key];
                   // A missing name is only pointed out once the field has been
@@ -292,12 +290,12 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                   const showError =
                     error !== undefined && (error !== 'required' || touched[field.key] === true);
                   return (
-                    <label className="grid gap-1" htmlFor={field.id} key={field.id}>
+                    <label className="grid min-w-0 gap-1" htmlFor={field.id} key={field.id}>
                       <span className="text-sm">{IDENTITY_FIELD_LABELS[field.key]}</span>
                       <input
                         aria-describedby={showError ? `${field.id}-error` : undefined}
                         aria-invalid={showError ? true : undefined}
-                        className="input w-full"
+                        className="input w-full min-w-0"
                         disabled={windowClosed}
                         id={field.id}
                         onBlur={() => setTouched((current) => ({ ...current, [field.key]: true }))}
@@ -318,7 +316,12 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                 })}
               </div>
 
-              <label className="label mt-4 items-start gap-2">
+              {/*
+                `whitespace-normal` is mandatory: the DaisyUI `.label` class
+                sets `white-space: nowrap`, and the engagement statement would
+                then overflow the modal box on a narrow screen.
+              */}
+              <label className="label mt-4 w-full min-w-0 items-start gap-2 whitespace-normal">
                 <input
                   checked={engaged}
                   className="checkbox mt-0.5"
@@ -329,7 +332,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                   type="checkbox"
                 />
                 <span className="text-sm">
-                  Nous nous engageons à participer ensemble au nettoyage de ce parcours.
+                  Nous confirmons notre participation à ce parcours de nettoyage.
                 </span>
               </label>
 

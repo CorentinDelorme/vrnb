@@ -104,7 +104,7 @@ function fillBinome(): void {
   for (const [index, input] of identityInputs().entries()) {
     fireEvent.change(input, { target: { value: values[index] } });
   }
-  fireEvent.click(screen.getByRole('checkbox', { name: /engageons/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /confirmons notre participation/ }));
 }
 
 /** The hidden anti-bot honeypot of the modal. */
@@ -121,14 +121,18 @@ describe('RegisterBinomeModal', () => {
     status.current = OPEN_STATUS;
   });
 
-  it('should show the tour context: Parcours, Zone, action day, meeting point', () => {
+  it('should show the tour context: Zone, Parcours, action day, meeting point', () => {
     renderModal();
-    const context = screen.getByText(/Parcours/).textContent ?? '';
-    expect(context).toContain('V1');
+    const context = screen.getByText(/Zone/).textContent ?? '';
+    // The Zone comes first, then the Parcours: « Zone Bruz Sud — Parcours V1 ».
     expect(context).toContain('Bruz Sud');
+    expect(context).toContain('V1');
+    expect(context.indexOf('Bruz Sud')).toBeLessThan(context.indexOf('V1'));
     expect(screen.getByText(/Jour de l'action/).textContent).toContain('14 février 2027');
     expect(screen.getAllByText(/Point de rendez-vous/).length).toBeGreaterThan(0);
+    // The meeting point is named without repeating the Zone.
     expect(screen.getByText(/Point de rendez-vous/).textContent).toContain('Place du Dr Joly');
+    expect(screen.getByText(/Point de rendez-vous/).textContent).not.toContain('Bruz Sud');
   });
 
   it('should keep the submit disabled until the form is complete', () => {
@@ -176,7 +180,7 @@ describe('RegisterBinomeModal', () => {
     fireEvent.change(identityInputs()[1]!, { target: { value: 'Dupont' } });
     fireEvent.change(identityInputs()[2]!, { target: { value: 'Marc' } });
     fireEvent.change(identityInputs()[3]!, { target: { value: 'Martin' } });
-    fireEvent.click(screen.getByRole('checkbox', { name: /engageons/ }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /confirmons notre participation/ }));
     mocks.postRegistration.mockResolvedValueOnce({ status: 'created' });
 
     fireEvent.click(submitButton());
@@ -305,7 +309,7 @@ describe('RegisterBinomeModal honeypot and GDPR notice', () => {
     renderModal();
     const notice = screen.getByText(/fiches de suivi/).textContent ?? '';
 
-    expect(notice).toContain("Vos noms servent à établir les fiches de suivi de l'action.");
+    expect(notice).toContain("Vos informations servent à établir les fiches de suivi de l'action.");
     expect(notice).toContain('Les données sont effacées 90 jours après l');
   });
 });
@@ -329,9 +333,10 @@ describe('RegisterBinomeModal closed window', () => {
     for (const input of identityInputs()) {
       expect(input.disabled).toBe(true);
     }
-    expect((screen.getByRole('checkbox', { name: /engageons/ }) as HTMLInputElement).disabled).toBe(
-      true,
-    );
+    expect(
+      (screen.getByRole('checkbox', { name: /confirmons notre participation/ }) as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
     expect(submitButton().disabled).toBe(true);
   });
 
