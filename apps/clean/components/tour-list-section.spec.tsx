@@ -83,3 +83,70 @@ describe('TourListSection inscriptions badge', () => {
     );
   });
 });
+
+/**
+ * The register buttons of ticket #17: one per uncovered Parcours next to the
+ * play button, hidden on the covered rows and on the rows of a closed
+ * registration window. Loading and error states are the unknown-coverage
+ * (open) state of #16, so the buttons stay offered there.
+ */
+describe('TourListSection inscriptions register button', () => {
+  /** Render with the given status and return the RTL result. */
+  function renderSection(next: InscriptionsStatus) {
+    setStatus(next);
+    return render(
+      <TourListSection title="Parcours à vélo" type="V" tours={TOURS} zoneId="bruz-sud" />,
+    );
+  }
+
+  beforeEach(() => {
+    push.mockClear();
+    status.current = { status: 'loading' };
+  });
+
+  it('should offer the register button on every row before statuses load or resolve', () => {
+    for (const pending of [{ status: 'loading' }, { status: 'error' }] as const) {
+      const { container, unmount } = renderSection(pending as InscriptionsStatus);
+      expect(
+        container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]'),
+      ).toHaveLength(TOURS.length);
+      unmount();
+    }
+  });
+
+  it('should offer the register button on uncovered rows of an open window only', () => {
+    const { container } = renderSection(SUCCESS);
+    // V1 is covered (badge), every other bike tour is uncovered:
+    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+      row.textContent?.includes('V1'),
+    );
+    const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+      row.textContent?.includes('V2'),
+    );
+    expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en binôme"]')).toBeNull();
+    expect(
+      v2Row?.querySelector('button[aria-label="S\'inscrire en binôme pour le parcours V2"]'),
+    ).not.toBeNull();
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+      TOURS.length - 1,
+    );
+  });
+
+  it('should hide every register button once the window is closed', () => {
+    const { container } = renderSection({
+      state: {
+        edition: { actionDate: '2027-02-14', year: 2027 },
+        inscriptions: [],
+        registrationOpen: false,
+      },
+      status: 'success',
+    });
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+      0,
+    );
+    // The play buttons stay: the closed window never touches the legacy DOM.
+    expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(
+      TOURS.length,
+    );
+  });
+});

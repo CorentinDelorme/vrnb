@@ -9,6 +9,7 @@ import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { useInscriptionsStatus } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
+import { TourRegisterButton } from './tour-register-button';
 
 /**
  * Tour list section — port of the legacy Angular `tour-list-section` component
@@ -21,6 +22,15 @@ import { TourPlayButton } from './tour-play-button';
  * « Binôme inscrit » badge next to its title once the statuses have loaded
  * after hydration (the public state carries no names); uncovered rows and the
  * loading/error states render exactly like before.
+ *
+ * Ticket #17: every uncovered Parcours row whose registration window is open
+ * also shows the register button right before the play button. While the
+ * statuses are loading (or on a fetch error) the coverage is unknown, and the
+ * unknown tours stay open for registration — exactly the badge-less state of
+ * #16, so a late-covered row is resolved by the modal's own 409 race guard.
+ * The gating hides the button through a prop (rather than unmounting the
+ * component) so a modal opened while a row was uncoverable keeps displaying
+ * its confirmation or conflict message once the row turns covered.
  */
 
 declare module 'react' {
@@ -54,6 +64,15 @@ function isCoveredInscriptions(
       (inscription) => inscription.zoneId === zoneId && inscription.tourId === tourId,
     )
   );
+}
+
+/**
+ * Whether registering is allowed for a row of unknown status. Once loaded, a
+ * closed window answer hides the buttons of every uncovered row; before that
+ * (loading or error) the coverage is unknown and the button stays offered.
+ */
+function isRegisteringOpen(status: InscriptionsStatus): boolean {
+  return status.status !== 'success' || status.state.registrationOpen;
 }
 
 interface TourListSectionProps {
@@ -109,6 +128,12 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               {formatDistance(tour.distance)}
             </div>
             <div className="list-col-grow flex justify-end">
+              <TourRegisterButton
+                available={
+                  !isCoveredInscriptions(status, zoneId, tour.name) && isRegisteringOpen(status)
+                }
+                tour={{ tourId: tour.name, zoneId }}
+              />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
             </div>
           </li>

@@ -1,11 +1,11 @@
 /**
- * Browser client of the public inscriptions state — fetches the relative
+ * Browser client of the inscriptions endpoints — fetches the relative
  * `GET /api/inscriptions` URL and deserializes the response into the trichotomy
  * the home provider consumes: `loading` before the request resolves (handled by
  * the provider) and a success/error outcome afterwards. Pure module with an
  * injectable fetch, so unit tests script the exchange without a network.
  * Ticket #17 reuses `fetchInscriptionsOutcome` (and its URL constant) when
- * registering a Binôme.
+ * registering a Binôme, and adds the POST side with the same seams.
  */
 
 import type { TourRef } from '../tours-queries';
@@ -20,8 +20,11 @@ export type InscriptionsOutcome =
   | { readonly state: InscriptionsPublicState; readonly status: 'success' }
   | { readonly status: 'error' };
 
-/** Injectable fetch (defaults to the browser one). */
-export type ClientFetch = (input: URL | string) => Promise<Response>;
+/**
+ * Injectable fetch (defaults to the browser one), for the statuses GET and
+ * the registration POST alike.
+ */
+export type ClientFetch = (input: URL | string, init?: RequestInit) => Promise<Response>;
 
 /**
  * Fetch and deserialize the public inscriptions state. A failing HTTP status,
@@ -72,4 +75,72 @@ function isTourRef(value: unknown): value is TourRef {
   if (value === null || typeof value !== 'object') return false;
   const { tourId, zoneId } = value as { tourId?: unknown; zoneId?: unknown };
   return typeof tourId === 'string' && tourId !== '' && typeof zoneId === 'string' && zoneId !== '';
+}
+
+/** Registration a Binôme submits from the home page (identity + context). */
+export interface BinomeRegistration {
+  readonly firstName1: string;
+  readonly firstName2: string;
+  readonly lastName1: string;
+  readonly lastName2: string;
+  readonly tourId: string;
+  readonly zoneId: string;
+}
+
+/**
+ * Outcome of a registration POST, the mirror of the handler's contract:
+ * `created` (201), `taken` (409 — the Parcours is covered), `invalid` (400 —
+ * the form is not acceptable) and `error` (anything else: 500, network
+ * failure). Distinct enough for the modal's basic feedback; per-status
+ * messaging is ticket #18's scope.
+ */
+export type RegistrationOutcome =
+  | { readonly status: 'created' }
+  | { readonly status: 'taken' }
+  | { readonly status: 'invalid' }
+  | { readonly status: 'error' };
+
+/**
+ * Exact JSON body of `POST /api/inscriptions` — the single source of the
+ * contract keys on the client side. `engaged` is always `true` (the checkbox
+ * gates the submit call) and `honeypot` is always an empty string for this
+ * ticket (the anti-bot enforcement is ticket #18; the server accepts the
+ * shape today).
+ */
+export function registrationRequestBody(registration: BinomeRegistration): string {
+  return JSON.stringify({
+    engaged: true,
+    firstName1: registration.firstName1,
+    firstName2: registration.firstName2,
+    honeypot: '',
+    lastName1: registration.lastName1,
+    lastName2: registration.lastName2,
+    tourId: registration.tourId,
+    zoneId: registration.zoneId,
+  });
+}
+
+/**
+ * Post a Binôme registration and deserialize the handler's status codes into
+ * the outcome above. A malformed or missing 201 body does not change the
+ * `created` outcome: the status code, not the body, carries the result (and
+ * no personal name is ever expected back).
+ */
+export async function postRegistration(
+  registration: BinomeRegistration,
+  fetchImpl: ClientFetch = fetch,
+): Promise<RegistrationOutcome> {
+  try {
+    const response = await fetchImpl(INSCRIPTIONS_API_URL, {
+      body: registrationRequestBody(registration),
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      method: 'POST',
+    });
+    if (response.status === 201) return { status: 'created' };
+    if (response.status === 409) return { status: 'taken' };
+    if (response.status === 400) return { status: 'invalid' };
+    return { status: 'error' };
+  } catch {
+    return { status: 'error' };
+  }
 }

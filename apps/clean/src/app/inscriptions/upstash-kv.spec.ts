@@ -317,3 +317,116 @@ describe('createUpstashInscriptionsStore', () => {
     expect(rest.calls).toHaveLength(0);
   });
 });
+
+/**
+ * The write port (`SET key value NX EX`, ticket #17): one REST call with the
+ * value sized to fit in the request body and the `SET` options as query
+ * parameters — serialization verified against Upstash (`?nx=true` is refused
+ * with `ERR syntax error`, the bare `?NX&EX=<seconds>` form is the accepted
+ * one).
+ */
+describe('createUpstashInscriptionsStore — setIfAbsent', () => {
+  /** Envelope of a successful SET (Redis `OK` reply). */
+  const okReply = { payload: { error: null, result: 'OK' } } as const;
+  /** Envelope of a SET refused by NX (the key already exists): `result: null`. */
+  const nullReply = { payload: { error: null, result: null } } as const;
+
+  it('should send a single POST SET command with the value as the body', async () => {
+    const rest = createScriptedRestFetch();
+    rest.enqueue(okReply);
+
+    const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
+    const stored = await store.setIfAbsent(
+      'inscriptions:2027:bruz-sud:V1',
+      '{"firstName1":"Léa"}',
+      8859600,
+    );
+
+    expect(stored).toBe(true);
+    expect(rest.calls).toHaveLength(1);
+    expect(rest.calls[0]?.url).toBe(
+      'https://rest-upstash.example/set/inscriptions%3A2027%3Abruz-sud%3AV1?NX&EX=8859600',
+    );
+    expect(rest.calls[0]?.init?.method).toBe('POST');
+    expect(rest.calls[0]?.init?.body).toBe('{"firstName1":"Léa"}');
+  });
+
+  it('should keep the Bearer authorization on the SET call', async () => {
+    const rest = createScriptedRestFetch();
+    rest.enqueue(okReply);
+
+    const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
+    await store.setIfAbsent('inscriptions:2027:z:A', '{}', 60);
+    expect(new Headers(rest.calls[0]?.init?.headers).get('authorization')).toBe(
+      'Bearer rest-token',
+    );
+  });
+
+  it('should round the TTL up to whole positive seconds', async () => {
+    const rest = createScriptedRestFetch();
+    rest.enqueue(okReply);
+
+    const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
+    await store.setIfAbsent('inscriptions:2027:z:A', '{}', 119.2);
+    expect(rest.calls[0]?.url).toContain('?NX&EX=120');
+
+    const restZero = createScriptedRestFetch();
+    restZero.enqueue(okReply);
+    const storeZero = createUpstashInscriptionsStore(CONFIG, restZero.fetchImpl);
+    await storeZero.setIfAbsent('inscriptions:2027:z:A', '{}', 0);
+    expect(restZero.calls[0]?.url).toContain('?NX&EX=1');
+  });
+
+  it('should map the OK envelope to a successful reservation', async () => {
+    const rest = createScriptedRestFetch();
+    rest.enqueue(okReply);
+    const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
+    expect(await store.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).toBe(true);
+  });
+
+  it('should map the null envelope of an NX miss to a lost reservation', async () => {
+    const rest = createScriptedRestFetch();
+    rest.enqueue(nullReply);
+    const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
+    expect(await store.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).toBe(false);
+  });
+
+  it('should reject on an error envelope or an unreadable SET reply', async () => {
+    const rest = createScriptedRestFetch();
+    rest.enqueue({ payload: { error: 'ERR syntax error' } });
+    const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
+    await expect(store.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).rejects.toThrow(
+      'Upstash REST command failed on /set/inscriptions',
+    );
+
+    const restWeird = createScriptedRestFetch();
+    restWeird.enqueue({ payload: { error: null, result: 42 } });
+    const storeWeird = createUpstashInscriptionsStore(CONFIG, restWeird.fetchImpl);
+    await expect(storeWeird.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).rejects.toThrow(
+      'not OK nor null',
+    );
+  });
+
+  it('should reject on an HTTP error status or a failed fetch', async () => {
+    const rest = createScriptedRestFetch();
+    rest.enqueue({ status: 401 });
+    const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
+    await expect(store.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).rejects.toThrow('HTTP 401');
+
+    const restDown = createScriptedRestFetch();
+    restDown.enqueue({ throws: 'network down' });
+    const storeDown = createUpstashInscriptionsStore(CONFIG, restDown.fetchImpl);
+    await expect(storeDown.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).rejects.toThrow(
+      'network down',
+    );
+  });
+
+  it('should fail per call when the REST credentials are missing', async () => {
+    const rest = createScriptedRestFetch();
+    const store = createUpstashInscriptionsStore({ token: '', url: '' }, rest.fetchImpl);
+    await expect(store.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).rejects.toThrow(
+      'UPSTASH_REDIS_REST_URL',
+    );
+    expect(rest.calls).toHaveLength(0);
+  });
+});
