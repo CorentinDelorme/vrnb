@@ -54,7 +54,7 @@ mobile`: expected count 34 → 47.** Stale assertion, not a migration change: co
 
 Totals: **95 tests per browser** (88 original + 7 added) × chromium + firefox = **190**.
 
-Inscriptions feature additions (ticket #16, no parity impact — DOM contract unchanged):
+Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, the legacy DOM contract is unchanged):
 
 3. **`Public inscriptions statuses` (3 tests)**: the covered Parcours of the Édition shows a
    « Binôme inscrit » badge, obtained after hydration from `GET /api/inscriptions`; that endpoint is
@@ -76,9 +76,7 @@ Inscriptions feature additions (ticket #16, no parity impact — DOM contract un
    would. The register button stays on the uncovered rows of a closed window (only a covered
    Parcours loses its button), so the play-button contract (47) stays unchanged too.
 
-Totals: **108 tests per browser** (102 after tickets #16 and #17, + 6 for ticket #18) × chromium
-
-- firefox = **216**.
+Totals: **108 tests per browser** (102 after tickets #16 and #17, + 6 for ticket #18) × chromium + firefox = **216**.
 
 ---
 
@@ -144,6 +142,10 @@ registration and registration window)
 > `GET /api/inscriptions` is intercepted with `page.route` in every test of this
 > file (both browsers), so the dev server needs no KV credentials. The POST
 > direction is scripted through the same `page.route` handler, assert by assert.
+>
+> The Inscriptions API itself and the Upstash KV adapter are not exercised here:
+> they are covered by the unit suite (`src/app/inscriptions/*.spec.ts`), and the
+> referent extraction script by `scripts/inscriptions-extract.spec.ts`.
 >
 > The « after the action date » cases fix the browser clock with
 > `page.clock.setFixedTime(new Date('2027-02-20T09:00:00Z'))` **before** the
@@ -455,6 +457,8 @@ test('should have no a11y violations on home page', async ({ page }) => {
 | Tour row                      | `li.list-row`                                                   |
 | Tour play button              | `button[aria-label="Lancer le parcours"]`                       |
 | Register button               | `button[aria-label="S'inscrire en binôme pour le parcours V2"]` |
+| Covered Parcours badge        | `.badge-success` with text "Binôme inscrit"                     |
+| Registration modal            | `dialog#register_modal_V2` (`getByRole('dialog')`)              |
 | Anti-bot honeypot             | `input[name="website"]` (hidden)                                |
 | "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (hidden on `max-sm`)     |
 | Map                           | `div#map`                                                       |

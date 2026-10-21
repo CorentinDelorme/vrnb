@@ -7,16 +7,28 @@
 
 Next.js 16 (App Router) + React 19 application, prerendered statically on build (SSG), with Vitest for unit testing, Playwright for E2E, ESLint on the shared `@repo/eslint-config` Next.js preset, Tailwind CSS 4 with DaisyUI 5 for styling, and Leaflet for interactive maps with GPX track rendering.
 
-No database: all data is embedded (generated `src/app/tours-data.ts` and static assets under `public/`). The dev server listens on **port 4200** (`next dev -p 4200`, parity with the former Angular dev server and the production URLs).
+No business database: all data is embedded (generated `src/app/tours-data.ts` and static assets under `public/`). The only exception is the Édition inscriptions, which live in a remote KV store (Upstash REST) behind the Inscriptions API. The dev server listens on **port 4200** (`next dev -p 4200`, parity with the former Angular dev server and the production URLs).
 
 Routes (anything else renders the 404 page, spec #3 US 25):
 
-| Route                  | Page                                              |
-| ---------------------- | ------------------------------------------------- |
-| `/`                    | Home — zone and Parcours list                     |
-| `/manual`              | Mode d'emploi                                     |
-| `/tours/<zone>/<P\|V>` | Zone map (Type de parcours: `P` à pied, `V` vélo) |
-| `/tour/<zone>/<id>`    | Parcours page — the three Étapes                  |
+| Route                  | Page                                                          |
+| ---------------------- | ------------------------------------------------------------- |
+| `/`                    | Home — zone and Parcours list                                 |
+| `/manual`              | Mode d'emploi                                                 |
+| `/tours/<zone>/<P\|V>` | Zone map (Type de parcours: `P` à pied, `V` vélo)             |
+| `/tour/<zone>/<id>`    | Parcours page — the three Étapes                              |
+| `/api/inscriptions`    | Inscriptions API — GET public state, POST binôme registration |
+
+### Inscriptions (Édition)
+
+The Inscriptions feature lets a **Binôme** cover a Parcours for the current Édition, first come first served. The core lives in `src/app/inscriptions/` (pure modules), the Next adapters in `app/api/inscriptions/route.ts` and the UI in `components/register-binome-modal.tsx`, `components/tour-register-button.tsx` and `components/inscriptions-status-provider.tsx`.
+
+- **Annual pivot** — `src/app/inscriptions/edition.ts` holds `CURRENT_EDITION` (`{ year, actionDate }`) and `EDITION_TIME_ZONE` (`Europe/Paris`). Bumping those values is the whole yearly rotation; `isRegistrationOpen(edition, now)` closes the window at midnight of the action date.
+- **KV contract** — one key per covered Parcours, `inscriptions:<year>:<zoneId>:<tourId>`, holding only the four identity fields. The reservation is atomic (`SET … NX EX`), so the first Binôme wins and a loser gets 409 without anything stored. Names never leave the store: the public state only exposes (zoneId, tourId) pairs.
+- **Retention** — every key is created with a TTL reaching `actionDate + INSCRIPTIONS_RETENTION_DAYS` (90) days in `EDITION_TIME_ZONE`, so the personal data expires with no cron and no manual purge.
+- **Environment** — `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` feed the Upstash REST adapter (names only, never values in the repo).
+- **Anti-bot** — the modal carries a hidden honeypot field (`website`); a filled one is refused with 400 `honeypot-triggered` and nothing is stored.
+- **Human operations** — `bun scripts/extract-inscriptions.ts` writes the per-Zone « Fiche de suivi » files (runbook: `scripts/README-inscriptions-extract.md`); a deregistration is the deletion of the `inscriptions:<year>:<zoneId>:<tourId>` key in the Upstash console (the site has no admin UI).
 
 ## Build/Lint/Test Commands
 
@@ -53,6 +65,9 @@ bun run generate:pdfs   # Regenerate the Fiche PDFs
 bun run generate:one -- --tour=V1 --zone=bruz-sud  # Single Parcours/zone (--skip-routes --skip-tours)
 bun run generate:zone-pdf -- --zone=bruz-sud       # Merge one Zone's PDFs into a single pack
 bun run generate:all    # routes + tours + pdfs
+
+# Inscriptions — referent extraction of the « Fiches de suivi » (local files, never deployed)
+bun scripts/extract-inscriptions.ts  # Extract the Édition inscriptions (see scripts/README-inscriptions-extract.md)
 ```
 
 `bun run lint`, `bun run check-types` and `bun run format:check` must be green before any handoff; never commit without passing tests.
@@ -204,7 +219,8 @@ apps/clean/
 │   ├── page.tsx               # Home `/`
 │   ├── manual/page.tsx        # Mode d'emploi `/manual`
 │   ├── tour/[zoneId]/[id]/page.tsx    # Parcours page (3 Étapes)
-│   └── tours/[zoneId]/[type]/page.tsx # Zone map
+│   ├── tours/[zoneId]/[type]/page.tsx # Zone map
+│   └── api/inscriptions/route.ts     # Inscriptions API (GET public state, POST registration)
 ├── components/                # React components (client where hooks/events needed)
 ├── lib/                       # Pure route/URL helpers (route-meta, menu-links…)
 ├── src/app/                   # Domain logic (pure TS + colocated specs)
@@ -212,6 +228,7 @@ apps/clean/
 │   ├── tours-queries.ts       # Parcours/Zone queries
 │   ├── tour-storage.ts        # Parcours en cours persistence (localStorage)
 │   ├── zones.ts               # Zones and Points de rendez-vous
+│   ├── inscriptions/          # Inscriptions feature (edition, KV, validation, API core)
 │   └── shared/                # gpx/ (GPX + GeoJSON) and map/ (Leaflet wrappers)
 ├── public/
 │   ├── gpx/                   # GPX traces, one folder per Parcours
@@ -219,7 +236,7 @@ apps/clean/
 │   ├── pdf/                   # Fiche PDFs
 │   └── media/ icons/ manual/  # Images, icons, manual screenshots
 ├── e2e/                       # Playwright specs + tests.md (E2E plan)
-└── scripts/                   # Data generation (generate-*.ts)
+└── scripts/                   # Data generation (generate-*.ts) + inscriptions extraction
 ```
 
 ### Package Manager
@@ -243,11 +260,14 @@ apps/clean/
 - `src/app/tours-queries.ts` — Parcours/Zone queries (see GLOSSARY)
 - `src/app/tours-data.ts` — generated tour definitions (never edit by hand)
 - `src/app/tour-storage.ts` — Parcours en cours persistence
+- `src/app/inscriptions/` — Inscriptions feature core (Édition config, KV adapter, validation, API handlers)
 - `src/app/shared/gpx/` — GPX parsing and precomputed GeoJSON loading
 - `src/app/shared/map/` — Leaflet wrappers (map, route, markers, position)
 - `components/tour-view.tsx` — Parcours page UI (Début/Nettoyage/Fin state machine)
 - `components/tours-map.tsx`, `components/tour-map.tsx` — Zone map and Parcours map
+- `components/register-binome-modal.tsx` — Binôme registration modal (identity, honeypot, GDPR notice)
 - `public/geojson/<zone>/<tour>.geojson` — precomputed asset (see GLOSSARY)
 - `scripts/generate-tours.ts` — data pipeline (tours-data + GeoJSON)
+- `scripts/README-inscriptions-extract.md` — referent runbook of the « Fiche de suivi » extraction
 - `e2e/tests.md` — E2E test plan
 - `GLOSSARY.md` — domain vocabulary; `README.md` — commands and data generation
