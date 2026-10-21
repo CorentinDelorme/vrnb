@@ -42,12 +42,12 @@ describe('renderSuiviSheetPdf', () => {
     expect(text).toContain('Prénom NOM');
   });
 
-  it('should tell which Édition it belongs to, above the sheet title', () => {
+  it('should tell which Édition it belongs to, under the sheet title', () => {
     const text = Buffer.from(renderSuiviSheetPdf(SHEET)).toString('latin1');
-    expect(text).toContain('Édition 2027 du dimanche 14 février 2027');
-    // The Édition line comes before the Zone title, and no retention footer
+    expect(text).toContain('Édition 2027 - dimanche 14 février 2027');
+    // The Édition line comes after the Zone title, and no retention footer
     // is printed anymore.
-    expect(text.indexOf('Édition 2027 du dimanche 14 février 2027')).toBeLessThan(
+    expect(text.indexOf('Édition 2027 - dimanche 14 février 2027')).toBeGreaterThan(
       text.indexOf('Bruz Sud - Suivi des parcours'),
     );
     expect(text).not.toContain('90 jours');

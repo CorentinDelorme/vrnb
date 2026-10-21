@@ -10,8 +10,8 @@ scripts/output/inscriptions/<année>/<zoneId>/Suivi_parcours_a_pied.pdf
 ```
 
 Chaque feuille reprend le gabarit des anciennes feuilles publiées par le site
-(`public/pdf/<zone>/Suivi_parcours_a_*.pdf`, retirées depuis) : un en-tête
-« Édition <année> du <date de l'action> », le titre de la Zone, le tableau des
+(`public/pdf/<zone>/Suivi_parcours_a_*.pdf`, retirées depuis) : le titre de la
+Zone, puis sous-titre « Édition <année> - <date de l'action> », le tableau des
 Parcours avec les deux colonnes « Prénom NOM » — **renseignées avec les Binômes
 inscrits** — puis les colonnes de pesée (Ordures / Tri / Verre) et le tableau
 des totaux, à remplir le jour de l'action.

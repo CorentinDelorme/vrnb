@@ -31,17 +31,17 @@ function sheetTitle(sheet: SuiviSheet): string {
 export function renderSuiviSheetPdf(sheet: SuiviSheet): Uint8Array {
   const doc = new jsPDF();
 
-  // The Édition line sits above the sheet title: « Édition 2027 du dimanche
+  doc.setFontSize(18);
+  doc.text(sheetTitle(sheet), 14, 16);
+
+  // The Édition line sits under the sheet title: « Édition 2027 - dimanche
   // 14 février 2027 ».
   doc.setFontSize(11);
   doc.text(
-    `Édition ${sheet.edition.year} du ${formatActionDateLabel(sheet.edition.actionDate)}`,
+    `Édition ${sheet.edition.year} - ${formatActionDateLabel(sheet.edition.actionDate)}`,
     14,
-    16,
+    27,
   );
-
-  doc.setFontSize(18);
-  doc.text(sheetTitle(sheet), 14, 27);
 
   autoTable(doc, {
     body: sheet.rows.map((row) => [row.tourId, row.member1, row.member2, '', '', '']),
