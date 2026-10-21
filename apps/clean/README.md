@@ -85,10 +85,10 @@ domaine `clean.velorandonaturebruz.fr` affiché sous le QR code).
 ## Pack PDF par zone
 
 Pour fusionner les PDF d'une zone en un seul fichier (cartes + fiches parcours),
-hors du projet, dans `$HOME/Documents` :
+dans le dossier local gitignoré `scripts/output/packs/` :
 
 ```sh
-bun run generate:zone-pdf              # Toutes les zones -> $HOME/Documents/<zoneId>.pdf
+bun run generate:zone-pdf              # Toutes les zones -> scripts/output/packs/<zoneId>.pdf
 bun run generate:zone-pdf -- --zone=bruz-sud          # Une seule zone
 bun run generate:zone-pdf -- --out-dir=/tmp/packs     # Dossier de sortie personnalisé
 ```

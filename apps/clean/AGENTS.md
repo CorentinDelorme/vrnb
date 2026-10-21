@@ -65,7 +65,7 @@ bun run generate:routes # Start/end GPX segments from the Point de rendez-vous (
 bun run generate:tours  # Regenerate tours-data.ts + the precomputed GeoJSON assets
 bun run generate:pdfs   # Regenerate the Fiche PDFs
 bun run generate:one -- --tour=V1 --zone=bruz-sud  # Single Parcours/zone (--skip-routes --skip-tours)
-bun run generate:zone-pdf -- --zone=bruz-sud       # Merge one Zone's PDFs into a single pack
+bun run generate:zone-pdf -- --zone=bruz-sud       # Merge one Zone's PDFs into scripts/output/packs/
 bun run generate:all    # routes + tours + pdfs
 
 # Inscriptions — referent extraction of the « Fiches de suivi » (local files, never deployed)

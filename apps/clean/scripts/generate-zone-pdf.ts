@@ -1,5 +1,4 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
 import { join } from 'path';
 import { PDFDocument } from 'pdf-lib';
 
@@ -59,13 +58,18 @@ function parseZoneFilter(): Set<string> | undefined {
   return ids.length > 0 ? new Set(ids) : undefined;
 }
 
+/**
+ * Output folder of the packs: the local `scripts/output/` tree, like the
+ * Inscriptions extraction — a gitignored folder, never committed and never
+ * deployed. `--out-dir=` overrides it.
+ */
 function parseOutDir(): string {
   const arg = process.argv.find((a) => a.startsWith('--out-dir='));
   if (arg) {
     const dir = arg.slice('--out-dir='.length).trim();
     if (dir) return dir;
   }
-  return join(process.env['HOME'] || homedir(), 'Documents');
+  return join(import.meta.dirname, 'output', 'packs');
 }
 
 async function mergeZone(zoneId: string, outDir: string): Promise<void> {
