@@ -6,6 +6,8 @@ import Link from 'next/link';
 import type * as React from 'react';
 
 import type { Tour, TourType } from '../src/app/tours-queries';
+import type { InscriptionsStatus } from './inscriptions-status-provider';
+import { useInscriptionsStatus } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
 
 /**
@@ -14,6 +16,11 @@ import { TourPlayButton } from './tour-play-button';
  * badge, "Voir tous les parcours" map link) and one `list-row` per tour with
  * its distance and play button. The legacy `app-tour-list-section` selector is
  * kept as the wrapper element because the E2E suite scopes its locators on it.
+ *
+ * Ticket #16: a Parcours covered by the Édition's inscriptions shows the
+ * « Binôme inscrit » badge next to its title once the statuses have loaded
+ * after hydration (the public state carries no names); uncovered rows and the
+ * loading/error states render exactly like before.
  */
 
 declare module 'react' {
@@ -35,6 +42,20 @@ function formatDistance(distance: number): string {
   return `${distance.toString().replace('.', ',')} km`;
 }
 
+/** Whether the loaded inscriptions cover the given (zone, Parcours) pair. */
+function isCoveredInscriptions(
+  status: InscriptionsStatus,
+  zoneId: string,
+  tourId: string,
+): boolean {
+  return (
+    status.status === 'success' &&
+    status.state.inscriptions.some(
+      (inscription) => inscription.zoneId === zoneId && inscription.tourId === tourId,
+    )
+  );
+}
+
 interface TourListSectionProps {
   readonly title: string;
   readonly tours: readonly Tour[];
@@ -44,6 +65,7 @@ interface TourListSectionProps {
 
 export function TourListSection({ title, tours, type, zoneId }: TourListSectionProps) {
   const typeIcon = type === 'V' ? BicycleIcon : WalkingIcon;
+  const status = useInscriptionsStatus();
 
   return (
     <app-tour-list-section>
@@ -77,7 +99,12 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             className="list-row items-center bg-base-100 border-base-200 rounded-lg border"
             key={tour.name}
           >
-            <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
+              {isCoveredInscriptions(status, zoneId, tour.name) ? (
+                <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
+              ) : null}
+            </div>
             <div className="text-base-content/70 text-base font-light sm:text-xl">
               {formatDistance(tour.distance)}
             </div>

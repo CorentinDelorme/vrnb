@@ -6,6 +6,12 @@ import HomePage from './page';
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
+// The inscriptions provider fetches in an effect: fake an unreachable API so
+// the home spec stays deterministic and network-free (badges stay hidden).
+vi.mock('../src/app/inscriptions/inscriptions-client', () => ({
+  fetchInscriptionsOutcome: async () => ({ status: 'error' }) as const,
+}));
+
 /**
  * Home page (spec #3, ticket #6): the legacy Angular `tours-list` component.
  * These tests assert the public rendered output (DOM text, links, attributes)

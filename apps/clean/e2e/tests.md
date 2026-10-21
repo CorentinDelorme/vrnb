@@ -54,6 +54,12 @@ mobile`: expected count 34 → 47.** Stale assertion, not a migration change: co
 
 Totals: **95 tests per browser** (88 original + 7 added) × chromium + firefox = **190**.
 
+Inscriptions feature additions (ticket #16, no parity impact — DOM contract unchanged):
+
+3. **`Public inscriptions statuses` (3 tests)**: the covered Parcours of the Édition shows a
+   « Binôme inscrit » badge, obtained after hydration from `GET /api/inscriptions`; that endpoint is
+   intercepted with `page.route`, so the totals above (and the 47 play buttons) stay unchanged.
+
 ---
 
 ## File: `e2e/app.spec.ts`
@@ -107,6 +113,25 @@ Route: `/`
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `should NOT show saved tour banner by default`                   | `goto('/')`                                                                                 | No "Reprendre le parcours" text                           |
 | `should show saved tour banner when localStorage has saved tour` | Set localStorage `vrnb_tour` to `{"tourId":"V1","step":1,"zoneId":"bruz-sud"}`, `goto('/')` | "Reprendre le parcours Bruz Sud - V1 (étape 2/3)" visible |
+
+---
+
+## File: `e2e/inscriptions.spec.ts`
+
+Route: `/` (ticket #16 — public inscriptions statuses, badge « Binôme inscrit »)
+
+> `GET /api/inscriptions` is intercepted with `page.route` in every test of this
+> file (both browsers), so the dev server needs no KV credentials.
+
+### `describe('Public inscriptions statuses')`
+
+#### Covered Parcours badge
+
+| Test name                                                        | Steps                                                                           | Expected                                                                                                     |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `should badge the covered Parcours after hydration, and only it` | Mock `GET /api/inscriptions` covering `bruz-sud`/`V1`, `goto('/')`              | Exactly one `.badge-success` "Binôme inscrit", inside the V1 row of the Bruz Sud bike section; nothing on V2 |
+| `should leave every row unbadged when the store covers nothing`  | Mock the API with an empty `inscriptions` list, `goto('/')`                     | No "Binôme inscrit" badge                                                                                    |
+| `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, all 47 play buttons intact                                                        |
 
 ---
 
