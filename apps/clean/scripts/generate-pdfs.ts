@@ -145,7 +145,7 @@ function formatTotal(tour: TourDistances): number {
 
 /** Deep link to the tour page in the deployed app. */
 function tourUrl(tour: TourDistances): string {
-  return `${TOUR_URL_PREFIX}tour/${tour.zoneId}/${tour.name}`;
+  return `${TOUR_URL_PREFIX}tour/${parcoursStateKey(tour.zoneId, tour.name)}`;
 }
 
 /**

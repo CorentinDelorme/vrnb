@@ -6,7 +6,13 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { ZONES } from '../src/app/zones';
 
-import { listParcours, tourPdfPath } from './generation-helpers';
+import {
+  listParcours,
+  parcoursStateKey as sharedParcoursStateKey,
+  parseParcoursStateKey as sharedParseParcoursStateKey,
+  zoneMapKey as sharedZoneMapKey,
+  tourPdfPath,
+} from './generation-helpers';
 import type { GenerationState, ParcoursGenerationRecord } from './generation-state';
 import {
   GENERATION_STATE_VERSION,
@@ -158,27 +164,13 @@ describe('meetingPointFingerprint', () => {
   });
 });
 
-describe('parcoursStateKey', () => {
-  it('should build the key of a Parcours of the state', () => {
-    expect(parcoursStateKey('bruz-sud', 'V1')).toBe('bruz-sud/V1');
-  });
-});
-
-describe('zoneMapKey', () => {
-  it('should build the key of an overview map of the state', () => {
-    expect(zoneMapKey('bruz-sud', 'V')).toBe('bruz-sud/V');
-  });
-});
-
-describe('parseParcoursStateKey', () => {
-  it('should read the Zone and the Parcours of a key', () => {
-    expect(parseParcoursStateKey('bruz-sud/V1')).toEqual({ zoneId: 'bruz-sud', tourId: 'V1' });
-  });
-
-  it('should return undefined when the key holds no Zone and no Parcours', () => {
-    expect(parseParcoursStateKey('bruz-sud')).toBeUndefined();
-    expect(parseParcoursStateKey('bruz-sud/V1/extra')).toBeUndefined();
-    expect(parseParcoursStateKey('/V1')).toBeUndefined();
+describe('the keys of the state', () => {
+  it('should be the keys of the shared helpers', () => {
+    // The state re-exports the keys it uses: the format has a single
+    // owner, the shared helpers.
+    expect(parcoursStateKey).toBe(sharedParcoursStateKey);
+    expect(parseParcoursStateKey).toBe(sharedParseParcoursStateKey);
+    expect(zoneMapKey).toBe(sharedZoneMapKey);
   });
 });
 

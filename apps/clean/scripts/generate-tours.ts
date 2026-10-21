@@ -139,7 +139,7 @@ function emitTourGeoJson(entry: ParcoursEntry): boolean {
     );
   } catch (error) {
     throw new Error(
-      `cannot emit ${entry.zoneId}/${entry.tourId}.geojson: ${error instanceof Error ? error.message : error}`,
+      `cannot emit ${parcoursStateKey(entry.zoneId, entry.tourId)}.geojson: ${error instanceof Error ? error.message : error}`,
     );
   }
 }

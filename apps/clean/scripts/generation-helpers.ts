@@ -367,7 +367,7 @@ export function zonePackFiles(rootDir: string, zoneId: string): string[] {
 export function zonePackParcours(rootDir: string, zoneId: string): string[] {
   return zonePackFiles(rootDir, zoneId)
     .filter((file) => TOUR_PDF_PATTERN.test(basename(file)))
-    .map((file) => `${zoneId}/${basename(file, '.pdf')}`);
+    .map((file) => parcoursStateKey(zoneId, basename(file, '.pdf')));
 }
 
 // --- Inventory of the Zones and the Parcours ---
@@ -400,6 +400,41 @@ export type PracticeType = 'V' | 'P';
  */
 export function practiceTypeOf(tourId: string): PracticeType {
   return tourId.startsWith('P') ? 'P' : 'V';
+}
+
+// --- The keys of the generation state ---
+
+/**
+ * Key of a Parcours: `<zone>/<parcours>`.
+ *
+ * The key identifies a Parcours everywhere it is named: in the generation
+ * state, in the counters of the `[perf]` block, in the documents of a zone
+ * pack and in the deep link of its page. It is built here, and only here,
+ * so every module speaks the same format.
+ */
+export function parcoursStateKey(zoneId: string, tourId: string): string {
+  return `${zoneId}/${tourId}`;
+}
+
+/**
+ * Read the key of a Parcours: `<zone>/<parcours>`.
+ *
+ * `undefined` when the key does not hold a Zone and a Parcours: the state
+ * is then ignored for that key.
+ */
+export function parseParcoursStateKey(
+  key: string,
+): { readonly zoneId: string; readonly tourId: string } | undefined {
+  const parts = key.split('/');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return undefined;
+  }
+  return { zoneId: parts[0], tourId: parts[1] };
+}
+
+/** Key of an overview map of a Zone: `<zone>/<kind>`. */
+export function zoneMapKey(zoneId: string, kind: PracticeType): string {
+  return `${zoneId}/${kind}`;
 }
 
 /** A Parcours found on disk, with the Zone it belongs to and its GPX traces. */

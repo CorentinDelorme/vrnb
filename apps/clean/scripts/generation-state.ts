@@ -22,13 +22,21 @@ import { createHash } from 'crypto';
 import { mkdirSync, readFileSync, statSync } from 'fs';
 import { dirname, join } from 'path';
 
-import type { ParcoursEntry, PracticeType } from './generation-helpers';
+import type { ParcoursEntry } from './generation-helpers';
 import {
   isRecord,
+  parseParcoursStateKey,
   resolveGpxTracePath,
   tourPdfPath,
   writeFileIfChanged,
 } from './generation-helpers';
+
+/**
+ * The keys of the state are owned by the shared helpers — they identify a
+ * Parcours or an overview map everywhere they are counted. They are
+ * re-exported here: the state is where they are used.
+ */
+export { parcoursStateKey, parseParcoursStateKey, zoneMapKey } from './generation-helpers';
 
 /**
  * Version of the generation state: the single source of truth of what the
@@ -127,32 +135,6 @@ export type GenerationStateRead =
   | { readonly status: 'missing' }
   /** The state file exists but cannot be read: it is corrupt. */
   | { readonly status: 'unreadable'; readonly reason: string };
-
-/** Key of a Parcours in the state: `<zone>/<parcours>`. */
-export function parcoursStateKey(zoneId: string, tourId: string): string {
-  return `${zoneId}/${tourId}`;
-}
-
-/**
- * Read the key of a Parcours of the state: `<zone>/<parcours>`.
- *
- * `undefined` when the key does not hold a Zone and a Parcours: the state
- * is then ignored for that key.
- */
-export function parseParcoursStateKey(
-  key: string,
-): { readonly zoneId: string; readonly tourId: string } | undefined {
-  const parts = key.split('/');
-  if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    return undefined;
-  }
-  return { zoneId: parts[0], tourId: parts[1] };
-}
-
-/** Key of an overview map in the state: `<zone>/<kind>`. */
-export function zoneMapKey(zoneId: string, kind: PracticeType): string {
-  return `${zoneId}/${kind}`;
-}
 
 /** Path of the state file of the app. */
 export function generationStatePath(rootDir: string): string {
