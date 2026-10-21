@@ -5,6 +5,7 @@ import { PDFDocument } from 'pdf-lib';
 import { ZONES } from '../src/app/zones';
 
 import {
+  errorMessage,
   matchesZoneFilter,
   parseGenerationFilters,
   perfReportPath,
@@ -39,11 +40,17 @@ function parseOutDir(): string {
   return join(import.meta.dirname, 'output', 'packs');
 }
 
-async function mergeZone(zoneId: string, outDir: string): Promise<void> {
+/**
+ * Merge the published documents of a Zone into one pack.
+ *
+ * Returns the number of documents the pack holds: zero when the Zone has
+ * no document to merge.
+ */
+async function mergeZone(zoneId: string, outDir: string): Promise<number> {
   const files = zonePackFiles(rootDir, zoneId);
   if (files.length === 0) {
     console.warn(`skip ${zoneId}: no PDFs found under public/pdf/${zoneId}/`);
-    return;
+    return 0;
   }
 
   const merged = await PDFDocument.create();
@@ -58,14 +65,23 @@ async function mergeZone(zoneId: string, outDir: string): Promise<void> {
 
   mkdirSync(outDir, { recursive: true });
   const outputPath = join(outDir, `${zoneId}.pdf`);
-  writeFileSync(outputPath, await merged.save());
+  try {
+    writeFileSync(outputPath, await merged.save());
+  } catch (error) {
+    throw new Error(`cannot write ${outputPath}: ${errorMessage(error)}`);
+  }
   console.log(`Generated: ${outputPath} (${merged.getPageCount()} pages)`);
+  return files.length;
 }
 
 async function main(): Promise<void> {
   const perf = createPerfRecorder();
   /** The Zones of the run, and the Parcours their pack reuses. */
   let zoneIds: string[] = [];
+  /** The packs the run wrote. */
+  const written: string[] = [];
+  /** The number of documents the packs hold. */
+  let documents = 0;
 
   try {
     const filters = parseGenerationFilters(process.argv);
@@ -78,22 +94,32 @@ async function main(): Promise<void> {
 
     for (const zoneId of zoneIds) {
       await perf.measure(zoneId, async () => {
-        await mergeZone(zoneId, outDir);
+        const merged = await mergeZone(zoneId, outDir);
+        if (merged > 0) {
+          written.push(zoneId);
+          documents += merged;
+        }
       });
     }
   } finally {
-    reportRun(perf, zoneIds);
+    reportRun(perf, zoneIds, written, documents);
   }
 }
 
 /**
  * Show the `[perf]` block of the run: how long it took, how long each Zone
- * took, and how many Parcours the pack reused.
+ * took, how many documents the packs hold and how many Parcours the pack
+ * reused.
  *
  * The pack regenerates no Parcours: it merges the documents that are
  * already published, so every Parcours of the pack is left alone.
  */
-function reportRun(perf: PerfRecorder, zoneIds: readonly string[]): void {
+function reportRun(
+  perf: PerfRecorder,
+  zoneIds: readonly string[],
+  written: readonly string[],
+  documents: number,
+): void {
   const reused = zoneIds.flatMap((zoneId) => zonePackParcours(rootDir, zoneId));
 
   const report = buildPerfReport({
@@ -102,6 +128,7 @@ function reportRun(perf: PerfRecorder, zoneIds: readonly string[]): void {
     steps: perf.steps,
     tiles: { fromCache: 0, downloaded: 0 },
     parcours: countersFromIds([], reused),
+    packs: { written, documents },
   });
 
   console.log(formatPerfReport(report).join('\n'));

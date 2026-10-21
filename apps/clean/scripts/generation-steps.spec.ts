@@ -1,13 +1,15 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { perfReportPath, writePerfReport } from './generation-helpers';
 import { buildPerfReport } from './generation-perf';
+import { GENERATION_STATE_VERSION } from './generation-state';
 import {
   GENERATION_STEPS,
+  readGenerationStateOrWarn,
   readStepReports,
   selectGenerationSteps,
   stepLabel,
@@ -98,5 +100,52 @@ describe('readStepReports', () => {
     fixtures.push(rootDir);
 
     expect(readStepReports(rootDir, ['generate-tours.ts'])).toEqual([]);
+  });
+});
+
+describe('readGenerationStateOrWarn', () => {
+  const fixtures: string[] = [];
+
+  afterEach(() => {
+    for (const rootDir of fixtures.splice(0)) {
+      rmSync(rootDir, { recursive: true, force: true });
+    }
+    vi.restoreAllMocks();
+  });
+
+  it('should return the state of the file', () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'vrnb-steps-'));
+    fixtures.push(rootDir);
+    const statePath = join(rootDir, 'generation-state.json');
+    writeFileSync(
+      statePath,
+      JSON.stringify({ version: GENERATION_STATE_VERSION, parcours: {}, zoneMaps: {} }),
+    );
+
+    expect(readGenerationStateOrWarn(statePath)).toEqual({
+      version: GENERATION_STATE_VERSION,
+      parcours: {},
+      zoneMaps: {},
+    });
+  });
+
+  it('should warn when the state file exists but cannot be read', () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'vrnb-steps-'));
+    fixtures.push(rootDir);
+    const statePath = join(rootDir, 'generation-state.json');
+    writeFileSync(statePath, 'not json');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(readGenerationStateOrWarn(statePath)).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('unreadable'));
+  });
+
+  it('should not warn when the state file is missing', () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'vrnb-steps-'));
+    fixtures.push(rootDir);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(readGenerationStateOrWarn(join(rootDir, 'generation-state.json'))).toBeUndefined();
+    expect(warn).not.toHaveBeenCalled();
   });
 });

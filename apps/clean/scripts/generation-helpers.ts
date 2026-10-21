@@ -18,7 +18,7 @@ import { basename, dirname, join } from 'path';
 
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
 
-import type { PerfReport } from './generation-perf';
+import type { PackCounters, PerfReport } from './generation-perf';
 
 /**
  * Values of a `--flag=a,b` option: the first matching argument wins, the
@@ -162,6 +162,18 @@ export function readPerfReport(path: string): PerfReport | undefined {
       regenerated: readIds(raw.zoneMaps, 'regenerated'),
       skipped: readIds(raw.zoneMaps, 'skipped'),
     },
+    packs: readPacks(raw.packs),
+  };
+}
+
+/** The packs of a report, `undefined` when the report holds none. */
+function readPacks(value: unknown): PackCounters | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return {
+    written: readIds(value, 'written'),
+    documents: typeof value.documents === 'number' ? value.documents : 0,
   };
 }
 
@@ -182,8 +194,42 @@ function readIds(value: unknown, key: string): string[] {
 }
 
 /** Whether a value is a JSON object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The message of an error, for the logs of the generation scripts.
+ */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Run the workers in parallel, at most `limit` of them at a time.
+ *
+ * The items are taken in order: the worker of an item is started as soon
+ * as a slot is free. A worker that throws rejects the whole call: the
+ * callers catch the failures of their own item, so one failing item never
+ * stops the others.
+ */
+export async function forEachConcurrently<T>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<void>,
+): Promise<void> {
+  const concurrency = Math.max(1, limit);
+  let next = 0;
+
+  const run = async (): Promise<void> => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      await worker(items[index], index);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => run()));
 }
 
 // --- Layout of the generated data ---
@@ -339,6 +385,22 @@ const TOUR_FOLDER_PATTERN = /^[VP]\d+$/;
  * always listed the Parcours of a Zone this way.
  */
 const PARCOURS_FOLDER_PATTERN = /^[VP]/;
+
+/**
+ * The practice type of a Parcours: `V` (bike) or `P` (walk).
+ *
+ * The type is the first letter of the id of the Parcours: it is the
+ * naming rule of the Parcours, and the pipelines use it to tell the two
+ * practices apart.
+ */
+export type PracticeType = 'V' | 'P';
+
+/**
+ * The practice type of a Parcours, from its id: `V` (bike) or `P` (walk).
+ */
+export function practiceTypeOf(tourId: string): PracticeType {
+  return tourId.startsWith('P') ? 'P' : 'V';
+}
 
 /** A Parcours found on disk, with the Zone it belongs to and its GPX traces. */
 export interface ParcoursEntry {

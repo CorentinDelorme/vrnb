@@ -8,13 +8,25 @@
  * The orchestrators (`generate-all.ts` and `generate-one.ts`) share the
  * list of the steps and the way they are run, so both hand the same
  * filters and the same `--force` flag to every step.
+ *
+ * This module also owns the plumbing the steps and the orchestrators
+ * share: the reading and the writing of the generation state, and the
+ * `[perf]` block every run ends with.
  */
 
 import { spawnSync } from 'child_process';
 import { join } from 'path';
 
-import { perfReportPath, readPerfReport } from './generation-helpers';
+import {
+  errorMessage,
+  perfReportPath,
+  readPerfReport,
+  writePerfReport,
+} from './generation-helpers';
 import type { PerfRecorder, PerfReport } from './generation-perf';
+import { aggregatePerfReports, formatPerfReport } from './generation-perf';
+import type { GenerationState } from './generation-state';
+import { readGenerationState, writeGenerationState } from './generation-state';
 
 /** The steps of the pipeline, in the order they must run. */
 export const GENERATION_STEPS = [
@@ -115,4 +127,64 @@ export async function runGenerationSteps(
       }
     });
   }
+}
+
+/**
+ * Read the generation state of a run.
+ *
+ * `undefined` when the state is missing (the normal state of a fresh
+ * copy) or unreadable (a corrupt file): the run then regenerates
+ * everything. A corrupt state is reported: the referent must know the
+ * pipeline forgot what it had produced.
+ */
+export function readGenerationStateOrWarn(statePath: string): GenerationState | undefined {
+  const read = readGenerationState(statePath);
+
+  if (read.status === 'unreadable') {
+    console.warn(
+      `Warning: the generation state is unreadable (${read.reason}), everything will be regenerated.`,
+    );
+    return undefined;
+  }
+
+  return read.status === 'read' ? read.state : undefined;
+}
+
+/**
+ * Write the generation state of a run.
+ *
+ * A state that cannot be written is reported: the run did what it had to
+ * do, but the next run will not know it.
+ */
+export function writeGenerationStateOrFail(statePath: string, state: GenerationState): void {
+  try {
+    writeGenerationState(statePath, state);
+  } catch (error) {
+    console.error(`cannot write the generation state (${statePath}): ${errorMessage(error)}`);
+  }
+}
+
+/**
+ * Show the `[perf]` block of an orchestrated run: how long it took, how
+ * long each step took, and the counters of the steps the run ran.
+ */
+export function reportRun(options: {
+  /** Name of the script, as the `[perf]` block of the run shows it. */
+  readonly script: string;
+  /** Root of the app, where the reports of the steps are read. */
+  readonly rootDir: string;
+  /** The recorder that measured the steps of the run. */
+  readonly perf: PerfRecorder;
+  /** The steps the run ran. */
+  readonly steps: readonly string[];
+}): void {
+  const report = aggregatePerfReports({
+    script: options.script,
+    totalMs: options.perf.totalMs(),
+    steps: options.perf.steps,
+    reports: readStepReports(options.rootDir, options.steps),
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(options.rootDir, options.script), report);
 }

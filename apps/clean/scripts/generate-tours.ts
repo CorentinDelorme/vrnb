@@ -18,6 +18,7 @@ import {
   parseForceFlag,
   parseGenerationFilters,
   perfReportPath,
+  practiceTypeOf,
   writeFileIfChanged,
   writePerfReport,
 } from './generation-helpers';
@@ -156,8 +157,8 @@ function sortTours(a: GeneratedTour, b: GeneratedTour): number {
  * tour is recomputed from the GPX files.
  */
 function mergeTours(existing: GeneratedTour[], fresh: GeneratedTour[]): GeneratedTour[] {
-  const freshKeys = new Set(fresh.map((t) => `${t.zoneId}/${t.name}`));
-  const kept = existing.filter((t) => !freshKeys.has(`${t.zoneId}/${t.name}`));
+  const freshKeys = new Set(fresh.map((tour) => parcoursStateKey(tour.zoneId, tour.name)));
+  const kept = existing.filter((tour) => !freshKeys.has(parcoursStateKey(tour.zoneId, tour.name)));
   return [...kept, ...fresh].sort(sortTours);
 }
 
@@ -204,8 +205,8 @@ async function main(): Promise<void> {
     const freshTours = await perf.measure('distances', async () =>
       inventory.parcours.map(readTourDistances),
     );
-    const freshVTours = freshTours.filter((tour) => tour.name.startsWith('V'));
-    const freshPTours = freshTours.filter((tour) => tour.name.startsWith('P'));
+    const freshVTours = freshTours.filter((tour) => practiceTypeOf(tour.name) === 'V');
+    const freshPTours = freshTours.filter((tour) => practiceTypeOf(tour.name) === 'P');
     if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
       throw new Error('No tours match the --tour/--zone filter.');
     }
@@ -252,10 +253,16 @@ async function main(): Promise<void> {
 
     // The catalogue is written only when its content changed.
     await perf.measure('catalogue', async () => {
-      if (writeFileIfChanged(outputFile, await buildToursData(vTours, pTours))) {
-        console.log('Updated src/app/tours-data.ts.');
-      } else {
-        console.log('Tours data unchanged: src/app/tours-data.ts left as is.');
+      try {
+        if (writeFileIfChanged(outputFile, await buildToursData(vTours, pTours))) {
+          console.log('Updated src/app/tours-data.ts.');
+        } else {
+          console.log('Tours data unchanged: src/app/tours-data.ts left as is.');
+        }
+      } catch (error) {
+        throw new Error(
+          `cannot write ${outputFile}: ${error instanceof Error ? error.message : error}`,
+        );
       }
     });
 

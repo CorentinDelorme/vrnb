@@ -92,6 +92,38 @@ describe('formatPerfReport', () => {
       '  zone maps: 1 regenerated, 1 skipped',
     ]);
   });
+
+  it('should show the packs the run wrote, and the documents they hold', () => {
+    const report = buildPerfReport({
+      script: 'generate-zone-pdf',
+      totalMs: 1_000,
+      steps: [],
+      tiles: { fromCache: 0, downloaded: 0 },
+      parcours: { regenerated: [], skipped: ['bruz-sud/V1'] },
+      packs: { written: ['bruz-sud'], documents: 12 },
+    });
+
+    expect(formatPerfReport(report)).toEqual([
+      '[perf] generate-zone-pdf',
+      '  total duration: 1.0 s',
+      '  tiles: 0 from cache, 0 downloaded',
+      '  Parcours: 0 regenerated, 1 skipped',
+      '  packs: 1 written, 12 documents',
+    ]);
+  });
+
+  it('should not tell a run that wrote packs changed nothing', () => {
+    const report = buildPerfReport({
+      script: 'generate-zone-pdf',
+      totalMs: 1_000,
+      steps: [],
+      tiles: { fromCache: 0, downloaded: 0 },
+      parcours: { regenerated: [], skipped: ['bruz-sud/V1'] },
+      packs: { written: ['bruz-sud'], documents: 12 },
+    });
+
+    expect(formatPerfReport(report).some((line) => line.includes('nothing changed'))).toBe(false);
+  });
 });
 
 describe('createPerfRecorder', () => {
@@ -229,5 +261,44 @@ describe('aggregatePerfReports', () => {
     });
 
     expect(report.parcours).toEqual({ regenerated: ['bruz-sud/V1'], skipped: [] });
+  });
+
+  it('should merge the packs of the steps of a run', () => {
+    const report = aggregatePerfReports({
+      script: 'generate-all',
+      totalMs: 120_000,
+      steps: [],
+      reports: [
+        buildPerfReport({
+          script: 'generate-zone-pdf',
+          totalMs: 60_000,
+          steps: [],
+          tiles: { fromCache: 0, downloaded: 0 },
+          parcours: { regenerated: [], skipped: [] },
+          packs: { written: ['bruz-sud'], documents: 12 },
+        }),
+      ],
+    });
+
+    expect(report.packs).toEqual({ written: ['bruz-sud'], documents: 12 });
+  });
+
+  it('should hold no pack when no step wrote one', () => {
+    const report = aggregatePerfReports({
+      script: 'generate-all',
+      totalMs: 120_000,
+      steps: [],
+      reports: [
+        buildPerfReport({
+          script: 'generate-pdfs',
+          totalMs: 60_000,
+          steps: [],
+          tiles: { fromCache: 0, downloaded: 0 },
+          parcours: { regenerated: [], skipped: [] },
+        }),
+      ],
+    });
+
+    expect(report.packs).toBeUndefined();
   });
 });

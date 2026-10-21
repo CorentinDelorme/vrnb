@@ -5,9 +5,11 @@ import { dirname, join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  forEachConcurrently,
   geoJsonAssetPath,
   gpxTracePath,
   isFilterActive,
+  isRecord,
   legacyGpxTracePath,
   listParcours,
   matchesFilters,
@@ -15,6 +17,7 @@ import {
   parseForceFlag,
   parseGenerationFilters,
   perfReportPath,
+  practiceTypeOf,
   readPerfReport,
   resolveGpxTracePath,
   tourPdfPath,
@@ -435,5 +438,65 @@ describe('zonePackParcours', () => {
     const rootDir = createFixture({});
 
     expect(zonePackParcours(rootDir, 'bruz-sud')).toEqual([]);
+  });
+});
+
+describe('isRecord', () => {
+  it('should tell a JSON object from the other values', () => {
+    expect(isRecord({})).toBe(true);
+    expect(isRecord([])).toBe(false);
+    expect(isRecord(null)).toBe(false);
+    expect(isRecord('text')).toBe(false);
+  });
+});
+
+describe('practiceTypeOf', () => {
+  it('should read the practice type of a Parcours from its id', () => {
+    expect(practiceTypeOf('V1')).toBe('V');
+    expect(practiceTypeOf('P13')).toBe('P');
+  });
+});
+
+describe('forEachConcurrently', () => {
+  it('should run every item of the list', async () => {
+    const done: number[] = [];
+
+    await forEachConcurrently([1, 2, 3], 2, async (item) => {
+      done.push(item);
+    });
+
+    expect(done.sort()).toEqual([1, 2, 3]);
+  });
+
+  it('should never run more workers than the limit', async () => {
+    let running = 0;
+    let peak = 0;
+
+    await forEachConcurrently([1, 2, 3, 4, 5], 2, async () => {
+      running += 1;
+      peak = Math.max(peak, running);
+      await Promise.resolve();
+      running -= 1;
+    });
+
+    expect(peak).toBe(2);
+  });
+
+  it('should tell the index of the item to the worker', async () => {
+    const indexes: number[] = [];
+
+    await forEachConcurrently(['a', 'b'], 1, async (_item, index) => {
+      indexes.push(index);
+    });
+
+    expect(indexes).toEqual([0, 1]);
+  });
+
+  it('should do nothing when the list is empty', async () => {
+    const worker = async (): Promise<void> => {
+      throw new Error('the worker must not run');
+    };
+
+    await expect(forEachConcurrently([], 3, worker)).resolves.toBeUndefined();
   });
 });

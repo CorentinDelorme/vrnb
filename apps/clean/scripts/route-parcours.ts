@@ -19,6 +19,8 @@
  * without touching the network.
  */
 
+import { forEachConcurrently, practiceTypeOf } from './generation-helpers';
+
 /** A coordinate pair, `[longitude, latitude]`. */
 export type LonLat = [number, number];
 
@@ -136,7 +138,7 @@ export const ROUTING_MIN_INTERVAL_MS = 400;
  * Parcours are routed as cycling, the walking ones on foot.
  */
 export function profileForParcours(tourId: string): ParcoursProfile {
-  return tourId.startsWith('V')
+  return practiceTypeOf(tourId) === 'V'
     ? { osrm: 'bicycle', costing: 'bicycle', gpxType: 'cycling' }
     : { osrm: 'foot', costing: 'pedestrian', gpxType: 'walking' };
 }
@@ -169,33 +171,25 @@ export async function routeParcours(
   const concurrency = Math.max(1, options.concurrency ?? PARCOURS_ROUTING_CONCURRENCY);
   const routed: (ParcoursRoutingOutcome | undefined)[] = new Array(parcours.length);
   const failures: (ParcoursRoutingFailure | undefined)[] = new Array(parcours.length);
-  let next = 0;
 
-  const run = async (): Promise<void> => {
-    while (next < parcours.length) {
-      const index = next;
-      next += 1;
-      const target = parcours[index];
-      try {
-        const start = await options.routeSegment(target.segments.start, target.profile);
-        const end = await options.routeSegment(target.segments.end, target.profile);
-        const outcome: ParcoursRoutingOutcome = {
-          tourId: target.tourId,
-          profile: target.profile,
-          start,
-          end,
-        };
-        options.onRouted?.(outcome);
-        routed[index] = outcome;
-      } catch (error) {
-        const failure: ParcoursRoutingFailure = { tourId: target.tourId, error };
-        failures[index] = failure;
-        options.onFailure?.(failure);
-      }
+  await forEachConcurrently(parcours, concurrency, async (target, index) => {
+    try {
+      const start = await options.routeSegment(target.segments.start, target.profile);
+      const end = await options.routeSegment(target.segments.end, target.profile);
+      const outcome: ParcoursRoutingOutcome = {
+        tourId: target.tourId,
+        profile: target.profile,
+        start,
+        end,
+      };
+      options.onRouted?.(outcome);
+      routed[index] = outcome;
+    } catch (error) {
+      const failure: ParcoursRoutingFailure = { tourId: target.tourId, error };
+      failures[index] = failure;
+      options.onFailure?.(failure);
     }
-  };
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, parcours.length) }, () => run()));
+  });
 
   return {
     routed: routed.filter((outcome): outcome is ParcoursRoutingOutcome => outcome !== undefined),

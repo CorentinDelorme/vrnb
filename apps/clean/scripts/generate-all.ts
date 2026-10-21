@@ -1,9 +1,8 @@
 import { join } from 'path';
 
-import { clearPerfReports, perfReportPath, writePerfReport } from './generation-helpers';
-import type { PerfRecorder } from './generation-perf';
-import { aggregatePerfReports, createPerfRecorder, formatPerfReport } from './generation-perf';
-import { GENERATION_STEPS, readStepReports, runGenerationSteps } from './generation-steps';
+import { clearPerfReports } from './generation-helpers';
+import { createPerfRecorder } from './generation-perf';
+import { GENERATION_STEPS, reportRun, runGenerationSteps } from './generation-steps';
 
 const rootDir = join(import.meta.dirname, '..');
 
@@ -27,24 +26,8 @@ async function main(): Promise<void> {
   try {
     await runGenerationSteps(GENERATION_STEPS, process.argv.slice(2), rootDir, perf);
   } finally {
-    reportRun(perf, GENERATION_STEPS);
+    reportRun({ script: SCRIPT_NAME, rootDir, perf, steps: GENERATION_STEPS });
   }
-}
-
-/**
- * Show the `[perf]` block of the run: how long it took, how long each step
- * took, and the counters of the steps the run ran.
- */
-function reportRun(perf: PerfRecorder, steps: readonly string[]): void {
-  const report = aggregatePerfReports({
-    script: SCRIPT_NAME,
-    totalMs: perf.totalMs(),
-    steps: perf.steps,
-    reports: readStepReports(rootDir, steps),
-  });
-
-  console.log(formatPerfReport(report).join('\n'));
-  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
 }
 
 main().catch((error: unknown) => {

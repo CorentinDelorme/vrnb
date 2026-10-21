@@ -14,6 +14,8 @@ import { createTileFetcher } from './tile-fetcher';
 
 import type { GpxSegmentSuffix } from './generation-helpers';
 import {
+  errorMessage,
+  forEachConcurrently,
   isFilterActive,
   matchesFilters,
   parseForceFlag,
@@ -35,19 +37,20 @@ import {
   formatPerfReport,
 } from './generation-perf';
 import type { GenerationPlan, PlanCandidate } from './generation-plan';
-import { planGeneration, zoneMapKey } from './generation-plan';
-import type { ParcoursStateUpdate } from './generation-state';
+import { planGeneration } from './generation-plan';
+import type { ParcoursStateUpdate, ZoneMapStateUpdate } from './generation-state';
 import {
   GENERATION_STATE_VERSION,
   fingerprintDocument,
   fingerprintParcoursArtefacts,
   generationStatePath,
+  meetingPointFingerprint,
   nextGenerationState,
   parcoursStateKey,
-  readGenerationState,
   withFicheFingerprint,
-  writeGenerationState,
+  zoneMapKey,
 } from './generation-state';
+import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
 
 const rootDir = join(import.meta.dirname, '..');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
@@ -651,7 +654,11 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   mkdirSync(zoneFolder, { recursive: true });
   const outputPath = tourPdfPath(rootDir, tour.zoneId, tour.name);
   ensureWritable(outputPath);
-  doc.save(outputPath);
+  try {
+    doc.save(outputPath);
+  } catch (error) {
+    throw new Error(`cannot write ${outputPath}: ${errorMessage(error)}`);
+  }
   console.log(`Generated: ${outputPath}`);
 }
 
@@ -791,29 +798,26 @@ async function generateZoneMapPdf(
   mkdirSync(zoneFolder, { recursive: true });
   const outputPath = zoneMapPdfPath(rootDir, zoneId, kind);
   ensureWritable(outputPath);
-  doc.save(outputPath);
+  try {
+    doc.save(outputPath);
+  } catch (error) {
+    throw new Error(`cannot write ${outputPath}: ${errorMessage(error)}`);
+  }
   console.log(`Generated: ${outputPath}`);
   return true;
 }
 
-/** Run the workers in parallel, at most `limit` of them at a time. */
-async function forEachConcurrently<T>(
-  items: readonly T[],
-  limit: number,
-  worker: (item: T) => Promise<void>,
-): Promise<void> {
-  let next = 0;
-  const run = async (): Promise<void> => {
-    while (next < items.length) {
-      const item = items[next];
-      next += 1;
-      await worker(item);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
-}
-
 // --- The plan of the run: what must be rendered again ---
+
+/**
+ * The fingerprint of the Point de rendez-vous of a Zone.
+ *
+ * The Fiche prints the name of the Point de rendez-vous: a Point de
+ * rendez-vous that changed invalidates the Fiche.
+ */
+function meetingPointFingerprintOf(zoneId: string): string {
+  return meetingPointFingerprint(getZone(zoneId).meetingPoint);
+}
 
 /** A Parcours of the run, with the fingerprints of the files it reads. */
 function toCandidate(tour: TourDistances): PlanCandidate {
@@ -821,6 +825,7 @@ function toCandidate(tour: TourDistances): PlanCandidate {
     zoneId: tour.zoneId,
     tourId: tour.name,
     fingerprints: fingerprintParcoursArtefacts(rootDir, tour.zoneId, tour.name),
+    meetingPoint: meetingPointFingerprintOf(tour.zoneId),
   };
 }
 
@@ -861,8 +866,12 @@ async function main(): Promise<void> {
   const renderedZoneMaps = new Set<string>();
 
   try {
-    mkdirSync(pdfRootDir(rootDir), { recursive: true });
-    mkdirSync(tileCacheDir, { recursive: true });
+    try {
+      mkdirSync(pdfRootDir(rootDir), { recursive: true });
+      mkdirSync(tileCacheDir, { recursive: true });
+    } catch (error) {
+      throw new Error(`cannot prepare the output folders: ${errorMessage(error)}`);
+    }
 
     const filters = parseGenerationFilters(process.argv);
     const force = parseForceFlag(process.argv);
@@ -883,7 +892,7 @@ async function main(): Promise<void> {
     // The plan decides what the run must render: the Fiche of the Parcours
     // that changed, and the overview map of the Zones that changed.
     const statePath = generationStatePath(rootDir);
-    const state = readGenerationState(statePath);
+    const state = readGenerationStateOrWarn(statePath);
     const runPlan = planGeneration({
       state,
       currentVersion: GENERATION_STATE_VERSION,
@@ -972,7 +981,23 @@ async function main(): Promise<void> {
         : undefined;
       updates.push({ key, record: withFicheFingerprint(state?.parcours[key], fiche) });
     }
-    writeGenerationState(statePath, nextGenerationState(state, updates));
+
+    // The state remembers the overview maps that were rendered: the next run
+    // knows they are up to date. An overview map that failed keeps no
+    // fingerprint, so the next run renders it again.
+    const zoneMapUpdates: ZoneMapStateUpdate[] = [];
+    for (const decision of runPlan.zoneDecisions) {
+      if (!decision.regenerateZoneMap) {
+        continue;
+      }
+      const key = zoneMapKey(decision.zoneId, decision.kind);
+      const fingerprint = renderedZoneMaps.has(key)
+        ? fingerprintDocument(zoneMapPdfPath(rootDir, decision.zoneId, decision.kind))
+        : undefined;
+      zoneMapUpdates.push({ key, fingerprint });
+    }
+
+    writeGenerationStateOrFail(statePath, nextGenerationState(state, updates, zoneMapUpdates));
 
     if (failures > 0) {
       throw new Error(`${failures} Fiche(s) failed.`);
