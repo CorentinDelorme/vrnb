@@ -20,8 +20,11 @@ export type InscriptionsOutcome =
   | { readonly state: InscriptionsPublicState; readonly status: 'success' }
   | { readonly status: 'error' };
 
-/** Injectable fetch (defaults to the browser one). */
-export type ClientFetch = (input: URL | string) => Promise<Response>;
+/**
+ * Injectable fetch (defaults to the browser one), for the statuses GET and
+ * the registration POST alike.
+ */
+export type ClientFetch = (input: URL | string, init?: RequestInit) => Promise<Response>;
 
 /**
  * Fetch and deserialize the public inscriptions state. A failing HTTP status,

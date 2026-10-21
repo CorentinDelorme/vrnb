@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import type { InscriptionsWriteStore } from './register';
 import type { RawInscriptionEntry } from './public-state';
 import { handleInscriptionsGet } from './public-state';
+import type { InscriptionsWriteStore } from './register';
 import {
   handleInscriptionsPost,
   inscriptionStoredValue,

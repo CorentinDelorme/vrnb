@@ -1,6 +1,6 @@
 'use client';
 
-import { CancelIcon, CalendarDaysIcon, Location01Icon } from '@hugeicons/core-free-icons';
+import { CalendarDaysIcon, CancelIcon, Location01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -149,8 +149,8 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
           <>
             <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
               <span>
-                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus
-                le {ACTION_DATE_LABEL} au point de rendez-vous ci-dessous.
+                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
+                {ACTION_DATE_LABEL} au point de rendez-vous ci-dessous.
               </span>
             </div>
             <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
@@ -193,72 +193,71 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
             </div>
 
             <form className="mt-4 grid gap-3" onSubmit={(event) => void submit(event)}>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {(
-                [
-                  { id: 'register-first-name-1', key: 'firstName1', label: 'Prénom du membre 1' },
-                  { id: 'register-last-name-1', key: 'lastName1', label: 'Nom du membre 1' },
-                  { id: 'register-first-name-2', key: 'firstName2', label: 'Prénom du membre 2' },
-                  { id: 'register-last-name-2', key: 'lastName2', label: 'Nom du membre 2' },
-                ] as const
-              ).map((field) => (
-                <label className="grid gap-1" htmlFor={field.id} key={field.id}>
-                  <span className="text-sm">{field.label}</span>
-                  <input
-                    className="input w-full"
-                    id={field.id}
-                    onChange={(event) =>
-                      setValues((current) => ({ ...current, [field.key]: event.target.value }))
-                    }
-                    required
-                    type="text"
-                    value={values[field.key]}
-                  />
-                </label>
-              ))}
-            </div>
-
-            <label className="label mt-4 items-start gap-2">
-              <input
-                checked={engaged}
-                className="checkbox mt-0.5"
-                id="register-engaged"
-                onChange={(event) => setEngaged(event.target.checked)}
-                required
-                type="checkbox"
-              />
-              <span className="text-sm">
-                Nous nous engageons à participer ensemble au nettoyage de ce parcours.
-              </span>
-            </label>
-
-            {outcome === 'taken' ? (
-              <div className="alert alert-warning mt-4 text-sm" role="alert">
-                Ce parcours vient d&apos;être couvert par un autre binôme : vous pouvez choisir un
-                autre parcours libre.
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    { id: 'register-first-name-1', key: 'firstName1', label: 'Prénom du membre 1' },
+                    { id: 'register-last-name-1', key: 'lastName1', label: 'Nom du membre 1' },
+                    { id: 'register-first-name-2', key: 'firstName2', label: 'Prénom du membre 2' },
+                    { id: 'register-last-name-2', key: 'lastName2', label: 'Nom du membre 2' },
+                  ] as const
+                ).map((field) => (
+                  <label className="grid gap-1" htmlFor={field.id} key={field.id}>
+                    <span className="text-sm">{field.label}</span>
+                    <input
+                      className="input w-full"
+                      id={field.id}
+                      onChange={(event) =>
+                        setValues((current) => ({ ...current, [field.key]: event.target.value }))
+                      }
+                      required
+                      type="text"
+                      value={values[field.key]}
+                    />
+                  </label>
+                ))}
               </div>
-            ) : null}
-            {outcome === 'invalid' ? (
-              <div className="alert alert-error mt-4 text-sm" role="alert">
-                Formulaire invalide : vérifiez chaque champ et la case d&apos;engagement.
-              </div>
-            ) : null}
-            {outcome === 'error' ? (
-              <div className="alert alert-error mt-4 text-sm" role="alert">
-                Une erreur est survenue : réessayez dans quelques instants.
-              </div>
-            ) : null}
 
-            <div className="modal-action">
-              <button
-                className="btn btn-primary max-sm:btn-sm sm:btn-md"
-                disabled={!complete || outcome === 'submitting'}
-                type="submit"
-              >
-                {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
-              </button>
-            </div>
+              <label className="label mt-4 items-start gap-2">
+                <input
+                  checked={engaged}
+                  className="checkbox mt-0.5"
+                  id="register-engaged"
+                  onChange={(event) => setEngaged(event.target.checked)}
+                  required
+                  type="checkbox"
+                />
+                <span className="text-sm">
+                  Nous nous engageons à participer ensemble au nettoyage de ce parcours.
+                </span>
+              </label>
+
+              {outcome === 'taken' ? (
+                <div className="alert alert-warning mt-4 text-sm" role="alert">
+                  Ce parcours vient d&apos;être couvert par un autre binôme : vous pouvez choisir un
+                  autre parcours libre.
+                </div>
+              ) : null}
+              {outcome === 'invalid' ? (
+                <div className="alert alert-error mt-4 text-sm" role="alert">
+                  Formulaire invalide : vérifiez chaque champ et la case d&apos;engagement.
+                </div>
+              ) : null}
+              {outcome === 'error' ? (
+                <div className="alert alert-error mt-4 text-sm" role="alert">
+                  Une erreur est survenue : réessayez dans quelques instants.
+                </div>
+              ) : null}
+
+              <div className="modal-action">
+                <button
+                  className="btn btn-primary max-sm:btn-sm sm:btn-md"
+                  disabled={!complete || outcome === 'submitting'}
+                  type="submit"
+                >
+                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
+                </button>
+              </div>
             </form>
           </>
         )}

@@ -76,6 +76,14 @@ const MAX_SCAN_PAGES = 256;
 const MGET_BATCH = 100;
 
 /**
+ * Both KV ports of the pure handlers (reading port of `public-state.ts`,
+ * atomic write port of `register.ts`) as the Upstash adapter serves them.
+ */
+export interface UpstashInscriptionsStore extends InscriptionsStore {
+  readonly setIfAbsent: (key: string, value: string, expiresIn: number) => Promise<boolean>;
+}
+
+/**
  * Adapter factory for the pure handlers' KV ports: the reading port (every
  * stored entry of an Édition year, scan + MGET, validated defensively) and
  * the atomic write port of `register.ts` (`SET … NX EX` in one REST call).
@@ -87,7 +95,7 @@ const MGET_BATCH = 100;
 export function createUpstashInscriptionsStore(
   config: UpstashConfig,
   restFetch: RestFetch = fetch,
-): InscriptionsStore {
+): UpstashInscriptionsStore {
   /** Extra call shape for `request`: defaults to a plain GET without body. */
   interface RestCallOptions {
     readonly body?: string;

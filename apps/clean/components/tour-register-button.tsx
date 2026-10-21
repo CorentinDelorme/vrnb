@@ -44,11 +44,7 @@ export function TourRegisterButton({ tour }: TourRegisterButtonProps) {
       </button>
 
       {everOpened ? (
-        <RegisterBinomeModal
-          onClose={() => setVisible(false)}
-          tour={tour}
-          visible={visible}
-        />
+        <RegisterBinomeModal onClose={() => setVisible(false)} tour={tour} visible={visible} />
       ) : null}
     </>
   );

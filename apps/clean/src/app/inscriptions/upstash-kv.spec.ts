@@ -411,9 +411,7 @@ describe('createUpstashInscriptionsStore — setIfAbsent', () => {
     const rest = createScriptedRestFetch();
     rest.enqueue({ status: 401 });
     const store = createUpstashInscriptionsStore(CONFIG, rest.fetchImpl);
-    await expect(store.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).rejects.toThrow(
-      'HTTP 401',
-    );
+    await expect(store.setIfAbsent('inscriptions:2027:z:A', '{}', 60)).rejects.toThrow('HTTP 401');
 
     const restDown = createScriptedRestFetch();
     restDown.enqueue({ throws: 'network down' });

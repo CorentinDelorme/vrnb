@@ -1,7 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { RegistrationOutcome } from '../src/app/inscriptions/inscriptions-client';
+import type {
+  BinomeRegistration,
+  RegistrationOutcome,
+} from '../src/app/inscriptions/inscriptions-client';
 import type { TourRef } from '../src/app/tours-queries';
 import { RegisterBinomeModal } from './register-binome-modal';
 
@@ -18,7 +21,9 @@ const TOUR: TourRef = { tourId: 'V1', zoneId: 'bruz-sud' };
 
 /** Mocks of the module boundary + provider hook, scripted per test. */
 const mocks = vi.hoisted(() => ({
-  postRegistration: vi.fn<() => Promise<RegistrationOutcome>>(),
+  postRegistration: vi.fn<(registration: BinomeRegistration) => Promise<RegistrationOutcome>>(() =>
+    Promise.resolve({ status: 'created' }),
+  ),
   reload: vi.fn(),
 }));
 
@@ -152,9 +157,9 @@ describe('RegisterBinomeModal', () => {
 
     // The native close (X button, backdrop, Escape) fires the `close` event;
     // the component must not reset anything, the host keeps it mounted.
-    (screen.getByText('Inscription du binôme').closest('dialog') as HTMLDialogElement).dispatchEvent(
-      new Event('close'),
-    );
+    (
+      screen.getByText('Inscription du binôme').closest('dialog') as HTMLDialogElement
+    ).dispatchEvent(new Event('close'));
     expect(onClose).toHaveBeenCalledOnce();
     expect((identityInputs()[0] as HTMLInputElement).value).toBe('Léa');
   });

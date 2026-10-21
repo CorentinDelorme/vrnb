@@ -1,6 +1,6 @@
 import { CURRENT_EDITION } from '../../../src/app/inscriptions/edition';
-import { handleInscriptionsPost } from '../../../src/app/inscriptions/register';
 import { handleInscriptionsGet } from '../../../src/app/inscriptions/public-state';
+import { handleInscriptionsPost } from '../../../src/app/inscriptions/register';
 import { createUpstashInscriptionsStore } from '../../../src/app/inscriptions/upstash-kv';
 
 /**

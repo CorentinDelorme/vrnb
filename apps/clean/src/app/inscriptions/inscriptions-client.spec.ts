@@ -125,14 +125,18 @@ describe('registrationRequestBody', () => {
 
 describe('postRegistration', () => {
   it('should POST the contract payload to the inscriptions URL', async () => {
-    const fetchImpl = vi.fn(
-      async () => new Response('{"inscription":{"tourId":"V1","zoneId":"bruz-sud"}}', { status: 201 }),
-    );
+    const fetches: [URL | string, RequestInit | undefined][] = [];
+    const fetchImpl = vi.fn(async (input: URL | string, init?: RequestInit): Promise<Response> => {
+      fetches.push([input, init]);
+      return new Response('{"inscription":{"tourId":"V1","zoneId":"bruz-sud"}}', {
+        status: 201,
+      });
+    });
 
     const outcome = await postRegistration(REGISTRATION, fetchImpl);
 
     expect(outcome).toEqual({ status: 'created' });
-    const [url, init] = fetchImpl.mock.calls[0] ?? [];
+    const [url, init] = fetches[0] ?? [];
     expect(url).toBe('/api/inscriptions');
     expect(init).toMatchObject({
       body: registrationRequestBody(REGISTRATION),

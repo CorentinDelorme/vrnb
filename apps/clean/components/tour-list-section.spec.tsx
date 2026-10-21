@@ -107,9 +107,9 @@ describe('TourListSection inscriptions register button', () => {
   it('should offer the register button on every row before statuses load or resolve', () => {
     for (const pending of [{ status: 'loading' }, { status: 'error' }] as const) {
       const { container, unmount } = renderSection(pending as InscriptionsStatus);
-      expect(
-        container.querySelectorAll('button[aria-label^="Inscrire un binôme"]'),
-      ).toHaveLength(TOURS.length);
+      expect(container.querySelectorAll('button[aria-label^="Inscrire un binôme"]')).toHaveLength(
+        TOURS.length,
+      );
       unmount();
     }
   });
