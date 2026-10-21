@@ -1,19 +1,24 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import type { FeatureCollection } from 'geojson';
 import { join } from 'path';
 
 import { buildTourGeoJsonAsset } from '../src/app/shared/gpx/tour-geojson';
 import { toursData } from '../src/app/tours-data';
-import { DEFAULT_ZONE_ID } from '../src/app/zones';
+
+import type { ParcoursEntry } from './generation-helpers';
+import {
+  compareParcoursIds,
+  geoJsonAssetPath,
+  geoJsonRootDir,
+  isFilterActive,
+  listParcours,
+  parseGenerationFilters,
+} from './generation-helpers';
 
 const rootDir = join(import.meta.dirname, '..');
-const gpxDir = join(rootDir, 'public/gpx');
-const geoJsonDir = join(rootDir, 'public/geojson');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
-
-const TOUR_FOLDER_PATTERN = /^[VP]\d+$/;
 
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
@@ -74,64 +79,15 @@ interface GeneratedTour {
   zoneId: string;
 }
 
-/** List the zone ids found under public/gpx (each zone is a folder of tour folders). */
-function getZoneIds(): string[] {
-  if (!existsSync(gpxDir)) {
-    return [];
-  }
-
-  const zoneIds = readdirSync(gpxDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && !TOUR_FOLDER_PATTERN.test(entry.name))
-    .map((entry) => entry.name);
-
-  // Legacy layout: tour folders directly under public/gpx belong to the default zone.
-  const hasLegacyTours = readdirSync(gpxDir, { withFileTypes: true }).some(
-    (entry) => entry.isDirectory() && TOUR_FOLDER_PATTERN.test(entry.name),
-  );
-  if (hasLegacyTours && !zoneIds.includes(DEFAULT_ZONE_ID)) {
-    zoneIds.push(DEFAULT_ZONE_ID);
-  }
-
-  return zoneIds.sort();
-}
-
-function getTours(prefix: string, zoneId: string, baseDir: string): GeneratedTour[] {
-  if (!existsSync(baseDir)) {
-    return [];
-  }
-
-  const folders = readdirSync(baseDir).filter((f) => f.startsWith(prefix));
-  return folders
-    .map((tourId) => {
-      const gpxPath = join(baseDir, tourId, `${tourId}.gpx`);
-      const startGpxPath = join(baseDir, tourId, `${tourId}_start.gpx`);
-      const endGpxPath = join(baseDir, tourId, `${tourId}_end.gpx`);
-
-      const distance = parseGpxDistance(gpxPath);
-      const startDistance = parseGpxDistance(startGpxPath);
-      const endDistance = parseGpxDistance(endGpxPath);
-
-      return {
-        name: tourId,
-        distance,
-        startDistance,
-        endDistance,
-        zoneId,
-      };
-    })
-    .sort((a, b) => {
-      const numA = parseInt(a.name.slice(1));
-      const numB = parseInt(b.name.slice(1));
-      return numA - numB;
-    });
-}
-
-function zoneBaseDir(zoneId: string): string {
-  // Legacy layout: default-zone tours live directly under public/gpx.
-  if (zoneId === DEFAULT_ZONE_ID && !existsSync(join(gpxDir, DEFAULT_ZONE_ID))) {
-    return gpxDir;
-  }
-  return join(gpxDir, zoneId);
+/** Distances of a Parcours, read from its GPX traces. */
+function readTourDistances(entry: ParcoursEntry): GeneratedTour {
+  return {
+    name: entry.tourId,
+    distance: parseGpxDistance(entry.tracePath),
+    startDistance: parseGpxDistance(entry.startSegmentPath),
+    endDistance: parseGpxDistance(entry.endSegmentPath),
+    zoneId: entry.zoneId,
+  };
 }
 
 /**
@@ -139,44 +95,32 @@ function zoneBaseDir(zoneId: string): string {
  * .geojson): the route plus the start/end segments, each feature tagged with
  * its role, so maps fetch precomputed data at runtime instead of parsing GPX.
  */
-function emitTourGeoJson(zoneId: string, tourId: string): void {
-  const tourGpxDir = join(zoneBaseDir(zoneId), tourId);
+function emitTourGeoJson(entry: ParcoursEntry): void {
   const asset = buildTourGeoJsonAsset({
-    start: readGpxCollection(join(tourGpxDir, `${tourId}_start.gpx`)),
-    tour: readGpxCollection(join(tourGpxDir, `${tourId}.gpx`)),
-    end: readGpxCollection(join(tourGpxDir, `${tourId}_end.gpx`)),
+    start: readGpxCollection(entry.startSegmentPath),
+    tour: readGpxCollection(entry.tracePath),
+    end: readGpxCollection(entry.endSegmentPath),
   });
 
-  const outputDir = join(geoJsonDir, zoneId);
+  const outputDir = join(geoJsonRootDir(rootDir), entry.zoneId);
   try {
     mkdirSync(outputDir, { recursive: true });
-    writeFileSync(join(outputDir, `${tourId}.geojson`), `${JSON.stringify(asset)}\n`);
+    writeFileSync(
+      geoJsonAssetPath(rootDir, entry.zoneId, entry.tourId),
+      `${JSON.stringify(asset)}\n`,
+    );
   } catch (error) {
     throw new Error(
-      `cannot emit ${zoneId}/${tourId}.geojson: ${error instanceof Error ? error.message : error}`,
+      `cannot emit ${entry.zoneId}/${entry.tourId}.geojson: ${error instanceof Error ? error.message : error}`,
     );
   }
-}
-
-function parseArgValues(flag: string): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
 }
 
 function sortTours(a: GeneratedTour, b: GeneratedTour): number {
   if (a.zoneId !== b.zoneId) {
     return a.zoneId.localeCompare(b.zoneId);
   }
-  if (a.name[0] !== b.name[0]) {
-    return a.name[0] < b.name[0] ? -1 : 1;
-  }
-  return parseInt(a.name.slice(1)) - parseInt(b.name.slice(1));
+  return compareParcoursIds(a.name, b.name);
 }
 
 /**
@@ -190,21 +134,17 @@ function mergeTours(existing: GeneratedTour[], fresh: GeneratedTour[]): Generate
   return [...kept, ...fresh].sort(sortTours);
 }
 
-const tourFilter = parseArgValues('--tour');
-const zoneFilter = parseArgValues('--zone');
-const filtered = tourFilter !== undefined || zoneFilter !== undefined;
+const filters = parseGenerationFilters(process.argv);
+const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
 
-const zoneIds = getZoneIds().filter((zoneId) => !zoneFilter || zoneFilter.has(zoneId));
+const inventory = listParcours(rootDir, filters);
+const zoneIds = inventory.zoneIds;
 if (filtered && zoneIds.length === 0) {
   throw new Error('No zones match the --tour/--zone filter.');
 }
-const matchesTour = (tour: GeneratedTour): boolean => !tourFilter || tourFilter.has(tour.name);
-const freshVTours = zoneIds.flatMap((zoneId) =>
-  getTours('V', zoneId, zoneBaseDir(zoneId)).filter(matchesTour),
-);
-const freshPTours = zoneIds.flatMap((zoneId) =>
-  getTours('P', zoneId, zoneBaseDir(zoneId)).filter(matchesTour),
-);
+const freshTours = inventory.parcours.map(readTourDistances);
+const freshVTours = freshTours.filter((tour) => tour.name.startsWith('V'));
+const freshPTours = freshTours.filter((tour) => tour.name.startsWith('P'));
 if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
   throw new Error('No tours match the --tour/--zone filter.');
 }
@@ -214,14 +154,13 @@ const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTour
 
 // Emit precomputed GeoJSON for every freshly computed tour only; tours kept
 // by the --tour/--zone merge keep their existing asset untouched.
-const freshTours = [...freshVTours, ...freshPTours];
 let emitFailures = 0;
-for (const tour of freshTours) {
+for (const entry of inventory.parcours) {
   try {
-    emitTourGeoJson(tour.zoneId, tour.name);
+    emitTourGeoJson(entry);
   } catch (error) {
     emitFailures += 1;
-    console.error(`fail ${tour.name}: ${error instanceof Error ? error.message : error}`);
+    console.error(`fail ${entry.tourId}: ${error instanceof Error ? error.message : error}`);
   }
 }
 if (emitFailures > 0) {
@@ -239,4 +178,4 @@ writeFileSync(outputFile, content);
 console.log(
   `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
 );
-console.log(`Emitted ${freshTours.length} precomputed GeoJSON files under public/geojson/`);
+console.log(`Emitted ${inventory.parcours.length} precomputed GeoJSON files under public/geojson/`);
