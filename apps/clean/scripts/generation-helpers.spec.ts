@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { dirname, join } from 'path';
 
@@ -12,9 +12,11 @@ import {
   listParcours,
   matchesFilters,
   parseFilterValues,
+  parseForceFlag,
   parseGenerationFilters,
   resolveGpxTracePath,
   tourPdfPath,
+  writeFileIfChanged,
   zoneMapPdfPath,
 } from './generation-helpers';
 
@@ -97,6 +99,42 @@ describe('isFilterActive', () => {
     expect(isFilterActive(undefined)).toBe(false);
     expect(isFilterActive(new Set())).toBe(false);
     expect(isFilterActive(new Set(['V1']))).toBe(true);
+  });
+});
+
+describe('parseForceFlag', () => {
+  it('should tell a forced run from a regular one', () => {
+    expect(parseForceFlag(['--tour=V1', '--force'])).toBe(true);
+    expect(parseForceFlag(['--tour=V1'])).toBe(false);
+  });
+});
+
+describe('writeFileIfChanged', () => {
+  it('should leave a file holding the same content untouched', () => {
+    const rootDir = createFixture({ 'tours-data.ts': 'same' });
+
+    const written = writeFileIfChanged(join(rootDir, 'tours-data.ts'), 'same');
+
+    expect(written).toBe(false);
+    expect(readFileSync(join(rootDir, 'tours-data.ts'), 'utf-8')).toBe('same');
+  });
+
+  it('should write a file whose content changed', () => {
+    const rootDir = createFixture({ 'tours-data.ts': 'old' });
+
+    const written = writeFileIfChanged(join(rootDir, 'tours-data.ts'), 'new');
+
+    expect(written).toBe(true);
+    expect(readFileSync(join(rootDir, 'tours-data.ts'), 'utf-8')).toBe('new');
+  });
+
+  it('should create a file that does not exist yet', () => {
+    const rootDir = createFixture({});
+
+    const written = writeFileIfChanged(join(rootDir, 'tours-data.ts'), 'new');
+
+    expect(written).toBe(true);
+    expect(readFileSync(join(rootDir, 'tours-data.ts'), 'utf-8')).toBe('new');
   });
 });
 
