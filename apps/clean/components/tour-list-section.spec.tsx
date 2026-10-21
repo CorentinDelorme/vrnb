@@ -107,9 +107,9 @@ describe('TourListSection inscriptions register button', () => {
   it('should offer the register button on every row before statuses load or resolve', () => {
     for (const pending of [{ status: 'loading' }, { status: 'error' }] as const) {
       const { container, unmount } = renderSection(pending as InscriptionsStatus);
-      expect(container.querySelectorAll('button[aria-label^="Inscrire un binôme"]')).toHaveLength(
-        TOURS.length,
-      );
+      expect(
+        container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]'),
+      ).toHaveLength(TOURS.length);
       unmount();
     }
   });
@@ -123,11 +123,11 @@ describe('TourListSection inscriptions register button', () => {
     const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
       row.textContent?.includes('V2'),
     );
-    expect(v1Row?.querySelector('button[aria-label^="Inscrire un binôme"]')).toBeNull();
+    expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en binôme"]')).toBeNull();
     expect(
-      v2Row?.querySelector('button[aria-label="Inscrire un binôme pour le parcours V2"]'),
+      v2Row?.querySelector('button[aria-label="S\'inscrire en binôme pour le parcours V2"]'),
     ).not.toBeNull();
-    expect(container.querySelectorAll('button[aria-label^="Inscrire un binôme"]')).toHaveLength(
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
       TOURS.length - 1,
     );
   });
@@ -141,7 +141,9 @@ describe('TourListSection inscriptions register button', () => {
       },
       status: 'success',
     });
-    expect(container.querySelectorAll('button[aria-label^="Inscrire un binôme"]')).toHaveLength(0);
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+      0,
+    );
     // The play buttons stay: the closed window never touches the legacy DOM.
     expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(
       TOURS.length,

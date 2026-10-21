@@ -28,6 +28,9 @@ import { TourRegisterButton } from './tour-register-button';
  * statuses are loading (or on a fetch error) the coverage is unknown, and the
  * unknown tours stay open for registration — exactly the badge-less state of
  * #16, so a late-covered row is resolved by the modal's own 409 race guard.
+ * The gating hides the button through a prop (rather than unmounting the
+ * component) so a modal opened while a row was uncoverable keeps displaying
+ * its confirmation or conflict message once the row turns covered.
  */
 
 declare module 'react' {
@@ -125,9 +128,12 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               {formatDistance(tour.distance)}
             </div>
             <div className="list-col-grow flex justify-end">
-              {!isCoveredInscriptions(status, zoneId, tour.name) && isRegisteringOpen(status) ? (
-                <TourRegisterButton tour={{ tourId: tour.name, zoneId }} />
-              ) : null}
+              <TourRegisterButton
+                available={
+                  !isCoveredInscriptions(status, zoneId, tour.name) && isRegisteringOpen(status)
+                }
+                tour={{ tourId: tour.name, zoneId }}
+              />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
             </div>
           </li>

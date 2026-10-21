@@ -128,7 +128,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
   };
 
   return (
-    <dialog className="modal" id="register_modal" ref={dialogRef}>
+    <dialog className="modal" id={`register_modal_${tour.tourId}`} ref={dialogRef}>
       <div className="modal-box">
         <form method="dialog">
           <button
