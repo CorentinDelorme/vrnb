@@ -5,6 +5,7 @@ import { handleInscriptionsGet } from './public-state';
 import type { InscriptionsWriteStore } from './register';
 import {
   handleInscriptionsPost,
+  hasFilledHoneypot,
   inscriptionStoredValue,
   parseInscriptionRegistration,
   registrationExpiresIn,
@@ -12,16 +13,22 @@ import {
 import { inscriptionKey } from './upstash-kv';
 
 /**
- * Pure core of `POST /api/inscriptions` (ticket #17): the registration is an
- * atomic first-come reservation on the KV store, the stored value never
+ * Pure core of `POST /api/inscriptions` (tickets #17 + #18): the registration
+ * is an atomic first-come reservation on the KV store, the stored value never
  * exceeds the four identity fields, and every outcome is a distinct no-store
- * JSON response (201 created, 409 covered, 400 invalid, 500 store failure).
+ * JSON response (201 created, 409 covered, 400 refused with the code of its
+ * cause, 500 store failure). Every refusal — anti-bot honeypot, closed
+ * registration window, invalid identity — happens BEFORE the write: the
+ * store stays untouched.
  */
 
 const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 
 /** 2027-02-01 late morning in Paris — a plausible registration instant. */
 const NOW = new Date('2027-02-01T09:00:00Z');
+
+/** The day after the action date: the registration window is closed. */
+const AFTER_ACTION_DATE = new Date('2027-02-15T09:00:00Z');
 
 /** One valid registration body, tweakable per test. */
 function validBody(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
@@ -119,10 +126,21 @@ describe('parseInscriptionRegistration', () => {
     }
   });
 
-  it('should tolerate any string honeypot at this ticket level (#18 enforces)', () => {
-    expect(parseInscriptionRegistration(validBody({ honeypot: 'spam text' }))?.honeypot).toBe(
-      'spam text',
+  it('should refuse the identity fields out of the shared bounds (#18)', () => {
+    // Too short (1 character once trimmed):
+    expect(parseInscriptionRegistration(validBody({ firstName1: ' L ' }))).toBeNull();
+    // Too long (61 characters once trimmed):
+    expect(parseInscriptionRegistration(validBody({ lastName2: 'a'.repeat(61) }))).toBeNull();
+    // Exactly on the bounds, the registration is accepted:
+    expect(parseInscriptionRegistration(validBody({ firstName1: ' Lé ' }))?.firstName1).toBe('Lé');
+    expect(parseInscriptionRegistration(validBody({ lastName2: 'b'.repeat(60) }))?.lastName2).toBe(
+      'b'.repeat(60),
     );
+  });
+
+  it('should refuse a filled honeypot (#18)', () => {
+    expect(parseInscriptionRegistration(validBody({ honeypot: 'spam text' }))).toBeNull();
+    expect(parseInscriptionRegistration(validBody({ honeypot: '   ' }))?.honeypot).toBe('');
     expect(parseInscriptionRegistration(validBody({ honeypot: '' }))?.honeypot).toBe('');
     expect(parseInscriptionRegistration(validBody({ honeypot: undefined }))?.honeypot).toBe('');
   });
@@ -134,11 +152,21 @@ describe('parseInscriptionRegistration', () => {
   });
 });
 
+describe('hasFilledHoneypot', () => {
+  it('should detect a filled honeypot and ignore everything else', () => {
+    expect(hasFilledHoneypot(validBody({ honeypot: 'https://spam.example' }))).toBe(true);
+    expect(hasFilledHoneypot(validBody({ honeypot: '  ' }))).toBe(false);
+    expect(hasFilledHoneypot(validBody({ honeypot: '' }))).toBe(false);
+    expect(hasFilledHoneypot(validBody({ honeypot: undefined }))).toBe(false);
+    expect(hasFilledHoneypot(validBody({ honeypot: 42 }))).toBe(false);
+    expect(hasFilledHoneypot(null)).toBe(false);
+    expect(hasFilledHoneypot('registration')).toBe(false);
+  });
+});
+
 describe('inscriptionStoredValue', () => {
   it('should serialize exactly the four identity fields', () => {
-    const registration = parseInscriptionRegistration(
-      validBody({ firstName1: ' Léa ', honeypot: 'spam' }),
-    );
+    const registration = parseInscriptionRegistration(validBody({ firstName1: ' Léa ' }));
     if (!registration) throw new Error('fixture not validated');
     expect(JSON.parse(inscriptionStoredValue(registration))).toEqual({
       firstName1: 'Léa',
@@ -246,6 +274,69 @@ describe('handleInscriptionsPost', () => {
       expect(response.status).toBe(400);
       await expect(response.json()).resolves.toEqual({ error: 'invalid-inscription' });
       expect(store.values.size).toBe(0);
+    }
+  });
+
+  it('should answer 400 with its own code when the honeypot is filled, storing nothing', async () => {
+    const store = new InMemoryWriteStore();
+    const response = await handleInscriptionsPost(
+      deps(store),
+      request(validBody({ honeypot: 'https://spam.example' })),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'honeypot-triggered' });
+    // The bot never reaches the store: no key, no write, no TTL.
+    expect(store.operationLog).toEqual([]);
+    expect(store.values.size).toBe(0);
+    expect(store.expiries.size).toBe(0);
+  });
+
+  it('should answer 400 with its own code once the registration window is closed', async () => {
+    const store = new InMemoryWriteStore();
+    const response = await handleInscriptionsPost(
+      deps(store, AFTER_ACTION_DATE),
+      request(validBody()),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'registration-closed' });
+    // A closed window never reaches the store either.
+    expect(store.operationLog).toEqual([]);
+    expect(store.values.size).toBe(0);
+    expect(store.expiries.size).toBe(0);
+  });
+
+  it('should refuse each invalid identity field with the invalid code, storing nothing', async () => {
+    const invalidBodies = [
+      validBody({ firstName1: ' L ' }), // 1 character once trimmed
+      validBody({ lastName1: 'b'.repeat(61) }), // 61 characters once trimmed
+      validBody({ firstName2: '   ' }), // blank after trim
+      validBody({ lastName2: undefined }), // missing
+      validBody({ engaged: false }), // the engagement statement is required
+    ];
+    for (const body of invalidBodies) {
+      const store = new InMemoryWriteStore();
+      const response = await handleInscriptionsPost(deps(store), request(body));
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: 'invalid-inscription' });
+      expect(store.operationLog).toEqual([]);
+      expect(store.values.size).toBe(0);
+    }
+  });
+
+  it('should give each refusal its own error code', async () => {
+    const cases: readonly { readonly body: unknown; readonly code: string; readonly now?: Date }[] =
+      [
+        { body: validBody({ honeypot: 'spam' }), code: 'honeypot-triggered' },
+        { body: validBody(), code: 'registration-closed', now: AFTER_ACTION_DATE },
+        { body: validBody({ firstName1: ' L ' }), code: 'invalid-inscription' },
+      ];
+    for (const { body, code, now } of cases) {
+      const store = new InMemoryWriteStore();
+      const response = await handleInscriptionsPost(deps(store, now ?? NOW), request(body));
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: code });
     }
   });
 

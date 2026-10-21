@@ -67,6 +67,19 @@ Inscriptions feature additions (ticket #16, no parity impact — DOM contract un
    Both directions of the API stay intercepted with `page.route`, so the totals above (and the 47
    play buttons) stay unchanged.
 
+5. **`Closed registration window` (2 tests) and `Anti-bot honeypot and GDPR notice` (4 tests),
+   ticket #18**: the modal of a closed registration window (the action date is past) announces
+   « l'action est passée » and disables its form, the hidden anti-bot honeypot is in the DOM but
+   invisible to humans, and the modal states the 90-day retention of the names. The "after the
+   action date" cases fix the browser clock with `page.clock.setFixedTime` before the navigation,
+   so the instant is deterministic; the mocked API answers the closed window like the real server
+   would. The register button stays on the uncovered rows of a closed window (only a covered
+   Parcours loses its button), so the play-button contract (47) stays unchanged too.
+
+Totals: **108 tests per browser** (102 after tickets #16 and #17, + 6 for ticket #18) × chromium
+
+- firefox = **216**.
+
 ---
 
 ## File: `e2e/app.spec.ts`
@@ -125,11 +138,18 @@ Route: `/`
 
 ## File: `e2e/inscriptions.spec.ts`
 
-Route: `/` (tickets #16 + #17 — public inscriptions statuses and binôme registration)
+Route: `/` (tickets #16 + #17 + #18 — public inscriptions statuses, binôme
+registration and registration window)
 
 > `GET /api/inscriptions` is intercepted with `page.route` in every test of this
 > file (both browsers), so the dev server needs no KV credentials. The POST
 > direction is scripted through the same `page.route` handler, assert by assert.
+>
+> The « after the action date » cases fix the browser clock with
+> `page.clock.setFixedTime(new Date('2027-02-20T09:00:00Z'))` **before** the
+> navigation (the action date of the Édition is 2027-02-14): the instant is
+> deterministic, and the mocked API answers the closed window
+> (`registrationOpen: false`) like the real server would answer it then.
 
 ### `describe('Public inscriptions statuses')`
 
@@ -163,6 +183,26 @@ addressed as `getByRole('dialog')`.
 | `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                            | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                             |
 | `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                              | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                       |
 | `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                    | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                          |
+
+### `describe('Closed registration window')` (ticket #18)
+
+The register button stays on the uncovered rows of a closed window: the modal
+itself announces that « l'action est passée » and disables its form. Only a
+covered Parcours loses its button (see the row above).
+
+| Test name                                                                         | Steps                                                                                                                          | Expected                                                                                                                                                       |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should disable the modal and announce the action is past`                        | Fix the clock after the action date, mock GET with `registrationOpen: false`, `goto('/')`, open V2's button                    | The modal contains « L'action est passée » and « les inscriptions sont closes »; the submit, the four identity inputs and the engagement checkbox are disabled |
+| `should close the window on the local clock when the public state is unavailable` | Fix the clock after the action date, mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`, open V2's button | The client falls back to its own clock: the same closed window and the same disabled submit                                                                    |
+
+### `describe('Anti-bot honeypot and GDPR notice')` (ticket #18)
+
+| Test name                                                          | Steps                                                                                                                | Expected                                                                                                                            |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `should hide the honeypot from humans in the modal`                | Mock GET (open, empty), `goto('/')`, open V2's button                                                                | One `input[name="website"]` in the modal: present in the DOM, `hidden`, `aria-hidden="true"`, `tabindex="-1"`, `autocomplete="off"` |
+| `should post the filled honeypot and explain the anti-bot refusal` | Script GET (open) + POST 400 `{"error":"honeypot-triggered"}`, open V2's button, fill, fill the hidden field, submit | One POST whose body carries the filled `honeypot`; the modal explains the « filtre anti-robots » refusal                            |
+| `should state the data retention of the names in the modal`        | Mock GET (open, empty), `goto('/')`, open V2's button                                                                | The modal states « Vos noms servent à établir les fiches de suivi de l'action. Les données sont effacées 90 jours après l'action. » |
+| `should have no a11y violation on the open registration modal`     | Mock GET (open, empty), `goto('/')`, open V2's button, run the axe audit on the page                                 | No axe violation (the hidden honeypot never breaks the audit)                                                                       |
 
 ---
 
@@ -415,6 +455,7 @@ test('should have no a11y violations on home page', async ({ page }) => {
 | Tour row                      | `li.list-row`                                                   |
 | Tour play button              | `button[aria-label="Lancer le parcours"]`                       |
 | Register button               | `button[aria-label="S'inscrire en binôme pour le parcours V2"]` |
+| Anti-bot honeypot             | `input[name="website"]` (hidden)                                |
 | "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (hidden on `max-sm`)     |
 | Map                           | `div#map`                                                       |
 | Step items                    | `li.step`                                                       |

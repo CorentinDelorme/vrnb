@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from '@playwright/test';
 
@@ -8,6 +9,11 @@ import { expect, test } from '@playwright/test';
  * register button next to its play button, and the registration flows through
  * the DaisyUI modal with `POST /api/inscriptions`. Every exchange (GET and
  * POST) is intercepted with `page.route`, so no KV backend is needed.
+ *
+ * Ticket #18: the modal of a closed registration window (the action date is
+ * past) announces « l'action est passée » and disables its form, the hidden
+ * anti-bot honeypot is in the DOM but invisible to humans, and the modal
+ * states how long the names are kept.
  */
 
 /** Public state shape returned by the (mocked) API. */
@@ -22,6 +28,15 @@ const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 
 /** Public state of an open window covering nothing. */
 const OPEN_STATE = { edition: EDITION, inscriptions: [], registrationOpen: true } as const;
+
+/** Public state of a closed window (the action date is past). */
+const CLOSED_STATE = { edition: EDITION, inscriptions: [], registrationOpen: false } as const;
+
+/**
+ * An instant after the action date of the Édition (2027-02-14): the browser
+ * clock is fixed on it to simulate the day the action is over.
+ */
+const AFTER_ACTION_DATE = new Date('2027-02-20T09:00:00Z');
 
 /** The exact POST contract the registering client sends (ticket #17). */
 const CONTRACT_BODY = {
@@ -94,6 +109,29 @@ async function fillRegistration(
   await modal.getByLabel('Prénom du membre 2', { exact: true }).fill(String(body.firstName2));
   await modal.getByLabel('Nom du membre 2', { exact: true }).fill(String(body.lastName2));
   await modal.getByRole('checkbox').check();
+}
+
+/** Open the registration modal of a Parcours from its register button. */
+async function openRegistrationModal(page: Page, tourId: string) {
+  await page
+    .getByRole('button', { name: `S'inscrire en binôme pour le parcours ${tourId}`, exact: true })
+    .click();
+  const modal = page.getByRole('dialog');
+  await expect(modal).toBeVisible();
+  return modal;
+}
+
+/**
+ * Fill the hidden anti-bot honeypot the way a bot would (a human never sees
+ * it): the native value setter plus an `input` event, so the controlled React
+ * input notices the change.
+ */
+async function fillHoneypot(page: Page, value: string): Promise<void> {
+  await page.locator('input[name="website"]').evaluate((input, filled) => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    setter?.call(input, filled);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }, value);
 }
 
 test.describe('Public inscriptions statuses', () => {
@@ -275,5 +313,119 @@ test.describe('Binôme registration', () => {
     await expect(
       page.getByRole('button', { name: "S'inscrire en binôme pour le parcours P2", exact: true }),
     ).toHaveCount(0);
+  });
+});
+
+/**
+ * The registration window of ticket #18: once the action date is past, the
+ * modal announces « l'action est passée » and disables its form. The instant
+ * is deterministic — the browser clock is fixed on a date after the action
+ * date (2027-02-14) before the navigation, and the mocked API answers the
+ * closed window like the real server would answer it at that instant.
+ */
+test.describe('Closed registration window', () => {
+  test('should disable the modal and announce the action is past', async ({ page }) => {
+    await page.clock.setFixedTime(AFTER_ACTION_DATE);
+    await page.route('**/api/inscriptions', (route) => route.fulfill({ json: CLOSED_STATE }));
+    await page.goto('/');
+
+    // The register button stays: the modal is the one explaining and
+    // disabling itself (only a covered Parcours loses its button).
+    const modal = await openRegistrationModal(page, 'V2');
+    await expect(modal).toContainText("L'action est passée");
+    await expect(modal).toContainText('les inscriptions sont closes');
+
+    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeDisabled();
+    await expect(modal.getByLabel('Prénom du membre 1', { exact: true })).toBeDisabled();
+    await expect(modal.getByLabel('Nom du membre 2', { exact: true })).toBeDisabled();
+    await expect(modal.getByRole('checkbox')).toBeDisabled();
+  });
+
+  test('should close the window on the local clock when the public state is unavailable', async ({
+    page,
+  }) => {
+    // The public state cannot be loaded: the client falls back to its own
+    // clock, which says the action date is past.
+    await page.clock.setFixedTime(AFTER_ACTION_DATE);
+    await page.route('**/api/inscriptions', (route) =>
+      route.fulfill({ json: { error: 'inscriptions-unavailable' }, status: 502 }),
+    );
+    await page.goto('/');
+
+    const modal = await openRegistrationModal(page, 'V2');
+    await expect(modal).toContainText("L'action est passée");
+    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeDisabled();
+  });
+});
+
+/**
+ * The anti-bot honeypot and the data retention notice of ticket #18: the
+ * hidden field is in the DOM (a bot fills it) but invisible to humans, and
+ * the modal states how long the names are kept.
+ */
+test.describe('Anti-bot honeypot and GDPR notice', () => {
+  test('should hide the honeypot from humans in the modal', async ({ page }) => {
+    await page.route('**/api/inscriptions', (route) => route.fulfill({ json: OPEN_STATE }));
+    await page.goto('/');
+
+    const modal = await openRegistrationModal(page, 'V2');
+    const honeypot = modal.locator('input[name="website"]');
+    // Present in the DOM…
+    await expect(honeypot).toHaveCount(1);
+    // …but invisible to humans: never displayed, never in the tab order, and
+    // out of the accessibility tree.
+    await expect(honeypot).toBeHidden();
+    await expect(honeypot).toHaveAttribute('aria-hidden', 'true');
+    await expect(honeypot).toHaveAttribute('tabindex', '-1');
+    await expect(honeypot).toHaveAttribute('autocomplete', 'off');
+  });
+
+  test('should post the filled honeypot and explain the anti-bot refusal', async ({ page }) => {
+    const postBodies: string[] = [];
+    await mockInscriptionsApi(page, {
+      get: () => OPEN_STATE,
+      post: async ({ body, fulfill }) => {
+        postBodies.push(body);
+        await fulfill({ json: { error: 'honeypot-triggered' }, status: 400 });
+      },
+    });
+    await page.goto('/');
+
+    const modal = await openRegistrationModal(page, 'V2');
+    await fillRegistration(page, CONTRACT_BODY);
+    // A bot fills the hidden field: the value travels with the registration
+    // and the server refuses it without storing anything.
+    await fillHoneypot(page, 'https://spam.example');
+    await modal.getByRole('button', { name: 'Inscrire mon binôme' }).click();
+
+    await expect(modal).toContainText(/filtre anti-robots/);
+    expect(postBodies).toHaveLength(1);
+    expect(JSON.parse(postBodies[0] ?? '{}')).toEqual({
+      ...CONTRACT_BODY,
+      honeypot: 'https://spam.example',
+    });
+  });
+
+  test('should state the data retention of the names in the modal', async ({ page }) => {
+    await page.route('**/api/inscriptions', (route) => route.fulfill({ json: OPEN_STATE }));
+    await page.goto('/');
+
+    const modal = await openRegistrationModal(page, 'V2');
+    await expect(modal).toContainText(
+      "Vos noms servent à établir les fiches de suivi de l'action.",
+    );
+    await expect(modal).toContainText('Les données sont effacées 90 jours après l');
+  });
+
+  test('should have no a11y violation on the open registration modal', async ({ page }) => {
+    await page.route('**/api/inscriptions', (route) => route.fulfill({ json: OPEN_STATE }));
+    await page.goto('/');
+
+    await openRegistrationModal(page, 'V2');
+    // The hidden honeypot must not break the audit of the home page.
+    const results = await new AxeBuilder({ page })
+      .disableRules(['meta-viewport', 'color-contrast'])
+      .analyze();
+    expect(results.violations).toEqual([]);
   });
 });

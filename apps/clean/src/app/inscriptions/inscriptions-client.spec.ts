@@ -12,7 +12,7 @@ import {
  * Browser client of the inscriptions endpoints: relative-URL fetch with an
  * injectable fetch and strict deserialization. GET degrades every failure to
  * the error outcome; POST maps the handler's status codes to the distinct
- * registration outcomes (created/taken/invalid/error).
+ * registration outcomes (created/taken/invalid/bot/closed/error).
  */
 
 const STATE = {
@@ -108,6 +108,7 @@ describe('parseInscriptionsState', () => {
 const REGISTRATION: BinomeRegistration = {
   firstName1: 'Léa',
   firstName2: 'Marc',
+  honeypot: '',
   lastName1: 'Dupont',
   lastName2: 'Martin',
   tourId: 'V1',
@@ -119,6 +120,12 @@ describe('registrationRequestBody', () => {
     expect(registrationRequestBody(REGISTRATION)).toBe(
       '{"engaged":true,"firstName1":"Léa","firstName2":"Marc","honeypot":"",' +
         '"lastName1":"Dupont","lastName2":"Martin","tourId":"V1","zoneId":"bruz-sud"}',
+    );
+  });
+
+  it('should carry the anti-bot honeypot value of the form', () => {
+    expect(registrationRequestBody({ ...REGISTRATION, honeypot: 'filled' })).toContain(
+      '"honeypot":"filled"',
     );
   });
 });
@@ -165,6 +172,34 @@ describe('postRegistration', () => {
       async () => new Response('{"error":"invalid-inscription"}', { status: 400 }),
     );
     expect(invalid).toEqual({ status: 'invalid' });
+  });
+
+  it('should tell the 400 refusals apart by their rejection code', async () => {
+    const bot = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"honeypot-triggered"}', { status: 400 }),
+    );
+    expect(bot).toEqual({ status: 'bot' });
+
+    const closed = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"registration-closed"}', { status: 400 }),
+    );
+    expect(closed).toEqual({ status: 'closed' });
+  });
+
+  it('should fall back to the invalid outcome on an unreadable 400 body', async () => {
+    const broken = await postRegistration(
+      REGISTRATION,
+      async () => new Response('not json', { status: 400 }),
+    );
+    expect(broken).toEqual({ status: 'invalid' });
+
+    const unknown = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"something-else"}', { status: 400 }),
+    );
+    expect(unknown).toEqual({ status: 'invalid' });
   });
 
   it('should map any other HTTP status to the error outcome', async () => {

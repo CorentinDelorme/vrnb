@@ -17,6 +17,23 @@ const TOUR: TourRef = { tourId: 'V1', zoneId: 'bruz-sud' };
 const showModal = vi.hoisted(() => vi.fn());
 
 /**
+ * The modal reads the registration window from the provider (ticket #18): the
+ * public state answers an open window, so the modal never depends on the
+ * wall clock of the test runner.
+ */
+vi.mock('./inscriptions-status-provider', () => ({
+  useInscriptionsReload: () => vi.fn(),
+  useInscriptionsStatus: () => ({
+    state: {
+      edition: { actionDate: '2027-02-14', year: 2027 },
+      inscriptions: [],
+      registrationOpen: true,
+    },
+    status: 'success',
+  }),
+}));
+
+/**
  * jsdom implements no dialog method at all: patch the two the components use,
  * mimicking the native behavior (the modal opening, and the `close` event of
  * the native dialog).
