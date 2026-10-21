@@ -11,10 +11,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-import {
-  INSCRIPTIONS_RETENTION_DAYS,
-  formatActionDateLabel,
-} from '../src/app/inscriptions/edition';
+import { formatActionDateLabel } from '../src/app/inscriptions/edition';
 import type { SuiviSheet } from './inscriptions-extract';
 
 /** jsPDF with the autoTable plugin, as the PDF generation script uses it. */
@@ -34,8 +31,17 @@ function sheetTitle(sheet: SuiviSheet): string {
 export function renderSuiviSheetPdf(sheet: SuiviSheet): Uint8Array {
   const doc = new jsPDF();
 
+  // The Édition line sits above the sheet title: « Édition 2027 du dimanche
+  // 14 février 2027 ».
+  doc.setFontSize(11);
+  doc.text(
+    `Édition ${sheet.edition.year} du ${formatActionDateLabel(sheet.edition.actionDate)}`,
+    14,
+    16,
+  );
+
   doc.setFontSize(18);
-  doc.text(sheetTitle(sheet), 14, 20);
+  doc.text(sheetTitle(sheet), 14, 27);
 
   autoTable(doc, {
     body: sheet.rows.map((row) => [row.tourId, row.member1, row.member2, '', '', '']),
@@ -47,7 +53,7 @@ export function renderSuiviSheetPdf(sheet: SuiviSheet): Uint8Array {
     },
     head: [['Parcours', 'Prénom NOM', 'Prénom NOM', 'Ordures (g)', 'Tri (g)', 'Verre (g)']],
     headStyles: { fillColor: [66, 135, 75] },
-    startY: 30,
+    startY: 38,
     theme: 'grid',
   });
 
@@ -58,12 +64,6 @@ export function renderSuiviSheetPdf(sheet: SuiviSheet): Uint8Array {
     startY: (doc as AutoTableDoc).lastAutoTable.finalY + 8,
     theme: 'grid',
   });
-
-  // The sheet carries personal data: it says which Édition it belongs to and
-  // when the data is erased.
-  const footer = `Édition ${sheet.edition.year} - action : ${formatActionDateLabel(sheet.edition.actionDate)} - les prénoms et noms sont effacés ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
-  doc.setFontSize(9);
-  doc.text(footer, 14, (doc as AutoTableDoc).lastAutoTable.finalY + 22);
 
   return new Uint8Array(doc.output('arraybuffer'));
 }
