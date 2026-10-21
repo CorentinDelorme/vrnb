@@ -1,6 +1,6 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { join } from 'path';
@@ -9,6 +9,8 @@ import sharp from 'sharp';
 
 import { toursData } from '../src/app/tours-data';
 import { getZone } from '../src/app/zones';
+import { createNetworkScheduler } from './network-scheduler';
+import { createTileFetcher } from './tile-fetcher';
 
 import type { GpxSegmentSuffix } from './generation-helpers';
 import {
@@ -31,6 +33,15 @@ const TILE_SIZE = 256;
 const USER_AGENT = 'vrnb-clean generate-pdfs';
 const REQUEST_DELAY_MS = 400;
 const REQUEST_TIMEOUT_MS = 30_000;
+/** Maximum number of simultaneous requests to a host (OSM tile usage policy). */
+const MAX_CONCURRENT_REQUESTS_PER_HOST = 2;
+/**
+ * Number of Fiches assembled in parallel. The network scheduler still caps
+ * the tile server at two simultaneous connections and one request every
+ * 400 ms: this constant only overlaps the assembly of a Fiche with the
+ * network wait of another one.
+ */
+const FICHE_CONCURRENCY = 3;
 const MAX_ZOOM = 18;
 const TILE_JPEG_QUALITY = 85;
 const MAP_JPEG_QUALITY = 88;
@@ -147,10 +158,6 @@ async function buildQrCodeImage(url: string): Promise<Buffer | undefined> {
   }
 }
 
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /** Older PDFs were committed read-only; make the target writable before saving. */
 function ensureWritable(outputPath: string): void {
   if (!existsSync(outputPath)) {
@@ -251,52 +258,55 @@ function planView(
   return undefined;
 }
 
-// --- OSM tile fetching with disk cache and throttling ---
-
-let lastFetchAt = 0;
+// --- OSM tile fetching: disk cache, network scheduler ---
 
 function tileCachePath(zoom: number, x: number, y: number): string {
   return join(tileCacheDir, String(zoom), String(x), `${y}.jpg`);
 }
 
+/**
+ * The scheduler every tile download goes through: one request every 400 ms
+ * and two at a time per host, and a tile needed by two Fiches at the same
+ * time is downloaded once.
+ */
+const scheduler = createNetworkScheduler({
+  minIntervalMs: REQUEST_DELAY_MS,
+  maxConcurrentPerHost: MAX_CONCURRENT_REQUESTS_PER_HOST,
+});
+
+/** The map tiles: read from the disk cache, downloaded through the scheduler. */
+const tileFetcher = createTileFetcher({
+  scheduler,
+  tileUrl: (zoom, x, y) =>
+    TILE_URL.replace('{z}', String(zoom)).replace('{x}', String(x)).replace('{y}', String(y)),
+  readCache: (zoom, x, y) => {
+    const cachePath = tileCachePath(zoom, x, y);
+    return existsSync(cachePath) ? readFileSync(cachePath) : undefined;
+  },
+  writeCache: (zoom, x, y, tile) => {
+    // Written aside and renamed: a Fiche reading the cache while another one
+    // writes it must not see a half-written tile.
+    const cachePath = tileCachePath(zoom, x, y);
+    const temporaryPath = `${cachePath}.${process.pid}.tmp`;
+    mkdirSync(join(tileCacheDir, String(zoom), String(x)), { recursive: true });
+    writeFileSync(temporaryPath, tile);
+    renameSync(temporaryPath, cachePath);
+  },
+  encode: (downloaded) => sharp(downloaded).jpeg({ quality: TILE_JPEG_QUALITY }).toBuffer(),
+  requestInit: () => ({
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  }),
+  onUnavailable: (zoom, x, y, error) => {
+    console.warn(
+      `  tile ${zoom}/${x}/${y} unavailable: ${error instanceof Error ? error.message : error}`,
+    );
+  },
+});
+
+/** The tile of a map panel, from the disk cache or from the tile server. */
 async function fetchTile(zoom: number, x: number, y: number): Promise<Buffer | undefined> {
-  const cachePath = tileCachePath(zoom, x, y);
-  if (existsSync(cachePath)) {
-    return readFileSync(cachePath);
-  }
-  const wait = REQUEST_DELAY_MS - (Date.now() - lastFetchAt);
-  if (wait > 0) {
-    await delay(wait);
-  }
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      lastFetchAt = Date.now();
-      const url = TILE_URL.replace('{z}', String(zoom))
-        .replace('{x}', String(x))
-        .replace('{y}', String(y));
-      const res = await fetch(url, {
-        headers: { 'User-Agent': USER_AGENT },
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const pngBuffer = Buffer.from(await res.arrayBuffer());
-      const jpegBuffer = await sharp(pngBuffer).jpeg({ quality: TILE_JPEG_QUALITY }).toBuffer();
-      mkdirSync(join(tileCacheDir, String(zoom), String(x)), { recursive: true });
-      writeFileSync(cachePath, jpegBuffer);
-      return jpegBuffer;
-    } catch (error) {
-      if (attempt === 1) {
-        console.warn(
-          `  tile ${zoom}/${x}/${y} unavailable: ${error instanceof Error ? error.message : error}`,
-        );
-        return undefined;
-      }
-      await delay(1000);
-    }
-  }
-  return undefined;
+  return tileFetcher.get(zoom, x, y);
 }
 
 // --- Map panel rendering ---
@@ -751,6 +761,23 @@ async function generateZoneMapPdf(
   console.log(`Generated: ${outputPath}`);
 }
 
+/** Run the workers in parallel, at most `limit` of them at a time. */
+async function forEachConcurrently<T>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let next = 0;
+  const run = async (): Promise<void> => {
+    while (next < items.length) {
+      const item = items[next];
+      next += 1;
+      await worker(item);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => run()));
+}
+
 async function main(): Promise<void> {
   mkdirSync(pdfRootDir(rootDir), { recursive: true });
   mkdirSync(tileCacheDir, { recursive: true });
@@ -769,29 +796,21 @@ async function main(): Promise<void> {
 
   const logo = await loadLogo();
 
-  for (const tour of allTours) {
-    await generateTourPdf(tour, logo);
-  }
+  await forEachConcurrently(allTours, FICHE_CONCURRENCY, (tour) => generateTourPdf(tour, logo));
 
   if (!isFilterActive(filters.tourIds)) {
     const zoneIds = [...new Set(allTours.map((t) => t.zoneId))].sort();
     const vTours = toursData.vTours.filter((t) => zoneIds.includes(t.zoneId));
     const pTours = toursData.pTours.filter((t) => zoneIds.includes(t.zoneId));
 
-    for (const zoneId of zoneIds) {
-      await generateZoneMapPdf(
-        zoneId,
-        'V',
-        vTours.filter((t) => t.zoneId === zoneId),
-        logo,
-      );
-      await generateZoneMapPdf(
-        zoneId,
-        'P',
-        pTours.filter((t) => t.zoneId === zoneId),
-        logo,
-      );
-    }
+    const zoneMaps = zoneIds.flatMap((zoneId) => [
+      { zoneId, kind: 'V' as const, tours: vTours.filter((t) => t.zoneId === zoneId) },
+      { zoneId, kind: 'P' as const, tours: pTours.filter((t) => t.zoneId === zoneId) },
+    ]);
+
+    await forEachConcurrently(zoneMaps, FICHE_CONCURRENCY, (zoneMap) =>
+      generateZoneMapPdf(zoneMap.zoneId, zoneMap.kind, zoneMap.tours, logo),
+    );
   }
 }
 
