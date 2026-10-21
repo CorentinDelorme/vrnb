@@ -60,8 +60,8 @@ test.describe('Public inscriptions statuses', () => {
       await page.goto('/');
 
       await expect(badgeLocator(page)).toHaveCount(0);
-      // Nothing else moves: the covered ambiguity of a failed fetch simply
-      // means "no badge" (loading/error/success trichotomy on the page side).
+      // A failed fetch just means "unknown coverage": no badge, and the play
+      // button DOM contract (47 rows × 1 button) stays untouched.
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
       await expect(playButtons).toHaveCount(47);
     });
