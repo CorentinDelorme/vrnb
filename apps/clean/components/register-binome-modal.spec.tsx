@@ -1,10 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type {
-  BinomeRegistration,
-  RegistrationOutcome,
-} from '../src/app/inscriptions/inscriptions-client';
+import type { RegistrationOutcome } from '../src/app/inscriptions/inscriptions-client';
+import type { BinomeRegistration } from '../src/app/inscriptions/validation';
 import type { TourRef } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { RegisterBinomeModal } from './register-binome-modal';
@@ -14,9 +12,9 @@ import { RegisterBinomeModal } from './register-binome-modal';
  * stays gated on the four identity fields plus the engagement statement, a
  * created outcome posts the exact contract body, shows the confirmation and
  * reloads the statuses; a 409 shows the covered-meantime guard and reloads
- * too; each refusal (invalid saisie, anti-bot honeypot, closed window) and
- * the network failures show their own explicit message without reloading. No
- * submit resets the fields — a close without submitting keeps the values.
+ * too; each refusal (invalid saisie, closed window) and the network failures
+ * show their own explicit message without reloading. No submit resets the
+ * fields — a close without submitting keeps the values.
  */
 
 const TOUR: TourRef = { tourId: 'V1', zoneId: 'bruz-sud' };
@@ -223,15 +221,17 @@ describe('RegisterBinomeModal', () => {
     expect(mocks.reload).not.toHaveBeenCalled();
   });
 
-  it('should show the distinct anti-bot feedback on a filled honeypot', async () => {
+  it('should show the standard invalid feedback on a 400, without revealing the honeypot', async () => {
     renderModal();
     fillBinome();
-    mocks.postRegistration.mockResolvedValueOnce({ status: 'bot' });
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'invalid' });
 
     fireEvent.click(submitButton());
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('anti-robots'));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Saisie invalide'));
 
-    expect(screen.getByRole('alert').textContent).toMatch(/filtre anti-robots/);
+    expect(screen.getByRole('alert').textContent).toMatch(/Saisie invalide/);
+    // The anti-bot honeypot is refused silently: the message never names it.
+    expect(screen.getByRole('alert').textContent).not.toMatch(/anti-robots/i);
     expect(mocks.reload).not.toHaveBeenCalled();
   });
 
@@ -293,7 +293,7 @@ describe('RegisterBinomeModal honeypot and GDPR notice', () => {
     fillBinome();
     // A bot fills the hidden field: the value travels with the registration.
     fireEvent.change(honeypotInput(), { target: { value: 'https://spam.example' } });
-    mocks.postRegistration.mockResolvedValueOnce({ status: 'bot' });
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'invalid' });
 
     fireEvent.click(submitButton());
     await waitFor(() => expect(mocks.postRegistration).toHaveBeenCalledOnce());

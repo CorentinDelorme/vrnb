@@ -1,6 +1,7 @@
 import { CURRENT_EDITION } from '../../../src/app/inscriptions/edition';
 import { handleInscriptionsGet } from '../../../src/app/inscriptions/public-state';
 import { handleInscriptionsPost } from '../../../src/app/inscriptions/register';
+import { parcoursExists } from '../../../src/app/tours-queries';
 import { createUpstashInscriptionsStore } from '../../../src/app/inscriptions/upstash-kv';
 
 /**
@@ -10,14 +11,17 @@ import { createUpstashInscriptionsStore } from '../../../src/app/inscriptions/up
  * adapter is built from the environment (bracket-form env access, per repo
  * convention) and serves both directions; credentials are validated at call
  * time by the adapter, so a missing environment degrades to the handlers'
- * JSON 502/500 instead of a crash. No caching is opted into (no
- * `force-static` / `revalidate`): the handlers stay dynamic and never run at
- * build time, and the POST is never statically prefetched.
+ * JSON 502/500 instead of a crash. The Parcours catalogue (the generated
+ * `tours-data.ts`) is the truth of the (Zone, Parcours) pairs: an unknown
+ * pair is refused by the POST handler and ignored by the GET one. No caching
+ * is opted into (no `force-static` / `revalidate`): the handlers stay dynamic
+ * and never run at build time, and the POST is never statically prefetched.
  */
 export function GET(): Promise<Response> {
   return handleInscriptionsGet({
     edition: CURRENT_EDITION,
     now: () => new Date(),
+    parcours: parcoursExists,
     store: createUpstashInscriptionsStore(restConfig()),
   });
 }
@@ -27,6 +31,7 @@ export function POST(request: Request): Promise<Response> {
     {
       edition: CURRENT_EDITION,
       now: () => new Date(),
+      parcours: parcoursExists,
       store: createUpstashInscriptionsStore(restConfig()),
     },
     request,

@@ -14,44 +14,23 @@
  * Ticket #18 hardens the handler with the three guards of the registration
  * window, all of them refusing BEFORE any write (the KV stays untouched):
  *
- * - the anti-bot honeypot: a filled hidden field means a bot → 400
- *   `honeypot-triggered`;
+ * - the anti-bot honeypot: a filled hidden field means a bot → the SAME 400
+ *   as any other invalid input (`invalid-inscription`), silently: the answer
+ *   never names the honeypot, so a bot cannot fingerprint the trap;
  * - the registration window: the day after the action date the Édition is
  *   closed → 400 `registration-closed`;
  * - the identity validation: the four names are required, trimmed and
- *   bounded (see `validation.ts`, the bounds shared with the client), and the
+ *   bounded (see `validation.ts`, the bounds shared with the client), the
+ *   (Zone, Parcours) pair must exist in the Parcours catalogue, and the
  *   engagement statement must be literally `true` → 400 `invalid-inscription`.
  */
 
 import type { Edition } from './edition';
 import { inscriptionsExpiryInstant, isRegistrationOpen, ttlSecondsUntil } from './edition';
+import { JSON_HEADERS } from './http';
 import { inscriptionKey } from './upstash-kv';
+import type { BinomeIdentity, BinomeRegistration, ParcoursLookup } from './validation';
 import { checkIdentityField } from './validation';
-
-/** Body the client sends to register a Binôme (exact contract keys). */
-export interface BinomeRegistrationInput {
-  readonly engaged: boolean;
-  readonly firstName1: string;
-  readonly firstName2: string;
-  readonly honeypot: string;
-  readonly lastName1: string;
-  readonly lastName2: string;
-  readonly tourId: string;
-  readonly zoneId: string;
-}
-
-/**
- * Persisted identity of the registered Binôme: the four trimmed fields only.
- * The engagement flag and the honeypot are request checks, never stored
- * values, and the (year, zone, tour) context stays implicit in the key —
- * "never store more than identity + context" (spec).
- */
-export interface BinomeIdentity {
-  readonly firstName1: string;
-  readonly firstName2: string;
-  readonly lastName1: string;
-  readonly lastName2: string;
-}
 
 /**
  * Write port of the pure handler over any KV backend (Upstash REST for prod).
@@ -69,23 +48,22 @@ export interface InscriptionsRegistrationDeps {
   readonly edition: Edition;
   /** Injectable clock: the key TTL is computed against "now". */
   readonly now: () => Date;
+  /**
+   * The Parcours catalogue: only a (Zone, Parcours) pair it knows can be
+   * registered, so the same Parcours can never be covered twice under two
+   * different keys.
+   */
+  readonly parcours: ParcoursLookup;
   readonly store: InscriptionsWriteStore;
 }
 
-const JSON_HEADERS = {
-  'cache-control': 'no-store',
-  'content-type': 'application/json; charset=utf-8',
-} as const;
-
 const INVALID = { error: 'invalid-inscription' } as const;
-const HONEYPOT = { error: 'honeypot-triggered' } as const;
 const CLOSED = { error: 'registration-closed' } as const;
 const CONFLICT = { error: 'inscriptions-conflict' } as const;
 const UNAVAILABLE = { error: 'inscriptions-unavailable' } as const;
 
 /** Error body shapes — never any identity of a requester. */
-type RegistrationErrorBody =
-  typeof INVALID | typeof HONEYPOT | typeof CLOSED | typeof CONFLICT | typeof UNAVAILABLE;
+type RegistrationErrorBody = typeof INVALID | typeof CLOSED | typeof CONFLICT | typeof UNAVAILABLE;
 /** 201 body: the public (zone, tour) pair of the reservation, never names. */
 interface InscriptionCreatedBody {
   readonly inscription: { readonly tourId: string; readonly zoneId: string };
@@ -94,8 +72,7 @@ interface InscriptionCreatedBody {
 /**
  * Whether the raw body carries a filled honeypot — the anti-bot signal of the
  * hidden field of the modal. A human never fills it; a bot that fills every
- * input of the form does. The check is deliberately independent from the rest
- * of the body: a bot is refused with its own code, whatever else it sent.
+ * input of the form does.
  */
 export function hasFilledHoneypot(payload: unknown): boolean {
   if (payload === null || typeof payload !== 'object') return false;
@@ -108,10 +85,12 @@ export function hasFilledHoneypot(payload: unknown): boolean {
  * identity fields must be strings, non-blank after trimming and within the
  * shared bounds (2 to 60 characters — see `validation.ts`), the context
  * (zone, Parcours) must be plausible non-empty strings, the engagement
- * statement must be literally `true`, and the honeypot must be empty (a filled
- * one is refused by `hasFilledHoneypot` before this validator runs).
+ * statement must be literally `true`, and the anti-bot honeypot must be empty.
+ *
+ * A filled honeypot is refused like any other invalid input: the answer
+ * never names the honeypot, so a bot cannot fingerprint the trap (spec US7).
  */
-export function parseInscriptionRegistration(payload: unknown): BinomeRegistrationInput | null {
+export function parseInscriptionRegistration(payload: unknown): BinomeRegistration | null {
   if (payload === null || typeof payload !== 'object') return null;
   const body = payload as Record<string, unknown>;
   const nonEmptyTrimmed = (value: unknown): string | null => {
@@ -125,6 +104,9 @@ export function parseInscriptionRegistration(payload: unknown): BinomeRegistrati
     const check = checkIdentityField(value);
     return check.error === null ? check.value : null;
   };
+  // The anti-bot honeypot: a filled hidden field means a bot. It is refused
+  // silently, exactly like any other invalid input.
+  if (hasFilledHoneypot(payload)) return null;
   const zoneId = nonEmptyTrimmed(body['zoneId']);
   const tourId = nonEmptyTrimmed(body['tourId']);
   const firstName1 = identity(body['firstName1']);
@@ -134,7 +116,7 @@ export function parseInscriptionRegistration(payload: unknown): BinomeRegistrati
   if (!zoneId || !tourId || !firstName1 || !lastName1 || !firstName2 || !lastName2) return null;
   if (body['engaged'] !== true) return null;
   const honeypot = body['honeypot'] === undefined ? '' : body['honeypot'];
-  if (typeof honeypot !== 'string' || honeypot.trim() !== '') return null;
+  if (typeof honeypot !== 'string') return null;
   return {
     engaged: true,
     firstName1,
@@ -148,7 +130,7 @@ export function parseInscriptionRegistration(payload: unknown): BinomeRegistrati
 }
 
 /** Serialized KV value of a registration: the four identity fields only. */
-export function inscriptionStoredValue(input: BinomeRegistrationInput): string {
+export function inscriptionStoredValue(input: BinomeRegistration): string {
   const identity: BinomeIdentity = {
     firstName1: input.firstName1,
     firstName2: input.firstName2,
@@ -189,15 +171,21 @@ export async function handleInscriptionsPost(
   } catch {
     return respond(400, INVALID);
   }
-  // The anti-bot guard comes first: a filled honeypot is a bot, whatever else
-  // it sent. Nothing is stored.
-  if (hasFilledHoneypot(payload)) return respond(400, HONEYPOT);
   // The registration window of the Édition: closed the day after the action
   // date (the action day itself still accepts registrations). Nothing is
   // stored.
   if (!isRegistrationOpen(deps.edition, deps.now())) return respond(400, CLOSED);
+  // The body validation: the anti-bot honeypot, the four identity fields, the
+  // engagement statement and the (Zone, Parcours) pair. A filled honeypot is
+  // refused silently, like any other invalid input — no dedicated code, so a
+  // bot cannot fingerprint the trap. Nothing is stored.
   const registration = parseInscriptionRegistration(payload);
   if (registration === null) return respond(400, INVALID);
+  // The Parcours catalogue: an unknown (Zone, Parcours) pair is refused, so
+  // the same Parcours can never be covered twice under two different keys.
+  if (!deps.parcours(registration.zoneId, registration.tourId)) {
+    return respond(400, INVALID);
+  }
 
   const key = inscriptionKey(deps.edition.year, registration.zoneId, registration.tourId);
   try {

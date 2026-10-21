@@ -11,7 +11,7 @@
 import type { TourRef } from '../tours-queries';
 import type { Edition } from './edition';
 import type { InscriptionsPublicState } from './public-state';
-import type { RegistrationRejection } from './validation';
+import type { BinomeRegistration, RegistrationRejection } from './validation';
 import { isRegistrationRejection } from './validation';
 
 /** Relative URL of the public statuses endpoint (same origin as the app). */
@@ -79,35 +79,17 @@ function isTourRef(value: unknown): value is TourRef {
   return typeof tourId === 'string' && tourId !== '' && typeof zoneId === 'string' && zoneId !== '';
 }
 
-/** Registration a Binôme submits from the home page (identity + context). */
-export interface BinomeRegistration {
-  readonly firstName1: string;
-  readonly firstName2: string;
-  /**
-   * The hidden anti-bot field of the modal (ticket #18): empty for a human,
-   * filled by a bot — the server refuses a filled one without storing
-   * anything.
-   */
-  readonly honeypot: string;
-  readonly lastName1: string;
-  readonly lastName2: string;
-  readonly tourId: string;
-  readonly zoneId: string;
-}
-
 /**
  * Outcome of a registration POST, the mirror of the handler's contract:
  * `created` (201), `taken` (409 — the Parcours is covered), `invalid` (400 —
- * the form is not acceptable), `bot` (400 — the anti-bot honeypot was filled),
- * `closed` (400 — the registration window of the Édition is closed) and
- * `error` (anything else: 500, network failure). Each status carries its own
- * explicit French message in the modal.
+ * the form is not acceptable), `closed` (400 — the registration window of the
+ * Édition is closed) and `error` (anything else: 500, network failure). Each
+ * status carries its own explicit French message in the modal.
  */
 export type RegistrationOutcome =
   | { readonly status: 'created' }
   | { readonly status: 'taken' }
   | { readonly status: 'invalid' }
-  | { readonly status: 'bot' }
   | { readonly status: 'closed' }
   | { readonly status: 'error' };
 
@@ -166,7 +148,9 @@ export async function postRegistration(
     if (response.status === 409) return { status: 'taken' };
     if (response.status === 400) {
       const rejection = await readRejection(response);
-      if (rejection === 'honeypot-triggered') return { status: 'bot' };
+      // The anti-bot honeypot is refused like any other invalid input: the
+      // server never names it, so the client shows the standard invalid
+      // message and a bot cannot fingerprint the trap.
       if (rejection === 'registration-closed') return { status: 'closed' };
       return { status: 'invalid' };
     }

@@ -13,7 +13,9 @@
 import type { TourRef } from '../tours-queries';
 import type { Edition } from './edition';
 import { isRegistrationOpen } from './edition';
+import { JSON_HEADERS } from './http';
 import { parseInscriptionKey } from './upstash-kv';
+import type { ParcoursLookup } from './validation';
 
 /** One stored inscription as read from the KV store, before any validation. */
 export interface RawInscriptionEntry {
@@ -44,20 +46,29 @@ export interface InscriptionsHandlerDeps {
   readonly edition: Edition;
   /** Injectable clock so tests control "today". */
   readonly now: () => Date;
+  /**
+   * The Parcours catalogue: only the pairs it knows are exposed, so a bogus
+   * legacy key can never pollute the public state.
+   */
+  readonly parcours: ParcoursLookup;
 }
 
 /**
  * Validate one stored entry and map it to its (zone, tour) pair; `null` when
- * the key is not a valid inscription key of this Édition or the value does
- * not parse to a JSON object (garbage entries are skipped, never reported).
+ * the key is not a valid inscription key of this Édition, the value does not
+ * parse to a JSON object (garbage entries are skipped, never reported) or the
+ * pair is unknown to the Parcours catalogue (a bogus legacy key is ignored,
+ * never exposed).
  */
 export function readInscriptionEntry(
   entry: RawInscriptionEntry,
   editionYear: number,
+  parcours: ParcoursLookup,
 ): TourRef | null {
   const parsedKey = parseInscriptionKey(entry.key);
   if (parsedKey === null || parsedKey.year !== editionYear) return null;
   if (!isValidInscriptionValue(entry.value)) return null;
+  if (!parcours(parsedKey.zoneId, parsedKey.tourId)) return null;
   return { tourId: parsedKey.tourId, zoneId: parsedKey.zoneId };
 }
 
@@ -81,14 +92,15 @@ function byZoneThenTour(a: TourRef, b: TourRef): number {
 
 /**
  * Compute the public inscriptions state of the Édition: an empty store yields
- * an empty list (still valid JSON), malformed entries are silently skipped.
+ * an empty list (still valid JSON), malformed entries are silently skipped,
+ * and only the (Zone, Parcours) pairs the catalogue knows are exposed.
  */
 export async function getInscriptionsState(
   deps: InscriptionsHandlerDeps,
 ): Promise<InscriptionsPublicState> {
   const entries = await deps.store.listAll(deps.edition.year);
   const inscriptions = entries
-    .map((entry) => readInscriptionEntry(entry, deps.edition.year))
+    .map((entry) => readInscriptionEntry(entry, deps.edition.year, deps.parcours))
     .filter((inscription): inscription is TourRef => inscription !== null)
     .sort(byZoneThenTour);
   return {
@@ -100,11 +112,6 @@ export async function getInscriptionsState(
 
 /** Body of the degraded response when the store is unreachable. */
 const UNAVAILABLE = { error: 'inscriptions-unavailable' } as const;
-
-const JSON_HEADERS = {
-  'cache-control': 'no-store',
-  'content-type': 'application/json; charset=utf-8',
-} as const;
 
 /**
  * Pure `GET` handler: returns the public state as a JSON `Response`, or a

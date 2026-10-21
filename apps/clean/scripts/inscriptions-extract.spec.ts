@@ -33,6 +33,23 @@ import {
 
 const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 
+/**
+ * The (Zone, Parcours) pairs the fake catalogue knows — every other pair is
+ * unknown and must be skipped (never a Fiche de suivi).
+ */
+const KNOWN_PAIRS = new Set([
+  'bruz-sud:V1',
+  'bruz-ker-lann:P3',
+  'zh:T3',
+  'zh:Kept',
+  'zh:V1',
+  'zi:T2',
+]);
+
+/** The fake catalogue lookup: only the pairs it knows exist. */
+const parcours = (zoneId: string, tourId: string): boolean =>
+  KNOWN_PAIRS.has(`${zoneId}:${tourId}`);
+
 /** Scripted raw entry built through the #16 key builder, keyed with its value. */
 function entry(year: number, zoneId: string, tourId: string, value: string): RawInscriptionEntry {
   return { key: inscriptionKey(year, zoneId, tourId), value };
@@ -153,6 +170,7 @@ describe('collectInscriptions', () => {
         storedInscription('zi', 'T2', ['Claire', 'Lenoir', 'Marc', 'Ferry']),
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toEqual([
       expect.objectContaining({
@@ -182,6 +200,7 @@ describe('collectInscriptions', () => {
         { key: inscriptionKey(2027, 'zh', 'PartlyFilled'), value: '{"firstName1":"Léa"}' },
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toHaveLength(1);
     expect(collected.warnings).toEqual([
@@ -189,6 +208,29 @@ describe('collectInscriptions', () => {
       'clé ignorée (valeur illisible ou Binôme incomplet) : inscriptions:2027:zh:PartlyFilled',
     ]);
     expect(JSON.stringify(collected.warnings)).not.toContain('Léa');
+  });
+
+  it('should skip a pair unknown to the catalogue, with a key-only warning', () => {
+    const collected = collectInscriptions(
+      [
+        storedInscription('zh', 'Kept', ['Léa', 'Dupont', 'Yann', 'Tanguy']),
+        // A typo of a real Parcours id: an unknown pair never becomes a
+        // Fiche de suivi.
+        storedInscription('zh', 'v1', ['Claire', 'Lenoir', 'Marc', 'Ferry']),
+        storedInscription('unknown-zone', 'V1', ['Anaïs', 'Martin', 'Hugo', 'Bernard']),
+      ],
+      2027,
+      parcours,
+    );
+
+    expect(collected.inscriptions).toHaveLength(1);
+    expect(collected.unknownParcoursCount).toBe(2);
+    expect(collected.warnings).toEqual([
+      'clé ignorée (parcours inconnu du catalogue) : inscriptions:2027:zh:v1',
+      'clé ignorée (parcours inconnu du catalogue) : inscriptions:2027:unknown-zone:V1',
+    ]);
+    // The warning names the key only: no personal data leaks.
+    expect(JSON.stringify(collected.warnings)).not.toContain('Claire');
   });
 
   it('should warn on unparseable keys and skip keys of other Éditions silently', () => {
@@ -201,6 +243,7 @@ describe('collectInscriptions', () => {
         },
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toEqual([]);
     expect(collected.warnings).toEqual(['clé ignorée (format inattendu) : inscriptions']);
@@ -213,6 +256,7 @@ describe('collectInscriptions', () => {
         storedInscription('zh', 'V1', ['Claire', 'Lenoir', 'Marc', 'Ferry']),
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toHaveLength(1);
     expect(collected.inscriptions[0]?.firstName1).toBe('Léa');

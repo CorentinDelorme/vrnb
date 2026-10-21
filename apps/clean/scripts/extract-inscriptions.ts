@@ -21,6 +21,7 @@ import { join } from 'node:path';
 
 import { CURRENT_EDITION } from '../src/app/inscriptions/edition';
 import { createUpstashInscriptionsStore } from '../src/app/inscriptions/upstash-kv';
+import { parcoursExists } from '../src/app/tours-queries';
 import {
   type FicheFileSink,
   type InscriptionsExtractionOutcome,
@@ -68,6 +69,7 @@ async function main(argv: readonly string[]): Promise<void> {
   const outcome: InscriptionsExtractionOutcome = await extractInscriptionSheets({
     edition: CURRENT_EDITION,
     outputDir,
+    parcours: parcoursExists,
     sink: fileSink,
     store,
   });
@@ -79,6 +81,11 @@ async function main(argv: readonly string[]): Promise<void> {
   console.log(`Édition : ${CURRENT_EDITION.year}`);
   if (outcome.inscriptions.length === 0) {
     console.log(`Aucune inscription pour l'édition ${CURRENT_EDITION.year}.`);
+  }
+  if (outcome.unknownParcoursCount > 0) {
+    console.log(
+      `Paires (Zone, Parcours) inconnues du catalogue ignorées : ${outcome.unknownParcoursCount}`,
+    );
   }
   console.log(`Fiches de suivi générées : ${outcome.fiches.length}`);
   for (const fiche of outcome.fiches) {

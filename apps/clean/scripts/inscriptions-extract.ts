@@ -24,23 +24,16 @@ import { EDITION_TIME_ZONE } from '../src/app/inscriptions/edition';
 import type { InscriptionsStore, RawInscriptionEntry } from '../src/app/inscriptions/public-state';
 import type { RestFetch, UpstashConfig } from '../src/app/inscriptions/upstash-kv';
 import { parseInscriptionKey } from '../src/app/inscriptions/upstash-kv';
+import type { BinomeIdentity, ParcoursLookup } from '../src/app/inscriptions/validation';
 import { ZONES } from '../src/app/zones';
 
 // --- Parsed inscriptions ---
-
-/** The four identity fields stored by the registration API (ticket #17). */
-export interface BinomeFields {
-  readonly firstName1: string;
-  readonly lastName1: string;
-  readonly firstName2: string;
-  readonly lastName2: string;
-}
 
 /**
  * One usable Inscription: the KV key provides the zone, Parcours and Édition
  * context, the parsed value provides the Binôme.
  */
-export interface BinomeInscription extends BinomeFields {
+export interface BinomeInscription extends BinomeIdentity {
   readonly key: string;
   readonly zoneId: string;
   readonly tourId: string;
@@ -57,7 +50,7 @@ function trimmedStringField(value: unknown): string | null {
  * a warning). Unknown keys are tolerated: the POST side owns the remaining
  * fields and may evolve them without breaking this extraction.
  */
-export function parseInscriptionBinome(value: string): BinomeFields | null {
+export function parseInscriptionBinome(value: string): BinomeIdentity | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(value);
@@ -82,6 +75,8 @@ export function parseInscriptionBinome(value: string): BinomeFields | null {
 export interface CollectedInscriptions {
   readonly inscriptions: readonly BinomeInscription[];
   readonly warnings: readonly string[];
+  /** How many pairs the catalogue does not know (skipped, never a fiche). */
+  readonly unknownParcoursCount: number;
 }
 
 /**
@@ -89,16 +84,21 @@ export interface CollectedInscriptions {
  * authoritative: keys that do not parse are warned and skipped, keys of any
  * other year are skipped silently (they simply belong to another Édition —
  * they live on until their TTL expires, that is expected), duplicate keys
- * (SCAN may emit them) keep their first value, and values without the four
- * name fields are warned and skipped — the run never stops on one bad record.
+ * (SCAN may emit them) keep their first value, values without the four name
+ * fields are warned and skipped, and a (Zone, Parcours) pair the catalogue
+ * does not know is warned and skipped too — an unknown pair is not a real
+ * Parcours, so it must never become a Fiche de suivi. The run never stops on
+ * one bad record.
  */
 export function collectInscriptions(
   entries: readonly RawInscriptionEntry[],
   editionYear: number,
+  parcours: ParcoursLookup,
 ): CollectedInscriptions {
   const inscriptions: BinomeInscription[] = [];
   const warnings: string[] = [];
   const seenKeys = new Set<string>();
+  let unknownParcoursCount = 0;
   for (const entry of entries) {
     const parsedKey = parseInscriptionKey(entry.key);
     if (parsedKey === null) {
@@ -110,6 +110,11 @@ export function collectInscriptions(
     }
     if (seenKeys.has(entry.key)) {
       warnings.push(`clé en double ignorée : ${entry.key}`);
+      continue;
+    }
+    if (!parcours(parsedKey.zoneId, parsedKey.tourId)) {
+      warnings.push(`clé ignorée (parcours inconnu du catalogue) : ${entry.key}`);
+      unknownParcoursCount += 1;
       continue;
     }
     const binome = parseInscriptionBinome(entry.value);
@@ -125,7 +130,7 @@ export function collectInscriptions(
       zoneId: parsedKey.zoneId,
     });
   }
-  return { inscriptions, warnings };
+  return { inscriptions, unknownParcoursCount, warnings };
 }
 
 // --- Zone grouping and sheet rendering ---
@@ -286,6 +291,11 @@ export interface InscriptionsExtractionDeps {
   /** Local (gitignored) folder receiving the fiches. */
   readonly outputDir: string;
   readonly sink: FicheFileSink;
+  /**
+   * The Parcours catalogue: a (Zone, Parcours) pair it does not know is
+   * skipped (with a warning), never turned into a Fiche de suivi.
+   */
+  readonly parcours: ParcoursLookup;
 }
 
 /** One written fiche, for the CLI recap. */
@@ -302,6 +312,8 @@ export interface InscriptionsExtractionOutcome {
   readonly inscriptions: readonly BinomeInscription[];
   readonly warnings: readonly string[];
   readonly fiches: readonly GeneratedFiche[];
+  /** How many pairs the catalogue does not know (skipped, never a fiche). */
+  readonly unknownParcoursCount: number;
 }
 
 /**
@@ -316,7 +328,7 @@ export async function extractInscriptionSheets(
 ): Promise<InscriptionsExtractionOutcome> {
   // All KV reads happen before the first write: an inventory failure leaves no partial output.
   const listings = await deps.store.listAll(deps.edition.year);
-  const collected = collectInscriptions(listings, deps.edition.year);
+  const collected = collectInscriptions(listings, deps.edition.year, deps.parcours);
   const grouped = groupInscriptionsByZone(collected.inscriptions);
   await deps.sink.ensureDir(deps.outputDir);
   const fiches: GeneratedFiche[] = [];
@@ -346,6 +358,7 @@ export async function extractInscriptionSheets(
   return {
     fiches,
     inscriptions: collected.inscriptions,
+    unknownParcoursCount: collected.unknownParcoursCount,
     warnings: [...collected.warnings, ...grouped.warnings],
   };
 }
