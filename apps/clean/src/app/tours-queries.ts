@@ -45,3 +45,23 @@ export function findTour(
   const zone = getZone(zoneId);
   return ALL_TOURS.find((tour) => tour.zoneId === zone.id && tour.name === name);
 }
+
+/**
+ * The strict (Zone, Parcours) lookup: a Parcours belongs to its Zone, so
+ * BOTH must match the generated catalogue. Unlike `findTour`, an unknown Zone
+ * never falls back to the default one — that fallback serves the UI, while
+ * this one validates (a registration must name a real Parcours of a real
+ * Zone, never a Parcours of another Zone).
+ */
+export function findParcours(zoneId: string, tourId: string): Tour | undefined {
+  return ALL_TOURS.find((tour) => tour.zoneId === zoneId && tour.name === tourId);
+}
+
+/**
+ * Whether the (Zone, Parcours) pair exists in the generated catalogue — the
+ * production implementation of the Inscriptions catalogue lookup (a
+ * registration may only cover a real Parcours of a real Zone).
+ */
+export function parcoursExists(zoneId: string, tourId: string): boolean {
+  return findParcours(zoneId, tourId) !== undefined;
+}

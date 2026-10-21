@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import type { BinomeRegistration } from './inscriptions-client';
 import {
   fetchInscriptionsOutcome,
   parseInscriptionsState,
   postRegistration,
   registrationRequestBody,
 } from './inscriptions-client';
+import type { BinomeRegistration } from './validation';
 
 /**
  * Browser client of the inscriptions endpoints: relative-URL fetch with an
@@ -174,18 +174,22 @@ describe('postRegistration', () => {
     expect(invalid).toEqual({ status: 'invalid' });
   });
 
-  it('should tell the 400 refusals apart by their rejection code', async () => {
-    const bot = await postRegistration(
-      REGISTRATION,
-      async () => new Response('{"error":"honeypot-triggered"}', { status: 400 }),
-    );
-    expect(bot).toEqual({ status: 'bot' });
-
+  it('should tell the closed window apart from the other 400 refusals', async () => {
     const closed = await postRegistration(
       REGISTRATION,
       async () => new Response('{"error":"registration-closed"}', { status: 400 }),
     );
     expect(closed).toEqual({ status: 'closed' });
+  });
+
+  it('should map the filled honeypot to the invalid outcome, like any other refusal', async () => {
+    // The server refuses a filled honeypot with the SAME code as any other
+    // invalid input, so the client shows the standard invalid message.
+    const bot = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"invalid-inscription"}', { status: 400 }),
+    );
+    expect(bot).toEqual({ status: 'invalid' });
   });
 
   it('should fall back to the invalid outcome on an unreadable 400 body', async () => {

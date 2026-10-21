@@ -27,13 +27,18 @@ export const CURRENT_EDITION: Edition = { year: 2027, actionDate: '2027-02-14' }
 export const EDITION_TIME_ZONE = 'Europe/Paris';
 
 /**
- * Whether registering a Binôme is possible: open until the action day starts
- * (midnight of `actionDate` in the Édition timezone), closed afterwards.
+ * Whether registering a Binôme is possible: the window stays OPEN during the
+ * whole action day (the calendar date of `actionDate` in the Édition
+ * timezone) and closes the next day (the calendar date after `actionDate`).
+ *
+ * The spec says the inscription « reste ouverte jusqu'à la date de l'action »
+ * and is refused « après la date de l'action » — the action day itself is
+ * still a registration day, so the boundary is inclusive.
  *
  * Pure: the comparison never touches `Date.now()` — pass the current time.
  */
 export function isRegistrationOpen(edition: Edition, now: Date): boolean {
-  return calendarDateInEurope(now) < edition.actionDate;
+  return calendarDateInEditionZone(now) <= edition.actionDate;
 }
 
 /** Storage retention of a Binôme inscription after the action, in days (spec). */
@@ -122,7 +127,7 @@ function wallClockInTimeZone(instant: Date, timeZone: string): string {
 }
 
 /** `YYYY-MM-DD` calendar date of `now`, as seen in the Édition timezone. */
-function calendarDateInEurope(now: Date): string {
+function calendarDateInEditionZone(now: Date): string {
   // 'en-CA' renders month/day zero-padded and ordered `YYYY-MM-DD`, so dates
   // compare lexicographically in the Édition timezone whatever the host clock.
   return calendarDateInTimeZone(now, EDITION_TIME_ZONE);

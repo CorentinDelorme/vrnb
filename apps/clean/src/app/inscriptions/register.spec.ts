@@ -17,9 +17,9 @@ import { inscriptionKey } from './upstash-kv';
  * is an atomic first-come reservation on the KV store, the stored value never
  * exceeds the four identity fields, and every outcome is a distinct no-store
  * JSON response (201 created, 409 covered, 400 refused with the code of its
- * cause, 500 store failure). Every refusal — anti-bot honeypot, closed
- * registration window, invalid identity — happens BEFORE the write: the
- * store stays untouched.
+ * status, 500 store failure). Every refusal — filled honeypot, closed
+ * registration window, invalid identity, unknown (Zone, Parcours) pair —
+ * happens BEFORE the write: the store stays untouched.
  */
 
 const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
@@ -28,7 +28,14 @@ const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 const NOW = new Date('2027-02-01T09:00:00Z');
 
 /** The day after the action date: the registration window is closed. */
-const AFTER_ACTION_DATE = new Date('2027-02-15T09:00:00Z');
+const AFTER_ACTION_DATE = new Date('2027-02-16T09:00:00Z');
+
+/** The (Zone, Parcours) pairs the fake catalogue knows. */
+const KNOWN_PAIRS = new Set(['bruz-sud:V1', 'bruz-sud:P3']);
+
+/** The fake catalogue lookup: only the pairs it knows exist. */
+const parcours = (zoneId: string, tourId: string): boolean =>
+  KNOWN_PAIRS.has(`${zoneId}:${tourId}`);
 
 /** One valid registration body, tweakable per test. */
 function validBody(overrides: Partial<Record<string, unknown>> = {}): Record<string, unknown> {
@@ -71,9 +78,9 @@ class InMemoryWriteStore implements InscriptionsWriteStore {
   }
 }
 
-/** Deps injecting the fake store and a fixed clock. */
+/** Deps injecting the fake store, the fake catalogue and a fixed clock. */
 function deps(store: InMemoryWriteStore, now: Date = NOW) {
-  return { edition: EDITION, now: () => now, store };
+  return { edition: EDITION, now: () => now, parcours, store };
 }
 
 /** A well-formed POST request carrying a JSON body. */
@@ -90,7 +97,6 @@ describe('parseInscriptionRegistration', () => {
     const registration = parseInscriptionRegistration(validBody({ firstName1: '  Léa  ' }));
     expect(registration?.firstName1).toBe('Léa');
     expect(parseInscriptionRegistration(validBody())).toEqual({
-      engaged: true,
       firstName1: 'Léa',
       firstName2: 'Marc',
       honeypot: '',
@@ -144,7 +150,6 @@ describe('parseInscriptionRegistration', () => {
     expect(parseInscriptionRegistration(validBody({ honeypot: '' }))?.honeypot).toBe('');
     expect(parseInscriptionRegistration(validBody({ honeypot: undefined }))?.honeypot).toBe('');
   });
-
   it('should reject non-object payloads', () => {
     expect(parseInscriptionRegistration(null)).toBeNull();
     expect(parseInscriptionRegistration('registration')).toBeNull();
@@ -277,7 +282,7 @@ describe('handleInscriptionsPost', () => {
     }
   });
 
-  it('should answer 400 with its own code when the honeypot is filled, storing nothing', async () => {
+  it('should answer 400 with the invalid code when the honeypot is filled, storing nothing', async () => {
     const store = new InMemoryWriteStore();
     const response = await handleInscriptionsPost(
       deps(store),
@@ -285,7 +290,9 @@ describe('handleInscriptionsPost', () => {
     );
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: 'honeypot-triggered' });
+    // The honeypot is refused silently: the SAME 400 as any other invalid
+    // input, so a bot cannot fingerprint the trap.
+    await expect(response.json()).resolves.toEqual({ error: 'invalid-inscription' });
     // The bot never reaches the store: no key, no write, no TTL.
     expect(store.operationLog).toEqual([]);
     expect(store.values.size).toBe(0);
@@ -325,12 +332,12 @@ describe('handleInscriptionsPost', () => {
     }
   });
 
-  it('should give each refusal its own error code', async () => {
+  it('should give each refusal status its own error code', async () => {
     const cases: readonly { readonly body: unknown; readonly code: string; readonly now?: Date }[] =
       [
-        { body: validBody({ honeypot: 'spam' }), code: 'honeypot-triggered' },
+        { body: validBody({ honeypot: 'spam' }), code: 'invalid-inscription' },
+        { body: validBody({ tourId: 'v1' }), code: 'invalid-inscription' },
         { body: validBody(), code: 'registration-closed', now: AFTER_ACTION_DATE },
-        { body: validBody({ firstName1: ' L ' }), code: 'invalid-inscription' },
       ];
     for (const { body, code, now } of cases) {
       const store = new InMemoryWriteStore();
@@ -340,6 +347,39 @@ describe('handleInscriptionsPost', () => {
     }
   });
 
+  it('should answer 400 and store nothing for a (Zone, Parcours) pair unknown to the catalogue', async () => {
+    // The catalogue is the truth of the real Parcours: an unknown pair must
+    // never create a key, or the same Parcours could be covered twice under
+    // two different keys (`V1` and `v1`).
+    for (const body of [
+      validBody({ tourId: 'v1' }),
+      validBody({ tourId: 'V99' }),
+      validBody({ zoneId: 'bruz-vau-gaillard' }),
+    ]) {
+      const store = new InMemoryWriteStore();
+      const response = await handleInscriptionsPost(deps(store), request(body));
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: 'invalid-inscription' });
+      // Nothing is stored: the store never sees the write.
+      expect(store.operationLog).toEqual([]);
+      expect(store.values.size).toBe(0);
+      expect(store.expiries.size).toBe(0);
+    }
+  });
+
+  it('should still accept a known pair of the catalogue', async () => {
+    const store = new InMemoryWriteStore();
+    const response = await handleInscriptionsPost(
+      deps(store),
+      request(validBody({ tourId: 'P3' })),
+    );
+
+    expect(response.status).toBe(201);
+    expect(store.values.get(inscriptionKey(2027, 'bruz-sud', 'P3'))).toBe(
+      '{"firstName1":"Léa","firstName2":"Marc","lastName1":"Dupont","lastName2":"Martin"}',
+    );
+  });
+
   it('should answer 500 when the store fails, without storing anything', async () => {
     const store: InscriptionsWriteStore = {
       setIfAbsent: async () => {
@@ -347,7 +387,7 @@ describe('handleInscriptionsPost', () => {
       },
     };
     const response = await handleInscriptionsPost(
-      { edition: EDITION, now: () => NOW, store },
+      { edition: EDITION, now: () => NOW, parcours, store },
       request(validBody()),
     );
 
@@ -366,6 +406,7 @@ describe('handleInscriptionsPost', () => {
     const response = await handleInscriptionsGet({
       edition: EDITION,
       now: () => NOW,
+      parcours,
       store: { listAll: async () => store.entries() },
     });
     const clone = response.clone();

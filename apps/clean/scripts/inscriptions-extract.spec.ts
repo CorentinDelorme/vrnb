@@ -5,20 +5,20 @@ import { createUpstashInscriptionsStore, inscriptionKey } from '../src/app/inscr
 import {
   binomeDisplay,
   collectInscriptions,
-  emptyEditionFicheFileName,
+  emptyEditionFicheDeSuiviFileName,
   EXTRACT_USAGE,
   extractInscriptionSheets,
   fetchWithTimeout,
-  formatEditionactionDate,
+  formatEditionActionDate,
   groupInscriptionsByZone,
   parseInscriptionBinome,
   parseInscriptionsExtractArgs,
   readInscriptionsKvConfig,
   renderEmptyEditionContent,
   renderZoneInscriptionsContent,
-  zoneFicheFileName,
+  zoneFicheDeSuiviFileName,
   type BinomeInscription,
-  type FicheFileSink,
+  type FicheDeSuiviFileSink,
   type ZoneInscriptionSheet,
 } from './inscriptions-extract';
 
@@ -32,6 +32,26 @@ import {
  */
 
 const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
+
+/**
+ * The (Zone, Parcours) pairs the fake catalogue knows — every other pair is
+ * unknown and must be skipped (never a Fiche de suivi).
+ */
+const KNOWN_PAIRS = new Set([
+  'bruz-ker-lann:P3',
+  'bruz-sud:Corrupt',
+  'bruz-sud:V1',
+  'zh:BadJson',
+  'zh:Kept',
+  'zh:PartlyFilled',
+  'zh:T3',
+  'zh:V1',
+  'zi:T2',
+]);
+
+/** The fake catalogue lookup: only the pairs it knows exist. */
+const parcours = (zoneId: string, tourId: string): boolean =>
+  KNOWN_PAIRS.has(`${zoneId}:${tourId}`);
 
 /** Scripted raw entry built through the #16 key builder, keyed with its value. */
 function entry(year: number, zoneId: string, tourId: string, value: string): RawInscriptionEntry {
@@ -56,7 +76,7 @@ function binomeValue(
 
 /** In-memory sink recording (folder, fileName, content) triples. */
 function createMemorySink(): {
-  readonly sink: FicheFileSink;
+  readonly sink: FicheDeSuiviFileSink;
   readonly files: Map<string, string>;
   readonly dirEnsured: string[];
 } {
@@ -153,6 +173,7 @@ describe('collectInscriptions', () => {
         storedInscription('zi', 'T2', ['Claire', 'Lenoir', 'Marc', 'Ferry']),
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toEqual([
       expect.objectContaining({
@@ -182,6 +203,7 @@ describe('collectInscriptions', () => {
         { key: inscriptionKey(2027, 'zh', 'PartlyFilled'), value: '{"firstName1":"Léa"}' },
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toHaveLength(1);
     expect(collected.warnings).toEqual([
@@ -189,6 +211,29 @@ describe('collectInscriptions', () => {
       'clé ignorée (valeur illisible ou Binôme incomplet) : inscriptions:2027:zh:PartlyFilled',
     ]);
     expect(JSON.stringify(collected.warnings)).not.toContain('Léa');
+  });
+
+  it('should skip a pair unknown to the catalogue, with a key-only warning', () => {
+    const collected = collectInscriptions(
+      [
+        storedInscription('zh', 'Kept', ['Léa', 'Dupont', 'Yann', 'Tanguy']),
+        // A typo of a real Parcours id: an unknown pair never becomes a
+        // Fiche de suivi.
+        storedInscription('zh', 'v1', ['Claire', 'Lenoir', 'Marc', 'Ferry']),
+        storedInscription('unknown-zone', 'V1', ['Anaïs', 'Martin', 'Hugo', 'Bernard']),
+      ],
+      2027,
+      parcours,
+    );
+
+    expect(collected.inscriptions).toHaveLength(1);
+    expect(collected.unknownParcoursCount).toBe(2);
+    expect(collected.warnings).toEqual([
+      'clé ignorée (parcours inconnu du catalogue) : inscriptions:2027:zh:v1',
+      'clé ignorée (parcours inconnu du catalogue) : inscriptions:2027:unknown-zone:V1',
+    ]);
+    // The warning names the key only: no personal data leaks.
+    expect(JSON.stringify(collected.warnings)).not.toContain('Claire');
   });
 
   it('should warn on unparseable keys and skip keys of other Éditions silently', () => {
@@ -201,6 +246,7 @@ describe('collectInscriptions', () => {
         },
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toEqual([]);
     expect(collected.warnings).toEqual(['clé ignorée (format inattendu) : inscriptions']);
@@ -213,6 +259,7 @@ describe('collectInscriptions', () => {
         storedInscription('zh', 'V1', ['Claire', 'Lenoir', 'Marc', 'Ferry']),
       ],
       2027,
+      parcours,
     );
     expect(collected.inscriptions).toHaveLength(1);
     expect(collected.inscriptions[0]?.firstName1).toBe('Léa');
@@ -264,13 +311,13 @@ describe('groupInscriptionsByZone', () => {
 
 // --- Fiche rendering ---
 
-describe('formatEditionactionDate', () => {
+describe('formatEditionActionDate', () => {
   it('should render the Édition action date in French, in the Édition timezone', () => {
-    expect(formatEditionactionDate(EDITION.actionDate)).toBe('Dimanche 14 février 2027');
+    expect(formatEditionActionDate(EDITION.actionDate)).toBe('Dimanche 14 février 2027');
   });
 
   it('should refuse an invalid configured date with a French error', () => {
-    expect(() => formatEditionactionDate('not-a-date')).toThrow(
+    expect(() => formatEditionActionDate('not-a-date')).toThrow(
       "Date de l'action de l'Édition invalide",
     );
   });
@@ -343,6 +390,7 @@ describe('extractInscriptionSheets', () => {
     const outcome = await extractInscriptionSheets({
       edition: EDITION,
       outputDir: OUT_DIR,
+      parcours,
       sink,
       store: {
         listAll: async () => [
@@ -354,22 +402,22 @@ describe('extractInscriptionSheets', () => {
 
     expect(dirEnsured).toEqual([OUT_DIR]);
     expect([...files.keys()]).toEqual([
-      zoneFicheFileName('bruz-ker-lann', 2027),
-      zoneFicheFileName('bruz-sud', 2027),
+      zoneFicheDeSuiviFileName('bruz-ker-lann', 2027),
+      zoneFicheDeSuiviFileName('bruz-sud', 2027),
     ]);
     expect(outcome.fiches).toEqual([
       expect.objectContaining({
         inscriptionCount: 1,
-        path: `${OUT_DIR}/${zoneFicheFileName('bruz-ker-lann', 2027)}`,
+        path: `${OUT_DIR}/${zoneFicheDeSuiviFileName('bruz-ker-lann', 2027)}`,
         zoneId: 'bruz-ker-lann',
       }),
       expect.objectContaining({
         inscriptionCount: 1,
-        path: `${OUT_DIR}/${zoneFicheFileName('bruz-sud', 2027)}`,
+        path: `${OUT_DIR}/${zoneFicheDeSuiviFileName('bruz-sud', 2027)}`,
         zoneId: 'bruz-sud',
       }),
     ]);
-    expect(files.get(zoneFicheFileName('bruz-sud', 2027))).toContain('Bruz Sud');
+    expect(files.get(zoneFicheDeSuiviFileName('bruz-sud', 2027))).toContain('Bruz Sud');
   });
 
   it('should produce a single empty-Édition fiche when nothing is usable', async () => {
@@ -377,6 +425,7 @@ describe('extractInscriptionSheets', () => {
     const outcome = await extractInscriptionSheets({
       edition: EDITION,
       outputDir: OUT_DIR,
+      parcours,
       sink,
       store: { listAll: async () => [] },
     });
@@ -384,12 +433,12 @@ describe('extractInscriptionSheets', () => {
     expect(outcome.inscriptions).toEqual([]);
     expect(outcome.fiches).toHaveLength(1);
     expect(outcome.fiches[0]).toEqual({
-      fileName: emptyEditionFicheFileName(2027),
+      fileName: emptyEditionFicheDeSuiviFileName(2027),
       inscriptionCount: 0,
-      path: `${OUT_DIR}/${emptyEditionFicheFileName(2027)}`,
+      path: `${OUT_DIR}/${emptyEditionFicheDeSuiviFileName(2027)}`,
       zoneId: null,
     });
-    expect(files.get(emptyEditionFicheFileName(2027))).toContain(
+    expect(files.get(emptyEditionFicheDeSuiviFileName(2027))).toContain(
       "Aucune inscription pour l'édition 2027.",
     );
   });
@@ -399,6 +448,7 @@ describe('extractInscriptionSheets', () => {
     const outcome = await extractInscriptionSheets({
       edition: EDITION,
       outputDir: OUT_DIR,
+      parcours,
       sink,
       store: {
         listAll: async () => [
@@ -412,7 +462,7 @@ describe('extractInscriptionSheets', () => {
       'clé ignorée (valeur illisible ou Binôme incomplet) : inscriptions:2027:bruz-sud:Corrupt',
     ]);
     expect(outcome.fiches).toHaveLength(1);
-    expect(files.get(zoneFicheFileName('bruz-sud', 2027))).toContain('| V1 |');
+    expect(files.get(zoneFicheDeSuiviFileName('bruz-sud', 2027))).toContain('| V1 |');
   });
 });
 
@@ -460,6 +510,7 @@ describe('extractInscriptionSheets over the Upstash REST adapter', () => {
     const outcome = await extractInscriptionSheets({
       edition: EDITION,
       outputDir: OUT_DIR,
+      parcours,
       sink,
       store: createUpstashInscriptionsStore(REST_CONFIG, rest.fetchImpl),
     });
@@ -470,7 +521,7 @@ describe('extractInscriptionSheets over the Upstash REST adapter', () => {
     expect(outcome.inscriptions).toEqual([
       expect.objectContaining({ firstName1: 'Léa', tourId: 'V1', zoneId: 'bruz-sud' }),
     ]);
-    expect([...files.keys()]).toEqual([zoneFicheFileName('bruz-sud', 2027)]);
+    expect([...files.keys()]).toEqual([zoneFicheDeSuiviFileName('bruz-sud', 2027)]);
   });
 
   it('should fail the extraction on an Upstash error envelope (no partial output)', async () => {
@@ -482,6 +533,7 @@ describe('extractInscriptionSheets over the Upstash REST adapter', () => {
       extractInscriptionSheets({
         edition: EDITION,
         outputDir: OUT_DIR,
+        parcours,
         sink,
         store: createUpstashInscriptionsStore(REST_CONFIG, rest.fetchImpl),
       }),

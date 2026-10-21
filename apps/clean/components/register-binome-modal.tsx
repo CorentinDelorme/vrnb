@@ -10,9 +10,12 @@ import {
   INSCRIPTIONS_RETENTION_DAYS,
   isRegistrationOpen,
 } from '../src/app/inscriptions/edition';
-import type { BinomeRegistration } from '../src/app/inscriptions/inscriptions-client';
 import { postRegistration } from '../src/app/inscriptions/inscriptions-client';
-import type { IdentityField, IdentityFieldError } from '../src/app/inscriptions/validation';
+import type {
+  BinomeRegistration,
+  IdentityField,
+  IdentityFieldError,
+} from '../src/app/inscriptions/validation';
 import {
   IDENTITY_FIELD_LABELS,
   IDENTITY_FIELD_MAX_LENGTH,
@@ -34,18 +37,20 @@ import { useInscriptionsReload, useInscriptionsStatus } from './inscriptions-sta
  * Submitting posts the registration and degrades on every outcome: created →
  * confirmation + statuses reload, taken (covered meanwhile) → last-resort
  * guard + statuses reload, and each refusal gets its own explicit French
- * message (400 saisie invalide / champ anti-robots / fenêtre fermée, 409
- * parcours déjà couvert, 500 et erreur réseau). The identity inputs keep
- * their values over close/reopen — the host keeps this component mounted and
- * only toggles `visible` — while nothing resets except a fresh mount.
+ * message (400 saisie invalide / fenêtre fermée, 409 parcours déjà couvert,
+ * 500 et erreur réseau). The identity inputs keep their values over
+ * close/reopen — the host keeps this component mounted and only toggles
+ * `visible` — while nothing resets except a fresh mount.
  *
  * Ticket #18 adds the three guards of the registration window:
  *
  * - the hidden anti-bot honeypot (present in the DOM, invisible to humans):
- *   a filled one is refused by the server with 400 and nothing is stored;
- * - the closed window: once the action date is past, the modal says « L'action
- *   est passée » and disables its form (the server refuses the same requests
- *   with 400);
+ *   a filled one is refused by the server with 400 and nothing is stored —
+ *   silently, like any other invalid input, so the modal never reveals the
+ *   trap;
+ * - the closed window: the day after the action date, the modal says «
+ *   L'action est passée » and disables its form (the server refuses the same
+ *   requests with 400);
  * - the shared identity bounds (2 to 60 characters per name, see
  *   `validation.ts`): the submit is enabled as soon as the form is complete
  *   and valid, and each field shows its own error message.
@@ -60,8 +65,7 @@ interface BinomeFormValues {
 }
 
 /** Lifecycle of a registration inside the modal (idle → submitting → outcome). */
-type ModalOutcome =
-  'idle' | 'submitting' | 'created' | 'taken' | 'invalid' | 'bot' | 'closed' | 'error';
+type ModalOutcome = 'idle' | 'submitting' | 'created' | 'taken' | 'invalid' | 'closed' | 'error';
 
 const EMPTY_BINOME: BinomeFormValues = {
   firstName1: '',
@@ -110,16 +114,11 @@ const OUTCOME_ALERTS: Readonly<
   taken: {
     className: 'alert alert-warning mt-4 text-sm',
     message:
-      "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
+      "Ce parcours vient d'être couvert par un autre Binôme : vous pouvez choisir un autre parcours libre.",
   },
   invalid: {
     className: 'alert alert-error mt-4 text-sm',
     message: "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
-  },
-  bot: {
-    className: 'alert alert-error mt-4 text-sm',
-    message:
-      "Votre inscription a été refusée par le filtre anti-robots. Contactez l'équipe VRNB si ce message vous semble erroné.",
   },
   closed: {
     className: 'alert alert-warning mt-4 text-sm',
@@ -225,7 +224,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
           </button>
         </form>
 
-        <h3 className="text-xl font-bold">Inscription du binôme</h3>
+        <h3 className="text-xl font-bold">Inscription du Binôme</h3>
         <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
           Parcours <span className="text-base-content font-medium">{tour.tourId}</span> — Zone{' '}
           <span className="text-base-content font-medium">{zone.name}</span>
@@ -235,7 +234,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
           <>
             <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
               <span>
-                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
+                <strong>Votre Binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
                 {ACTION_DATE_LABEL} au point de rendez-vous ci-dessous.
               </span>
             </div>
@@ -367,7 +366,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                   disabled={!complete || outcome === 'submitting' || windowClosed}
                   type="submit"
                 >
-                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
+                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon Binôme'}
                 </button>
               </div>
             </form>

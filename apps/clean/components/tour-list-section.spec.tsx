@@ -109,7 +109,7 @@ describe('TourListSection inscriptions register button', () => {
     for (const pending of [{ status: 'loading' }, { status: 'error' }] as const) {
       const { container, unmount } = renderSection(pending as InscriptionsStatus);
       expect(
-        container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]'),
+        container.querySelectorAll('button[aria-label^="S\'inscrire en Binôme"]'),
       ).toHaveLength(TOURS.length);
       unmount();
     }
@@ -124,11 +124,11 @@ describe('TourListSection inscriptions register button', () => {
     const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
       row.textContent?.includes('V2'),
     );
-    expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en binôme"]')).toBeNull();
+    expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en Binôme"]')).toBeNull();
     expect(
-      v2Row?.querySelector('button[aria-label="S\'inscrire en binôme pour le parcours V2"]'),
+      v2Row?.querySelector('button[aria-label="S\'inscrire en Binôme pour le parcours V2"]'),
     ).not.toBeNull();
-    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en Binôme"]')).toHaveLength(
       TOURS.length - 1,
     );
   });
@@ -144,7 +144,7 @@ describe('TourListSection inscriptions register button', () => {
     });
     // The closed window is explained by the modal itself (ticket #18), so the
     // register buttons stay: only a covered Parcours loses its own.
-    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en Binôme"]')).toHaveLength(
       TOURS.length,
     );
     // The play buttons stay: the closed window never touches the legacy DOM.

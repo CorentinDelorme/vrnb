@@ -23,11 +23,11 @@ Routes (anything else renders the 404 page, spec #3 US 25):
 
 The Inscriptions feature lets a **Binôme** cover a Parcours for the current Édition, first come first served. The core lives in `src/app/inscriptions/` (pure modules), the Next adapters in `app/api/inscriptions/route.ts` and the UI in `components/register-binome-modal.tsx`, `components/tour-register-button.tsx` and `components/inscriptions-status-provider.tsx`.
 
-- **Annual pivot** — `src/app/inscriptions/edition.ts` holds `CURRENT_EDITION` (`{ year, actionDate }`) and `EDITION_TIME_ZONE` (`Europe/Paris`). Bumping those values is the whole yearly rotation; `isRegistrationOpen(edition, now)` closes the window at midnight of the action date.
+- **Annual pivot** — `src/app/inscriptions/edition.ts` holds `CURRENT_EDITION` (`{ year, actionDate }`) and `EDITION_TIME_ZONE` (`Europe/Paris`). Bumping those values is the whole yearly rotation; `isRegistrationOpen(edition, now)` keeps the window open during the whole action day and closes it the next day.
 - **KV contract** — one key per covered Parcours, `inscriptions:<year>:<zoneId>:<tourId>`, holding only the four identity fields. The reservation is atomic (`SET … NX EX`), so the first Binôme wins and a loser gets 409 without anything stored. Names never leave the store: the public state only exposes (zoneId, tourId) pairs.
 - **Retention** — every key is created with a TTL reaching `actionDate + INSCRIPTIONS_RETENTION_DAYS` (90) days in `EDITION_TIME_ZONE`, so the personal data expires with no cron and no manual purge.
 - **Environment** — `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` feed the Upstash REST adapter (names only, never values in the repo).
-- **Anti-bot** — the modal carries a hidden honeypot field (`website`); a filled one is refused with 400 `honeypot-triggered` and nothing is stored.
+- **Anti-bot** — the modal carries a hidden honeypot field (`website`); a filled one is refused with the same 400 as any other invalid input (`invalid-inscription`), silently, and nothing is stored.
 - **Human operations** — `bun scripts/extract-inscriptions.ts` writes the per-Zone « Fiche de suivi » files (runbook: `scripts/README-inscriptions-extract.md`); a deregistration is the deletion of the `inscriptions:<year>:<zoneId>:<tourId>` key in the Upstash console (the site has no admin UI).
 
 ## Build/Lint/Test Commands
@@ -184,7 +184,7 @@ const tours: any[] = [];
 
 Unit tests — Vitest (jsdom, globals), colocated `*.spec.ts(x)`; component/page specs use `@testing-library/react`. No DI container: shared behavior is extracted into pure functions — that seam (pure-TS modules, 25 tests) is what spec #3 validated; the component/page RTL specs go beyond the spec's minimal seam and were added during implementation as a safety net, not as spec-validated scope.
 
-- Migration note (implementation): the unit suite was expanded from the 25 pure-TS tests of the spec #3 seam to 128 tests with the addition of the component/page RTL specs (`app/page.spec.tsx`, `app/manual/page.spec.tsx`, `app/not-found.spec.tsx` and friends) — a deliberate safety net before the PR, documented like the E2E deltas in `e2e/tests.md`.
+- Migration note (implementation): the unit suite was expanded from the 25 pure-TS tests of the spec #3 seam to 288 tests today — the component/page RTL specs (`app/page.spec.tsx`, `app/manual/page.spec.tsx`, `app/not-found.spec.tsx` and friends) and the Inscriptions feature modules (`src/app/inscriptions/*.spec.ts`, `scripts/inscriptions-extract.spec.ts`) — a deliberate safety net before the PR, documented like the E2E deltas in `e2e/tests.md`.
 
 ```ts
 import { describe, expect, it } from 'vitest';

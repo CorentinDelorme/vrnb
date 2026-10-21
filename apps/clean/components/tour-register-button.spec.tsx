@@ -62,7 +62,7 @@ describe('TourRegisterButton', () => {
     const { container } = render(<TourRegisterButton available tour={TOUR} />);
 
     const button = screen.getByRole('button', {
-      name: "S'inscrire en binôme pour le parcours V1",
+      name: "S'inscrire en Binôme pour le parcours V1",
     });
     expect(button.textContent).toContain("S'inscrire");
     // The modal is not mounted before the first click.
@@ -72,7 +72,7 @@ describe('TourRegisterButton', () => {
   it('should mount the modal and call showModal exactly once per opened modal', async () => {
     const { container } = render(<TourRegisterButton available tour={TOUR} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /S'inscrire en binôme pour le parcours/ }));
+    fireEvent.click(screen.getByRole('button', { name: /S'inscrire en Binôme pour le parcours/ }));
 
     expect(showModal).toHaveBeenCalledTimes(1);
     expect(container.querySelector('dialog#register_modal_V1')).not.toBeNull();

@@ -98,10 +98,13 @@ describe('the shared bounds and labels', () => {
 });
 
 describe('isRegistrationRejection', () => {
-  it('should recognize the three rejection codes of a 400 answer', () => {
-    for (const code of ['invalid-inscription', 'honeypot-triggered', 'registration-closed']) {
+  it('should recognize the rejection codes of a 400 answer', () => {
+    for (const code of ['invalid-inscription', 'registration-closed']) {
       expect(isRegistrationRejection(code)).toBe(true);
     }
+    // The anti-bot honeypot has no dedicated code: it is refused like any
+    // other invalid input, so a bot cannot fingerprint the trap.
+    expect(isRegistrationRejection('honeypot-triggered')).toBe(false);
     expect(isRegistrationRejection('inscriptions-conflict')).toBe(false);
     expect(isRegistrationRejection('')).toBe(false);
   });

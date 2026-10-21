@@ -7,12 +7,53 @@
  * - the French labels of the four identity fields (the modal's input labels)
  *   and the per-field error reasons (the modal's inline feedback);
  * - the rejection codes of a 400 answer (the modal maps each of them to its
- *   own explicit French message).
+ *   own explicit French message);
+ * - the shape of a registration: the browser client builds it, the POST
+ *   handler parses it, the extraction script narrows it to the identity it
+ *   reads — one declaration, never redeclared under another name.
  *
  * Client-safe pure module (no server-only dependency): it is imported by the
  * POST handler (`register.ts`), by the browser client (`inscriptions-client.ts`)
  * and by the registration modal (`components/register-binome-modal.tsx`).
  */
+
+/**
+ * The registration of a Binôme: its four identity fields, the (Zone,
+ * Parcours) context it covers and the hidden anti-bot honeypot. The
+ * engagement statement is a request check, never a stored value, so it is
+ * not part of this shape — the server checks it on the raw body.
+ */
+export interface BinomeRegistration {
+  readonly firstName1: string;
+  readonly firstName2: string;
+  /**
+   * The hidden anti-bot field of the modal (ticket #18): empty for a human,
+   * filled by a bot — the server refuses a filled one without storing
+   * anything.
+   */
+  readonly honeypot: string;
+  readonly lastName1: string;
+  readonly lastName2: string;
+  readonly tourId: string;
+  readonly zoneId: string;
+}
+
+/**
+ * The identity of a Binôme — the narrowing of a registration to the four
+ * names, i.e. the only personal data ever stored. The extraction script and
+ * the stored value use it; nobody redeclares the four fields.
+ */
+export type BinomeIdentity = Pick<
+  BinomeRegistration,
+  'firstName1' | 'firstName2' | 'lastName1' | 'lastName2'
+>;
+
+/**
+ * The catalogue lookup port: does the (Zone, Parcours) pair exist in the
+ * real Parcours catalogue? The server refuses any other pair, so a POST can
+ * never cover the same Parcours twice under two different keys.
+ */
+export type ParcoursLookup = (zoneId: string, tourId: string) => boolean;
 
 /**
  * Minimum length of an identity field, counted on the trimmed value: a name
@@ -95,21 +136,18 @@ export function checkIdentityFields(
 
 /**
  * The rejection codes of a 400 answer of the POST endpoint — the distinct
- * reasons the server refuses a registration:
+ * statuses the server refuses a registration for:
  *
  * - `invalid-inscription`: the body does not hold an acceptable registration
- *   (missing, blank, over-long identity field, missing engagement statement);
- * - `honeypot-triggered`: the hidden anti-bot field was filled (a bot);
+ *   (missing, blank or over-long identity field, missing engagement
+ *   statement, unknown (Zone, Parcours) pair, filled anti-bot honeypot — the
+ *   honeypot is refused silently, without any dedicated code, so a bot
+ *   cannot fingerprint it);
  * - `registration-closed`: the action date is past, the window is closed.
  */
-export type RegistrationRejection =
-  'invalid-inscription' | 'honeypot-triggered' | 'registration-closed';
+export type RegistrationRejection = 'invalid-inscription' | 'registration-closed';
 
 /** Whether a string is one of the rejection codes of a 400 answer. */
 export function isRegistrationRejection(value: string): value is RegistrationRejection {
-  return (
-    value === 'invalid-inscription' ||
-    value === 'honeypot-triggered' ||
-    value === 'registration-closed'
-  );
+  return value === 'invalid-inscription' || value === 'registration-closed';
 }

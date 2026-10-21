@@ -38,6 +38,12 @@ const CLOSED_STATE = { edition: EDITION, inscriptions: [], registrationOpen: fal
  */
 const AFTER_ACTION_DATE = new Date('2027-02-20T09:00:00Z');
 
+/**
+ * An instant of the action day itself (2027-02-14, Paris): the registration
+ * window is still open that day.
+ */
+const ACTION_DAY = new Date('2027-02-14T12:00:00Z');
+
 /** The exact POST contract the registering client sends (ticket #17). */
 const CONTRACT_BODY = {
   engaged: true,
@@ -114,7 +120,7 @@ async function fillRegistration(
 /** Open the registration modal of a Parcours from its register button. */
 async function openRegistrationModal(page: Page, tourId: string) {
   await page
-    .getByRole('button', { name: `S'inscrire en binôme pour le parcours ${tourId}`, exact: true })
+    .getByRole('button', { name: `S'inscrire en Binôme pour le parcours ${tourId}`, exact: true })
     .click();
   const modal = page.getByRole('dialog');
   await expect(modal).toBeVisible();
@@ -202,7 +208,7 @@ test.describe('Binôme registration', () => {
     await page.goto('/');
 
     const v2Register = page.getByRole('button', {
-      name: "S'inscrire en binôme pour le parcours V2",
+      name: "S'inscrire en Binôme pour le parcours V2",
       exact: true,
     });
     await expect(v2Register).toBeVisible();
@@ -218,7 +224,7 @@ test.describe('Binôme registration', () => {
     await fillRegistration(page, CONTRACT_BODY);
     // The engagement statement gates the submit: untick it → disabled, then
     // re-tick → enabled (the form is otherwise complete).
-    const submit = modal.getByRole('button', { name: 'Inscrire mon binôme' });
+    const submit = modal.getByRole('button', { name: 'Inscrire mon Binôme' });
     await modal.getByRole('checkbox').uncheck();
     await expect(submit).toBeDisabled();
     await modal.getByRole('checkbox').check();
@@ -226,7 +232,7 @@ test.describe('Binôme registration', () => {
 
     await submit.click();
 
-    await expect(modal).toContainText('Votre binôme est inscrit');
+    await expect(modal).toContainText('Votre Binôme est inscrit');
     // One exact POST, then the statuses reload without a page reload:
     expect(postBodies).toHaveLength(1);
     expect(JSON.parse(postBodies[0] ?? '{}')).toEqual(CONTRACT_BODY);
@@ -241,7 +247,7 @@ test.describe('Binôme registration', () => {
     await page.goto('/');
 
     await page
-      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P3", exact: true })
+      .getByRole('button', { name: "S'inscrire en Binôme pour le parcours P3", exact: true })
       .click();
     await page.getByLabel('Prénom du membre 1', { exact: true }).fill('Céline');
     await page.getByLabel('Nom du membre 2', { exact: true }).fill('Roux');
@@ -250,7 +256,7 @@ test.describe('Binôme registration', () => {
     await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toBeHidden();
 
     await page
-      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P3", exact: true })
+      .getByRole('button', { name: "S'inscrire en Binôme pour le parcours P3", exact: true })
       .click();
     await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toHaveValue('Céline');
@@ -263,7 +269,7 @@ test.describe('Binôme registration', () => {
 
     await expect(rowLocator(page, 'V1').locator('.badge-success')).toHaveText('Binôme inscrit');
     await expect(
-      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V1", exact: true }),
+      page.getByRole('button', { name: "S'inscrire en Binôme pour le parcours V1", exact: true }),
     ).toHaveCount(0);
     // The covered row keeps its play button (legacy DOM contract).
     await expect(
@@ -294,7 +300,7 @@ test.describe('Binôme registration', () => {
     await page.goto('/');
 
     await page
-      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P2", exact: true })
+      .getByRole('button', { name: "S'inscrire en Binôme pour le parcours P2", exact: true })
       .click();
 
     const modal = page.getByRole('dialog').first();
@@ -304,14 +310,14 @@ test.describe('Binôme registration', () => {
       lastName2: 'Roux',
       tourId: 'P2',
     });
-    await modal.getByRole('button', { name: 'Inscrire mon binôme' }).click();
+    await modal.getByRole('button', { name: 'Inscrire mon Binôme' }).click();
 
-    await expect(modal).toContainText(/couvert par un autre binôme/);
+    await expect(modal).toContainText(/couvert par un autre Binôme/);
     expect(postBodies).toHaveLength(1);
     // The 409's statuses reload shows the covered state: badge + button gone.
     await expect(rowLocator(page, 'P2').locator('.badge-success')).toHaveText('Binôme inscrit');
     await expect(
-      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours P2", exact: true }),
+      page.getByRole('button', { name: "S'inscrire en Binôme pour le parcours P2", exact: true }),
     ).toHaveCount(0);
   });
 });
@@ -335,7 +341,7 @@ test.describe('Closed registration window', () => {
     await expect(modal).toContainText("L'action est passée");
     await expect(modal).toContainText('les inscriptions sont closes');
 
-    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeDisabled();
+    await expect(modal.getByRole('button', { name: 'Inscrire mon Binôme' })).toBeDisabled();
     await expect(modal.getByLabel('Prénom du membre 1', { exact: true })).toBeDisabled();
     await expect(modal.getByLabel('Nom du membre 2', { exact: true })).toBeDisabled();
     await expect(modal.getByRole('checkbox')).toBeDisabled();
@@ -354,7 +360,24 @@ test.describe('Closed registration window', () => {
 
     const modal = await openRegistrationModal(page, 'V2');
     await expect(modal).toContainText("L'action est passée");
-    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeDisabled();
+    await expect(modal.getByRole('button', { name: 'Inscrire mon Binôme' })).toBeDisabled();
+  });
+
+  test('should keep the window open during the action day itself', async ({ page }) => {
+    // The action day is still a registration day: the local clock fallback
+    // (the public state cannot be loaded) says the window is open.
+    await page.clock.setFixedTime(ACTION_DAY);
+    await page.route('**/api/inscriptions', (route) =>
+      route.fulfill({ json: { error: 'inscriptions-unavailable' }, status: 502 }),
+    );
+    await page.goto('/');
+
+    const modal = await openRegistrationModal(page, 'V2');
+    await expect(modal).not.toContainText("L'action est passée");
+    await expect(modal.getByLabel('Prénom du membre 1', { exact: true })).toBeEnabled();
+
+    await fillRegistration(page, CONTRACT_BODY);
+    await expect(modal.getByRole('button', { name: 'Inscrire mon Binôme' })).toBeEnabled();
   });
 });
 
@@ -380,13 +403,18 @@ test.describe('Anti-bot honeypot and GDPR notice', () => {
     await expect(honeypot).toHaveAttribute('autocomplete', 'off');
   });
 
-  test('should post the filled honeypot and explain the anti-bot refusal', async ({ page }) => {
+  test('should post the filled honeypot and be refused like any other invalid input', async ({
+    page,
+  }) => {
     const postBodies: string[] = [];
     await mockInscriptionsApi(page, {
       get: () => OPEN_STATE,
       post: async ({ body, fulfill }) => {
         postBodies.push(body);
-        await fulfill({ json: { error: 'honeypot-triggered' }, status: 400 });
+        // The server refuses a filled honeypot with the SAME 400 as any other
+        // invalid input: nothing is stored, and the answer never names the
+        // honeypot (a bot must not be able to fingerprint the trap).
+        await fulfill({ json: { error: 'invalid-inscription' }, status: 400 });
       },
     });
     await page.goto('/');
@@ -396,14 +424,22 @@ test.describe('Anti-bot honeypot and GDPR notice', () => {
     // A bot fills the hidden field: the value travels with the registration
     // and the server refuses it without storing anything.
     await fillHoneypot(page, 'https://spam.example');
-    await modal.getByRole('button', { name: 'Inscrire mon binôme' }).click();
+    await modal.getByRole('button', { name: 'Inscrire mon Binôme' }).click();
 
-    await expect(modal).toContainText(/filtre anti-robots/);
+    // The refusal is silent: the standard invalid-input message, never an
+    // anti-robots hint.
+    await expect(modal).toContainText('Saisie invalide');
+    await expect(modal).not.toContainText(/anti-robots/i);
     expect(postBodies).toHaveLength(1);
     expect(JSON.parse(postBodies[0] ?? '{}')).toEqual({
       ...CONTRACT_BODY,
       honeypot: 'https://spam.example',
     });
+    // Nothing was stored: the Parcours stays uncovered and unbadged.
+    await expect(badgeLocator(page)).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en Binôme pour le parcours V2", exact: true }),
+    ).toHaveCount(1);
   });
 
   test('should state the data retention of the names in the modal', async ({ page }) => {

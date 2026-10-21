@@ -12,7 +12,8 @@ import { inscriptionKey } from './upstash-kv';
 /**
  * Pure core of `GET /api/inscriptions` (ticket #16): the public state exposes
  * (zone, tour) pairs only, an empty store stays valid JSON, malformed entries
- * are skipped, and the edition data comes from the injected config. A store
+ * are skipped, the pairs unknown to the Parcours catalogue are never
+ * exposed, and the edition data comes from the injected config. A store
  * outage degrades to a JSON 502.
  */
 
@@ -20,8 +21,29 @@ const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 
 /** 2027-02-13 late morning in Paris — registration still open. */
 const OPEN_CLOCK = new Date('2027-02-13T09:00:00Z');
-/** 2027-02-14 — the action day, registration closed. */
-const CLOSED_CLOCK = new Date('2027-02-14T09:00:00Z');
+/** 2027-02-14 late morning in Paris — the action day, registration still open. */
+const ACTION_DAY_CLOCK = new Date('2027-02-14T09:00:00Z');
+/** 2027-02-16 — the day after the action date, registration closed. */
+const CLOSED_CLOCK = new Date('2027-02-16T09:00:00Z');
+
+/** The (Zone, Parcours) pairs the fake catalogue knows. */
+const KNOWN_PAIRS = new Set([
+  'bruz-sud:V1',
+  'zh:Kept',
+  'zh:Kept1',
+  'zh:T',
+  'zh:T2',
+  'zh:T3',
+  'zh:T11',
+  'zh:T20',
+  'zh:V1',
+  'zi:T20',
+  'ze:KeptArray',
+]);
+
+/** The fake catalogue lookup: only the pairs it knows exist. */
+const parcours = (zoneId: string, tourId: string): boolean =>
+  KNOWN_PAIRS.has(`${zoneId}:${tourId}`);
 
 /** Scripted raw store entry, keyed through the adapter's key builder. */
 function entry(year: number, zoneId: string, tourId: string, value: string): RawInscriptionEntry {
@@ -33,7 +55,12 @@ function deps(
   entries: readonly RawInscriptionEntry[],
   now: Date = OPEN_CLOCK,
 ): InscriptionsHandlerDeps {
-  return { edition: EDITION, now: () => now, store: { listAll: async () => entries } };
+  return {
+    edition: EDITION,
+    now: () => now,
+    parcours,
+    store: { listAll: async () => entries },
+  };
 }
 
 describe('getInscriptionsState', () => {
@@ -104,6 +131,19 @@ describe('getInscriptionsState', () => {
     expect(state.inscriptions).toEqual([{ tourId: 'Kept', zoneId: 'zh' }]);
   });
 
+  it('should never expose a pair unknown to the Parcours catalogue', async () => {
+    // A bogus legacy key (a typo of a real Parcours id, or a Parcours of
+    // another Zone) is ignored: it never pollutes the public state.
+    const state = await getInscriptionsState(
+      deps([
+        entry(2027, 'zh', 'Kept', '{"binome":{}}'),
+        entry(2027, 'zh', 'v1', '{"binome":{}}'),
+        entry(2027, 'unknown-zone', 'V1', '{"binome":{}}'),
+      ]),
+    );
+    expect(state.inscriptions).toEqual([{ tourId: 'Kept', zoneId: 'zh' }]);
+  });
+
   it('should reflect the injected Édition config', async () => {
     const state = await getInscriptionsState(deps([]));
     expect(state.edition).toEqual(EDITION);
@@ -111,6 +151,10 @@ describe('getInscriptionsState', () => {
 
   it('should derive registrationOpen from the Édition config and the injected clock', async () => {
     await expect(getInscriptionsState(deps([], OPEN_CLOCK))).resolves.toMatchObject({
+      registrationOpen: true,
+    });
+    // The action day itself still accepts registrations.
+    await expect(getInscriptionsState(deps([], ACTION_DAY_CLOCK))).resolves.toMatchObject({
       registrationOpen: true,
     });
     await expect(getInscriptionsState(deps([], CLOSED_CLOCK))).resolves.toMatchObject({
@@ -145,6 +189,7 @@ describe('handleInscriptionsGet', () => {
     const response = await handleInscriptionsGet({
       edition: EDITION,
       now: () => OPEN_CLOCK,
+      parcours,
       store: {
         listAll: async () => {
           throw new Error('network down');
@@ -175,17 +220,31 @@ describe('isValidInscriptionValue', () => {
 
 describe('readInscriptionEntry', () => {
   it('should map a valid entry to its zone/tour pair', () => {
-    expect(readInscriptionEntry(entry(2027, 'zh', 'V1', '{"binome":{}}'), 2027)).toEqual({
+    expect(readInscriptionEntry(entry(2027, 'zh', 'V1', '{"binome":{}}'), 2027, parcours)).toEqual({
       tourId: 'V1',
       zoneId: 'zh',
     });
   });
 
   it('should map entries of another year or with garbage to null', () => {
-    expect(readInscriptionEntry(entry(2026, 'zh', 'V1', '{"binome":{}}'), 2027)).toBeNull();
-    expect(readInscriptionEntry(entry(2027, 'zh', 'V1', 'garbage'), 2027)).toBeNull();
     expect(
-      readInscriptionEntry({ key: 'not-an-inscription-key', value: '{"binome":{}}' }, 2027),
+      readInscriptionEntry(entry(2026, 'zh', 'V1', '{"binome":{}}'), 2027, parcours),
+    ).toBeNull();
+    expect(readInscriptionEntry(entry(2027, 'zh', 'V1', 'garbage'), 2027, parcours)).toBeNull();
+    expect(
+      readInscriptionEntry(
+        { key: 'not-an-inscription-key', value: '{"binome":{}}' },
+        2027,
+        parcours,
+      ),
+    ).toBeNull();
+  });
+
+  it('should map a pair unknown to the catalogue to null', () => {
+    // A bogus legacy key (a typo of a real Parcours id) is ignored: it never
+    // reaches the public state.
+    expect(
+      readInscriptionEntry(entry(2027, 'zh', 'v1', '{"binome":{}}'), 2027, parcours),
     ).toBeNull();
   });
 });
