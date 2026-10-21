@@ -159,6 +159,7 @@ particuliers, exemple de désistement — est dans
 | Quand | Qui | Quoi |
 |---|---|---|
 | À l'annonce de l'Édition | Mainteneur | Mettre à jour `year` et `actionDate` dans `src/app/inscriptions/edition.ts` (un seul commit) |
+| 3 jours avant la date de l'action | — | Rien : la fenêtre d'inscription se ferme d'elle-même (`REGISTRATION_CLOSURE_DAYS = 3`), le temps d'imprimer les fiches et d'organiser la journée |
 | Avant l'action, à chaque vague d'inscriptions | Référent | Régénérer et imprimer les fiches de suivi (`bun scripts/extract-inscriptions.ts`) |
 | À tout moment (désistement) | Référent | Supprimer la clé `inscriptions:<année>:<zoneId>:<parcours>` dans la console Upstash : le parcours redevient disponible |
 | 90 jours après la date de l'action | — | Rien : les clés expirent automatiquement du KV |

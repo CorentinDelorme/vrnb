@@ -32,7 +32,7 @@ interface TourRegisterButtonProps {
    * Whether the row offers registration (an uncovered Parcours). When false
    * the button renders nothing, but a modal opened earlier stays mounted
    * until the page changes. A closed registration window keeps the button:
-   * the modal itself explains that « l'action est passée » (ticket #18).
+   * the modal itself explains that the window is closed (ticket #18).
    */
   readonly available: boolean;
   readonly tour: TourRef;
@@ -46,7 +46,7 @@ export function TourRegisterButton({ available, tour }: TourRegisterButtonProps)
     <>
       {available ? (
         <button
-          aria-label={`S'inscrire en Binôme pour le parcours ${tour.tourId}`}
+          aria-label={`S'inscrire en binôme pour le parcours ${tour.tourId}`}
           className="btn btn-outline btn-secondary btn-xs gap-1 sm:btn-sm"
           onClick={() => {
             setEverOpened(true);

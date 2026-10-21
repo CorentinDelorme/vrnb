@@ -8,6 +8,7 @@ import {
   CURRENT_EDITION,
   EDITION_TIME_ZONE,
   INSCRIPTIONS_RETENTION_DAYS,
+  REGISTRATION_CLOSURE_DAYS,
   isRegistrationOpen,
 } from '../src/app/inscriptions/edition';
 import { postRegistration } from '../src/app/inscriptions/inscriptions-client';
@@ -48,9 +49,9 @@ import { useInscriptionsReload, useInscriptionsStatus } from './inscriptions-sta
  *   a filled one is refused by the server with 400 and nothing is stored —
  *   silently, like any other invalid input, so the modal never reveals the
  *   trap;
- * - the closed window: the day after the action date, the modal says «
- *   L'action est passée » and disables its form (the server refuses the same
- *   requests with 400);
+ * - the closed window: 3 days before the action date, the modal says «
+ *   Les inscriptions sont closes » and disables its form (the server refuses
+ *   the same requests with 400);
  * - the shared identity bounds (2 to 60 characters per name, see
  *   `validation.ts`): the submit is enabled as soon as the form is complete
  *   and valid, and each field shows its own error message.
@@ -97,7 +98,7 @@ function formatDateFrench(calendarDate: string): string {
 const ACTION_DATE_LABEL = formatDateFrench(CURRENT_EDITION.actionDate);
 
 /** The message of the closed registration window (also the 400 answer). */
-const CLOSED_WINDOW_MESSAGE = "L'action est passée — les inscriptions sont closes.";
+const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se ferme ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action.`;
 
 /**
  * The data retention notice of the modal (GDPR): the names only build the
@@ -114,7 +115,7 @@ const OUTCOME_ALERTS: Readonly<
   taken: {
     className: 'alert alert-warning mt-4 text-sm',
     message:
-      "Ce parcours vient d'être couvert par un autre Binôme : vous pouvez choisir un autre parcours libre.",
+      "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
   },
   invalid: {
     className: 'alert alert-error mt-4 text-sm',
@@ -224,7 +225,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
           </button>
         </form>
 
-        <h3 className="text-xl font-bold">Inscription du Binôme</h3>
+        <h3 className="text-xl font-bold">Inscription du binôme</h3>
         <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
           Zone <span className="text-base-content font-medium">{zone.name}</span> — Parcours{' '}
           <span className="text-base-content font-medium">{tour.tourId}</span>
@@ -234,7 +235,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
           <>
             <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
               <span>
-                <strong>Votre Binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
+                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
                 {ACTION_DATE_LABEL} au point de rendez-vous ci-dessous.
               </span>
             </div>
@@ -306,11 +307,15 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                         type="text"
                         value={values[field.key]}
                       />
-                      {showError ? (
-                        <span className="text-error text-xs" id={`${field.id}-error`}>
-                          {FIELD_ERROR_MESSAGES[error]}
-                        </span>
-                      ) : null}
+                      {/*
+                        The error line is always rendered (empty when the
+                        field is valid) so every field keeps the same height:
+                        an error under one field must not push the next row's
+                        inputs down and break the alignment of the columns.
+                      */}
+                      <span className="text-error min-h-4 text-xs" id={`${field.id}-error`}>
+                        {showError ? FIELD_ERROR_MESSAGES[error] : ''}
+                      </span>
                     </label>
                   );
                 })}
@@ -319,12 +324,13 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
               {/*
                 `whitespace-normal` is mandatory: the DaisyUI `.label` class
                 sets `white-space: nowrap`, and the engagement statement would
-                then overflow the modal box on a narrow screen.
+                then overflow the modal box on a narrow screen. `items-center`
+                keeps the checkbox and its label on the same line.
               */}
-              <label className="label mt-4 w-full min-w-0 items-start gap-2 whitespace-normal">
+              <label className="label mt-4 w-full min-w-0 items-center gap-2 whitespace-normal">
                 <input
                   checked={engaged}
-                  className="checkbox mt-0.5"
+                  className="checkbox"
                   disabled={windowClosed}
                   id="register-engaged"
                   onChange={(event) => setEngaged(event.target.checked)}
@@ -369,7 +375,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                   disabled={!complete || outcome === 'submitting' || windowClosed}
                   type="submit"
                 >
-                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon Binôme'}
+                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
                 </button>
               </div>
             </form>

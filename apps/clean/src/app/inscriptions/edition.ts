@@ -27,18 +27,28 @@ export const CURRENT_EDITION: Edition = { year: 2027, actionDate: '2027-02-14' }
 export const EDITION_TIME_ZONE = 'Europe/Paris';
 
 /**
- * Whether registering a Binôme is possible: the window stays OPEN during the
- * whole action day (the calendar date of `actionDate` in the Édition
- * timezone) and closes the next day (the calendar date after `actionDate`).
+ * Days before the action date when the registration window closes: the
+ * organizers need that time to print the tracking sheets and to organize the
+ * day, so a Binôme can register until 3 days before the action at the latest.
+ */
+export const REGISTRATION_CLOSURE_DAYS = 3;
+
+/**
+ * Whether registering a Binôme is possible: the window stays OPEN until
+ * `actionDate - REGISTRATION_CLOSURE_DAYS` (the calendar date in the Édition
+ * timezone, inclusive) and closes after it — a Binôme can still register 3
+ * days before the action, never 2 days before.
  *
- * The spec says the inscription « reste ouverte jusqu'à la date de l'action »
- * and is refused « après la date de l'action » — the action day itself is
- * still a registration day, so the boundary is inclusive.
+ * The closure exists for the organizers: they need the covered-Parcours list
+ * before the action to print the tracking sheets and organize the day.
  *
  * Pure: the comparison never touches `Date.now()` — pass the current time.
  */
 export function isRegistrationOpen(edition: Edition, now: Date): boolean {
-  return calendarDateInEditionZone(now) <= edition.actionDate;
+  return (
+    calendarDateInEditionZone(now) <=
+    calendarDatePlusDays(edition.actionDate, -REGISTRATION_CLOSURE_DAYS)
+  );
 }
 
 /** Storage retention of a Binôme inscription after the action, in days (spec). */

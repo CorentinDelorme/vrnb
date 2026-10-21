@@ -70,13 +70,13 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
 
 5. **`Closed registration window` (3 tests) and `Anti-bot honeypot and GDPR notice` (4 tests),
    ticket #18**: the modal of a closed registration window (the day after the action date)
-   announces « l'action est passée » and disables its form, the hidden anti-bot honeypot is in
+   announces that the window is closed and disables its form, the hidden anti-bot honeypot is in
    the DOM but invisible to humans, and the modal states the 90-day retention of the names. The
    "closed window" cases fix the browser clock with `page.clock.setFixedTime` before the
    navigation, so the instant is deterministic; the mocked API answers the closed window like
-   the real server would answer it then. The registration window stays **open during the whole
-   action day** (the action date is inclusive) and closes the next day — one case fixes the
-   clock on the action day itself and expects an open window. The register button stays on the
+   the real server would answer it then. The registration window stays **open until 3 days
+   before the action** (`REGISTRATION_CLOSURE_DAYS`) and closes after it — one case fixes the
+   clock on the last registration day and expects an open window. The register button stays on the
    uncovered rows of a closed window (only a covered Parcours loses its button), so the
    play-button contract (47) stays unchanged too.
 
@@ -152,12 +152,12 @@ registration and registration window)
 > referent extraction script by `scripts/inscriptions-extract.spec.ts`.
 >
 > The « closed window » cases fix the browser clock with
-> `page.clock.setFixedTime(new Date('2027-02-20T09:00:00Z'))` **before** the
-> navigation (the action date of the Édition is 2027-02-14): the instant is
-> deterministic, and the mocked API answers the closed window
-> (`registrationOpen: false`) like the real server would answer it then.
-> The registration window is **open during the whole action day** and closes
-> the next day (2027-02-15), so the action day is a registration day.
+> `page.clock.setFixedTime(new Date('2027-02-12T09:00:00Z'))` **before** the
+> navigation (the action date of the Édition is 2027-02-14, the window closes
+> 3 days before): the instant is deterministic, and the mocked API answers the
+> closed window (`registrationOpen: false`) like the real server would answer
+> it then. The registration window is **open until 2027-02-11** (3 days before
+> the action) and closed from 2027-02-12.
 
 ### `describe('Public inscriptions statuses')`
 
@@ -198,15 +198,16 @@ notre participation à ce parcours de nettoyage. »
 ### `describe('Closed registration window')` (ticket #18)
 
 The register button stays on the uncovered rows of a closed window: the modal
-itself announces that « l'action est passée » and disables its form. Only a
-covered Parcours loses its button (see the row above). The window closes the
-day **after** the action date — the action day itself is still open.
+itself announces that the window is closed and disables its form. Only a
+covered Parcours loses its button (see the row above). The window closes 3
+days **before** the action date, so the organizers can print the tracking
+sheets and organize the day; the last registration day is still open.
 
-| Test name                                                                         | Steps                                                                                                                                                  | Expected                                                                                                                                                       |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `should disable the modal and announce the action is past`                        | Fix the clock after the action date, mock GET with `registrationOpen: false`, `goto('/')`, open V2's button                                            | The modal contains « L'action est passée » and « les inscriptions sont closes »; the submit, the four identity inputs and the engagement checkbox are disabled |
-| `should close the window on the local clock when the public state is unavailable` | Fix the clock after the action date, mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`, open V2's button                         | The client falls back to its own clock: the same closed window and the same disabled submit                                                                    |
-| `should keep the window open during the action day itself`                        | Fix the clock on the action day (2027-02-14), mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`, open V2's button, fill the form | The client falls back to its own clock: no « L'action est passée », the identity inputs and the submit stay enabled                                            |
+| Test name                                                                         | Steps                                                                                                                                                                                       | Expected                                                                                                                                                                     |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should disable the modal and announce the closed window`                         | Fix the clock 2 days before the action date, mock GET with `registrationOpen: false`, `goto('/')`, open V2's button                                                                         | The modal contains « Les inscriptions sont closes » and « 3 jours avant la date de l'action »; the submit, the four identity inputs and the engagement checkbox are disabled |
+| `should close the window on the local clock when the public state is unavailable` | Fix the clock after the action date, mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`, open V2's button                                                              | The client falls back to its own clock: the same closed window and the same disabled submit                                                                                  |
+| `should keep the window open on the last registration day`                        | Fix the clock on the last registration day (2027-02-11, 3 days before the action), mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`, open V2's button, fill the form | The client falls back to its own clock: no « Les inscriptions sont closes », the identity inputs and the submit stay enabled                                                 |
 
 ### `describe('Anti-bot honeypot and GDPR notice')` (ticket #18)
 

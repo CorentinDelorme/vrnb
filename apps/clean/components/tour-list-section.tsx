@@ -75,7 +75,7 @@ function isCoveredInscriptions(
 /**
  * Whether the row offers its register button (ticket #18): only a covered
  * Parcours loses it. A closed registration window keeps the button — the
- * modal explains that « l'action est passée » and disables its form.
+ * modal explains that the window is closed and disables its form.
  */
 function isUncovered(status: InscriptionsStatus, zoneId: string, tourId: string): boolean {
   return !isCoveredInscriptions(status, zoneId, tourId);
@@ -91,6 +91,14 @@ interface TourListSectionProps {
 export function TourListSection({ title, tours, type, zoneId }: TourListSectionProps) {
   const typeIcon = type === 'V' ? BicycleIcon : WalkingIcon;
   const status = useInscriptionsStatus();
+  /**
+   * Whether the coverage of the rows is known: the action slot (badge or
+   * register button) stays empty until the public state answered, so the
+   * register button never turns into a « Binôme inscrit » badge under the
+   * volunteer's eyes. A failed request keeps the button (the coverage is
+   * unknown, and the registration is still attempted).
+   */
+  const statusKnown = status.status !== 'loading';
 
   return (
     <app-tour-list-section>
@@ -129,11 +137,11 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               {formatDistance(tour.distance)}
             </div>
             <div className="list-col-grow flex items-center justify-end gap-2">
-              {isCoveredInscriptions(status, zoneId, tour.name) ? (
+              {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
                 <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
               ) : null}
               <TourRegisterButton
-                available={isUncovered(status, zoneId, tour.name)}
+                available={statusKnown && isUncovered(status, zoneId, tour.name)}
                 tour={{ tourId: tour.name, zoneId }}
               />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />

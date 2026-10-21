@@ -89,7 +89,7 @@ function renderModal() {
 }
 
 const submitButton = (): HTMLButtonElement =>
-  screen.getByRole('button', { name: /Inscrire mon Binôme/ }) as HTMLButtonElement;
+  screen.getByRole('button', { name: /Inscrire mon binôme/ }) as HTMLButtonElement;
 
 /** The four identity inputs, by label, in DOM order. */
 function identityInputs(): readonly HTMLInputElement[] {
@@ -171,7 +171,7 @@ describe('RegisterBinomeModal', () => {
       zoneId: 'bruz-sud',
     });
     expect(mocks.reload).toHaveBeenCalledOnce();
-    expect(screen.getByRole('alert').textContent).toContain('Votre Binôme est inscrit');
+    expect(screen.getByRole('alert').textContent).toContain('Votre binôme est inscrit');
   });
 
   it('should trim the identity values sent to the API', async () => {
@@ -195,7 +195,7 @@ describe('RegisterBinomeModal', () => {
     // The native close (X button, backdrop, Escape) fires the `close` event;
     // the component must not reset anything, the host keeps it mounted.
     (
-      screen.getByText('Inscription du Binôme').closest('dialog') as HTMLDialogElement
+      screen.getByText('Inscription du binôme').closest('dialog') as HTMLDialogElement
     ).dispatchEvent(new Event('close'));
     expect(onClose).toHaveBeenCalledOnce();
     expect((identityInputs()[0] as HTMLInputElement).value).toBe('Léa');
@@ -209,7 +209,7 @@ describe('RegisterBinomeModal', () => {
     fireEvent.click(submitButton());
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('couvert'));
 
-    expect(screen.getByRole('alert').textContent).toMatch(/couvert par un autre Binôme/);
+    expect(screen.getByRole('alert').textContent).toMatch(/couvert par un autre binôme/);
     expect(mocks.reload).toHaveBeenCalledOnce();
   });
 
@@ -246,10 +246,10 @@ describe('RegisterBinomeModal', () => {
 
     fireEvent.click(submitButton());
     await waitFor(() =>
-      expect(screen.getByRole('alert').textContent).toContain("L'action est passée"),
+      expect(screen.getByRole('alert').textContent).toContain('Les inscriptions sont closes'),
     );
 
-    expect(screen.getByRole('alert').textContent).toMatch(/inscriptions sont closes/);
+    expect(screen.getByRole('alert').textContent).toMatch(/3 jours avant la date de l'action/);
     expect(mocks.reload).not.toHaveBeenCalled();
   });
 
@@ -315,8 +315,8 @@ describe('RegisterBinomeModal honeypot and GDPR notice', () => {
 });
 
 /**
- * The closed registration window (ticket #18): the modal announces that «
- * l'action est passée » and disables its whole form.
+ * The closed registration window (ticket #18): the modal announces that the
+ * window is closed (3 days before the action) and disables its whole form.
  */
 describe('RegisterBinomeModal closed window', () => {
   beforeEach(() => {
@@ -328,8 +328,8 @@ describe('RegisterBinomeModal closed window', () => {
   it('should announce the closed window and disable the form', () => {
     renderModal();
 
-    expect(screen.getByRole('alert').textContent).toContain("L'action est passée");
-    expect(screen.getByRole('alert').textContent).toContain('les inscriptions sont closes');
+    expect(screen.getByRole('alert').textContent).toContain('Les inscriptions sont closes');
+    expect(screen.getByRole('alert').textContent).toContain("3 jours avant la date de l'action");
     for (const input of identityInputs()) {
       expect(input.disabled).toBe(true);
     }

@@ -27,8 +27,8 @@ const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 /** 2027-02-01 late morning in Paris — a plausible registration instant. */
 const NOW = new Date('2027-02-01T09:00:00Z');
 
-/** The day after the action date: the registration window is closed. */
-const AFTER_ACTION_DATE = new Date('2027-02-16T09:00:00Z');
+/** Two days before the action date: the registration window is closed. */
+const AFTER_CLOSURE_DATE = new Date('2027-02-16T09:00:00Z');
 
 /** The (Zone, Parcours) pairs the fake catalogue knows. */
 const KNOWN_PAIRS = new Set(['bruz-sud:V1', 'bruz-sud:P3']);
@@ -302,7 +302,7 @@ describe('handleInscriptionsPost', () => {
   it('should answer 400 with its own code once the registration window is closed', async () => {
     const store = new InMemoryWriteStore();
     const response = await handleInscriptionsPost(
-      deps(store, AFTER_ACTION_DATE),
+      deps(store, AFTER_CLOSURE_DATE),
       request(validBody()),
     );
 
@@ -337,7 +337,7 @@ describe('handleInscriptionsPost', () => {
       [
         { body: validBody({ honeypot: 'spam' }), code: 'invalid-inscription' },
         { body: validBody({ tourId: 'v1' }), code: 'invalid-inscription' },
-        { body: validBody(), code: 'registration-closed', now: AFTER_ACTION_DATE },
+        { body: validBody(), code: 'registration-closed', now: AFTER_CLOSURE_DATE },
       ];
     for (const { body, code, now } of cases) {
       const store = new InMemoryWriteStore();

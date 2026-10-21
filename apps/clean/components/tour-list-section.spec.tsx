@@ -86,10 +86,13 @@ describe('TourListSection inscriptions badge', () => {
 
 /**
  * The register buttons of ticket #17: one per uncovered Parcours next to the
- * play button, hidden on the covered rows. Loading and error states are the
- * unknown-coverage (open) state of #16, so the buttons stay offered there.
+ * play button, hidden on the covered rows. The action slot stays empty while
+ * the statuses are loading, so the button never turns into a badge under the
+ * volunteer's eyes; once the public state answered, the button and the badge
+ * are shown at the same time. On a failed request the coverage is unknown, so
+ * the button stays offered.
  * Ticket #18 keeps the button on the uncovered rows of a closed registration
- * window too: the modal itself explains that « l'action est passée ».
+ * window too: the modal itself explains that the window is closed.
  */
 describe('TourListSection inscriptions register button', () => {
   /** Render with the given status and return the RTL result. */
@@ -105,14 +108,20 @@ describe('TourListSection inscriptions register button', () => {
     status.current = { status: 'loading' };
   });
 
-  it('should offer the register button on every row before statuses load or resolve', () => {
-    for (const pending of [{ status: 'loading' }, { status: 'error' }] as const) {
-      const { container, unmount } = renderSection(pending as InscriptionsStatus);
-      expect(
-        container.querySelectorAll('button[aria-label^="S\'inscrire en Binôme"]'),
-      ).toHaveLength(TOURS.length);
-      unmount();
-    }
+  it('should offer no register button until the public state answered', () => {
+    const { container, unmount } = renderSection({ status: 'loading' });
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+      0,
+    );
+    unmount();
+  });
+
+  it('should offer the register button on every row when the public state failed', () => {
+    const { container, unmount } = renderSection({ status: 'error' });
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
+      TOURS.length,
+    );
+    unmount();
   });
 
   it('should offer the register button on uncovered rows of an open window only', () => {
@@ -124,11 +133,11 @@ describe('TourListSection inscriptions register button', () => {
     const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
       row.textContent?.includes('V2'),
     );
-    expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en Binôme"]')).toBeNull();
+    expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en binôme"]')).toBeNull();
     expect(
-      v2Row?.querySelector('button[aria-label="S\'inscrire en Binôme pour le parcours V2"]'),
+      v2Row?.querySelector('button[aria-label="S\'inscrire en binôme pour le parcours V2"]'),
     ).not.toBeNull();
-    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en Binôme"]')).toHaveLength(
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
       TOURS.length - 1,
     );
   });
@@ -144,7 +153,7 @@ describe('TourListSection inscriptions register button', () => {
     });
     // The closed window is explained by the modal itself (ticket #18), so the
     // register buttons stay: only a covered Parcours loses its own.
-    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en Binôme"]')).toHaveLength(
+    expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
       TOURS.length,
     );
     // The play buttons stay: the closed window never touches the legacy DOM.

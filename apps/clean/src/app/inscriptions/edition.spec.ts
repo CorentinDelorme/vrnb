@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CURRENT_EDITION,
   INSCRIPTIONS_RETENTION_DAYS,
+  REGISTRATION_CLOSURE_DAYS,
   inscriptionsExpiryInstant,
   isRegistrationOpen,
   ttlSecondsUntil,
@@ -10,8 +11,9 @@ import {
 
 /**
  * "Registration open" derivation from the Édition config (pure, clock
- * injected): open until the action date INCLUSIVE — the whole action day
- * accepts registrations — and closed from the next calendar day.
+ * injected): open until 3 days before the action date INCLUSIVE — the
+ * organizers need that time to print the tracking sheets and organize the
+ * day — and closed from 2 days before.
  * February 2027 is CET (UTC+1) in `EDITION_TIME_ZONE`, so UTC instants are
  * converted explicitly in the expectations.
  */
@@ -20,34 +22,32 @@ describe('isRegistrationOpen', () => {
     expect(isRegistrationOpen(CURRENT_EDITION, new Date('2026-12-01T00:00:00Z'))).toBe(true);
   });
 
-  it('should still be open late on the day before the action', () => {
-    // 22:30 UTC = 23:30 Paris on 2027-02-13, the day before the action.
-    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-13T22:30:00Z'))).toBe(true);
+  it('should still be open late on the last registration day', () => {
+    // The last registration day is 2027-02-11 (3 days before the action):
+    // 22:30 UTC = 23:30 Paris on that day.
+    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-11T22:30:00Z'))).toBe(true);
   });
 
-  it('should stay open during the whole action day', () => {
-    // 23:59 UTC on the 13th = 00:59 Paris on 2027-02-14 (the action day).
-    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-13T23:59:00Z'))).toBe(true);
-    // 09:00 UTC = 10:00 Paris on the action day.
-    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-14T09:00:00Z'))).toBe(true);
-    // 22:30 UTC = 23:30 Paris on the action day — the last moment of the day.
-    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-14T22:30:00Z'))).toBe(true);
-  });
-
-  it('should close the window the day after the action', () => {
-    // 23:00 UTC on the 14th = 00:00 Paris on 2027-02-15 (the day after).
-    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-14T23:00:00Z'))).toBe(false);
-    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-15T09:00:00Z'))).toBe(false);
+  it('should close the window 2 days before the action', () => {
+    // 23:00 UTC on the 11th = 00:00 Paris on 2027-02-12 (2 days before).
+    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-11T23:00:00Z'))).toBe(false);
+    // The action day itself is closed too.
+    expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-02-14T09:00:00Z'))).toBe(false);
     expect(isRegistrationOpen(CURRENT_EDITION, new Date('2027-06-01T00:00:00Z'))).toBe(false);
+  });
+
+  it('should close the window exactly 3 days before the action', () => {
+    expect(REGISTRATION_CLOSURE_DAYS).toBe(3);
   });
 
   it('should follow the edition passed in, not the bundled one', () => {
     const edition = { actionDate: '2030-05-20', year: 2030 };
-    expect(isRegistrationOpen(edition, new Date('2030-05-19T12:00:00Z'))).toBe(true);
-    // The action day itself is still open…
-    expect(isRegistrationOpen(edition, new Date('2030-05-20T12:00:00Z'))).toBe(true);
-    // …the next day is closed.
-    expect(isRegistrationOpen(edition, new Date('2030-05-21T12:00:00Z'))).toBe(false);
+    // 3 days before the action, still open…
+    expect(isRegistrationOpen(edition, new Date('2030-05-17T12:00:00Z'))).toBe(true);
+    // …2 days before, closed.
+    expect(isRegistrationOpen(edition, new Date('2030-05-18T12:00:00Z'))).toBe(false);
+    // The action day itself is closed as well.
+    expect(isRegistrationOpen(edition, new Date('2030-05-20T12:00:00Z'))).toBe(false);
   });
 });
 
