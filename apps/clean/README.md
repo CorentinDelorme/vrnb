@@ -129,9 +129,10 @@ Elles doivent être renseignées à deux endroits :
 
 - **sur Vercel**, dans les variables d'environnement du projet, pour que l'API
   déployée puisse lire et écrire les inscriptions ;
-- **en local**, dans `apps/clean/.env.local` — Bun charge ce fichier
-  automatiquement quand la commande est lancée depuis `apps/clean/`. Ce fichier
-  n'est jamais committé.
+- **en local**, dans `apps/clean/.env.local` — ce fichier est chargé
+  automatiquement, par Bun pour le script d'extraction (lancé depuis
+  `apps/clean/`) et par Next.js pour le serveur de développement. Il n'est
+  jamais committé.
 
 Le jeton doit être un **jeton standard** Upstash : les jetons en lecture seule
 ne peuvent pas exécuter le `SCAN` nécessaire à l'extraction.
