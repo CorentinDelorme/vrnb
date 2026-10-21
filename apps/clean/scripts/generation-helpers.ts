@@ -18,7 +18,7 @@ import { basename, dirname, join } from 'path';
 
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
 
-import type { PerfReport } from './generation-perf';
+import type { PackCounters, PerfReport } from './generation-perf';
 
 /**
  * Values of a `--flag=a,b` option: the first matching argument wins, the
@@ -162,6 +162,18 @@ export function readPerfReport(path: string): PerfReport | undefined {
       regenerated: readIds(raw.zoneMaps, 'regenerated'),
       skipped: readIds(raw.zoneMaps, 'skipped'),
     },
+    packs: readPacks(raw.packs),
+  };
+}
+
+/** The packs of a report, `undefined` when the report holds none. */
+function readPacks(value: unknown): PackCounters | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+  return {
+    written: readIds(value, 'written'),
+    documents: typeof value.documents === 'number' ? value.documents : 0,
   };
 }
 
@@ -182,8 +194,42 @@ function readIds(value: unknown, key: string): string[] {
 }
 
 /** Whether a value is a JSON object. */
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The message of an error, for the logs of the generation scripts.
+ */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Run the workers in parallel, at most `limit` of them at a time.
+ *
+ * The items are taken in order: the worker of an item is started as soon
+ * as a slot is free. A worker that throws rejects the whole call: the
+ * callers catch the failures of their own item, so one failing item never
+ * stops the others.
+ */
+export async function forEachConcurrently<T>(
+  items: readonly T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<void>,
+): Promise<void> {
+  const concurrency = Math.max(1, limit);
+  let next = 0;
+
+  const run = async (): Promise<void> => {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      await worker(items[index], index);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => run()));
 }
 
 // --- Layout of the generated data ---
@@ -321,7 +367,7 @@ export function zonePackFiles(rootDir: string, zoneId: string): string[] {
 export function zonePackParcours(rootDir: string, zoneId: string): string[] {
   return zonePackFiles(rootDir, zoneId)
     .filter((file) => TOUR_PDF_PATTERN.test(basename(file)))
-    .map((file) => `${zoneId}/${basename(file, '.pdf')}`);
+    .map((file) => parcoursStateKey(zoneId, basename(file, '.pdf')));
 }
 
 // --- Inventory of the Zones and the Parcours ---
@@ -339,6 +385,57 @@ const TOUR_FOLDER_PATTERN = /^[VP]\d+$/;
  * always listed the Parcours of a Zone this way.
  */
 const PARCOURS_FOLDER_PATTERN = /^[VP]/;
+
+/**
+ * The practice type of a Parcours: `V` (bike) or `P` (walk).
+ *
+ * The type is the first letter of the id of the Parcours: it is the
+ * naming rule of the Parcours, and the pipelines use it to tell the two
+ * practices apart.
+ */
+export type PracticeType = 'V' | 'P';
+
+/**
+ * The practice type of a Parcours, from its id: `V` (bike) or `P` (walk).
+ */
+export function practiceTypeOf(tourId: string): PracticeType {
+  return tourId.startsWith('P') ? 'P' : 'V';
+}
+
+// --- The keys of the generation state ---
+
+/**
+ * Key of a Parcours: `<zone>/<parcours>`.
+ *
+ * The key identifies a Parcours everywhere it is named: in the generation
+ * state, in the counters of the `[perf]` block, in the documents of a zone
+ * pack and in the deep link of its page. It is built here, and only here,
+ * so every module speaks the same format.
+ */
+export function parcoursStateKey(zoneId: string, tourId: string): string {
+  return `${zoneId}/${tourId}`;
+}
+
+/**
+ * Read the key of a Parcours: `<zone>/<parcours>`.
+ *
+ * `undefined` when the key does not hold a Zone and a Parcours: the state
+ * is then ignored for that key.
+ */
+export function parseParcoursStateKey(
+  key: string,
+): { readonly zoneId: string; readonly tourId: string } | undefined {
+  const parts = key.split('/');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return undefined;
+  }
+  return { zoneId: parts[0], tourId: parts[1] };
+}
+
+/** Key of an overview map of a Zone: `<zone>/<kind>`. */
+export function zoneMapKey(zoneId: string, kind: PracticeType): string {
+  return `${zoneId}/${kind}`;
+}
 
 /** A Parcours found on disk, with the Zone it belongs to and its GPX traces. */
 export interface ParcoursEntry {

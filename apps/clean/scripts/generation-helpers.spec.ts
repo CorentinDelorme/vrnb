@@ -5,21 +5,27 @@ import { dirname, join } from 'path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
+  forEachConcurrently,
   geoJsonAssetPath,
   gpxTracePath,
   isFilterActive,
+  isRecord,
   legacyGpxTracePath,
   listParcours,
   matchesFilters,
+  parcoursStateKey,
   parseFilterValues,
   parseForceFlag,
   parseGenerationFilters,
+  parseParcoursStateKey,
   perfReportPath,
+  practiceTypeOf,
   readPerfReport,
   resolveGpxTracePath,
   tourPdfPath,
   writeFileIfChanged,
   writePerfReport,
+  zoneMapKey,
   zoneMapPdfPath,
   zonePackFiles,
   zonePackParcours,
@@ -291,12 +297,9 @@ describe('listParcours', () => {
 
     expect(inventory.zoneIds).toEqual(['bruz-ker-lann', 'bruz-sud']);
     expect(inventory.zones.map((zone) => zone.zoneId)).toEqual(['bruz-ker-lann', 'bruz-sud']);
-    expect(inventory.parcours.map((entry) => `${entry.zoneId}/${entry.tourId}`)).toEqual([
-      'bruz-ker-lann/V30',
-      'bruz-sud/P1',
-      'bruz-sud/V1',
-      'bruz-sud/V2',
-    ]);
+    expect(inventory.parcours.map((entry) => parcoursStateKey(entry.zoneId, entry.tourId))).toEqual(
+      ['bruz-ker-lann/V30', 'bruz-sud/P1', 'bruz-sud/V1', 'bruz-sud/V2'],
+    );
   });
 
   it('should point to the GPX traces of every Parcours', () => {
@@ -321,9 +324,9 @@ describe('listParcours', () => {
 
     const inventory = listParcours(rootDir, parseGenerationFilters(['--tour=V2']));
 
-    expect(inventory.parcours.map((entry) => `${entry.zoneId}/${entry.tourId}`)).toEqual([
-      'bruz-sud/V2',
-    ]);
+    expect(inventory.parcours.map((entry) => parcoursStateKey(entry.zoneId, entry.tourId))).toEqual(
+      ['bruz-sud/V2'],
+    );
     expect(inventory.zones.map((zone) => zone.zoneId)).toEqual(['bruz-sud']);
     // The Zones are not filtered by the --tour filter: a Zone without any
     // matching Parcours still exists.
@@ -339,9 +342,9 @@ describe('listParcours', () => {
     const inventory = listParcours(rootDir, parseGenerationFilters(['--zone=bruz-ker-lann']));
 
     expect(inventory.zoneIds).toEqual(['bruz-ker-lann']);
-    expect(inventory.parcours.map((entry) => `${entry.zoneId}/${entry.tourId}`)).toEqual([
-      'bruz-ker-lann/V30',
-    ]);
+    expect(inventory.parcours.map((entry) => parcoursStateKey(entry.zoneId, entry.tourId))).toEqual(
+      ['bruz-ker-lann/V30'],
+    );
   });
 
   it('should attribute the Parcours of the legacy flat layout to the default Zone', () => {
@@ -353,10 +356,9 @@ describe('listParcours', () => {
     const inventory = listParcours(rootDir);
 
     expect(inventory.zoneIds).toEqual(['bruz-sud']);
-    expect(inventory.parcours.map((entry) => `${entry.zoneId}/${entry.tourId}`)).toEqual([
-      'bruz-sud/P1',
-      'bruz-sud/V1',
-    ]);
+    expect(inventory.parcours.map((entry) => parcoursStateKey(entry.zoneId, entry.tourId))).toEqual(
+      ['bruz-sud/P1', 'bruz-sud/V1'],
+    );
     expect(inventory.parcours[1]?.dir).toBe(join(rootDir, 'public/gpx/V1'));
     expect(inventory.parcours[1]?.tracePath).toBe(join(rootDir, 'public/gpx/V1/V1.gpx'));
   });
@@ -420,6 +422,30 @@ describe('writePerfReport', () => {
   });
 });
 
+describe('parcoursStateKey', () => {
+  it('should build the key of a Parcours', () => {
+    expect(parcoursStateKey('bruz-sud', 'V1')).toBe('bruz-sud/V1');
+  });
+});
+
+describe('zoneMapKey', () => {
+  it('should build the key of an overview map of a Zone', () => {
+    expect(zoneMapKey('bruz-sud', 'V')).toBe('bruz-sud/V');
+  });
+});
+
+describe('parseParcoursStateKey', () => {
+  it('should read the Zone and the Parcours of a key', () => {
+    expect(parseParcoursStateKey('bruz-sud/V1')).toEqual({ zoneId: 'bruz-sud', tourId: 'V1' });
+  });
+
+  it('should return undefined when the key holds no Zone and no Parcours', () => {
+    expect(parseParcoursStateKey('bruz-sud')).toBeUndefined();
+    expect(parseParcoursStateKey('bruz-sud/V1/extra')).toBeUndefined();
+    expect(parseParcoursStateKey('/V1')).toBeUndefined();
+  });
+});
+
 describe('zonePackParcours', () => {
   it('should list the Parcours whose Fiche is part of the pack of a Zone', () => {
     const rootDir = createFixture({
@@ -435,5 +461,65 @@ describe('zonePackParcours', () => {
     const rootDir = createFixture({});
 
     expect(zonePackParcours(rootDir, 'bruz-sud')).toEqual([]);
+  });
+});
+
+describe('isRecord', () => {
+  it('should tell a JSON object from the other values', () => {
+    expect(isRecord({})).toBe(true);
+    expect(isRecord([])).toBe(false);
+    expect(isRecord(null)).toBe(false);
+    expect(isRecord('text')).toBe(false);
+  });
+});
+
+describe('practiceTypeOf', () => {
+  it('should read the practice type of a Parcours from its id', () => {
+    expect(practiceTypeOf('V1')).toBe('V');
+    expect(practiceTypeOf('P13')).toBe('P');
+  });
+});
+
+describe('forEachConcurrently', () => {
+  it('should run every item of the list', async () => {
+    const done: number[] = [];
+
+    await forEachConcurrently([1, 2, 3], 2, async (item) => {
+      done.push(item);
+    });
+
+    expect(done.sort()).toEqual([1, 2, 3]);
+  });
+
+  it('should never run more workers than the limit', async () => {
+    let running = 0;
+    let peak = 0;
+
+    await forEachConcurrently([1, 2, 3, 4, 5], 2, async () => {
+      running += 1;
+      peak = Math.max(peak, running);
+      await Promise.resolve();
+      running -= 1;
+    });
+
+    expect(peak).toBe(2);
+  });
+
+  it('should tell the index of the item to the worker', async () => {
+    const indexes: number[] = [];
+
+    await forEachConcurrently(['a', 'b'], 1, async (_item, index) => {
+      indexes.push(index);
+    });
+
+    expect(indexes).toEqual([0, 1]);
+  });
+
+  it('should do nothing when the list is empty', async () => {
+    const worker = async (): Promise<void> => {
+      throw new Error('the worker must not run');
+    };
+
+    await expect(forEachConcurrently([], 3, worker)).resolves.toBeUndefined();
   });
 });

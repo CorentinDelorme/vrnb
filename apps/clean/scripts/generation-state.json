@@ -5,283 +5,336 @@
       "trace": "a34f86bbf14d023a4d694de2f7e3eddbffb614f93b3b268606dc88cbab7460d0",
       "startSegment": "46c9628efbd75189507e5300bc85033bf2226b26c41db467d7f8e4355f9e7c48",
       "endSegment": "ada41c80b56b2ea88771afb506f8dd710052dfb6dec78335ecae7b632931ac97",
-      "fiche": "93f9de871481d66e4740a9037788f7e48282ddbc3e7e4e7593adc5c5b7315ee0"
+      "fiche": "93f9de871481d66e4740a9037788f7e48282ddbc3e7e4e7593adc5c5b7315ee0",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V31": {
       "trace": "3a4cfe85191b61e9f5e452e686721d919974b04ba0b1ae39ea926fc1fe325ea3",
       "startSegment": "8708ee88d2f2da362a2d8706a63de66538fbfab1cb22edfd2d2f186ae00e675f",
       "endSegment": "1f41643fa39a6b7e599b858d239de8ee5abece85ec769a5a734f6cb9027674ee",
-      "fiche": "9478f22343c31109c3cb379312271b10a8293e04d3f59c3765ce46d64ba565b8"
+      "fiche": "9478f22343c31109c3cb379312271b10a8293e04d3f59c3765ce46d64ba565b8",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V32": {
       "trace": "e5143635a0ffd0e594e297b6da3f2068b6b1718626a859233d054adb4e0bb0f1",
       "startSegment": "cc0a19560384311f644a16071f8d393c2375f70babd63f892750d7a41dc44380",
       "endSegment": "e41abcd877eff6855fec4387fbd07df1805e46ff0899e6f716c422d20ddcd892",
-      "fiche": "eef9f8c4d7ab715c5907224a30e65ac2399b24c3823d1ecfdbaca0d3908fc976"
+      "fiche": "eef9f8c4d7ab715c5907224a30e65ac2399b24c3823d1ecfdbaca0d3908fc976",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V33": {
       "trace": "7cf5f70b44c4023c988c02e7251ba0750f99f9ab2fd8997395fd82114e846c0e",
       "startSegment": "e2f4d5caca1216511c13b99b23c7e2dd4994188e803fcfeec699c83c37fb1a94",
       "endSegment": "4110a42bdfab22e91ed3b55b1de2ecea1a3179f37f8af737ce32158a020a2362",
-      "fiche": "4881a9bf0f71d3dd9e3addf507ef7537441152ec0a161b273df8eeeee603f729"
+      "fiche": "4881a9bf0f71d3dd9e3addf507ef7537441152ec0a161b273df8eeeee603f729",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V34": {
       "trace": "ec4db5cb57b6e1557e0f49f107fe869718e3e17776c7845c86816646bdd3e1ef",
       "startSegment": "0a0d3f001ecf9bfffe88f3245a378e85fd1c86466a6d1e031142a2b8150626a3",
       "endSegment": "05b5db9572055f5468608bf65f5840f6d8d6d62f9878669a90fdb9608e68b217",
-      "fiche": "75ae9e982a5a288c7888d4642452f9b661dd099d6ec4185cba4c4302e88cf427"
+      "fiche": "75ae9e982a5a288c7888d4642452f9b661dd099d6ec4185cba4c4302e88cf427",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V35": {
       "trace": "32dcee7611ec4fd0e46564701078788d11f516e6529f913d75c722d026e49912",
       "startSegment": "e8013f3ea0fc19579d4b5fab1483b8c32d93775f09d56884ac1c01ae513ec8fe",
       "endSegment": "772e2b500b3e71b2078d48b7d490ec1d56e476a8fe91d4d4ac0498ca3d78ea66",
-      "fiche": "d03e93da45b465b5badf1b661ec00cb519ee723e9164887c83e0812c81fc55cf"
+      "fiche": "d03e93da45b465b5badf1b661ec00cb519ee723e9164887c83e0812c81fc55cf",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V36": {
       "trace": "936ec1d31ec083be4015d3e5b05dafaef6bf98055a290de3b198aadfe9510b5a",
       "startSegment": "26d3d7b870fd15372d7e8d967d0607e314b78e862aa0e91adaf8333775c55fac",
       "endSegment": "eccdf5627d4538e21bbf524ded260c6d0a7537441292b97cb8401b973f358213",
-      "fiche": "957a404f2a39192954b6738b53a6dc185ac1f5ce6b3dfc4a0f696218719f141b"
+      "fiche": "957a404f2a39192954b6738b53a6dc185ac1f5ce6b3dfc4a0f696218719f141b",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V37": {
       "trace": "3981da814519ed4f827871b183eff7ff0b541359abc9e018709bec3794a5f69e",
       "startSegment": "4a48f84995c004f41bd9193f3b900455b0e0cd1d053018a368c2630cd4d79f7e",
       "endSegment": "1c1b0ca0dbe2d7167a519092d131a4c198bad279346b3bc629170457afcf3539",
-      "fiche": "dec0d9aefdba28f9e2a0dbb0472fa4409360451ccda515743836190a857edd23"
+      "fiche": "dec0d9aefdba28f9e2a0dbb0472fa4409360451ccda515743836190a857edd23",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V38": {
       "trace": "c7b30eac405126ca3ef5dcfccbeaf85e3ae36bea586d3b1c33a5f16ddc11e29e",
       "startSegment": "67cd1f496d99e69c64239e041f1270922513cc7a21ead632b5ed840fb9928183",
       "endSegment": "622afc294747fb7d07a06997d47431fa764f1453a4487c0e5879d8ef10ab8bc4",
-      "fiche": "74f9454c2b41767e733280b069c9d80f2e5cd78e95981c04837efe99897aa7f4"
+      "fiche": "74f9454c2b41767e733280b069c9d80f2e5cd78e95981c04837efe99897aa7f4",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V39": {
       "trace": "ed0d2c09a96dd0d7863fe1a3130b903484540e5f11fb98da8deda67cc62834f3",
       "startSegment": "a0a4eb7f6b01b2e859a5a3c4dbbcfd3155f28d89a4cc06226edd413303013dfd",
       "endSegment": "f4351d91ec760ad44635ad7b3223a503578fc7b974df4f029cc1795713d08bf6",
-      "fiche": "bbc1c7789268316af7fa1dc8c697a977d075e933ef027c54c93e25e6772583f1"
+      "fiche": "bbc1c7789268316af7fa1dc8c697a977d075e933ef027c54c93e25e6772583f1",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V40": {
       "trace": "6d83d7dceea8de514c68d448baf7d2b1efd592249846e1f9bb1f1196538c6416",
       "startSegment": "3203a5aa1f23a5fb9cf6efab9b4e20c6844836ec6c650f8de629b2988005854c",
       "endSegment": "633f64b9e3858d3af8dc8a69a3eb2ea4d3c107307fbde72ffa387a737fba21f7",
-      "fiche": "7f51558a096cc3e6ed491623a937488b8f43800cd608088072e3e0e2563add20"
+      "fiche": "7f51558a096cc3e6ed491623a937488b8f43800cd608088072e3e0e2563add20",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V41": {
       "trace": "ec60956a9a02bf0d7cd5af015c86a4d6e8cf11d5a151ac713ae8cb4235bd257a",
       "startSegment": "1287fbe5b3ac7c4c5a07887c07d096f5fdad1bb3643842c2cf7095d4273d3951",
       "endSegment": "fcea5b21aa0e26862d2c677a36140c84bd481f64e4a219b248b6839d9712706d",
-      "fiche": "3530a392e7eb79045d742d21fc8ee70d5718fc15c046d5feb5ae9aaa49d63f7f"
+      "fiche": "3530a392e7eb79045d742d21fc8ee70d5718fc15c046d5feb5ae9aaa49d63f7f",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-ker-lann/V42": {
       "trace": "c58c67f28932c4daf645f25b096507f61efaa75bce43dd5b3c1efdb89bf2f423",
       "startSegment": "5680ee5dced89ff4e17bfa63aac3310167b1beefa5022ac391553b623c486bc4",
       "endSegment": "09f3ad391d011413397d249030144ba94474dba118783c9c6442cc102bfd772a",
-      "fiche": "80fd07ce3c533cc895481342b5cfca0aeddcaa7d7ace6d760a0832db63b9d15c"
+      "fiche": "80fd07ce3c533cc895481342b5cfca0aeddcaa7d7ace6d760a0832db63b9d15c",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P1": {
       "trace": "b0d1af48710e8f19f5234fa616fa781a3b0d264743fa15fc28b22c7307666fc8",
       "startSegment": "379fa1fc7d6bf0922cf13b15ae81bba2ae3893f98228a3f2844e1b8fbbbfe009",
       "endSegment": "e159848d7161b0bd255c335779eef6ac01fefc1795323838f338ad49ae1ead25",
-      "fiche": "c9ce0cf6f2b976a2790e95a83b0f504a19c6ef208bab9d86dab9517fa12050a4"
+      "fiche": "c9ce0cf6f2b976a2790e95a83b0f504a19c6ef208bab9d86dab9517fa12050a4",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P2": {
       "trace": "17c4ba19a6d9ffb3823d603ee482815fdbdaa89716549c1904751f403f544ad2",
       "startSegment": "b9c41393f913704f204e96093fbe484b03bb9466864eb0a20021e2d261b777ac",
       "endSegment": "65845a424b8388fc71c53ba37404ae8084ea1196b1da1c7696e9200624401773",
-      "fiche": "b6ef814d2505cf8ca35e9b4709be49452b90fd6cc5bddff2fac95060f54bde75"
+      "fiche": "b6ef814d2505cf8ca35e9b4709be49452b90fd6cc5bddff2fac95060f54bde75",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P3": {
       "trace": "4752749f3bb8769c715877cd2d9db4aaa0eb08246b2929b8fc89a8b25edf48db",
       "startSegment": "2833ad1827da428e251075a7f5806ea21f5e39072ab56a76dd45142a232db0d7",
       "endSegment": "f1ea5d0f797022f0a7d16a934a31196e240f329fe84a8c9597a2d23f94fc7221",
-      "fiche": "cfddef4dee60895433f3974b166739047eab76ac56dd91de31df23cedbf84c7c"
+      "fiche": "cfddef4dee60895433f3974b166739047eab76ac56dd91de31df23cedbf84c7c",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P4": {
       "trace": "c051fee0da5d66ef933dff35e576e6e18bde1abfc8727b535d0f8b2e5e94a627",
       "startSegment": "a74d5865e171463ad8c80340f31fa54956c5cf6526f406d0fa4eba89b5f33e0f",
       "endSegment": "37e39c0e203bf11df5b8ccd9ade7dff12c92368be53b8945ec255e3a4e495a17",
-      "fiche": "bb0647dbc3f98d3137abdd96a604021c3ae4a6f90a011fcb1cbf4df1d516a120"
+      "fiche": "bb0647dbc3f98d3137abdd96a604021c3ae4a6f90a011fcb1cbf4df1d516a120",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P5": {
       "trace": "00daa35a4fa255f673db1a8a3155c2b63c9482e6cbcbc17b68576e71f4cc1da6",
       "startSegment": "dfdc511e5c2f6f73506185fff1e64e008c30c94a39d600d7f4dd909607c1cfde",
       "endSegment": "17ca464d94980ff35fc277eaef7ea055cde9b52231476ddc13c7996f4f8d575b",
-      "fiche": "adad945ec5366e6cddc8ebca551c055a11ccef57959386629711cd0e2e9f13d9"
+      "fiche": "adad945ec5366e6cddc8ebca551c055a11ccef57959386629711cd0e2e9f13d9",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P6": {
       "trace": "1321c77c7ed8fe472aec50b10217fe6ea33cfc3f4ff6686d846a3a471c44e0a9",
       "startSegment": "03d2fd0996d5ab04673fc3bc6a59e2ba71ff7772b0fa0d2d62eeaff8cd8c8c37",
       "endSegment": "add4f4a3b1719e77f54248b729df51e1abdd814012628d90fb7b48e10afbb74c",
-      "fiche": "ad8c60a1d0c89dc1b86138df22106f244884ce79e8328df6fbdb729e7b4bf6c6"
+      "fiche": "ad8c60a1d0c89dc1b86138df22106f244884ce79e8328df6fbdb729e7b4bf6c6",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P7": {
       "trace": "ac95f87e7b164fb908942aa013fb83d86aa895a2fc795fbbf38153cf93a62c4d",
       "startSegment": "c9cf89e0e1365eb5308c7ace3bb4f6b320f7e2bcf0ea239e94534aab18b56b22",
       "endSegment": "0199947d7ea1491be0ff1242e51ad394ac1140a26bee1bd7cb11716979bd195a",
-      "fiche": "8b2e952757fa5b5ca12b4b4ca044dc6d6c4e5a08422bec443cacf7c2aac671b7"
+      "fiche": "8b2e952757fa5b5ca12b4b4ca044dc6d6c4e5a08422bec443cacf7c2aac671b7",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P8": {
       "trace": "3f30233f0834fa26cbf6845aff5fa7f358008b668656d123f62346c73f3c6079",
       "startSegment": "e74c82125ba9e71a51199a8ca50d5e52b4f6e5cf45a57a6ffa0b400fc71ee767",
       "endSegment": "635cf8650db8b43f7e7ac185628c0ececa1d575244cfbf6da15fa743636efacd",
-      "fiche": "b7fb248908d175e7310b5c037d261aa61cccce4824302a0c359bc23370d5fd6a"
+      "fiche": "b7fb248908d175e7310b5c037d261aa61cccce4824302a0c359bc23370d5fd6a",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P9": {
       "trace": "12873027680e33894cd69f1bb71986094736fbd336181e9c0f0b95c62e28725e",
       "startSegment": "55ee0fb503f636d85e1d784feeed430bdc298aa7ad4d99c843f4eb0f2db7e337",
       "endSegment": "3387e58cbf93f9e2b0ca37870de841caba612434c222369e866074bde3db614c",
-      "fiche": "d5f6dc5cbffd6c3903d67e0e748584796f0cbd7ac7e5abd82254e35a088d0561"
+      "fiche": "d5f6dc5cbffd6c3903d67e0e748584796f0cbd7ac7e5abd82254e35a088d0561",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P10": {
       "trace": "152d665294d6f6b215caa8c149930cce6af06c1a8466cd847babf702eb0f2b67",
       "startSegment": "f139d8b92776702af7ddcde60e245624b7d8c7f90fc4893ec85f06ad32dc765a",
       "endSegment": "f65bd37794abb5aed674244b85323bf88adb44861147ed0dad1f6cbb133cc416",
-      "fiche": "bd4ad0c0a8e7736d5ea8d70ea84a69f50f5dfb180b7531962e8b8e8ff20f9a66"
+      "fiche": "bd4ad0c0a8e7736d5ea8d70ea84a69f50f5dfb180b7531962e8b8e8ff20f9a66",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P11": {
       "trace": "030650af4625156f3fae41cc7616c56f0f134e22cd704eb39f2f757af382c9e3",
       "startSegment": "b4679850275b99b62c752b58b941b484e34ecb92a1511c8cf96963856616157a",
       "endSegment": "b8f762d9d73699ceed5ea2758fd9fd9a2c0fca51b9f5d0837c7fb6ddff3235e8",
-      "fiche": "8c86eb8856360421f554e3fa9990ded414a2cf5f022a621ae4f4b925b25bfeb2"
+      "fiche": "8c86eb8856360421f554e3fa9990ded414a2cf5f022a621ae4f4b925b25bfeb2",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P12": {
       "trace": "b82f396320a12c8f576b99716213417464805defa07949c7c5a0498101051315",
       "startSegment": "61c4f4cda44760a0339fefa7e3a1e6ba2c23ab2a9272584a364ae97438af221e",
       "endSegment": "0ff95d462156d8877c59ca88087f0e21a75c518a1f80b5335dc22e48abc0e226",
-      "fiche": "13d9101906f3dec9f23b7e69aa8914872fa3b3f351734affb540cdd184a88570"
+      "fiche": "13d9101906f3dec9f23b7e69aa8914872fa3b3f351734affb540cdd184a88570",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/P13": {
       "trace": "ec9d69c646b917b6c130456e1657ca71b6b6b4ae00d1480d7be519dba4eef46c",
       "startSegment": "19b1ade17a0ab267d7843267bc9a49ba72996621967617b2681c1eeb97ed2896",
       "endSegment": "7c3beecbc7888e709286467444bc9c2261f961e5353d1fb07850b956d169d093",
-      "fiche": "63561fa912f685666a134824b61c382bf52c3ec0b4e2399c4a8b50cbc8522cdd"
+      "fiche": "63561fa912f685666a134824b61c382bf52c3ec0b4e2399c4a8b50cbc8522cdd",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V1": {
       "trace": "15fa82373143e33dcb2c6acb258cbbde45ecab1453d01107f5d10416c7a79b20",
       "startSegment": "591d6c0ca09eafa2b1bc1aeb1e1313469c5de11e832f45eacdca0676273524df",
       "endSegment": "899bbc6f07293003a2188d901b2c0d007c0fff5806f32f451a5d55aeddd25927",
-      "fiche": "d88280551935179550860761aad540b25446c27cce6980674c501d194136f403"
+      "fiche": "d88280551935179550860761aad540b25446c27cce6980674c501d194136f403",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V2": {
       "trace": "c47533768ebd21d60ac502670baae4af5c0d156c8a47a91394aabeb38c397fc1",
       "startSegment": "4e806209a3e61f73d9546576a9458da8efab4efc2ca8acccd6445e78fe7075ed",
       "endSegment": "6234ff31fe33b10a14970690618224cf39ef2a0838f1c9d3fafbcf6483bfe74e",
-      "fiche": "12486d7cf113cef988f5fbde6b90bbbbb897bcdf9ad5cf9e6e45b8af1695460f"
+      "fiche": "12486d7cf113cef988f5fbde6b90bbbbb897bcdf9ad5cf9e6e45b8af1695460f",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V3": {
       "trace": "80cdd21366f96f72291c86fe49b3604bd115419b37d07f70e436fe82881e124f",
       "startSegment": "390bd3343f3a52a0f22461be9854381ab4d4a765adb1b34b7dc1a91830bbea88",
       "endSegment": "6b93da080e2273c8a0f318417db3b62f5502a27a1051b156bb649d9a8adae8ae",
-      "fiche": "fcb6a6b58257fcead3a3cf802f7220d2325c552f916dff421ddec9e2b4b11721"
+      "fiche": "fcb6a6b58257fcead3a3cf802f7220d2325c552f916dff421ddec9e2b4b11721",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V4": {
       "trace": "83eb0ef60b385cc918a9c75bae0089dbb9822a0f2f54a0dec91b638a8589d074",
       "startSegment": "b6edea3e8be93a4fd78f7c81059e90b122d77373adc88f6615ac728ec9879d28",
       "endSegment": "3c9ee85b39b010938ea32090464d22a6a0dd54d037a4d5a62ccb55e1fb12b539",
-      "fiche": "c32dc5b94dee6a2c7ae55b91584506211a8240525e107eea3c3e4a2097d9490e"
+      "fiche": "c32dc5b94dee6a2c7ae55b91584506211a8240525e107eea3c3e4a2097d9490e",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V5": {
       "trace": "c0d34019d03e2b60daa6f1633a4f1853b10f216b47ff297fedd082d1d9249685",
       "startSegment": "a3733e61e40043059349639fe27c6c1b70c21532ffee1d414433860f35f29078",
       "endSegment": "8c8af03b1d9a4152676f773340f86915224c7358c3525f6b936721cd93e81a54",
-      "fiche": "7c4761e4ea739e67faaeaad433a8f6a46ef044aa409a7b3c591d9193de49f0a4"
+      "fiche": "7c4761e4ea739e67faaeaad433a8f6a46ef044aa409a7b3c591d9193de49f0a4",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V6": {
       "trace": "4f7243802b6a553164a8cb997cff253c0e7de5e105d7f40fc28bcfc0d21cfb79",
       "startSegment": "f3e3ac8630f1ae2ea4cc5571d5d2c79cd256c0c5d6d67e6b7926af7f2ab224dc",
       "endSegment": "81fc6cccd65699799b61c1b1bf33ca97f7b38d7cf7f6eaccf04aefb92682d22e",
-      "fiche": "92445a13cb8915794c702120e0a85d627dc7210fc26d5faac0692951862e0298"
+      "fiche": "92445a13cb8915794c702120e0a85d627dc7210fc26d5faac0692951862e0298",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V7": {
       "trace": "8b87d7c539af7d2a4c31037564cdbed9ee41d425b10c75a18ae4f52d61d42f96",
       "startSegment": "95047b0919b4b11a5ccae9a0a64d3f3f12a66e777e9c60ee5de6043849088d99",
       "endSegment": "633a2aaed1638e488a57dc030607e2f079250e7b917b32f861c88b128e22e667",
-      "fiche": "fb8b5485c94908f872698603e41a8852ff9e89933baae39b5b61281e666ef4c9"
+      "fiche": "fb8b5485c94908f872698603e41a8852ff9e89933baae39b5b61281e666ef4c9",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V8": {
       "trace": "41bac2dafd4f0a00204cf18ad1d44145596e5984a4bd7342033182d0b6c08abd",
       "startSegment": "fcd473ebe94c82c39474907f10014bd69364e8c16244c47c5119129d94559102",
       "endSegment": "aed54ee32d8c8678fed7cb10c3005d3f666a836f9b56ed870aefa6b39a136d7e",
-      "fiche": "d0bfe1b475f78d17ce1b2160c5fee20999e06e8bfccd0d495643877e8e0aa4c1"
+      "fiche": "d0bfe1b475f78d17ce1b2160c5fee20999e06e8bfccd0d495643877e8e0aa4c1",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V9": {
       "trace": "bb8b523aa8678ecda428fdc33f6c00caf70a74177997103cf61ef24d782e5a34",
       "startSegment": "116466beff54a125ba593147a46139b581e561d75c206ebdc4d5f94bf64a9ddb",
       "endSegment": "a6e259e1829d0596171eb0f47e95a35ca22434353e54b856d92ce226c77e9fa8",
-      "fiche": "6738250fc1c35c0c544aea64b535b07532000f3607d9efa3db7c77bec85eaa09"
+      "fiche": "6738250fc1c35c0c544aea64b535b07532000f3607d9efa3db7c77bec85eaa09",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V10": {
       "trace": "0a186083d1597514814f00176418265f50dc56c3e94960c27fb7ce8a64684eea",
       "startSegment": "3c2b0d53d152603d8fe50bc40917bd35ee94699c8d8f6a2388e6e62b8dd6efb6",
       "endSegment": "9918b904873347079e86e9a9e2243b8a8c4f179dbbf43af34a45efa7a5d696c8",
-      "fiche": "281577c623b562dd20fd3c864a097ef2214561cc31253a12319bfab427a7fea0"
+      "fiche": "281577c623b562dd20fd3c864a097ef2214561cc31253a12319bfab427a7fea0",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V11": {
       "trace": "802b40e5b9ff588775da4fd94d402d6b94342c761cb96cec60bd2c0d6d6030b8",
       "startSegment": "899a0b3ab76e05fe4e26d3832e11019b65c3e6d18056f0f95b8b40f55e980375",
       "endSegment": "fc243b8f2038d9c9e847dff1c2a9711548d9dc7018a1e84973a7be5afc792caa",
-      "fiche": "d7ee8c726a60acd1522bcb9fb3458677b279d4760ee344d45cead9f31d6bd704"
+      "fiche": "d7ee8c726a60acd1522bcb9fb3458677b279d4760ee344d45cead9f31d6bd704",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V12": {
       "trace": "4bd21a3bbfbe29a8281ac848839f9b193b4c36c7a2f0213c7bc4a49dc55e0d97",
       "startSegment": "4580a713eb4373cd282dcad4b7eec59617d485feee1add80369a43d4b36e513c",
       "endSegment": "a17713f6c0b902e1fda33c8c50371698a9ec6ed3dcb1237bf420e3c47b08b4a4",
-      "fiche": "90b752a7b83306ffa9a814dc840c84f3eb850d96d6e1bfb84c6a586e0a27e55a"
+      "fiche": "90b752a7b83306ffa9a814dc840c84f3eb850d96d6e1bfb84c6a586e0a27e55a",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V13": {
       "trace": "5d1e929523bd5b07e45e46b18626cd0a2599ce9a276da0f23e21cb898321f13f",
       "startSegment": "c195f887537fef53cc1d736b7eea185ecb4d7971f91f23251791e8a2ff778e75",
       "endSegment": "762ebe5b9d661ba0a466198c2257f9fe70c1a30b66afb708694cb23ae94f7a4c",
-      "fiche": "48bd84e5e7a9cef407502fe5dbff5a933fd0a9e510be6e98a63d5e33768d503d"
+      "fiche": "48bd84e5e7a9cef407502fe5dbff5a933fd0a9e510be6e98a63d5e33768d503d",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V14": {
       "trace": "5682e906781382a0946022add549656604ecdba9d8c854810b4536eb844cf2da",
       "startSegment": "d1c375ee05d778406e81926c4fc9ffaed43aea958ba92ca0c4be9001d81492e6",
       "endSegment": "3af1adb71684723040499fbe9478999cde08533fea4dacef032063fd92d2562b",
-      "fiche": "d5c79dfec1769d01fdd388f4e07e6e0336eb5a833e1cdbc512defe5d09da88b6"
+      "fiche": "d5c79dfec1769d01fdd388f4e07e6e0336eb5a833e1cdbc512defe5d09da88b6",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-sud/V15": {
       "trace": "33b65394cbea3e25325c7ea8be339a09420cc173b1be389ec603b5fdadbe2ea6",
       "startSegment": "10e3b2249df74e57e6937182b4b739f022f027bb841dc3f0be25ea252262d8d1",
       "endSegment": "656aff350cd42cb62704ab59ab3327fb2e49c95c4a476a0fe68b2b955a2ee02e",
-      "fiche": "a48cdc4d680a4d8268a9499e57e78919ce424f8c253d7f83b98674e3abee1654"
+      "fiche": "a48cdc4d680a4d8268a9499e57e78919ce424f8c253d7f83b98674e3abee1654",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-vau-gaillard/V20": {
       "trace": "fe6b2d332dc6be02b4ac59e9885d168310ddebb6b680f8aca80d6200b75c19e9",
       "startSegment": "c9d74e3f6b261bc4a79f97eaa62e6b586ec7883b887fe786e44ea3fdc548ab3a",
       "endSegment": "99b0cf94411185194449ae856ce457285a7a2a3245b4f3a0075be0327dd0d774",
-      "fiche": "7d8285867ccbf2a0c6a07bc07b29b9379bc0f281b6731858b2bb45ce3dafb5f4"
+      "fiche": "7d8285867ccbf2a0c6a07bc07b29b9379bc0f281b6731858b2bb45ce3dafb5f4",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-vau-gaillard/V21": {
       "trace": "8bd7cb9f640120c68274d3f5c4fb27bb464b957611d93dd568fe9f5cd7960a7b",
       "startSegment": "90b322b5631cb16ce8159bc7f9bffd59c6ab507052fc170c82a0d7676a6d157c",
       "endSegment": "2ab1ab41d3f229caec5e67eecb799c5dac940f27ed626657536d1eee3f30203e",
-      "fiche": "ee4e848bdc539085aec04092c778424edd31b42649b1225534bf40ac4dd6526b"
+      "fiche": "ee4e848bdc539085aec04092c778424edd31b42649b1225534bf40ac4dd6526b",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-vau-gaillard/V22": {
       "trace": "45a18f82236ae31aaeca5f682c43ad0c8fdb5aba4798d367b4bc592750b0bc65",
       "startSegment": "123fc05632bd8eace7104d72663e880e5f1ce99def9925062a1030fac29ba8eb",
       "endSegment": "7d517c7f0a975a14c098498099d5ed695c682183d70b0ef9d032bf394095d5c1",
-      "fiche": "1b826d7d204d8370cad1c1ea8e8dcea3a8b2cede6b6beea810f7acd9216c2375"
+      "fiche": "1b826d7d204d8370cad1c1ea8e8dcea3a8b2cede6b6beea810f7acd9216c2375",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-vau-gaillard/V23": {
       "trace": "9208bb7b6e28aaa3a05b09cd7d75c49dcfcb7978a4e63328bb4716dbd5d9be50",
       "startSegment": "6b50d9bb4b7b5fd4e19840b2ddccddef8264c589c0bffa8db2f798b110ce51d9",
       "endSegment": "fbf0da8f34f075ae39fdaee703e25529552e9857dfc7728bd8728a61b62643a9",
-      "fiche": "5e8857d0bd7685c4a2dcede816c9970456658ae2737f4dd9a113c6f80f18ddf9"
+      "fiche": "5e8857d0bd7685c4a2dcede816c9970456658ae2737f4dd9a113c6f80f18ddf9",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-vau-gaillard/V24": {
       "trace": "9846b658766b88c54b15218c35c2def79a1948bb3f075b89b11a425e274a0680",
       "startSegment": "f87db2be3d1208a1fae88f664157b643149e690aac9267c807308aafb22c8e0c",
       "endSegment": "b9f3e193a79d5ba1b1002a309ebd2c855c4536c635a519801b101f69c3258706",
-      "fiche": "2a6c76d68ac85c08ca8a855578bf97f498a2e0b08931615a534bb2fa15c4e1e4"
+      "fiche": "2a6c76d68ac85c08ca8a855578bf97f498a2e0b08931615a534bb2fa15c4e1e4",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     },
     "bruz-vau-gaillard/V25": {
       "trace": "575ebc419cee49d3e74e4a7e5f54e3b8ffd70a0adde2f3b3c31dd681749fa0cd",
       "startSegment": "86e200831dc28fec55b770cc8f26348716a7b88ae41f7156194da84bcc965e26",
       "endSegment": "f204af5d20df32dcd7221fe42d4da9130ef8c9229de533f47dd503cac9d92a82",
-      "fiche": "157b99882d01616ef08179590bf07654a36f2386852e5225bb88a78374b2d5b5"
+      "fiche": "157b99882d01616ef08179590bf07654a36f2386852e5225bb88a78374b2d5b5",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
     }
+  },
+  "zoneMaps": {
+    "bruz-ker-lann/V": "d6e1c7f6f0190667bac089ebb61e14e2330756d19a4bd2ca4dafc9dd132e2070",
+    "bruz-sud/V": "3d8140aa81c73437c98e2868118aa27402d03f5ce2981423fa7cdf308947d133",
+    "bruz-sud/P": "639d055e9fa13dbeb36a26996aa42f0f30160528d663bf9a9c5ff821f80f02e7",
+    "bruz-vau-gaillard/V": "11062775e90339e4efa881a4e8c8b34b9c761550fa1f3f8a01228df48ba88d3f"
   }
 }

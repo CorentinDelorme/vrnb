@@ -80,19 +80,25 @@ déclare à jour.
 
 La pipeline s'appuie sur un **état de génération** versionné, `scripts/generation-state.json`
 (committé dans le dépôt). Pour chaque parcours, il garde l'empreinte (sha256) de la trace
-source, des segments de début et de fin et de la fiche produite. À partir de cet état et
-des empreintes trouvées sur le disque, la pipeline décide, pour chaque parcours :
+source, du Point de rendez-vous de la zone, des segments de début et de fin et de la fiche
+produite ; pour chaque fiche de zone, l'empreinte de la carte produite. À partir de cet
+état et des empreintes trouvées sur le disque, la pipeline décide, pour chaque parcours :
 
 - les **segments de début et de fin** sont re-calculés si la trace source a changé, si le
-  parcours est inconnu de l'état, ou si ses segments manquent du disque ou de l'état ;
+  Point de rendez-vous de la zone a changé (les segments partent et reviennent du Point de
+  rendez-vous), si le parcours est inconnu de l'état, ou si ses segments manquent du
+  disque ou de l'état ;
 - la **fiche** est re-rendue si les segments viennent d'être re-calculés, si la fiche est
   absente du disque, si l'état ne connaît pas la fiche, ou si son contenu ne correspond
   plus à celui enregistré ;
 - la **fiche de zone** (la carte d'ensemble d'une zone, pour un type de parcours) est
-  re-rendue dès qu'un parcours de la zone a changé, ou si elle est absente du disque.
+  re-rendue dès qu'un parcours de la zone a changé, si elle est absente du disque, si
+  l'état ne connaît pas son empreinte (elle n'a jamais été rendue, ou le dernier rendu a
+  échoué), ou si son contenu ne correspond plus à celui enregistré.
 
-Sans état (fichier absent ou illisible), ou avec une constante de version différente de
-celle du code, tout est régénéré.
+Sans état (fichier absent), ou avec une constante de version différente de
+celle du code, tout est régénéré. Un état présent mais illisible (fichier corrompu) est
+signalé dans la sortie du run, et tout est régénéré.
 
 Comme l'état est versionné, une copie fraîche du dépôt se comporte comme une copie de
 travail déjà à jour : le premier run ne refait rien. Un parcours en échec (routeur
@@ -104,10 +110,11 @@ l'augmenter invalide tous les artefacts et impose une régénération complète.
 l'augmenter quand vous modifiez l'un des deux.
 
 `bun run generate:state` (`scripts/refresh-generation-state.ts`) complète l'état avec
-l'empreinte des fiches déjà présentes dans `public/pdf/` — pour les parcours que l'état
-connaît mais dont la fiche n'y est pas encore enregistrée. Il n'écrase jamais une empreinte
-déjà enregistrée. Lancez-le sur une copie fraîche du dépôt (l'état doit déjà exister), ou
-après avoir remplacé des fiches à la main.
+l'empreinte des fiches déjà présentes dans `public/pdf/`, l'empreinte du Point de
+rendez-vous de chaque zone et l'empreinte des fiches de zone — pour les artefacts que
+l'état connaît mais dont l'empreinte n'y est pas encore enregistrée. Il n'écrase jamais
+une empreinte déjà enregistrée. Lancez-le sur une copie fraîche du dépôt (l'état doit déjà
+exister), ou après avoir remplacé des fiches à la main.
 
 ### Forcer la régénération
 
@@ -141,6 +148,20 @@ regenerated`. Les compteurs sont exacts, filtres `--tour` / `--zone` compris. Le
 détaillés sont écrits en JSON dans `scripts/output/perf/` (dossier gitignoré) et fusionnés
 par l'orchestrateur.
 
+Le script des packs (`generate:zone-pdf`) ne régénère aucun parcours — il fusionne les
+documents déjà publiés — mais il écrit des fichiers : son bloc annonce donc les packs
+qu'il a écrits et les documents qu'ils contiennent, et il ne dit jamais « nothing
+changed ».
+
+```text
+[perf] generate-zone-pdf
+  total duration: 1.2 s
+  step bruz-sud: 1.1 s
+  tiles: 0 from cache, 0 downloaded
+  Parcours: 0 regenerated, 47 skipped
+  packs: 1 written, 49 documents
+```
+
 ### Politesse envers les serveurs communautaires
 
 La pipeline interroge les serveurs communautaires (tuiles OSM, OSRM, Valhalla) sans jamais
@@ -155,6 +176,41 @@ les marteler :
 - **un cache de tuiles partagé** sur le disque (`scripts/.cache/tiles/`, gitignoré) : une
   tuile déjà téléchargée n'est pas retéléchargée, et une tuile demandée par deux fiches à
   la fois n'est téléchargée qu'une fois.
+
+**Ce que la décision de politesse dit exactement** (les limites sont appliquées par
+l'ordonnanceur réseau, `scripts/network-scheduler.ts`, pour *tous* les hôtes) :
+
+- **le débit par hôte est inchangé** : une requête démarre au plus une fois toutes les
+  400 ms sur un même hôte — c'est le débit d'aujourd'hui, et le gain de temps vient du
+  recouvrement des attentes, pas d'un débit plus élevé ;
+- **la concurrence par hôte est plafonnée à 2** : deux connexions au maximum sur un même
+  hôte, la limite de la politique d'usage des tuiles OSM (« bulk downloading is
+  prohibited, two connections maximum »). Le ticket #24 parlait de « une requête à la
+  fois » : la lecture retenue est « une requête *démarrée* à la fois par hôte et par
+  tranche de 400 ms » — c'est le débit ci-dessus, pas le nombre de connexions ;
+- **le nombre de requêtes par Fiche est inchangé** : une Fiche demande toujours les
+  mêmes tuiles ; le cache disque et la déduplication des requêtes en vol évitent
+  seulement de les retélécharger.
+
+### Vérification manuelle de la pipeline
+
+Quatre vérifications, à faire sur une copie de travail (elles ne doivent rien laisser sur
+le disque, hormis l'état de génération inchangé) :
+
+1. **Run idempotent** — `bun run generate:all` sans rien modifier : le bloc `[perf]`
+   annonce `nothing changed`, les compteurs de tuiles sont à 0 (aucun appel réseau) et
+   `git status` ne montre aucune modification.
+2. **Une trace modifiée** — modifier `public/gpx/<zone>/<parcours>/<parcours>.gpx`, puis
+   relancer `bun run generate:all` : seul ce parcours est re-routé et sa fiche re-rendue
+   (`Parcours: 1 regenerated, 46 skipped`), les autres tracés et les autres fiches sont
+   intacts. Changer le Point de rendez-vous d'une zone (`src/app/zones.ts`) a le même
+   effet : tous les parcours de la zone sont re-routés.
+3. **`--force`** — `bun run generate:all -- --force` : tous les segments et toutes les
+   fiches sont régénérés, quel que soit l'état.
+4. **Routeur indisponible** — rendre le routeur injoignable (couper le réseau, ou
+   pointer `scripts/router-client.ts` vers une URL morte) puis lancer un run : le parcours
+   en échec est signalé (`fail V1: …`), il n'est **pas** marqué comme à jour dans l'état
+   de génération, et le run suivant le rejoue.
 
 ### Ce qui est publié sur le site
 

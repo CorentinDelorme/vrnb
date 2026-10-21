@@ -10,6 +10,7 @@ import { buildSegmentGpx } from './segment-gpx';
 
 import type { ParcoursEntry } from './generation-helpers';
 import {
+  errorMessage,
   gpxRootDir,
   listParcours,
   parseForceFlag,
@@ -32,11 +33,11 @@ import {
   GENERATION_STATE_VERSION,
   fingerprintParcoursFiles,
   generationStatePath,
+  meetingPointFingerprint,
   nextGenerationState,
   parcoursStateKey,
-  readGenerationState,
-  writeGenerationState,
 } from './generation-state';
+import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
 import type { LonLat, ParcoursRoute } from './route-parcours';
 import {
   PARCOURS_ROUTING_CONCURRENCY,
@@ -82,12 +83,31 @@ function getTourEndpoints(entry: ParcoursEntry): { start: LonLat; end: LonLat } 
   return { start: [first[0], first[1]], end: [last[0], last[1]] };
 }
 
+/**
+ * The fingerprints of the Point de rendez-vous of the Zones of the run.
+ *
+ * The segments of a Parcours start and end at the Point de rendez-vous of
+ * its Zone: a Point de rendez-vous that changed invalidates them. The
+ * fingerprint is the sha256 of the name and of the coordinates of the
+ * Point de rendez-vous.
+ */
+function meetingPointFingerprintsOf(zoneIds: readonly string[]): Map<string, string> {
+  const fingerprints = new Map<string, string>();
+
+  for (const zoneId of zoneIds) {
+    fingerprints.set(zoneId, meetingPointFingerprint(getZone(zoneId).meetingPoint));
+  }
+
+  return fingerprints;
+}
+
 /** The fingerprints of the files of a Parcours, as they are on the disk. */
-function toCandidate(entry: ParcoursEntry): PlanCandidate {
+function toCandidate(entry: ParcoursEntry, meetingPoint: string | undefined): PlanCandidate {
   return {
     zoneId: entry.zoneId,
     tourId: entry.tourId,
-    fingerprints: fingerprintParcoursFiles(entry),
+    fingerprints: { ...fingerprintParcoursFiles(entry), fiche: undefined },
+    meetingPoint,
   };
 }
 
@@ -117,14 +137,20 @@ async function main(): Promise<void> {
     );
 
     const statePath = generationStatePath(rootDir);
-    const state = readGenerationState(statePath);
+    const state = readGenerationStateOrWarn(statePath);
+    const meetingPoints = meetingPointFingerprintsOf(
+      inventory.parcours.map((entry) => entry.zoneId),
+    );
 
     // The plan decides what the run must route: the Parcours whose source
-    // trace changed, and only them.
+    // trace changed, the Parcours whose Point de rendez-vous changed, and
+    // only them.
     plan = planGeneration({
       state,
       currentVersion: GENERATION_STATE_VERSION,
-      candidates: inventory.parcours.map(toCandidate),
+      candidates: inventory.parcours.map((entry) =>
+        toCandidate(entry, meetingPoints.get(entry.zoneId)),
+      ),
       filters,
       force,
     });
@@ -210,24 +236,30 @@ async function main(): Promise<void> {
             if (!entry) {
               throw new Error(`Unknown parcours: ${outcome.tourId}`);
             }
-            writeFileIfChanged(
-              entry.startSegmentPath,
-              buildSegmentGpx(
-                `${meetingPoint.name} vers le parcours ${outcome.tourId}`,
-                outcome.profile.gpxType,
-                outcome.start.coords,
-                outcome.start.source,
-              ),
-            );
-            writeFileIfChanged(
-              entry.endSegmentPath,
-              buildSegmentGpx(
-                `Fin du parcours ${outcome.tourId} vers ${meetingPoint.name}`,
-                outcome.profile.gpxType,
-                outcome.end.coords,
-                outcome.end.source,
-              ),
-            );
+            try {
+              writeFileIfChanged(
+                entry.startSegmentPath,
+                buildSegmentGpx(
+                  `${meetingPoint.name} vers le parcours ${outcome.tourId}`,
+                  outcome.profile.gpxType,
+                  outcome.start.coords,
+                  outcome.start.source,
+                ),
+              );
+              writeFileIfChanged(
+                entry.endSegmentPath,
+                buildSegmentGpx(
+                  `Fin du parcours ${outcome.tourId} vers ${meetingPoint.name}`,
+                  outcome.profile.gpxType,
+                  outcome.end.coords,
+                  outcome.end.source,
+                ),
+              );
+            } catch (error) {
+              throw new Error(
+                `cannot write the segments of ${outcome.tourId}: ${errorMessage(error)}`,
+              );
+            }
             routed.add(parcoursStateKey(entry.zoneId, entry.tourId));
             console.log(
               `ok ${outcome.tourId} (${outcome.profile.osrm}): start ${outcome.start.coords.length} pts` +
@@ -250,9 +282,9 @@ async function main(): Promise<void> {
     // The state remembers what the pipeline produced: a Parcours that was
     // routed is up to date, a Parcours that failed is dropped, so the next
     // run routes it again.
-    writeGenerationState(
+    writeGenerationStateOrFail(
       statePath,
-      nextGenerationState(state, stateUpdates(entries, toRoute, routed, failed)),
+      nextGenerationState(state, stateUpdates(entries, toRoute, routed, failed, meetingPoints)),
     );
 
     if (failures > 0) {
@@ -302,21 +334,30 @@ function reportRun(
  *
  * A Parcours that was routed has no Fiche fingerprint anymore: its Fiche
  * was rendered from the previous segments, so it is out of date and the
- * Fiche step renders it again.
+ * Fiche step renders it again. The fingerprint of the Point de rendez-vous
+ * is recorded: the Parcours was routed from it.
  */
 function stateUpdates(
   entries: ReadonlyMap<string, ParcoursEntry>,
   toRoute: readonly ParcoursDecision[],
   routed: ReadonlySet<string>,
   failed: ReadonlySet<string>,
+  meetingPoints: ReadonlyMap<string, string>,
 ): ParcoursStateUpdate[] {
   return toRoute.map((decision) => {
     const key = keyOf(decision);
     const entry = entries.get(key);
     if (failed.has(key) || !routed.has(key) || !entry) {
-      return { key };
+      return { key, record: undefined };
     }
-    return { key, record: { ...fingerprintParcoursFiles(entry), fiche: undefined } };
+    return {
+      key,
+      record: {
+        ...fingerprintParcoursFiles(entry),
+        fiche: undefined,
+        meetingPoint: meetingPoints.get(entry.zoneId),
+      },
+    };
   });
 }
 

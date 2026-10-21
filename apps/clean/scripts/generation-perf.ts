@@ -13,6 +13,8 @@
  * block with fake durations and fake counters.
  */
 
+import { parcoursStateKey, zoneMapKey } from './generation-state';
+
 /**
  * One step of a run, and how long it took.
  */
@@ -60,6 +62,19 @@ export interface ZoneMapCounters {
 }
 
 /**
+ * The packs of a run: the ones it wrote, and the documents they hold.
+ *
+ * The pack script merges the published documents of a Zone: it renders
+ * no Parcours, but it does write files.
+ */
+export interface PackCounters {
+  /** The packs the run wrote, as `<zone>` ids. */
+  readonly written: readonly string[];
+  /** The number of documents the packs of the run hold. */
+  readonly documents: number;
+}
+
+/**
  * Everything the `[perf]` block of a run shows.
  */
 export interface PerfReport {
@@ -75,6 +90,8 @@ export interface PerfReport {
   readonly parcours: ParcoursCounters;
   /** The overview maps of the run. */
   readonly zoneMaps: ZoneMapCounters;
+  /** The packs of the run, `undefined` when the run wrote none. */
+  readonly packs: PackCounters | undefined;
 }
 
 /** The inputs of the report of a run. */
@@ -91,6 +108,8 @@ export interface PerfReportInput {
   readonly parcours: ParcoursCounters;
   /** The overview maps of the run, empty when the run holds none. */
   readonly zoneMaps?: ZoneMapCounters;
+  /** The packs of the run, absent when the run wrote none. */
+  readonly packs?: PackCounters;
 }
 
 /** The overview maps of a run that touched none. */
@@ -175,10 +194,8 @@ export function countersFromDecisions<T extends PerfDecision>(
   decisions: readonly T[],
   isRegenerated: (decision: T) => boolean,
 ): ParcoursCounters {
-  return splitDecisions(
-    decisions,
-    isRegenerated,
-    (decision) => `${decision.zoneId}/${decision.tourId}`,
+  return splitDecisions(decisions, isRegenerated, (decision) =>
+    parcoursStateKey(decision.zoneId, decision.tourId),
   );
 }
 
@@ -189,10 +206,8 @@ export function countersFromZoneDecisions<T extends PerfZoneDecision>(
   decisions: readonly T[],
   isRegenerated: (decision: T) => boolean,
 ): ZoneMapCounters {
-  return splitDecisions(
-    decisions,
-    isRegenerated,
-    (decision) => `${decision.zoneId}/${decision.kind}`,
+  return splitDecisions(decisions, isRegenerated, (decision) =>
+    zoneMapKey(decision.zoneId, decision.kind),
   );
 }
 
@@ -267,6 +282,8 @@ export function aggregatePerfReports(input: PerfAggregateInput): PerfReport {
     (id) => !zoneMapsRegenerated.includes(id),
   );
 
+  const packs = input.reports.flatMap((report) => report.packs ?? []);
+
   return buildPerfReport({
     script: input.script,
     totalMs: input.totalMs,
@@ -277,7 +294,16 @@ export function aggregatePerfReports(input: PerfAggregateInput): PerfReport {
     },
     parcours: { regenerated, skipped },
     zoneMaps: { regenerated: zoneMapsRegenerated, skipped: zoneMapsSkipped },
+    packs: packs.length > 0 ? mergePackCounters(packs) : undefined,
   });
+}
+
+/** Merge the packs of the steps of a run: the packs are unique, the documents add up. */
+function mergePackCounters(packs: readonly PackCounters[]): PackCounters {
+  return {
+    written: unique(packs.flatMap((pack) => pack.written)),
+    documents: sum(packs.map((pack) => pack.documents)),
+  };
 }
 
 /** The ids of a list, without the duplicates and in the order they came. */
@@ -301,6 +327,7 @@ export function buildPerfReport(input: PerfReportInput): PerfReport {
     tiles: input.tiles,
     parcours: input.parcours,
     zoneMaps: input.zoneMaps ?? EMPTY_ZONE_MAPS,
+    packs: input.packs,
   };
 }
 
@@ -329,6 +356,12 @@ export function formatPerfReport(report: PerfReport): string[] {
     );
   }
 
+  if (report.packs) {
+    lines.push(
+      `  packs: ${report.packs.written.length} written, ${report.packs.documents} documents`,
+    );
+  }
+
   const nothingChanged = nothingChangedLine(report);
   if (nothingChanged) {
     lines.push(nothingChanged);
@@ -342,6 +375,10 @@ export function formatPerfReport(report: PerfReport): string[] {
  * the run regenerated something.
  */
 function nothingChangedLine(report: PerfReport): string | undefined {
+  if (report.packs) {
+    // The pack script writes files even though it renders no Parcours.
+    return undefined;
+  }
   if (report.parcours.regenerated.length > 0 || report.zoneMaps.regenerated.length > 0) {
     return undefined;
   }

@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { parseGenerationFilters } from './generation-helpers';
 import type { PlanCandidate } from './generation-plan';
-import { planGeneration, zoneMapKey } from './generation-plan';
-import type { GenerationState } from './generation-state';
-import { nextGenerationState } from './generation-state';
+import { planGeneration } from './generation-plan';
+import type { GenerationState, ParcoursGenerationRecord } from './generation-state';
+import { nextGenerationState, zoneMapKey } from './generation-state';
 
 /**
  * The generation plan (tickets #26 and #27): the pure decision of what a
@@ -15,10 +15,14 @@ import { nextGenerationState } from './generation-state';
 
 const VERSION = 1;
 
+/** The fingerprint of the Point de rendez-vous the Parcours were routed from. */
+const MEETING_POINT = 'meeting-point';
+
 function candidate(
   tourId: string,
   fingerprints: Partial<PlanCandidate['fingerprints']> = {},
   zoneId = 'bruz-sud',
+  meetingPoint: string | undefined = MEETING_POINT,
 ): PlanCandidate {
   return {
     zoneId,
@@ -30,19 +34,33 @@ function candidate(
       fiche: 'fiche',
       ...fingerprints,
     },
+    meetingPoint,
+  };
+}
+
+/** A record of the state, with the fingerprints the test does not care about. */
+function record(overrides: Partial<ParcoursGenerationRecord> = {}): ParcoursGenerationRecord {
+  return {
+    trace: undefined,
+    startSegment: undefined,
+    endSegment: undefined,
+    fiche: undefined,
+    meetingPoint: undefined,
+    ...overrides,
   };
 }
 
 function stateWith(record: GenerationState['parcours'][string]): GenerationState {
-  return { version: VERSION, parcours: { 'bruz-sud/V1': record } };
+  return { version: VERSION, parcours: { 'bruz-sud/V1': record }, zoneMaps: {} };
 }
 
-const UP_TO_DATE_RECORD = {
+const UP_TO_DATE_RECORD = record({
   trace: 'trace',
   startSegment: 'start',
   endSegment: 'end',
   fiche: 'fiche',
-};
+  meetingPoint: MEETING_POINT,
+});
 
 describe('planGeneration', () => {
   it('should not re-route a Parcours whose trace and segments did not change', () => {
@@ -83,7 +101,7 @@ describe('planGeneration', () => {
 
   it('should re-route a Parcours the state does not know', () => {
     const plan = planGeneration({
-      state: { version: VERSION, parcours: {} },
+      state: { version: VERSION, parcours: {}, zoneMaps: {} },
       currentVersion: VERSION,
       candidates: [candidate('V1')],
     });
@@ -127,7 +145,7 @@ describe('planGeneration', () => {
 
   it('should re-route a Parcours whose segments are not recorded in the state', () => {
     const plan = planGeneration({
-      state: stateWith({ trace: 'trace' }),
+      state: stateWith(record({ trace: 'trace', meetingPoint: MEETING_POINT })),
       currentVersion: VERSION,
       candidates: [candidate('V1')],
     });
@@ -194,7 +212,9 @@ describe('planGeneration', () => {
   });
 
   it('should route a Parcours again after a failed run dropped it from the state', () => {
-    const state = nextGenerationState(stateWith(UP_TO_DATE_RECORD), [{ key: 'bruz-sud/V1' }]);
+    const state = nextGenerationState(stateWith(UP_TO_DATE_RECORD), [
+      { key: 'bruz-sud/V1', record: undefined },
+    ]);
 
     const plan = planGeneration({
       state,
@@ -210,6 +230,52 @@ describe('planGeneration', () => {
       regenerateFiche: true,
       ficheReason: 'parcours-changed',
     });
+  });
+});
+
+describe('planGeneration — the Point de rendez-vous', () => {
+  it('should not re-route a Parcours whose Point de rendez-vous did not change', () => {
+    const plan = planGeneration({
+      state: stateWith(UP_TO_DATE_RECORD),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+    });
+
+    expect(plan.decisions[0]?.rerouteSegments).toBe(false);
+    expect(plan.decisions[0]?.reason).toBe('unchanged');
+  });
+
+  it('should re-route a Parcours whose Point de rendez-vous changed', () => {
+    const plan = planGeneration({
+      state: stateWith(UP_TO_DATE_RECORD),
+      currentVersion: VERSION,
+      candidates: [candidate('V1', {}, 'bruz-sud', 'other-meeting-point')],
+    });
+
+    expect(plan.decisions[0]?.rerouteSegments).toBe(true);
+    expect(plan.decisions[0]?.reason).toBe('meeting-point-changed');
+  });
+
+  it('should render the Fiche of a Parcours whose Point de rendez-vous changed', () => {
+    const plan = planGeneration({
+      state: stateWith(UP_TO_DATE_RECORD),
+      currentVersion: VERSION,
+      candidates: [candidate('V1', {}, 'bruz-sud', 'other-meeting-point')],
+    });
+
+    expect(plan.decisions[0]?.regenerateFiche).toBe(true);
+    expect(plan.decisions[0]?.ficheReason).toBe('parcours-changed');
+  });
+
+  it('should re-route a Parcours the state knows no Point de rendez-vous for', () => {
+    const plan = planGeneration({
+      state: stateWith(record({ trace: 'trace', startSegment: 'start', endSegment: 'end' })),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+    });
+
+    expect(plan.decisions[0]?.rerouteSegments).toBe(true);
+    expect(plan.decisions[0]?.reason).toBe('meeting-point-changed');
   });
 });
 
@@ -260,7 +326,14 @@ describe('planGeneration — the Fiche of a Parcours', () => {
 
   it('should render the Fiche when the state records no Fiche fingerprint', () => {
     const plan = planGeneration({
-      state: stateWith({ trace: 'trace', startSegment: 'start', endSegment: 'end' }),
+      state: stateWith(
+        record({
+          trace: 'trace',
+          startSegment: 'start',
+          endSegment: 'end',
+          meetingPoint: MEETING_POINT,
+        }),
+      ),
       currentVersion: VERSION,
       candidates: [candidate('V1')],
     });
@@ -299,9 +372,14 @@ describe('planGeneration — the overview map of a Zone', () => {
     [zoneMapKey('bruz-sud', 'P')]: 'zone-map-p',
   };
 
+  /** A state that knows the overview maps of the Zone. */
+  function stateWithZoneMaps(): GenerationState {
+    return { ...stateWith(UP_TO_DATE_RECORD), zoneMaps: zoneFingerprints };
+  }
+
   it('should not render the overview map of a Zone whose Parcours did not change', () => {
     const plan = planGeneration({
-      state: stateWith(UP_TO_DATE_RECORD),
+      state: stateWithZoneMaps(),
       currentVersion: VERSION,
       candidates: [candidate('V1')],
       zoneMapFingerprints: zoneFingerprints,
@@ -314,7 +392,7 @@ describe('planGeneration — the overview map of a Zone', () => {
 
   it('should render the overview map when a Parcours of the Zone changed', () => {
     const plan = planGeneration({
-      state: stateWith(UP_TO_DATE_RECORD),
+      state: stateWithZoneMaps(),
       currentVersion: VERSION,
       candidates: [candidate('V1', { trace: 'new-trace' })],
       zoneMapFingerprints: zoneFingerprints,
@@ -327,7 +405,7 @@ describe('planGeneration — the overview map of a Zone', () => {
 
   it('should render the overview map when the Fiche of a Parcours of the Zone is rendered again', () => {
     const plan = planGeneration({
-      state: stateWith(UP_TO_DATE_RECORD),
+      state: stateWithZoneMaps(),
       currentVersion: VERSION,
       candidates: [candidate('V1', { fiche: undefined })],
       zoneMapFingerprints: zoneFingerprints,
@@ -339,7 +417,7 @@ describe('planGeneration — the overview map of a Zone', () => {
 
   it('should render the overview map when the map file is missing', () => {
     const plan = planGeneration({
-      state: stateWith(UP_TO_DATE_RECORD),
+      state: stateWithZoneMaps(),
       currentVersion: VERSION,
       candidates: [candidate('V1')],
       zoneMapFingerprints: {},
@@ -350,9 +428,35 @@ describe('planGeneration — the overview map of a Zone', () => {
     ]);
   });
 
-  it('should render every overview map of the selection when the run is forced', () => {
+  it('should render the overview map when the state records no fingerprint for it', () => {
     const plan = planGeneration({
       state: stateWith(UP_TO_DATE_RECORD),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      zoneMapFingerprints: zoneFingerprints,
+    });
+
+    expect(plan.zoneDecisions).toEqual([
+      { zoneId: 'bruz-sud', kind: 'V', regenerateZoneMap: true, reason: 'no-zone-map-state' },
+    ]);
+  });
+
+  it('should render the overview map when the map on the disk differs from the state', () => {
+    const plan = planGeneration({
+      state: stateWithZoneMaps(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      zoneMapFingerprints: { ...zoneFingerprints, [zoneMapKey('bruz-sud', 'V')]: 'other-map' },
+    });
+
+    expect(plan.zoneDecisions).toEqual([
+      { zoneId: 'bruz-sud', kind: 'V', regenerateZoneMap: true, reason: 'zone-map-changed' },
+    ]);
+  });
+
+  it('should render every overview map of the selection when the run is forced', () => {
+    const plan = planGeneration({
+      state: stateWithZoneMaps(),
       currentVersion: VERSION,
       candidates: [candidate('V1'), candidate('P1')],
       zoneMapFingerprints: zoneFingerprints,
@@ -365,7 +469,7 @@ describe('planGeneration — the overview map of a Zone', () => {
 
   it('should decide one overview map per practice type of the Zone', () => {
     const plan = planGeneration({
-      state: stateWith(UP_TO_DATE_RECORD),
+      state: stateWithZoneMaps(),
       currentVersion: VERSION,
       candidates: [candidate('V1'), candidate('P1')],
       zoneMapFingerprints: zoneFingerprints,
@@ -376,7 +480,7 @@ describe('planGeneration — the overview map of a Zone', () => {
 
   it('should not decide the overview map of a Zone out of the run', () => {
     const plan = planGeneration({
-      state: stateWith(UP_TO_DATE_RECORD),
+      state: stateWithZoneMaps(),
       currentVersion: VERSION,
       candidates: [candidate('V1'), candidate('V30', {}, 'bruz-ker-lann')],
       zoneMapFingerprints: zoneFingerprints,
