@@ -142,7 +142,7 @@ describe('TourListSection inscriptions register button', () => {
     );
   });
 
-  it('should keep the register button on every uncovered row once the window is closed', () => {
+  it('should hide the register button on every row once the window is closed', () => {
     const { container } = renderSection({
       state: {
         edition: { actionDate: '2027-02-14', year: 2027 },
@@ -151,10 +151,10 @@ describe('TourListSection inscriptions register button', () => {
       },
       status: 'success',
     });
-    // The closed window is explained by the modal itself (ticket #18), so the
-    // register buttons stay: only a covered Parcours loses its own.
+    // The window closes 3 days before the action: the organizers need that
+    // time, so the registration button disappears with it.
     expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
-      TOURS.length,
+      0,
     );
     // The play buttons stay: the closed window never touches the legacy DOM.
     expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(

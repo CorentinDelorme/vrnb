@@ -197,11 +197,11 @@ notre participation à ce parcours de nettoyage. »
 
 ### `describe('Closed registration window')` (ticket #18)
 
-The register button stays on the uncovered rows of a closed window: the modal
-itself announces that the window is closed and disables its form. Only a
-covered Parcours loses its button (see the row above). The window closes 3
-days **before** the action date, so the organizers can print the tracking
-sheets and organize the day; the last registration day is still open.
+A closed window hides the register button: the window closes 3 days **before**
+the action date, so the organizers can print the tracking sheets and organize
+the day; the last registration day is still open. The modal keeps its closed
+state as a safety net (a page opened before the closure), covered by the unit
+suite. A covered Parcours loses its button too (see the row above).
 
 | Test name                                                                         | Steps                                                                                                                                                                                       | Expected                                                                                                                                                                     |
 | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

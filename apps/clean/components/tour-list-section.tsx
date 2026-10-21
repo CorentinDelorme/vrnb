@@ -34,9 +34,10 @@ import { TourRegisterButton } from './tour-register-button';
  * while a row was uncoverable keeps displaying its confirmation or conflict
  * message once the row turns covered.
  *
- * Ticket #18: a closed registration window (the action date is past) does not
- * hide the register button — the modal itself explains that « l'action est
- * passée » and disables its form. Only a covered Parcours loses its button.
+ * Ticket #18: a closed registration window (the window closes 3 days before
+ * the action date) hides the register button — the organizers need that time
+ * to print the tracking sheets and organize the day. A covered Parcours
+ * loses its button too, replaced by the « Binôme inscrit » badge.
  */
 
 declare module 'react' {
@@ -73,9 +74,9 @@ function isCoveredInscriptions(
 }
 
 /**
- * Whether the row offers its register button (ticket #18): only a covered
- * Parcours loses it. A closed registration window keeps the button — the
- * modal explains that the window is closed and disables its form.
+ * Whether the row offers its register button (ticket #18): a covered Parcours
+ * loses it, and so does a closed registration window (the caller also checks
+ * the window).
  */
 function isUncovered(status: InscriptionsStatus, zoneId: string, tourId: string): boolean {
   return !isCoveredInscriptions(status, zoneId, tourId);
@@ -99,6 +100,14 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
    * unknown, and the registration is still attempted).
    */
   const statusKnown = status.status !== 'loading';
+  /**
+   * Whether the registration window is open, as the server answers it: the
+   * window closes 3 days before the action date (the organizers need that
+   * time to print the tracking sheets and organize the day), and the register
+   * button disappears with it. A failed request leaves the window unknown, so
+   * the button stays — the server refuses the registration anyway.
+   */
+  const windowOpen = status.status === 'success' ? status.state.registrationOpen : true;
 
   return (
     <app-tour-list-section>
@@ -141,7 +150,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
                 <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
               ) : null}
               <TourRegisterButton
-                available={statusKnown && isUncovered(status, zoneId, tour.name)}
+                available={statusKnown && windowOpen && isUncovered(status, zoneId, tour.name)}
                 tour={{ tourId: tour.name, zoneId }}
               />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />

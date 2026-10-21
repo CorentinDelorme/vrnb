@@ -31,8 +31,8 @@ interface TourRegisterButtonProps {
   /**
    * Whether the row offers registration (an uncovered Parcours). When false
    * the button renders nothing, but a modal opened earlier stays mounted
-   * until the page changes. A closed registration window keeps the button:
-   * the modal itself explains that the window is closed (ticket #18).
+   * until the page changes. A closed registration window (3 days before the
+   * action) also hides the button (ticket #18).
    */
   readonly available: boolean;
   readonly tour: TourRef;

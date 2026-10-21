@@ -333,21 +333,18 @@ test.describe('Binôme registration', () => {
  * answers the closed window like the real server would answer it then.
  */
 test.describe('Closed registration window', () => {
-  test('should disable the modal and announce the closed window', async ({ page }) => {
+  test('should hide the register button once the window is closed', async ({ page }) => {
     await page.clock.setFixedTime(AFTER_CLOSURE_DATE);
     await page.route('**/api/inscriptions', (route) => route.fulfill({ json: CLOSED_STATE }));
     await page.goto('/');
 
-    // The register button stays: the modal is the one explaining and
-    // disabling itself (only a covered Parcours loses its button).
-    const modal = await openRegistrationModal(page, 'V2');
-    await expect(modal).toContainText('Les inscriptions sont closes');
-    await expect(modal).toContainText("3 jours avant la date de l'action");
-
-    await expect(modal.getByRole('button', { name: 'Inscrire mon binôme' })).toBeDisabled();
-    await expect(modal.getByLabel('Prénom du membre 1', { exact: true })).toBeDisabled();
-    await expect(modal.getByLabel('Nom du membre 2', { exact: true })).toBeDisabled();
-    await expect(modal.getByRole('checkbox')).toBeDisabled();
+    // The window closes 3 days before the action: the organizers need that
+    // time to print the tracking sheets, so the button disappears with it.
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+    ).toHaveCount(0);
+    // The play buttons stay: the closed window never touches the legacy DOM.
+    await expect(page.locator('button[aria-label="Lancer le parcours"]')).toHaveCount(47);
   });
 
   test('should close the window on the local clock when the public state is unavailable', async ({
