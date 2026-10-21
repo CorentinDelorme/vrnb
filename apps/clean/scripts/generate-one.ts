@@ -1,9 +1,19 @@
 import { join } from 'path';
 
-import { parseFilterValues } from './generation-helpers';
-import { runGenerationSteps, selectGenerationSteps } from './generation-steps';
+import {
+  clearPerfReports,
+  parseFilterValues,
+  perfReportPath,
+  writePerfReport,
+} from './generation-helpers';
+import type { PerfRecorder } from './generation-perf';
+import { aggregatePerfReports, createPerfRecorder, formatPerfReport } from './generation-perf';
+import { readStepReports, runGenerationSteps, selectGenerationSteps } from './generation-steps';
 
 const rootDir = join(import.meta.dirname, '..');
+
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-one';
 
 function hasFlag(flag: string): boolean {
   return process.argv.includes(flag);
@@ -37,7 +47,7 @@ function selectedSteps(): string[] {
   });
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const tours = parseFilterValues(process.argv, '--tour') ?? [];
   const zones = parseFilterValues(process.argv, '--zone') ?? [];
 
@@ -51,12 +61,36 @@ function main(): void {
   if (zones.length > 0) filterArgs.push(`--zone=${zones.join(',')}`);
   if (hasFlag('--force')) filterArgs.push('--force');
 
-  runGenerationSteps(selectedSteps(), filterArgs, rootDir);
+  const steps = selectedSteps();
+  const perf = createPerfRecorder();
+  // The reports of a previous run must never be mistaken for the ones of
+  // this run.
+  clearPerfReports(rootDir);
+
+  try {
+    await runGenerationSteps(steps, filterArgs, rootDir, perf);
+  } finally {
+    reportRun(perf, steps);
+  }
 }
 
-try {
-  main();
-} catch (error: unknown) {
+/**
+ * Show the `[perf]` block of the run: how long it took, how long each step
+ * took, and the counters of the steps the run ran.
+ */
+function reportRun(perf: PerfRecorder, steps: readonly string[]): void {
+  const report = aggregatePerfReports({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    reports: readStepReports(rootDir, steps),
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
+}
+
+main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
-}
+});

@@ -13,12 +13,56 @@
 import { spawnSync } from 'child_process';
 import { join } from 'path';
 
+import { perfReportPath, readPerfReport } from './generation-helpers';
+import type { PerfRecorder, PerfReport } from './generation-perf';
+
 /** The steps of the pipeline, in the order they must run. */
 export const GENERATION_STEPS = [
   'generate-start-end-gpx.ts',
   'generate-tours.ts',
   'generate-pdfs.ts',
 ] as const;
+
+/**
+ * The label of a step of the pipeline, as the referent knows it: the name
+ * of the command that runs it.
+ */
+export function stepLabel(script: string): string {
+  switch (script) {
+    case 'generate-start-end-gpx.ts':
+      return 'generate:routes';
+    case 'generate-tours.ts':
+      return 'generate:tours';
+    case 'generate-pdfs.ts':
+      return 'generate:pdfs';
+    default:
+      return script;
+  }
+}
+
+/** The name of the script of a step, as its `[perf]` report is named. */
+export function stepScriptName(script: string): string {
+  return script.replace(/\.ts$/, '');
+}
+
+/**
+ * The `[perf]` reports of the steps of a run.
+ *
+ * A step that failed before it could report holds no report: the
+ * orchestrator then knows nothing about it.
+ */
+export function readStepReports(rootDir: string, steps: readonly string[]): PerfReport[] {
+  const reports: PerfReport[] = [];
+
+  for (const script of steps) {
+    const report = readPerfReport(perfReportPath(rootDir, stepScriptName(script)));
+    if (report) {
+      reports.push(report);
+    }
+  }
+
+  return reports;
+}
 
 /**
  * The steps of a run that skips some of them.
@@ -49,20 +93,26 @@ export function selectGenerationSteps(options: {
  *
  * A failing step stops the run: the next steps would work on artefacts
  * that were not produced.
+ *
+ * The duration of each step is measured, so the orchestrator can show how
+ * long the run took and how long each step took.
  */
-export function runGenerationSteps(
+export async function runGenerationSteps(
   steps: readonly string[],
   args: readonly string[],
   rootDir: string,
-): void {
+  recorder: PerfRecorder,
+): Promise<void> {
   for (const script of steps) {
     console.log(`\n=== ${script} ${args.join(' ')} ===`);
-    const result = spawnSync('bun', ['tsx', join(rootDir, 'scripts', script), ...args], {
-      cwd: rootDir,
-      stdio: 'inherit',
+    await recorder.measure(stepLabel(script), () => {
+      const result = spawnSync('bun', ['tsx', join(rootDir, 'scripts', script), ...args], {
+        cwd: rootDir,
+        stdio: 'inherit',
+      });
+      if (result.status !== 0) {
+        throw new Error(`Step failed: ${script}`);
+      }
     });
-    if (result.status !== 0) {
-      throw new Error(`Step failed: ${script}`);
-    }
   }
 }

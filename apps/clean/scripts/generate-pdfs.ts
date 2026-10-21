@@ -19,12 +19,22 @@ import {
   parseForceFlag,
   parseGenerationFilters,
   pdfRootDir,
+  perfReportPath,
   resolveGpxTracePath,
   tourPdfPath,
+  writePerfReport,
   zoneMapPdfPath,
   zonePdfDir,
 } from './generation-helpers';
-import type { PlanCandidate } from './generation-plan';
+import type { PerfRecorder } from './generation-perf';
+import {
+  buildPerfReport,
+  countersFromDecisions,
+  countersFromZoneDecisions,
+  createPerfRecorder,
+  formatPerfReport,
+} from './generation-perf';
+import type { GenerationPlan, PlanCandidate } from './generation-plan';
 import { planGeneration, zoneMapKey } from './generation-plan';
 import type { ParcoursStateUpdate } from './generation-state';
 import {
@@ -42,6 +52,9 @@ import {
 const rootDir = join(import.meta.dirname, '..');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
 const tileCacheDir = join(rootDir, 'scripts', '.cache', 'tiles');
+
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-pdfs';
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_SIZE = 256;
@@ -649,12 +662,18 @@ interface ZoneTrack {
   readonly coords: LonLat[];
 }
 
+/**
+ * Render the overview map of a Zone.
+ *
+ * Returns whether the document was written: a Zone without any track of
+ * the practice type has no map to render.
+ */
 async function generateZoneMapPdf(
   zoneId: string,
   kind: 'V' | 'P',
   tours: TourDistances[],
   logo: LogoImage | undefined,
-): Promise<void> {
+): Promise<boolean> {
   const zoneName = getZone(zoneId).name;
   const typeLabel = kind === 'V' ? 'Parcours à vélo' : 'Parcours à pied';
   const tracks: ZoneTrack[] = tours
@@ -662,7 +681,7 @@ async function generateZoneMapPdf(
     .filter((track): track is ZoneTrack => !!track.coords && track.coords.length > 0);
 
   if (tracks.length === 0) {
-    return;
+    return false;
   }
 
   const doc = new jsPDF({ orientation: 'landscape' });
@@ -699,7 +718,7 @@ async function generateZoneMapPdf(
   const view = planView(allCoords, rect.w / rect.h, 3072);
   if (!view) {
     console.warn(`  no map view for ${zoneId} ${kind}`);
-    return;
+    return false;
   }
 
   const background = await buildMapBackground(view, 92);
@@ -774,6 +793,7 @@ async function generateZoneMapPdf(
   ensureWritable(outputPath);
   doc.save(outputPath);
   console.log(`Generated: ${outputPath}`);
+  return true;
 }
 
 /** Run the workers in parallel, at most `limit` of them at a time. */
@@ -833,115 +853,172 @@ function toursOfZone(zoneId: string, kind: 'V' | 'P'): TourDistances[] {
 }
 
 async function main(): Promise<void> {
-  mkdirSync(pdfRootDir(rootDir), { recursive: true });
-  mkdirSync(tileCacheDir, { recursive: true });
+  const perf = createPerfRecorder();
+  /** The plan of the run, `undefined` when the run failed before it. */
+  let plan: GenerationPlan | undefined;
+  /** The Parcours whose Fiche was rendered, and the overview maps written. */
+  const rendered = new Set<string>();
+  const renderedZoneMaps = new Set<string>();
 
-  const filters = parseGenerationFilters(process.argv);
-  const force = parseForceFlag(process.argv);
-  if (force) {
-    console.log('Force mode requested: every Fiche of the selection is rendered.');
+  try {
+    mkdirSync(pdfRootDir(rootDir), { recursive: true });
+    mkdirSync(tileCacheDir, { recursive: true });
+
+    const filters = parseGenerationFilters(process.argv);
+    const force = parseForceFlag(process.argv);
+    if (force) {
+      console.log('Force mode requested: every Fiche of the selection is rendered.');
+    }
+    const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter((tour) =>
+      matchesFilters(filters, tour.zoneId, tour.name),
+    );
+
+    if (
+      (isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds)) &&
+      allTours.length === 0
+    ) {
+      throw new Error('No tours match the --tour/--zone filter.');
+    }
+
+    // The plan decides what the run must render: the Fiche of the Parcours
+    // that changed, and the overview map of the Zones that changed.
+    const statePath = generationStatePath(rootDir);
+    const state = readGenerationState(statePath);
+    const runPlan = planGeneration({
+      state,
+      currentVersion: GENERATION_STATE_VERSION,
+      candidates: allTours.map(toCandidate),
+      zoneMapFingerprints: zoneMapFingerprintsOf(allTours),
+      filters,
+      force,
+    });
+    plan = runPlan;
+
+    const logo = await loadLogo();
+
+    const toursByKey = new Map(
+      allTours.map((tour) => [parcoursStateKey(tour.zoneId, tour.name), tour]),
+    );
+    let failures = 0;
+
+    for (const decision of plan.decisions) {
+      if (!decision.regenerateFiche) {
+        console.log(`skip ${decision.tourId} (${decision.ficheReason})`);
+      }
+    }
+
+    await perf.measure('Fiches', async () => {
+      await forEachConcurrently(
+        runPlan.decisions.filter((decision) => decision.regenerateFiche),
+        FICHE_CONCURRENCY,
+        async (decision) => {
+          const tour = toursByKey.get(parcoursStateKey(decision.zoneId, decision.tourId));
+          if (!tour) {
+            return;
+          }
+          try {
+            await generateTourPdf(tour, logo);
+            rendered.add(parcoursStateKey(tour.zoneId, tour.name));
+          } catch (error) {
+            failures += 1;
+            console.error(`fail ${tour.name}: ${error instanceof Error ? error.message : error}`);
+          }
+        },
+      );
+    });
+
+    for (const decision of plan.zoneDecisions) {
+      if (!decision.regenerateZoneMap) {
+        console.log(`skip ${decision.zoneId} ${decision.kind} map (${decision.reason})`);
+      }
+    }
+
+    await perf.measure('zone maps', async () => {
+      await forEachConcurrently(
+        runPlan.zoneDecisions.filter((decision) => decision.regenerateZoneMap),
+        FICHE_CONCURRENCY,
+        async (decision) => {
+          try {
+            const written = await generateZoneMapPdf(
+              decision.zoneId,
+              decision.kind,
+              toursOfZone(decision.zoneId, decision.kind),
+              logo,
+            );
+            if (written) {
+              renderedZoneMaps.add(zoneMapKey(decision.zoneId, decision.kind));
+            }
+          } catch (error) {
+            failures += 1;
+            console.error(
+              `fail ${decision.zoneId} map: ${error instanceof Error ? error.message : error}`,
+            );
+          }
+        },
+      );
+    });
+
+    // The state remembers the Fiches that were rendered: the next run knows
+    // they are up to date. A Fiche that failed keeps no fingerprint, so the
+    // next run renders it again.
+    const updates: ParcoursStateUpdate[] = [];
+    for (const decision of runPlan.decisions) {
+      if (!decision.regenerateFiche) {
+        continue;
+      }
+      const key = parcoursStateKey(decision.zoneId, decision.tourId);
+      const fiche = rendered.has(key)
+        ? fingerprintDocument(tourPdfPath(rootDir, decision.zoneId, decision.tourId))
+        : undefined;
+      updates.push({ key, record: withFicheFingerprint(state?.parcours[key], fiche) });
+    }
+    writeGenerationState(statePath, nextGenerationState(state, updates));
+
+    if (failures > 0) {
+      throw new Error(`${failures} Fiche(s) failed.`);
+    }
+  } finally {
+    reportRun(perf, plan, rendered, renderedZoneMaps);
   }
-  const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter((tour) =>
-    matchesFilters(filters, tour.zoneId, tour.name),
-  );
+}
 
-  if (
-    (isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds)) &&
-    allTours.length === 0
-  ) {
-    throw new Error('No tours match the --tour/--zone filter.');
-  }
-
-  // The plan decides what the run must render: the Fiche of the Parcours
-  // that changed, and the overview map of the Zones that changed.
-  const statePath = generationStatePath(rootDir);
-  const state = readGenerationState(statePath);
-  const plan = planGeneration({
-    state,
-    currentVersion: GENERATION_STATE_VERSION,
-    candidates: allTours.map(toCandidate),
-    zoneMapFingerprints: zoneMapFingerprintsOf(allTours),
-    filters,
-    force,
+/**
+ * Show the `[perf]` block of the run: how long it took, how long the Fiches
+ * and the overview maps took, how many tiles came from the cache and how
+ * many were downloaded, and how many Parcours were rendered again.
+ */
+function reportRun(
+  perf: PerfRecorder,
+  plan: GenerationPlan | undefined,
+  rendered: ReadonlySet<string>,
+  renderedZoneMaps: ReadonlySet<string>,
+): void {
+  const stats = tileFetcher.stats;
+  const report = buildPerfReport({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    tiles: { fromCache: stats.cacheHits, downloaded: stats.downloads },
+    parcours: plan
+      ? countersFromDecisions(
+          plan.decisions,
+          (decision) =>
+            decision.regenerateFiche &&
+            rendered.has(parcoursStateKey(decision.zoneId, decision.tourId)),
+        )
+      : { regenerated: [], skipped: [] },
+    zoneMaps: plan
+      ? countersFromZoneDecisions(
+          plan.zoneDecisions,
+          (decision) =>
+            decision.regenerateZoneMap &&
+            renderedZoneMaps.has(zoneMapKey(decision.zoneId, decision.kind)),
+        )
+      : { regenerated: [], skipped: [] },
   });
 
-  const logo = await loadLogo();
-
-  const toursByKey = new Map(
-    allTours.map((tour) => [parcoursStateKey(tour.zoneId, tour.name), tour]),
-  );
-  const rendered = new Set<string>();
-  let failures = 0;
-
-  for (const decision of plan.decisions) {
-    if (!decision.regenerateFiche) {
-      console.log(`skip ${decision.tourId} (${decision.ficheReason})`);
-    }
-  }
-
-  await forEachConcurrently(
-    plan.decisions.filter((decision) => decision.regenerateFiche),
-    FICHE_CONCURRENCY,
-    async (decision) => {
-      const tour = toursByKey.get(parcoursStateKey(decision.zoneId, decision.tourId));
-      if (!tour) {
-        return;
-      }
-      try {
-        await generateTourPdf(tour, logo);
-        rendered.add(parcoursStateKey(tour.zoneId, tour.name));
-      } catch (error) {
-        failures += 1;
-        console.error(`fail ${tour.name}: ${error instanceof Error ? error.message : error}`);
-      }
-    },
-  );
-
-  for (const decision of plan.zoneDecisions) {
-    if (!decision.regenerateZoneMap) {
-      console.log(`skip ${decision.zoneId} ${decision.kind} map (${decision.reason})`);
-    }
-  }
-
-  await forEachConcurrently(
-    plan.zoneDecisions.filter((decision) => decision.regenerateZoneMap),
-    FICHE_CONCURRENCY,
-    async (decision) => {
-      try {
-        await generateZoneMapPdf(
-          decision.zoneId,
-          decision.kind,
-          toursOfZone(decision.zoneId, decision.kind),
-          logo,
-        );
-      } catch (error) {
-        failures += 1;
-        console.error(
-          `fail ${decision.zoneId} map: ${error instanceof Error ? error.message : error}`,
-        );
-      }
-    },
-  );
-
-  // The state remembers the Fiches that were rendered: the next run knows
-  // they are up to date. A Fiche that failed keeps no fingerprint, so the
-  // next run renders it again.
-  const updates: ParcoursStateUpdate[] = [];
-  for (const decision of plan.decisions) {
-    if (!decision.regenerateFiche) {
-      continue;
-    }
-    const key = parcoursStateKey(decision.zoneId, decision.tourId);
-    const fiche = rendered.has(key)
-      ? fingerprintDocument(tourPdfPath(rootDir, decision.zoneId, decision.tourId))
-      : undefined;
-    updates.push({ key, record: withFicheFingerprint(state?.parcours[key], fiche) });
-  }
-  writeGenerationState(statePath, nextGenerationState(state, updates));
-
-  if (failures > 0) {
-    throw new Error(`${failures} Fiche(s) failed.`);
-  }
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
 }
 
 main().catch((error: unknown) => {

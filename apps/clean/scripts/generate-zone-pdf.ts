@@ -4,9 +4,26 @@ import { PDFDocument } from 'pdf-lib';
 
 import { ZONES } from '../src/app/zones';
 
-import { matchesZoneFilter, parseGenerationFilters, zonePackFiles } from './generation-helpers';
+import {
+  matchesZoneFilter,
+  parseGenerationFilters,
+  perfReportPath,
+  writePerfReport,
+  zonePackFiles,
+  zonePackParcours,
+} from './generation-helpers';
+import type { PerfRecorder } from './generation-perf';
+import {
+  buildPerfReport,
+  countersFromIds,
+  createPerfRecorder,
+  formatPerfReport,
+} from './generation-perf';
 
 const rootDir = join(import.meta.dirname, '..');
+
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-zone-pdf';
 
 /**
  * Output folder of the packs: the local `scripts/output/` tree, like the
@@ -46,6 +63,7 @@ async function mergeZone(zoneId: string, outDir: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  const perf = createPerfRecorder();
   const filters = parseGenerationFilters(process.argv);
   const outDir = parseOutDir();
   const zoneIds = ZONES.map((zone) => zone.id).filter((id) => matchesZoneFilter(filters, id));
@@ -55,8 +73,34 @@ async function main(): Promise<void> {
   }
 
   for (const zoneId of zoneIds) {
-    await mergeZone(zoneId, outDir);
+    await perf.measure(zoneId, async () => {
+      await mergeZone(zoneId, outDir);
+    });
   }
+
+  reportRun(perf, zoneIds);
+}
+
+/**
+ * Show the `[perf]` block of the run: how long it took, how long each Zone
+ * took, and how many Parcours the pack reused.
+ *
+ * The pack regenerates no Parcours: it merges the documents that are
+ * already published, so every Parcours of the pack is left alone.
+ */
+function reportRun(perf: PerfRecorder, zoneIds: readonly string[]): void {
+  const reused = zoneIds.flatMap((zoneId) => zonePackParcours(rootDir, zoneId));
+
+  const report = buildPerfReport({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    tiles: { fromCache: 0, downloaded: 0 },
+    parcours: countersFromIds([], reused),
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
 }
 
 main().catch((error: unknown) => {
