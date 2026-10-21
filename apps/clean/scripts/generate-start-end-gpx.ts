@@ -1,12 +1,14 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
-import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
+import { getZone } from '../src/app/zones';
+
+import type { ParcoursEntry } from './generation-helpers';
+import { gpxRootDir, listParcours, parseGenerationFilters } from './generation-helpers';
 
 const rootDir = join(import.meta.dirname, '..');
-const gpxDir = join(rootDir, 'public/gpx');
 
 const OSRM_BASE_URL = 'https://router.project-osrm.org/route/v1';
 const VALHALLA_URL = 'https://valhalla1.openstreetmap.de/route';
@@ -30,11 +32,8 @@ function profileForTour(tourId: string): { osrm: 'bicycle' | 'foot'; gpxType: st
     : { osrm: 'foot', gpxType: 'walking' };
 }
 
-function getTourEndpoints(
-  tourId: string,
-  baseDir: string,
-): { start: LonLat; end: LonLat } | undefined {
-  const gpxPath = join(baseDir, tourId, `${tourId}.gpx`);
+function getTourEndpoints(entry: ParcoursEntry): { start: LonLat; end: LonLat } | undefined {
+  const gpxPath = entry.tracePath;
   if (!existsSync(gpxPath)) {
     return undefined;
   }
@@ -245,97 +244,37 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function parseArgValues(flag: string): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
-}
-
-function parseTourFilter(): Set<string> | undefined {
-  return parseArgValues('--tour');
-}
-
-function parseZoneFilter(): Set<string> | undefined {
-  return parseArgValues('--zone');
-}
-
-interface ZoneTours {
-  readonly zoneId: string;
-  readonly baseDir: string;
-  readonly tourIds: string[];
-}
-
-/** Group tour folders by zone (legacy root-level tours belong to the default zone). */
-function getZoneTours(
-  tourFilter: Set<string> | undefined,
-  zoneFilter: Set<string> | undefined,
-): ZoneTours[] {
-  if (!existsSync(gpxDir)) {
-    throw new Error(`GPX directory not found: ${gpxDir}`);
-  }
-
-  const isTourDir = (name: string): boolean => /^[VP]/.test(name);
-  const sortTours = (a: string, b: string): number => parseInt(a.slice(1)) - parseInt(b.slice(1));
-  const filterTours = (ids: string[]): string[] =>
-    ids.filter((id) => !tourFilter || tourFilter.has(id)).sort(sortTours);
-
-  const result: ZoneTours[] = [];
-  const entries = readdirSync(gpxDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory() || isTourDir(entry.name)) continue;
-    if (zoneFilter && !zoneFilter.has(entry.name)) continue;
-    const baseDir = join(gpxDir, entry.name);
-    const tourIds = filterTours(
-      readdirSync(baseDir, { withFileTypes: true })
-        .filter((tour) => tour.isDirectory() && isTourDir(tour.name))
-        .map((tour) => tour.name),
-    );
-    if (tourIds.length > 0) {
-      result.push({ zoneId: entry.name, baseDir, tourIds });
-    }
-  }
-
-  // Legacy layout: tour folders directly under public/gpx.
-  const legacyIds = filterTours(
-    entries.filter((entry) => entry.isDirectory() && isTourDir(entry.name)).map((e) => e.name),
-  );
-  if (legacyIds.length > 0 && (!zoneFilter || zoneFilter.has(DEFAULT_ZONE_ID))) {
-    result.push({ zoneId: DEFAULT_ZONE_ID, baseDir: gpxDir, tourIds: legacyIds });
-  }
-
-  return result.sort((a, b) => a.zoneId.localeCompare(b.zoneId));
-}
-
 async function main(): Promise<void> {
-  const tourFilter = parseTourFilter();
-  const zoneFilter = parseZoneFilter();
-  const zones = getZoneTours(tourFilter, zoneFilter);
+  const filters = parseGenerationFilters(process.argv);
+  const gpxRoot = gpxRootDir(rootDir);
+  if (!existsSync(gpxRoot)) {
+    throw new Error(`GPX directory not found: ${gpxRoot}`);
+  }
 
-  if (zones.length === 0 || zones.every((z) => z.tourIds.length === 0)) {
+  const inventory = listParcours(rootDir, filters);
+  const zones = inventory.zones;
+
+  if (zones.length === 0 || zones.every((zone) => zone.parcours.length === 0)) {
     throw new Error('No tours found to process.');
   }
 
   let failures = 0;
 
-  for (const { zoneId, baseDir, tourIds } of zones) {
+  for (const zone of zones) {
+    const zoneId = zone.zoneId;
     const meetingPoint = getZone(zoneId).meetingPoint;
     const meetingCoords: LonLat = [meetingPoint.coordinates[0], meetingPoint.coordinates[1]];
 
     console.log(
       `Zone ${zoneId} — meeting point: ${meetingPoint.name} (${meetingCoords[1]}, ${meetingCoords[0]})`,
     );
-    console.log(`Generating start/end GPX for ${tourIds.length} tours...`);
+    console.log(`Generating start/end GPX for ${zone.parcours.length} tours...`);
 
-    for (const tourId of tourIds) {
+    for (const entry of zone.parcours) {
+      const tourId = entry.tourId;
       const { osrm, gpxType } = profileForTour(tourId);
       try {
-        const endpoints = getTourEndpoints(tourId, baseDir);
+        const endpoints = getTourEndpoints(entry);
         if (!endpoints) {
           throw new Error(`cannot read endpoints from ${tourId}/${tourId}.gpx`);
         }
@@ -345,7 +284,7 @@ async function main(): Promise<void> {
         const fromEnd = await resolveRoute(endpoints.end, meetingCoords, osrm);
 
         writeFileSync(
-          join(baseDir, tourId, `${tourId}_start.gpx`),
+          entry.startSegmentPath,
           buildGpx(
             `${meetingPoint.name} vers le parcours ${tourId}`,
             gpxType,
@@ -354,7 +293,7 @@ async function main(): Promise<void> {
           ),
         );
         writeFileSync(
-          join(baseDir, tourId, `${tourId}_end.gpx`),
+          entry.endSegmentPath,
           buildGpx(
             `Fin du parcours ${tourId} vers ${meetingPoint.name}`,
             gpxType,

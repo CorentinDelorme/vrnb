@@ -1,17 +1,9 @@
 import { spawnSync } from 'child_process';
 import { join } from 'path';
 
-const rootDir = join(import.meta.dirname, '..');
+import { parseFilterValues } from './generation-helpers';
 
-function parseArgValues(flag: string): string[] {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return [];
-  return arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+const rootDir = join(import.meta.dirname, '..');
 
 function hasFlag(flag: string): boolean {
   return process.argv.includes(flag);
@@ -43,8 +35,8 @@ function runStep(script: string, filterArgs: string[]): void {
 }
 
 function main(): void {
-  const tours = parseArgValues('--tour');
-  const zones = parseArgValues('--zone');
+  const tours = parseFilterValues(process.argv, '--tour') ?? [];
+  const zones = parseFilterValues(process.argv, '--zone') ?? [];
 
   if (tours.length === 0 && zones.length === 0) {
     printUsage();
