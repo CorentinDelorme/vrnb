@@ -29,14 +29,14 @@ test.describe('Tours map — Bike (V)', () => {
     await expect(drawer.locator('h1')).toContainText('Bruz Sud - Parcours à vélo');
   });
 
-  test('should show PDF download link in drawer', async ({ page }) => {
+  test('should not show the tracking PDF link in drawer', async ({ page }) => {
+    // The « Fiches de suivi » are generated from the real inscriptions by the
+    // referent script, outside the site: the drawer only offers the map PDF.
     await page.goto('/tours/bruz-sud/V');
     await page.getByText('Menu', { exact: true }).click();
-    const pdfLink = page.locator('.drawer-side').getByRole('link', {
-      name: 'Télécharger le PDF de suivi',
-    });
-    await expect(pdfLink).toBeVisible();
-    await expect(pdfLink).toHaveAttribute('href', '/pdf/bruz-sud/Suivi_parcours_a_velo.pdf');
+    await expect(
+      page.locator('.drawer-side').getByRole('link', { name: 'Télécharger le PDF de suivi' }),
+    ).toHaveCount(0);
   });
 
   test('should show map PDF download link in drawer', async ({ page }) => {
@@ -76,14 +76,12 @@ test.describe('Tours map — Walking (P)', () => {
     await expect(page.locator('div#map')).toBeVisible();
   });
 
-  test('should show PDF download link with correct href', async ({ page }) => {
+  test('should not show the tracking PDF link with the walking tour map', async ({ page }) => {
     await page.goto('/tours/bruz-sud/P');
     await page.getByText('Menu', { exact: true }).click();
-    const pdfLink = page.locator('.drawer-side').getByRole('link', {
-      name: 'Télécharger le PDF de suivi',
-    });
-    await expect(pdfLink).toBeVisible();
-    await expect(pdfLink).toHaveAttribute('href', '/pdf/bruz-sud/Suivi_parcours_a_pied.pdf');
+    await expect(
+      page.locator('.drawer-side').getByRole('link', { name: 'Télécharger le PDF de suivi' }),
+    ).toHaveCount(0);
   });
 
   test('should show map PDF download link with correct href', async ({ page }) => {

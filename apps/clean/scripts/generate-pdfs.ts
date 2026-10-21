@@ -744,56 +744,6 @@ async function generateZoneMapPdf(
   console.log(`Generated: ${outputPath}`);
 }
 
-// --- Tracking sheets: one file per zone and tour type ---
-
-type AutoTableDoc = jsPDF & { lastAutoTable: { finalY: number } };
-
-function generateTrackingPdf(zoneId: string, kind: 'V' | 'P', tourNames: string[]): void {
-  if (tourNames.length === 0) {
-    return;
-  }
-  const zoneName = getZone(zoneId).name;
-  const title =
-    kind === 'V'
-      ? `${zoneName} - Suivi des parcours à vélo`
-      : `${zoneName} - Suivi des parcours à pied`;
-  const filename = kind === 'V' ? 'Suivi_parcours_a_velo.pdf' : 'Suivi_parcours_a_pied.pdf';
-
-  const doc = new jsPDF();
-
-  doc.setFontSize(18);
-  doc.text(title, 14, 20);
-
-  autoTable(doc, {
-    startY: 30,
-    head: [['Parcours', 'Prénom NOM', 'Prénom NOM', 'Ordures (g)', 'Tri (g)', 'Verre (g)']],
-    body: tourNames.map((tour) => [tour, '', '', '', '', '']),
-    theme: 'grid',
-    headStyles: { fillColor: [66, 135, 75] },
-    columnStyles: {
-      0: { cellWidth: 20 },
-      3: { cellWidth: 25 },
-      4: { cellWidth: 25 },
-      5: { cellWidth: 25 },
-    },
-  });
-
-  autoTable(doc, {
-    startY: (doc as AutoTableDoc).lastAutoTable.finalY + 8,
-    head: [['Ordures (kg)', 'Tri (kg)', 'Verre (kg)', 'Total (kg)']],
-    body: [['', '', '', '']],
-    theme: 'grid',
-    headStyles: { fillColor: [66, 135, 75] },
-  });
-
-  const zonePdfDir = join(pdfDir, zoneId);
-  mkdirSync(zonePdfDir, { recursive: true });
-  const outputPath = join(zonePdfDir, filename);
-  ensureWritable(outputPath);
-  doc.save(outputPath);
-  console.log(`Generated: ${outputPath}`);
-}
-
 function parseArgValues(flag: string): Set<string> | undefined {
   const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
   if (!arg) return undefined;
@@ -839,16 +789,6 @@ async function main(): Promise<void> {
     const pTours = toursData.pTours.filter((t) => zoneIds.includes(t.zoneId));
 
     for (const zoneId of zoneIds) {
-      generateTrackingPdf(
-        zoneId,
-        'V',
-        vTours.filter((t) => t.zoneId === zoneId).map((t) => t.name),
-      );
-      generateTrackingPdf(
-        zoneId,
-        'P',
-        pTours.filter((t) => t.zoneId === zoneId).map((t) => t.name),
-      );
       await generateZoneMapPdf(
         zoneId,
         'V',

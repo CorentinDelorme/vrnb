@@ -93,6 +93,11 @@ bun run generate:zone-pdf -- --zone=bruz-sud          # Une seule zone
 bun run generate:zone-pdf -- --out-dir=/tmp/packs     # Dossier de sortie personnalisé
 ```
 
+Le pack contient les cartes de zone et les fiches des parcours. Il ne contient
+plus de fiche de suivi : celles-ci sont générées à partir des **inscriptions
+réelles** par le script d'extraction (voir « Extraire les fiches de suivi »),
+et ne sont pas publiées sur le site.
+
 ## Inscriptions des binômes
 
 Pour chaque **Édition** (voir [GLOSSARY.md](./GLOSSARY.md)), un **Binôme**
@@ -145,7 +150,10 @@ ne peuvent pas exécuter le `SCAN` nécessaire à l'extraction.
 ### Extraire les fiches de suivi (avant l'action)
 
 Les prénoms et les noms ne quittent le KV que par le script d'extraction local,
-qui écrit une **Fiche de suivi** par Zone (Parcours inscrits et binômes) :
+qui écrit une **Fiche de suivi** par Zone (Parcours inscrits et binômes). C'est
+la seule source des fiches de suivi : les anciens PDF de suivi (les feuilles
+blanches `Suivi_parcours_a_*.pdf`, sans les noms) ne sont plus générés ni
+publiés, et le lien « Télécharger le PDF de suivi » a été retiré du menu :
 
 ```sh
 # depuis apps/clean/
