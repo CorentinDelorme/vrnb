@@ -4,6 +4,7 @@ import { parseGenerationFilters } from './generation-helpers';
 import type { PlanCandidate } from './generation-plan';
 import { planGeneration } from './generation-plan';
 import type { GenerationState } from './generation-state';
+import { nextGenerationState } from './generation-state';
 
 /**
  * The generation plan (ticket #26): the pure decision of what a
@@ -174,5 +175,22 @@ describe('planGeneration', () => {
     });
 
     expect(plan.decisions).toEqual([]);
+  });
+
+  it('should route a Parcours again after a failed run dropped it from the state', () => {
+    const state = nextGenerationState(stateWith(UP_TO_DATE_RECORD), [{ key: 'bruz-sud/V1' }]);
+
+    const plan = planGeneration({
+      state,
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+    });
+
+    expect(plan.decisions[0]).toEqual({
+      zoneId: 'bruz-sud',
+      tourId: 'V1',
+      rerouteSegments: true,
+      reason: 'no-state-entry',
+    });
   });
 });
