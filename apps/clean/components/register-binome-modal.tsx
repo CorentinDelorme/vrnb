@@ -95,6 +95,14 @@ const ACTION_DATE_LABEL = formatDateFrench(CURRENT_EDITION.actionDate);
 /** The message of the closed registration window (also the 400 answer). */
 const CLOSED_WINDOW_MESSAGE = "L'action est passée — les inscriptions sont closes.";
 
+/**
+ * The data retention notice of the modal (GDPR): the names only build the
+ * « Fiches de suivi » of the action, and the data is erased 90 days after it.
+ * Built as a single string: the JSX compiler would glue the number to the
+ * following text when the text carries an HTML entity (spacing pitfall).
+ */
+const GDPR_NOTICE = `Vos noms servent à établir les fiches de suivi de l'action. Les données sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
+
 /** The explicit French feedback of each refusal of the server (ticket #18). */
 const OUTCOME_ALERTS: Readonly<
   Partial<Record<ModalOutcome, { readonly className: string; readonly message: string }>>
@@ -345,10 +353,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                 value={honeypot}
               />
 
-              <p className="text-base-content/70 mt-4 text-xs sm:text-sm">
-                Vos noms servent à établir les fiches de suivi de l&apos;action. Les données sont
-                effacées {INSCRIPTIONS_RETENTION_DAYS} jours après l&apos;action.
-              </p>
+              <p className="text-base-content/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
 
               {outcomeAlert ? (
                 <div className={outcomeAlert.className} role="alert">
