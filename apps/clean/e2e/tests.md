@@ -62,23 +62,24 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    with `page.route`, so the totals above (and the 47 play buttons) stay unchanged.
 
 4. **`Binôme registration` (4 tests, ticket #17)**: uncovered Parcours rows of an open Édition
-   window offer a register button (`aria-label="S'inscrire en Binôme pour le parcours <tourId>"`,
+   window offer a register button (`aria-label="S'inscrire en binôme pour le parcours <tourId>"`,
    visible-text-first per WCAG 2.5.3 Label in Name — enforced by the home-page axe audit) next to
    their play button; the registration flows through the DaisyUI modal and `POST /api/inscriptions`.
    Both directions of the API stay intercepted with `page.route`, so the totals above (and the 47
    play buttons) stay unchanged.
 
 5. **`Closed registration window` (3 tests) and `Anti-bot honeypot and GDPR notice` (4 tests),
-   ticket #18**: the modal of a closed registration window (the day after the action date)
-   announces that the window is closed and disables its form, the hidden anti-bot honeypot is in
-   the DOM but invisible to humans, and the modal states the 90-day retention of the names. The
-   "closed window" cases fix the browser clock with `page.clock.setFixedTime` before the
-   navigation, so the instant is deterministic; the mocked API answers the closed window like
-   the real server would answer it then. The registration window stays **open until 3 days
-   before the action** (`REGISTRATION_CLOSURE_DAYS`) and closes after it — one case fixes the
-   clock on the last registration day and expects an open window. The register button stays on the
-   uncovered rows of a closed window (only a covered Parcours loses its button), so the
-   play-button contract (47) stays unchanged too.
+   ticket #18**: the register button disappears once the registration window is closed (and when
+   the public state cannot be loaded), the hidden anti-bot honeypot is in the DOM but invisible to
+   humans, and the modal states the 90-day retention of the names. The "closed window" cases fix
+   the browser clock with `page.clock.setFixedTime` before the navigation, so the instant is
+   deterministic; the mocked API answers the closed window like the real server would answer it
+   then. The registration window stays **open until 3 days before the action**
+   (`REGISTRATION_CLOSURE_DAYS`) and closes after it — one case fixes the clock on the last
+   registration day and expects an open window. A closed window hides the register button of the
+   uncovered rows (a covered Parcours loses it too), so the play-button contract (47) stays
+   unchanged. The modal of a closed window (its own closed state, reached when the public state
+   could not be loaded) is covered by the unit suite, not by an E2E case.
 
 Totals: **109 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18) × chromium + firefox = **218**.
 
@@ -167,12 +168,12 @@ registration and registration window)
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `should badge the covered Parcours after hydration, and only it` | Mock `GET /api/inscriptions` covering `bruz-sud`/`V1`, `goto('/')`              | Exactly one `.badge-success` "Binôme inscrit", inside the V1 row of the Bruz Sud bike section; nothing on V2 |
 | `should leave every row unbadged when the store covers nothing`  | Mock the API with an empty `inscriptions` list, `goto('/')`                     | No "Binôme inscrit" badge                                                                                    |
-| `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, all 47 play buttons intact                                                        |
+| `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, no register button (the coverage is unknown), all 47 play buttons intact          |
 
 ### `describe('Binôme registration')` (ticket #17)
 
 The register button of every uncovered Parcours row is named
-`aria-label="S'inscrire en Binôme pour le parcours <tourId>"` (visible text
+`aria-label="S'inscrire en binôme pour le parcours <tourId>"` (visible text
 `S'inscrire` first, compact size `btn-xs`/`btn-sm`). The modal is the
 `<dialog className="modal">` element, addressed as `getByRole('dialog')`. Its
 context reads « Zone <zone> — Parcours <tour> », the meeting point is named
@@ -188,12 +189,12 @@ notre participation à ce parcours de nettoyage. »
 > page.getByRole('dialog').getByLabel('Nom du membre 1', { exact: true });
 > ```
 
-| Test name                                                                      | Steps                                                                                                                                                                                       | Expected                                                                                                                                                                                 |
-| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `should register through the modal: 201, confirmation, badge, button gone`     | Script GET (empty → covered) + POST 201 `{"inscription":{…}}` with `page.route`, `goto('/')`, open V2's button, assert modal context (Zone, action date, meeting point), fill, tick, submit | Exactly one POST carrying the full contract body (4 identity fields, `engaged: true`, `honeypot: ''`, `zoneId`/`tourId`); confirmation text; V2 badged; register button gone — no reload |
-| `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                            | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                             |
-| `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                              | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                       |
-| `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                    | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                          |
+| Test name                                                                      | Steps                                                                                                                                                                                                                                                                                                          | Expected                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should register through the modal: 201, confirmation, badge, button gone`     | Script GET (empty → covered) + POST 201 `{"inscription":{…}}` with `page.route`, `goto('/')`, open V2's button, assert modal context (Zone « Bruz Sud », action date « 14 février 2027 », meeting point), fill, tick, submit (the engagement statement gates the submit: untick → disabled, re-tick → enabled) | Exactly one POST carrying the full contract body (4 identity fields, `engaged: true`, `honeypot: ''`, `zoneId`/`tourId`); confirmation text « Votre binôme est inscrit »; V2 badged; register button gone — no reload |
+| `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                                                                                                                                               | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                                                          |
+| `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                                                                                                                                                 | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                                                    |
+| `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                                                                                                                                       | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                                                       |
 
 ### `describe('Closed registration window')` (ticket #18)
 
@@ -214,12 +215,12 @@ button is shown, so the site never offers a registration it cannot honor.
 
 ### `describe('Anti-bot honeypot and GDPR notice')` (ticket #18)
 
-| Test name                                                                     | Steps                                                                                                                 | Expected                                                                                                                                                                                         |
-| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `should hide the honeypot from humans in the modal`                           | Mock GET (open, empty), `goto('/')`, open V2's button                                                                 | One `input[name="website"]` in the modal: present in the DOM, `hidden`, `aria-hidden="true"`, `tabindex="-1"`, `autocomplete="off"`                                                              |
-| `should post the filled honeypot and be refused like any other invalid input` | Script GET (open) + POST 400 `{"error":"invalid-inscription"}`, open V2's button, fill, fill the hidden field, submit | One POST whose body carries the filled `honeypot`; the refusal is silent — the standard « Saisie invalide » message, never an anti-robots hint, and nothing stored (the Parcours stays unbadged) |
-| `should state the data retention of the names in the modal`                   | Mock GET (open, empty), `goto('/')`, open V2's button                                                                 | The modal states « Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées 90 jours après l'action. »                                                      |
-| `should have no a11y violation on the open registration modal`                | Mock GET (open, empty), `goto('/')`, open V2's button, run the axe audit on the page                                  | No axe violation (the hidden honeypot never breaks the audit)                                                                                                                                    |
+| Test name                                                                     | Steps                                                                                                                                          | Expected                                                                                                                                                                                                                    |
+| ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should hide the honeypot from humans in the modal`                           | Mock GET (open, empty), `goto('/')`, open V2's button                                                                                          | One `input[name="website"]` in the modal: present in the DOM, `hidden`, `aria-hidden="true"`, `tabindex="-1"`, `autocomplete="off"`                                                                                         |
+| `should post the filled honeypot and be refused like any other invalid input` | Script GET (open) + POST 400 `{"error":"invalid-inscription"}`, open V2's button, fill, fill the hidden field, submit                          | One POST whose body carries the filled `honeypot`; the refusal is silent — the standard « Saisie invalide » message, never an anti-robots hint, and nothing stored (the Parcours stays unbadged, its register button stays) |
+| `should state the data retention of the names in the modal`                   | Mock GET (open, empty), `goto('/')`, open V2's button                                                                                          | The modal states « Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées 90 jours après l'action. »                                                                                 |
+| `should have no a11y violation on the open registration modal`                | Mock GET (open, empty), `goto('/')`, open V2's button, run the axe audit on the page (the `meta-viewport` and `color-contrast` rules disabled) | No axe violation (the hidden honeypot never breaks the audit)                                                                                                                                                               |
 
 ---
 
@@ -471,7 +472,7 @@ test('should have no a11y violations on home page', async ({ page }) => {
 | Tour section component        | `app-tour-list-section` with `hasText` filter                                              |
 | Tour row                      | `li.list-row`                                                                              |
 | Tour play button              | `button[aria-label="Lancer le parcours"]`                                                  |
-| Register button               | `button[aria-label="S'inscrire en Binôme pour le parcours V2"]`                            |
+| Register button               | `button[aria-label="S'inscrire en binôme pour le parcours V2"]`                            |
 | Covered Parcours badge        | `.badge-success` with text "Binôme inscrit" (in the row, where the register button stands) |
 | Registration modal            | `dialog#register_modal_V2` (`getByRole('dialog')`)                                         |
 | Anti-bot honeypot             | `input[name="website"]` (hidden)                                                           |
