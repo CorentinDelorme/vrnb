@@ -8,6 +8,13 @@
  * read from the stored values — Binôme identities stay in the store, the
  * response only exposes (zone, Parcours) pairs. The thin Next adapter lives
  * in `app/api/inscriptions/route.ts`; ticket #17 adds the write side.
+ *
+ * The coverage of a Parcours is decided by its KEY, never by the stored
+ * value: the key carries the whole (Édition, Zone, Parcours) context, and the
+ * value only carries the Binôme identity — or nothing at all, when the key was
+ * seeded by hand in the Upstash console (the referent workflow). Such a key
+ * covers its Parcours all the same, which is why the GET never parses the
+ * values at all.
  */
 
 import type { TourRef } from '../tours-queries';
@@ -21,7 +28,11 @@ import type { ParcoursLookup } from './validation';
 export interface RawInscriptionEntry {
   /** Redis key `inscriptions:<year>:<zone>:<tour-name>` (or garbage). */
   readonly key: string;
-  /** Raw JSON blob of the entry (may be malformed). */
+  /**
+   * Raw JSON blob of the entry (may be malformed, or empty when the key was
+   * seeded by hand). Only the referent extraction script reads it — the
+   * public state decides the coverage from the key alone.
+   */
   readonly value: string;
 }
 
@@ -54,11 +65,13 @@ export interface InscriptionsHandlerDeps {
 }
 
 /**
- * Validate one stored entry and map it to its (zone, tour) pair; `null` when
- * the key is not a valid inscription key of this Édition, the value does not
- * parse to a JSON object (garbage entries are skipped, never reported) or the
- * pair is unknown to the Parcours catalogue (a bogus legacy key is ignored,
- * never exposed).
+ * Map one stored entry to its (zone, tour) pair; `null` when the key is not a
+ * valid inscription key of this Édition or the pair is unknown to the Parcours
+ * catalogue (a bogus legacy key is ignored, never exposed).
+ *
+ * The stored value is never read: the coverage comes from the key alone, so a
+ * key seeded by hand in the Upstash console (empty or garbage value) covers
+ * its Parcours exactly like a key written by the POST handler.
  */
 export function readInscriptionEntry(
   entry: RawInscriptionEntry,
@@ -67,19 +80,8 @@ export function readInscriptionEntry(
 ): TourRef | null {
   const parsedKey = parseInscriptionKey(entry.key);
   if (parsedKey === null || parsedKey.year !== editionYear) return null;
-  if (!isValidInscriptionValue(entry.value)) return null;
   if (!parcours(parsedKey.zoneId, parsedKey.tourId)) return null;
   return { tourId: parsedKey.tourId, zoneId: parsedKey.zoneId };
-}
-
-/** A stored value is valid iff it parses to a JSON object (contents ignored). */
-export function isValidInscriptionValue(value: string): boolean {
-  try {
-    const parsed: unknown = JSON.parse(value);
-    return typeof parsed === 'object' && parsed !== null;
-  } catch {
-    return false;
-  }
 }
 
 /** Zone first, then Parcours with numeric-aware order (V2 before V10). */
@@ -92,8 +94,9 @@ function byZoneThenTour(a: TourRef, b: TourRef): number {
 
 /**
  * Compute the public inscriptions state of the Édition: an empty store yields
- * an empty list (still valid JSON), malformed entries are silently skipped,
- * and only the (Zone, Parcours) pairs the catalogue knows are exposed.
+ * an empty list (still valid JSON), entries whose key is malformed or foreign
+ * are silently skipped, and only the (Zone, Parcours) pairs the catalogue
+ * knows are exposed.
  */
 export async function getInscriptionsState(
   deps: InscriptionsHandlerDeps,

@@ -1,20 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import type { InscriptionsHandlerDeps, RawInscriptionEntry } from './public-state';
-import {
-  getInscriptionsState,
-  handleInscriptionsGet,
-  isValidInscriptionValue,
-  readInscriptionEntry,
-} from './public-state';
+import { getInscriptionsState, handleInscriptionsGet, readInscriptionEntry } from './public-state';
 import { inscriptionKey } from './upstash-kv';
 
 /**
  * Pure core of `GET /api/inscriptions` (ticket #16): the public state exposes
- * (zone, tour) pairs only, an empty store stays valid JSON, malformed entries
- * are skipped, the pairs unknown to the Parcours catalogue are never
- * exposed, and the edition data comes from the injected config. A store
- * outage degrades to a JSON 502.
+ * (zone, tour) pairs only, an empty store stays valid JSON, the coverage comes
+ * from the KEY (whatever the stored value holds), the pairs unknown to the
+ * Parcours catalogue are never exposed, and the edition data comes from the
+ * injected config. A store outage degrades to a JSON 502.
  */
 
 const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
@@ -29,6 +24,11 @@ const CLOSED_CLOCK = new Date('2027-02-12T09:00:00Z');
 /** The (Zone, Parcours) pairs the fake catalogue knows. */
 const KNOWN_PAIRS = new Set([
   'bruz-sud:V1',
+  'zh:BadNull',
+  'zh:BadNumber',
+  'zh:BadString',
+  'zh:EmptyValue',
+  'zh:GarbageValue',
   'zh:Kept',
   'zh:Kept1',
   'zh:T',
@@ -101,11 +101,14 @@ describe('getInscriptionsState', () => {
     expect(state.inscriptions).toEqual([]);
   });
 
-  it('should skip entries whose stored value is not JSON (garbage never breaks the API)', async () => {
+  it('should cover a key whatever its stored value (a hand-seeded key counts as covered)', async () => {
+    // The referent seeds a key by hand in the Upstash console: the coverage
+    // comes from the KEY, so an empty or garbage value still covers the
+    // Parcours (and the POST answers 409 for that key, forever).
     const state = await getInscriptionsState(
       deps([
-        entry(2027, 'zh', 'Kept1', '{"binome":{}}'),
-        entry(2027, 'zh', 'BadJson', 'garbage{{'),
+        entry(2027, 'zh', 'EmptyValue', ''),
+        entry(2027, 'zh', 'GarbageValue', 'garbage{{'),
         entry(2027, 'zh', 'BadString', '"just a string"'),
         entry(2027, 'zh', 'BadNumber', '42'),
         entry(2027, 'zh', 'BadNull', 'null'),
@@ -114,7 +117,11 @@ describe('getInscriptionsState', () => {
     );
     expect(state.inscriptions).toEqual([
       { tourId: 'KeptArray', zoneId: 'ze' },
-      { tourId: 'Kept1', zoneId: 'zh' },
+      { tourId: 'BadNull', zoneId: 'zh' },
+      { tourId: 'BadNumber', zoneId: 'zh' },
+      { tourId: 'BadString', zoneId: 'zh' },
+      { tourId: 'EmptyValue', zoneId: 'zh' },
+      { tourId: 'GarbageValue', zoneId: 'zh' },
     ]);
   });
 
@@ -204,22 +211,6 @@ describe('handleInscriptionsGet', () => {
   });
 });
 
-describe('isValidInscriptionValue', () => {
-  it('should accept any JSON object payload without reading its content', () => {
-    expect(isValidInscriptionValue('{"binome":{"firstName":"Léa"}}')).toBe(true);
-    expect(isValidInscriptionValue('{}')).toBe(true);
-    expect(isValidInscriptionValue('[]')).toBe(true);
-  });
-
-  it('should reject non-object and unparseable payloads', () => {
-    expect(isValidInscriptionValue('"just a string"')).toBe(false);
-    expect(isValidInscriptionValue('42')).toBe(false);
-    expect(isValidInscriptionValue('null')).toBe(false);
-    expect(isValidInscriptionValue('garbage{{')).toBe(false);
-    expect(isValidInscriptionValue('')).toBe(false);
-  });
-});
-
 describe('readInscriptionEntry', () => {
   it('should map a valid entry to its zone/tour pair', () => {
     expect(readInscriptionEntry(entry(2027, 'zh', 'V1', '{"binome":{}}'), 2027, parcours)).toEqual({
@@ -228,11 +219,10 @@ describe('readInscriptionEntry', () => {
     });
   });
 
-  it('should map entries of another year or with garbage to null', () => {
+  it('should map entries of another year or with a malformed key to null', () => {
     expect(
       readInscriptionEntry(entry(2026, 'zh', 'V1', '{"binome":{}}'), 2027, parcours),
     ).toBeNull();
-    expect(readInscriptionEntry(entry(2027, 'zh', 'V1', 'garbage'), 2027, parcours)).toBeNull();
     expect(
       readInscriptionEntry(
         { key: 'not-an-inscription-key', value: '{"binome":{}}' },
@@ -240,6 +230,17 @@ describe('readInscriptionEntry', () => {
         parcours,
       ),
     ).toBeNull();
+  });
+
+  it('should map an entry with a garbage value to its pair (the key decides)', () => {
+    expect(readInscriptionEntry(entry(2027, 'zh', 'V1', 'garbage'), 2027, parcours)).toEqual({
+      tourId: 'V1',
+      zoneId: 'zh',
+    });
+    expect(readInscriptionEntry(entry(2027, 'zh', 'V1', ''), 2027, parcours)).toEqual({
+      tourId: 'V1',
+      zoneId: 'zh',
+    });
   });
 
   it('should map a pair unknown to the catalogue to null', () => {
