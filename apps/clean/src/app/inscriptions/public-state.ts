@@ -1,0 +1,122 @@
+/**
+ * Public state of the Inscriptions for the Édition — the pure core of
+ * `GET /api/inscriptions` (ticket #16).
+ *
+ * The module is server-agnostic (no `process.env`, no `next` import) so it
+ * stays unit-testable: it reads a raw KV listing through the
+ * `InscriptionsStore` port and returns validated public data. Names are never
+ * read from the stored values — Binôme identities stay in the store, the
+ * response only exposes (zone, Parcours) pairs. The thin Next adapter lives
+ * in `app/api/inscriptions/route.ts`; ticket #17 adds the write side.
+ */
+
+import type { TourRef } from '../tours-queries';
+import type { Edition } from './edition';
+import { isRegistrationOpen } from './edition';
+import { parseInscriptionKey } from './upstash-kv';
+
+/** One stored inscription as read from the KV store, before any validation. */
+export interface RawInscriptionEntry {
+  /** Redis key `inscriptions:<year>:<zone>:<tour-name>` (or garbage). */
+  readonly key: string;
+  /** Raw JSON blob of the entry (may be malformed). */
+  readonly value: string;
+}
+
+/** Reading port of the pure handler over any KV backend (.Upstash for prod). */
+export interface InscriptionsStore {
+  /** Every stored entry for the edition `year`, keys and values as strings. */
+  readonly listAll: (year: number) => Promise<readonly RawInscriptionEntry[]>;
+}
+
+/** Public body of `GET /api/inscriptions` — no personal names, ever. */
+export interface InscriptionsPublicState {
+  readonly edition: Edition;
+  /** Registration for the Édition is open until the action day starts. */
+  readonly registrationOpen: boolean;
+  /** Names-free list of covered (zone, Parcours) pairs, sorted for stability. */
+  readonly inscriptions: readonly TourRef[];
+}
+
+/** Injected ports + config of the pure handler. */
+export interface InscriptionsHandlerDeps {
+  readonly store: InscriptionsStore;
+  readonly edition: Edition;
+  /** Injectable clock so tests control "today". */
+  readonly now: () => Date;
+}
+
+/**
+ * Validate one stored entry and map it to its (zone, tour) pair; `null` when
+ * the key is not a valid inscription key of this Édition or the value does
+ * not parse to a JSON object (garbage entries are skipped, never reported).
+ */
+export function readInscriptionEntry(
+  entry: RawInscriptionEntry,
+  editionYear: number,
+): TourRef | null {
+  const parsedKey = parseInscriptionKey(entry.key);
+  if (parsedKey === null || parsedKey.year !== editionYear) return null;
+  if (!isValidInscriptionValue(entry.value)) return null;
+  return { tourId: parsedKey.tourId, zoneId: parsedKey.zoneId };
+}
+
+/** A stored value is valid iff it parses to a JSON object (contents ignored). */
+export function isValidInscriptionValue(value: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null;
+  } catch {
+    return false;
+  }
+}
+
+/** Zone first, then Parcours with numeric-aware order (V2 before V10). */
+function byZoneThenTour(a: TourRef, b: TourRef): number {
+  return (
+    a.zoneId.localeCompare(b.zoneId, 'en', { numeric: true }) ||
+    a.tourId.localeCompare(b.tourId, 'en', { numeric: true })
+  );
+}
+
+/**
+ * Compute the public inscriptions state of the Édition: an empty store yields
+ * an empty list (still valid JSON), malformed entries are silently skipped.
+ */
+export async function getInscriptionsState(
+  deps: InscriptionsHandlerDeps,
+): Promise<InscriptionsPublicState> {
+  const entries = await deps.store.listAll(deps.edition.year);
+  const inscriptions = entries
+    .map((entry) => readInscriptionEntry(entry, deps.edition.year))
+    .filter((inscription): inscription is TourRef => inscription !== null)
+    .sort(byZoneThenTour);
+  return {
+    edition: deps.edition,
+    inscriptions,
+    registrationOpen: isRegistrationOpen(deps.edition, deps.now()),
+  };
+}
+
+/** Body of the degraded response when the store is unreachable. */
+const UNAVAILABLE = { error: 'inscriptions-unavailable' } as const;
+
+const JSON_HEADERS = {
+  'cache-control': 'no-store',
+  'content-type': 'application/json; charset=utf-8',
+} as const;
+
+/**
+ * Pure `GET` handler: returns the public state as a JSON `Response`, or a
+ * JSON 502 when the KV adapter fails — the response shape stays valid JSON in
+ * both cases so any client can parse the outcome. No caching: route handlers
+ * of this app stay dynamic by default (see `route.ts`).
+ */
+export async function handleInscriptionsGet(deps: InscriptionsHandlerDeps): Promise<Response> {
+  try {
+    const state = await getInscriptionsState(deps);
+    return new Response(JSON.stringify(state), { headers: JSON_HEADERS, status: 200 });
+  } catch {
+    return new Response(JSON.stringify(UNAVAILABLE), { headers: JSON_HEADERS, status: 502 });
+  }
+}
