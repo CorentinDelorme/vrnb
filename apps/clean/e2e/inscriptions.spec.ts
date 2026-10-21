@@ -87,10 +87,12 @@ async function fillRegistration(
   body: { readonly [key in keyof typeof CONTRACT_BODY]: string | boolean },
 ): Promise<void> {
   const modal = page.getByRole('dialog');
-  await modal.getByLabel('Prénom du membre 1').fill(String(body.firstName1));
-  await modal.getByLabel('Nom du membre 1').fill(String(body.lastName1));
-  await modal.getByLabel('Prénom du membre 2').fill(String(body.firstName2));
-  await modal.getByLabel('Nom du membre 2').fill(String(body.lastName2));
+  // `exact: true` everywhere: without it, « Nom du membre 1 » also matches the
+  // « Prénom du membre 1 » label (« Prénom » contains « nom » as a substring).
+  await modal.getByLabel('Prénom du membre 1', { exact: true }).fill(String(body.firstName1));
+  await modal.getByLabel('Nom du membre 1', { exact: true }).fill(String(body.lastName1));
+  await modal.getByLabel('Prénom du membre 2', { exact: true }).fill(String(body.firstName2));
+  await modal.getByLabel('Nom du membre 2', { exact: true }).fill(String(body.lastName2));
   await modal.getByRole('checkbox').check();
 }
 
@@ -162,7 +164,7 @@ test.describe('Binôme registration', () => {
     await page.goto('/');
 
     const v2Register = page.getByRole('button', {
-      name: 'Inscrire un binôme pour le parcours V2',
+      name: "S'inscrire en binôme pour le parcours V2",
       exact: true,
     });
     await expect(v2Register).toBeVisible();
@@ -176,8 +178,10 @@ test.describe('Binôme registration', () => {
     await expect(modal).toContainText('Place du Dr Joly');
 
     await fillRegistration(page, CONTRACT_BODY);
-    // The engagement statement gates the submit:
+    // The engagement statement gates the submit: untick it → disabled, then
+    // re-tick → enabled (the form is otherwise complete).
     const submit = modal.getByRole('button', { name: 'Inscrire mon binôme' });
+    await modal.getByRole('checkbox').uncheck();
     await expect(submit).toBeDisabled();
     await modal.getByRole('checkbox').check();
     await expect(submit).toBeEnabled();
@@ -199,20 +203,20 @@ test.describe('Binôme registration', () => {
     await page.goto('/');
 
     await page
-      .getByRole('button', { name: 'Inscrire un binôme pour le parcours P3', exact: true })
+      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P3", exact: true })
       .click();
-    await page.getByLabel('Prénom du membre 1').fill('Céline');
-    await page.getByLabel('Nom du membre 2').fill('Roux');
+    await page.getByLabel('Prénom du membre 1', { exact: true }).fill('Céline');
+    await page.getByLabel('Nom du membre 2', { exact: true }).fill('Roux');
 
     await page.getByRole('button', { name: 'Fermer', exact: true }).click();
-    await expect(page.getByLabel('Prénom du membre 1')).toBeHidden();
+    await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toBeHidden();
 
     await page
-      .getByRole('button', { name: 'Inscrire un binôme pour le parcours P3', exact: true })
+      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P3", exact: true })
       .click();
-    await expect(page.getByLabel('Prénom du membre 1')).toBeVisible();
-    await expect(page.getByLabel('Prénom du membre 1')).toHaveValue('Céline');
-    await expect(page.getByLabel('Nom du membre 2')).toHaveValue('Roux');
+    await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toBeVisible();
+    await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toHaveValue('Céline');
+    await expect(page.getByLabel('Nom du membre 2', { exact: true })).toHaveValue('Roux');
   });
 
   test('should show no register button on a covered tour but keep its badge', async ({ page }) => {
@@ -221,7 +225,7 @@ test.describe('Binôme registration', () => {
 
     await expect(rowLocator(page, 'V1').locator('.badge-success')).toHaveText('Binôme inscrit');
     await expect(
-      page.getByRole('button', { name: 'Inscrire un binôme pour le parcours V1', exact: true }),
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V1", exact: true }),
     ).toHaveCount(0);
     // The covered row keeps its play button (legacy DOM contract).
     await expect(
@@ -252,7 +256,7 @@ test.describe('Binôme registration', () => {
     await page.goto('/');
 
     await page
-      .getByRole('button', { name: 'Inscrire un binôme pour le parcours P2', exact: true })
+      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P2", exact: true })
       .click();
 
     const modal = page.getByRole('dialog').first();
@@ -269,7 +273,7 @@ test.describe('Binôme registration', () => {
     // The 409's statuses reload shows the covered state: badge + button gone.
     await expect(rowLocator(page, 'P2').locator('.badge-success')).toHaveText('Binôme inscrit');
     await expect(
-      page.getByRole('button', { name: 'Inscrire un binôme pour le parcours P2', exact: true }),
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours P2", exact: true }),
     ).toHaveCount(0);
   });
 });

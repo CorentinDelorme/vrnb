@@ -60,6 +60,13 @@ Inscriptions feature additions (ticket #16, no parity impact — DOM contract un
    « Binôme inscrit » badge, obtained after hydration from `GET /api/inscriptions`; that endpoint is
    intercepted with `page.route`, so the totals above (and the 47 play buttons) stay unchanged.
 
+4. **`Binôme registration` (4 tests, ticket #17)**: uncovered Parcours rows of an open Édition
+   window offer a register button (`aria-label="S'inscrire en binôme pour le parcours <tourId>"`,
+   visible-text-first per WCAG 2.5.3 Label in Name — enforced by the home-page axe audit) next to
+   their play button; the registration flows through the DaisyUI modal and `POST /api/inscriptions`.
+   Both directions of the API stay intercepted with `page.route`, so the totals above (and the 47
+   play buttons) stay unchanged.
+
 ---
 
 ## File: `e2e/app.spec.ts`
@@ -118,10 +125,11 @@ Route: `/`
 
 ## File: `e2e/inscriptions.spec.ts`
 
-Route: `/` (ticket #16 — public inscriptions statuses, badge « Binôme inscrit »)
+Route: `/` (tickets #16 + #17 — public inscriptions statuses and binôme registration)
 
 > `GET /api/inscriptions` is intercepted with `page.route` in every test of this
-> file (both browsers), so the dev server needs no KV credentials.
+> file (both browsers), so the dev server needs no KV credentials. The POST
+> direction is scripted through the same `page.route` handler, assert by assert.
 
 ### `describe('Public inscriptions statuses')`
 
@@ -132,6 +140,29 @@ Route: `/` (ticket #16 — public inscriptions statuses, badge « Binôme inscri
 | `should badge the covered Parcours after hydration, and only it` | Mock `GET /api/inscriptions` covering `bruz-sud`/`V1`, `goto('/')`              | Exactly one `.badge-success` "Binôme inscrit", inside the V1 row of the Bruz Sud bike section; nothing on V2 |
 | `should leave every row unbadged when the store covers nothing`  | Mock the API with an empty `inscriptions` list, `goto('/')`                     | No "Binôme inscrit" badge                                                                                    |
 | `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, all 47 play buttons intact                                                        |
+
+### `describe('Binôme registration')` (ticket #17)
+
+The register button of every uncovered Parcours row is named
+`aria-label="S'inscrire en binôme pour le parcours <tourId>"` (visible text
+`S'inscrire` first). The modal is the `<dialog className="modal">` element,
+addressed as `getByRole('dialog')`.
+
+> Locators inside the modal use `exact: true` on every `getByLabel`:
+> Playwright matches labels by substring, and « Pré**nom** du membre 1 »
+> contains « **Nom** du membre 1 », so the name fields resolve to 2 inputs
+> without it.
+>
+> ```ts
+> page.getByRole('dialog').getByLabel('Nom du membre 1', { exact: true });
+> ```
+
+| Test name                                                                      | Steps                                                                                                                                                                                       | Expected                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should register through the modal: 201, confirmation, badge, button gone`     | Script GET (empty → covered) + POST 201 `{"inscription":{…}}` with `page.route`, `goto('/')`, open V2's button, assert modal context (Zone, action date, meeting point), fill, tick, submit | Exactly one POST carrying the full contract body (4 identity fields, `engaged: true`, `honeypot: ''`, `zoneId`/`tourId`); confirmation text; V2 badged; register button gone — no reload |
+| `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                            | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                             |
+| `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                              | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                       |
+| `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                    | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                          |
 
 ---
 
@@ -374,28 +405,29 @@ test('should have no a11y violations on home page', async ({ page }) => {
 
 ## Selector Reference
 
-| Element                       | Selector                                                    |
-| ----------------------------- | ----------------------------------------------------------- |
-| VRNB logo                     | `img[alt="VRNB"]`                                           |
-| Back button                   | `a[aria-label="Retour à l'accueil"]`                        |
-| Page title `<h1>`             | `h1` (inside header)                                        |
-| Tour section heading          | `h2` with text "Parcours à vélo" / "Parcours à pied"        |
-| Tour section component        | `app-tour-list-section` with `hasText` filter               |
-| Tour row                      | `li.list-row`                                               |
-| Tour play button              | `button[aria-label="Lancer le parcours"]`                   |
-| "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (hidden on `max-sm`) |
-| Map                           | `div#map`                                                   |
-| Step items                    | `li.step`                                                   |
-| "Précédent" button            | `getByRole('button', { name: 'Précédent' })`                |
-| "Suivant" button              | `getByRole('button', { name: 'Suivant' })`                  |
-| "Terminer" button             | `getByRole('button', { name: 'Terminer' })`                 |
-| Menu button                   | `getByText('Menu', { exact: true })`                        |
-| Drawer sidebar                | `.drawer-side ul.menu`                                      |
-| Drawer close                  | `.drawer-side label[aria-label="close sidebar"]`            |
-| Finish modal                  | `dialog#finish_modal`                                       |
-| Modal close                   | `button[aria-label="Fermer"]` inside `dialog#finish_modal`  |
-| Saved tour banner             | `li.list-row` containing "Reprendre le parcours"            |
-| Footer                        | `footer`                                                    |
+| Element                       | Selector                                                        |
+| ----------------------------- | --------------------------------------------------------------- |
+| VRNB logo                     | `img[alt="VRNB"]`                                               |
+| Back button                   | `a[aria-label="Retour à l'accueil"]`                            |
+| Page title `<h1>`             | `h1` (inside header)                                            |
+| Tour section heading          | `h2` with text "Parcours à vélo" / "Parcours à pied"            |
+| Tour section component        | `app-tour-list-section` with `hasText` filter                   |
+| Tour row                      | `li.list-row`                                                   |
+| Tour play button              | `button[aria-label="Lancer le parcours"]`                       |
+| Register button               | `button[aria-label="S'inscrire en binôme pour le parcours V2"]` |
+| "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (hidden on `max-sm`)     |
+| Map                           | `div#map`                                                       |
+| Step items                    | `li.step`                                                       |
+| "Précédent" button            | `getByRole('button', { name: 'Précédent' })`                    |
+| "Suivant" button              | `getByRole('button', { name: 'Suivant' })`                      |
+| "Terminer" button             | `getByRole('button', { name: 'Terminer' })`                     |
+| Menu button                   | `getByText('Menu', { exact: true })`                            |
+| Drawer sidebar                | `.drawer-side ul.menu`                                          |
+| Drawer close                  | `.drawer-side label[aria-label="close sidebar"]`                |
+| Finish modal                  | `dialog#finish_modal`                                           |
+| Modal close                   | `button[aria-label="Fermer"]` inside `dialog#finish_modal`      |
+| Saved tour banner             | `li.list-row` containing "Reprendre le parcours"                |
+| Footer                        | `footer`                                                        |
 
 ---
 
