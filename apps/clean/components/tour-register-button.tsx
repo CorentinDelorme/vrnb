@@ -29,9 +29,10 @@ import { RegisterBinomeModal } from './register-binome-modal';
 
 interface TourRegisterButtonProps {
   /**
-   * Whether the row offers registration (uncovered row of an open window).
-   * When false the button renders nothing, but a modal opened earlier stays
-   * mounted until the page changes.
+   * Whether the row offers registration (an uncovered Parcours). When false
+   * the button renders nothing, but a modal opened earlier stays mounted
+   * until the page changes. A closed registration window keeps the button:
+   * the modal itself explains that « l'action est passée » (ticket #18).
    */
   readonly available: boolean;
   readonly tour: TourRef;

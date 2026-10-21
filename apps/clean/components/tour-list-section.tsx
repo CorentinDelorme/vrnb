@@ -23,14 +23,18 @@ import { TourRegisterButton } from './tour-register-button';
  * after hydration (the public state carries no names); uncovered rows and the
  * loading/error states render exactly like before.
  *
- * Ticket #17: every uncovered Parcours row whose registration window is open
- * also shows the register button right before the play button. While the
- * statuses are loading (or on a fetch error) the coverage is unknown, and the
- * unknown tours stay open for registration — exactly the badge-less state of
- * #16, so a late-covered row is resolved by the modal's own 409 race guard.
- * The gating hides the button through a prop (rather than unmounting the
- * component) so a modal opened while a row was uncoverable keeps displaying
- * its confirmation or conflict message once the row turns covered.
+ * Ticket #17: every uncovered Parcours row also shows the register button
+ * right before the play button. While the statuses are loading (or on a
+ * fetch error) the coverage is unknown, and the unknown tours stay open for
+ * registration — exactly the badge-less state of #16, so a late-covered row
+ * is resolved by the modal's own 409 race guard. The gating hides the button
+ * through a prop (rather than unmounting the component) so a modal opened
+ * while a row was uncoverable keeps displaying its confirmation or conflict
+ * message once the row turns covered.
+ *
+ * Ticket #18: a closed registration window (the action date is past) does not
+ * hide the register button — the modal itself explains that « l'action est
+ * passée » and disables its form. Only a covered Parcours loses its button.
  */
 
 declare module 'react' {
@@ -67,12 +71,16 @@ function isCoveredInscriptions(
 }
 
 /**
- * Whether registering is allowed for a row of unknown status. Once loaded, a
- * closed window answer hides the buttons of every uncovered row; before that
- * (loading or error) the coverage is unknown and the button stays offered.
+ * Whether the row offers its register button (ticket #18): only a covered
+ * Parcours loses it. A closed registration window keeps the button — the
+ * modal explains that « l'action est passée » and disables its form.
  */
-function isRegisteringOpen(status: InscriptionsStatus): boolean {
-  return status.status !== 'success' || status.state.registrationOpen;
+function isRegisteringAvailable(
+  status: InscriptionsStatus,
+  zoneId: string,
+  tourId: string,
+): boolean {
+  return !isCoveredInscriptions(status, zoneId, tourId);
 }
 
 interface TourListSectionProps {
@@ -129,9 +137,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             </div>
             <div className="list-col-grow flex justify-end">
               <TourRegisterButton
-                available={
-                  !isCoveredInscriptions(status, zoneId, tour.name) && isRegisteringOpen(status)
-                }
+                available={isRegisteringAvailable(status, zoneId, tour.name)}
                 tour={{ tourId: tour.name, zoneId }}
               />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />

@@ -6,14 +6,16 @@ import type {
   RegistrationOutcome,
 } from '../src/app/inscriptions/inscriptions-client';
 import type { TourRef } from '../src/app/tours-queries';
+import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { RegisterBinomeModal } from './register-binome-modal';
 
 /**
- * Behavior of the DaisyUI registration modal (ticket #17): the submit stays
- * gated on the four identity fields plus the engagement statement, a created
- * outcome posts the exact contract body, shows the confirmation and reloads
- * the statuses; a 409 shows the covered-meantime guard and reloads too; 400
- * and network failures show distinct basic feedback without reloading. No
+ * Behavior of the DaisyUI registration modal (tickets #17 + #18): the submit
+ * stays gated on the four identity fields plus the engagement statement, a
+ * created outcome posts the exact contract body, shows the confirmation and
+ * reloads the statuses; a 409 shows the covered-meantime guard and reloads
+ * too; each refusal (invalid saisie, anti-bot honeypot, closed window) and
+ * the network failures show their own explicit message without reloading. No
  * submit resets the fields — a close without submitting keeps the values.
  */
 
@@ -27,13 +29,37 @@ const mocks = vi.hoisted(() => ({
   reload: vi.fn(),
 }));
 
+/** The public state the provider hook answers for the ongoing render. */
+const status = vi.hoisted(() => ({ current: undefined as unknown }));
+
 vi.mock('../src/app/inscriptions/inscriptions-client', () => ({
   postRegistration: mocks.postRegistration,
 }));
 
 vi.mock('./inscriptions-status-provider', () => ({
   useInscriptionsReload: () => mocks.reload,
+  useInscriptionsStatus: () => status.current as InscriptionsStatus,
 }));
+
+/** The public state of an open registration window. */
+const OPEN_STATUS: InscriptionsStatus = {
+  state: {
+    edition: { actionDate: '2027-02-14', year: 2027 },
+    inscriptions: [],
+    registrationOpen: true,
+  },
+  status: 'success',
+};
+
+/** The public state of a closed registration window (the action date is past). */
+const CLOSED_STATUS: InscriptionsStatus = {
+  state: {
+    edition: { actionDate: '2027-02-14', year: 2027 },
+    inscriptions: [],
+    registrationOpen: false,
+  },
+  status: 'success',
+};
 
 /**
  * jsdom implements no dialog method: patch the two the modal lives on. The
@@ -83,10 +109,18 @@ function fillBinome(): void {
   fireEvent.click(screen.getByRole('checkbox', { name: /engageons/ }));
 }
 
+/** The hidden anti-bot honeypot of the modal. */
+function honeypotInput(): HTMLInputElement {
+  const input = document.querySelector('input[name="website"]');
+  if (!(input instanceof HTMLInputElement)) throw new Error('honeypot not found');
+  return input;
+}
+
 describe('RegisterBinomeModal', () => {
   beforeEach(() => {
     mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
     mocks.reload.mockReset();
+    status.current = OPEN_STATUS;
   });
 
   it('should show the tour context: Parcours, Zone, action day, meeting point', () => {
@@ -128,6 +162,7 @@ describe('RegisterBinomeModal', () => {
     expect(mocks.postRegistration.mock.calls[0]?.[0]).toEqual({
       firstName1: 'Léa',
       firstName2: 'Marc',
+      honeypot: '',
       lastName1: 'Dupont',
       lastName2: 'Martin',
       tourId: 'V1',
@@ -182,9 +217,35 @@ describe('RegisterBinomeModal', () => {
     mocks.postRegistration.mockResolvedValueOnce({ status: 'invalid' });
 
     fireEvent.click(submitButton());
-    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Formulaire'));
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Saisie invalide'));
 
-    expect(screen.getByRole('alert').textContent).toMatch(/Formulaire invalide/);
+    expect(screen.getByRole('alert').textContent).toMatch(/Saisie invalide/);
+    expect(mocks.reload).not.toHaveBeenCalled();
+  });
+
+  it('should show the distinct anti-bot feedback on a filled honeypot', async () => {
+    renderModal();
+    fillBinome();
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'bot' });
+
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('anti-robots'));
+
+    expect(screen.getByRole('alert').textContent).toMatch(/filtre anti-robots/);
+    expect(mocks.reload).not.toHaveBeenCalled();
+  });
+
+  it('should show the distinct closed-window feedback on a closed window answer', async () => {
+    renderModal();
+    fillBinome();
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'closed' });
+
+    fireEvent.click(submitButton());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain("L'action est passée"),
+    );
+
+    expect(screen.getByRole('alert').textContent).toMatch(/inscriptions sont closes/);
     expect(mocks.reload).not.toHaveBeenCalled();
   });
 
@@ -198,5 +259,87 @@ describe('RegisterBinomeModal', () => {
 
     expect(screen.getByRole('alert').textContent).toMatch(/Une erreur est survenue/);
     expect(mocks.reload).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The anti-bot honeypot and the data retention notice (ticket #18): the hidden
+ * field is in the DOM (a bot fills it) but a human never sees nor reaches it,
+ * and the modal states how long the names are kept.
+ */
+describe('RegisterBinomeModal honeypot and GDPR notice', () => {
+  beforeEach(() => {
+    mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
+    mocks.reload.mockReset();
+    status.current = OPEN_STATUS;
+  });
+
+  it('should render the honeypot hidden from the humans', () => {
+    renderModal();
+    const honeypot = honeypotInput();
+
+    expect(honeypot).not.toBeNull();
+    expect(honeypot.hasAttribute('hidden')).toBe(true);
+    expect(honeypot.getAttribute('aria-hidden')).toBe('true');
+    expect(honeypot.getAttribute('tabindex')).toBe('-1');
+    expect(honeypot.getAttribute('autocomplete')).toBe('off');
+    // A human never reaches it: it is out of the accessibility tree and of
+    // the tab order.
+    expect(screen.queryByRole('textbox', { name: /website/i })).toBeNull();
+  });
+
+  it('should send the honeypot value the form holds', async () => {
+    renderModal();
+    fillBinome();
+    // A bot fills the hidden field: the value travels with the registration.
+    fireEvent.change(honeypotInput(), { target: { value: 'https://spam.example' } });
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'bot' });
+
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(mocks.postRegistration).toHaveBeenCalledOnce());
+
+    expect(mocks.postRegistration.mock.calls[0]?.[0]?.honeypot).toBe('https://spam.example');
+  });
+
+  it('should state the data retention of the names', () => {
+    renderModal();
+    const notice = screen.getByText(/fiches de suivi/).textContent ?? '';
+
+    expect(notice).toContain("Vos noms servent à établir les fiches de suivi de l'action.");
+    expect(notice).toContain('Les données sont effacées 90 jours après l');
+  });
+});
+
+/**
+ * The closed registration window (ticket #18): the modal announces that «
+ * l'action est passée » and disables its whole form.
+ */
+describe('RegisterBinomeModal closed window', () => {
+  beforeEach(() => {
+    mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
+    mocks.reload.mockReset();
+    status.current = CLOSED_STATUS;
+  });
+
+  it('should announce the closed window and disable the form', () => {
+    renderModal();
+
+    expect(screen.getByRole('alert').textContent).toContain("L'action est passée");
+    expect(screen.getByRole('alert').textContent).toContain('les inscriptions sont closes');
+    for (const input of identityInputs()) {
+      expect(input.disabled).toBe(true);
+    }
+    expect((screen.getByRole('checkbox', { name: /engageons/ }) as HTMLInputElement).disabled).toBe(
+      true,
+    );
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should never post a registration while the window is closed', () => {
+    renderModal();
+    fillBinome();
+
+    fireEvent.click(submitButton());
+    expect(mocks.postRegistration).not.toHaveBeenCalled();
   });
 });

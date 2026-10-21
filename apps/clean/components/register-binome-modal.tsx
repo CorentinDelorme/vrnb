@@ -4,15 +4,27 @@ import { CalendarDaysIcon, CancelIcon, Location01Icon } from '@hugeicons/core-fr
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useRef, useState } from 'react';
 
-import { CURRENT_EDITION, EDITION_TIME_ZONE } from '../src/app/inscriptions/edition';
+import {
+  CURRENT_EDITION,
+  EDITION_TIME_ZONE,
+  INSCRIPTIONS_RETENTION_DAYS,
+  isRegistrationOpen,
+} from '../src/app/inscriptions/edition';
 import type { BinomeRegistration } from '../src/app/inscriptions/inscriptions-client';
 import { postRegistration } from '../src/app/inscriptions/inscriptions-client';
+import type { IdentityField, IdentityFieldError } from '../src/app/inscriptions/validation';
+import {
+  IDENTITY_FIELD_LABELS,
+  IDENTITY_FIELD_MAX_LENGTH,
+  IDENTITY_FIELD_MIN_LENGTH,
+  checkIdentityFields,
+} from '../src/app/inscriptions/validation';
 import type { TourRef } from '../src/app/tours-queries';
 import { getZone } from '../src/app/zones';
-import { useInscriptionsReload } from './inscriptions-status-provider';
+import { useInscriptionsReload, useInscriptionsStatus } from './inscriptions-status-provider';
 
 /**
- * DaisyUI registration modal of one Parcours (ticket #17): it shows the
+ * DaisyUI registration modal of one Parcours (tickets #17 + #18): it shows the
  * selected tour context — Parcours name, Zone, action date and the Zone
  * meeting point — and collects the two Binôme identities plus the required
  * engagement statement. `showModal()` is called by effect when the host makes
@@ -21,10 +33,22 @@ import { useInscriptionsReload } from './inscriptions-status-provider';
  *
  * Submitting posts the registration and degrades on every outcome: created →
  * confirmation + statuses reload, taken (covered meanwhile) → last-resort
- * guard + statuses reload, invalid / network error → basic French feedback
- * (per-status detailed messaging is ticket #18). The identity inputs keep
+ * guard + statuses reload, and each refusal gets its own explicit French
+ * message (400 saisie invalide / champ anti-robots / fenêtre fermée, 409
+ * parcours déjà couvert, 500 et erreur réseau). The identity inputs keep
  * their values over close/reopen — the host keeps this component mounted and
  * only toggles `visible` — while nothing resets except a fresh mount.
+ *
+ * Ticket #18 adds the three guards of the registration window:
+ *
+ * - the hidden anti-bot honeypot (present in the DOM, invisible to humans):
+ *   a filled one is refused by the server with 400 and nothing is stored;
+ * - the closed window: once the action date is past, the modal says « L'action
+ *   est passée » and disables its form (the server refuses the same requests
+ *   with 400);
+ * - the shared identity bounds (2 to 60 characters per name, see
+ *   `validation.ts`): the submit is enabled as soon as the form is complete
+ *   and valid, and each field shows its own error message.
  */
 
 /** The four identity fields of the Binôme form, as controlled inputs. */
@@ -36,7 +60,8 @@ interface BinomeFormValues {
 }
 
 /** Lifecycle of a registration inside the modal (idle → submitting → outcome). */
-type ModalOutcome = 'idle' | 'submitting' | 'created' | 'taken' | 'invalid' | 'error';
+type ModalOutcome =
+  'idle' | 'submitting' | 'created' | 'taken' | 'invalid' | 'bot' | 'closed' | 'error';
 
 const EMPTY_BINOME: BinomeFormValues = {
   firstName1: '',
@@ -44,6 +69,14 @@ const EMPTY_BINOME: BinomeFormValues = {
   lastName1: '',
   lastName2: '',
 };
+
+/** The identity inputs of the modal: their id and their field key. */
+const IDENTITY_INPUTS = [
+  { id: 'register-first-name-1', key: 'firstName1' },
+  { id: 'register-last-name-1', key: 'lastName1' },
+  { id: 'register-first-name-2', key: 'firstName2' },
+  { id: 'register-last-name-2', key: 'lastName2' },
+] as const satisfies readonly { readonly id: string; readonly key: IdentityField }[];
 
 /** "samedi 14 février 2027" — the action day labeled in the modal context. */
 function formatDateFrench(calendarDate: string): string {
@@ -59,17 +92,43 @@ function formatDateFrench(calendarDate: string): string {
 /** French long-form date of the Édition action day (module-scope constant). */
 const ACTION_DATE_LABEL = formatDateFrench(CURRENT_EDITION.actionDate);
 
-/** Whether the form holds everything the engagement contract requires. */
-function isFormComplete(values: BinomeFormValues, engaged: boolean): boolean {
-  const filled = (value: string): boolean => value.trim() !== '';
-  return (
-    filled(values.firstName1) &&
-    filled(values.lastName1) &&
-    filled(values.firstName2) &&
-    filled(values.lastName2) &&
-    engaged
-  );
-}
+/** The message of the closed registration window (also the 400 answer). */
+const CLOSED_WINDOW_MESSAGE = "L'action est passée — les inscriptions sont closes.";
+
+/** The explicit French feedback of each refusal of the server (ticket #18). */
+const OUTCOME_ALERTS: Readonly<
+  Partial<Record<ModalOutcome, { readonly className: string; readonly message: string }>>
+> = {
+  taken: {
+    className: 'alert alert-warning mt-4 text-sm',
+    message:
+      "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
+  },
+  invalid: {
+    className: 'alert alert-error mt-4 text-sm',
+    message: "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
+  },
+  bot: {
+    className: 'alert alert-error mt-4 text-sm',
+    message:
+      "Votre inscription a été refusée par le filtre anti-robots. Contactez l'équipe VRNB si ce message vous semble erroné.",
+  },
+  closed: {
+    className: 'alert alert-warning mt-4 text-sm',
+    message: CLOSED_WINDOW_MESSAGE,
+  },
+  error: {
+    className: 'alert alert-error mt-4 text-sm',
+    message: 'Une erreur est survenue : réessayez dans quelques instants.',
+  },
+};
+
+/** The inline French feedback of each identity field error. */
+const FIELD_ERROR_MESSAGES: Readonly<Record<IdentityFieldError, string>> = {
+  required: 'Champ obligatoire.',
+  'too-short': `${IDENTITY_FIELD_MIN_LENGTH} caractères minimum.`,
+  'too-long': `${IDENTITY_FIELD_MAX_LENGTH} caractères maximum.`,
+};
 
 interface RegisterBinomeModalProps {
   /** Called when the dialog closes, whatever the way (button, Escape, backdrop). */
@@ -82,9 +141,12 @@ interface RegisterBinomeModalProps {
 export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [values, setValues] = useState<BinomeFormValues>(EMPTY_BINOME);
+  const [touched, setTouched] = useState<Readonly<Partial<Record<IdentityField, boolean>>>>({});
   const [engaged, setEngaged] = useState(false);
+  const [honeypot, setHoneypot] = useState('');
   const [outcome, setOutcome] = useState<ModalOutcome>('idle');
   const reloadStatuses = useInscriptionsReload();
+  const status = useInscriptionsStatus();
 
   useEffect(() => {
     if (visible) dialogRef.current?.showModal();
@@ -101,12 +163,26 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
   }, [onClose]);
 
   const zone = getZone(tour.zoneId);
-  const complete = isFormComplete(values, engaged);
+  /**
+   * The registration window of the Édition: the server's answer wins (the
+   * public state carries `registrationOpen`), so the client and the server
+   * always agree. The local clock is only a fallback while the public state
+   * is not loaded yet (or failed to load).
+   */
+  const registrationOpen =
+    status.status === 'success'
+      ? status.state.registrationOpen
+      : isRegistrationOpen(CURRENT_EDITION, new Date());
+  const windowClosed = !registrationOpen;
+  const { errors, values: trimmed } = checkIdentityFields(values);
+  /** The submit is enabled as soon as the form is complete and valid. */
+  const complete = Object.keys(errors).length === 0 && engaged;
   const identity: BinomeRegistration = {
-    firstName1: values.firstName1.trim(),
-    firstName2: values.firstName2.trim(),
-    lastName1: values.lastName1.trim(),
-    lastName2: values.lastName2.trim(),
+    firstName1: trimmed.firstName1,
+    firstName2: trimmed.firstName2,
+    honeypot,
+    lastName1: trimmed.lastName1,
+    lastName2: trimmed.lastName2,
     tourId: tour.tourId,
     zoneId: tour.zoneId,
   };
@@ -115,7 +191,7 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
 
   const submit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (!complete || outcome === 'submitting') return;
+    if (!complete || outcome === 'submitting' || windowClosed) return;
     setOutcome('submitting');
     const registration = await postRegistration(identity);
     setOutcome(registration.status);
@@ -126,6 +202,8 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
       reloadStatuses();
     }
   };
+
+  const outcomeAlert = OUTCOME_ALERTS[outcome];
 
   return (
     <dialog className="modal" id={`register_modal_${tour.tourId}`} ref={dialogRef}>
@@ -192,36 +270,52 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
               </div>
             </div>
 
+            {windowClosed && outcome !== 'closed' ? (
+              <div className="alert alert-warning mt-4 text-sm sm:text-base" role="alert">
+                {CLOSED_WINDOW_MESSAGE}
+              </div>
+            ) : null}
+
             <form className="mt-4 grid gap-3" onSubmit={(event) => void submit(event)}>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {(
-                  [
-                    { id: 'register-first-name-1', key: 'firstName1', label: 'Prénom du membre 1' },
-                    { id: 'register-last-name-1', key: 'lastName1', label: 'Nom du membre 1' },
-                    { id: 'register-first-name-2', key: 'firstName2', label: 'Prénom du membre 2' },
-                    { id: 'register-last-name-2', key: 'lastName2', label: 'Nom du membre 2' },
-                  ] as const
-                ).map((field) => (
-                  <label className="grid gap-1" htmlFor={field.id} key={field.id}>
-                    <span className="text-sm">{field.label}</span>
-                    <input
-                      className="input w-full"
-                      id={field.id}
-                      onChange={(event) =>
-                        setValues((current) => ({ ...current, [field.key]: event.target.value }))
-                      }
-                      required
-                      type="text"
-                      value={values[field.key]}
-                    />
-                  </label>
-                ))}
+                {IDENTITY_INPUTS.map((field) => {
+                  const error = errors[field.key];
+                  // A missing name is only pointed out once the field has been
+                  // left; a length overrun is shown as soon as it happens.
+                  const showError =
+                    error !== undefined && (error !== 'required' || touched[field.key] === true);
+                  return (
+                    <label className="grid gap-1" htmlFor={field.id} key={field.id}>
+                      <span className="text-sm">{IDENTITY_FIELD_LABELS[field.key]}</span>
+                      <input
+                        aria-describedby={showError ? `${field.id}-error` : undefined}
+                        aria-invalid={showError ? true : undefined}
+                        className="input w-full"
+                        disabled={windowClosed}
+                        id={field.id}
+                        onBlur={() => setTouched((current) => ({ ...current, [field.key]: true }))}
+                        onChange={(event) =>
+                          setValues((current) => ({ ...current, [field.key]: event.target.value }))
+                        }
+                        required
+                        type="text"
+                        value={values[field.key]}
+                      />
+                      {showError ? (
+                        <span className="text-error text-xs" id={`${field.id}-error`}>
+                          {FIELD_ERROR_MESSAGES[error]}
+                        </span>
+                      ) : null}
+                    </label>
+                  );
+                })}
               </div>
 
               <label className="label mt-4 items-start gap-2">
                 <input
                   checked={engaged}
                   className="checkbox mt-0.5"
+                  disabled={windowClosed}
                   id="register-engaged"
                   onChange={(event) => setEngaged(event.target.checked)}
                   required
@@ -232,27 +326,40 @@ export function RegisterBinomeModal({ onClose, tour, visible }: RegisterBinomeMo
                 </span>
               </label>
 
-              {outcome === 'taken' ? (
-                <div className="alert alert-warning mt-4 text-sm" role="alert">
-                  Ce parcours vient d&apos;être couvert par un autre binôme : vous pouvez choisir un
-                  autre parcours libre.
-                </div>
-              ) : null}
-              {outcome === 'invalid' ? (
-                <div className="alert alert-error mt-4 text-sm" role="alert">
-                  Formulaire invalide : vérifiez chaque champ et la case d&apos;engagement.
-                </div>
-              ) : null}
-              {outcome === 'error' ? (
-                <div className="alert alert-error mt-4 text-sm" role="alert">
-                  Une erreur est survenue : réessayez dans quelques instants.
+              {/*
+                Anti-bot honeypot (ticket #18): the field is in the DOM — a bot
+                filling every input of the form fills it — but a human never
+                sees it (hidden) and never reaches it (out of the tab order and
+                of the accessibility tree). A filled honeypot is refused by the
+                server with a 400 and nothing is stored.
+              */}
+              <input
+                aria-hidden="true"
+                autoComplete="off"
+                hidden
+                id="register-website"
+                name="website"
+                onChange={(event) => setHoneypot(event.target.value)}
+                tabIndex={-1}
+                type="text"
+                value={honeypot}
+              />
+
+              <p className="text-base-content/70 mt-4 text-xs sm:text-sm">
+                Vos noms servent à établir les fiches de suivi de l&apos;action. Les données sont
+                effacées {INSCRIPTIONS_RETENTION_DAYS} jours après l&apos;action.
+              </p>
+
+              {outcomeAlert ? (
+                <div className={outcomeAlert.className} role="alert">
+                  {outcomeAlert.message}
                 </div>
               ) : null}
 
               <div className="modal-action">
                 <button
                   className="btn btn-primary max-sm:btn-sm sm:btn-md"
-                  disabled={!complete || outcome === 'submitting'}
+                  disabled={!complete || outcome === 'submitting' || windowClosed}
                   type="submit"
                 >
                   {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}

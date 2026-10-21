@@ -86,9 +86,10 @@ describe('TourListSection inscriptions badge', () => {
 
 /**
  * The register buttons of ticket #17: one per uncovered Parcours next to the
- * play button, hidden on the covered rows and on the rows of a closed
- * registration window. Loading and error states are the unknown-coverage
- * (open) state of #16, so the buttons stay offered there.
+ * play button, hidden on the covered rows. Loading and error states are the
+ * unknown-coverage (open) state of #16, so the buttons stay offered there.
+ * Ticket #18 keeps the button on the uncovered rows of a closed registration
+ * window too: the modal itself explains that « l'action est passée ».
  */
 describe('TourListSection inscriptions register button', () => {
   /** Render with the given status and return the RTL result. */
@@ -132,7 +133,7 @@ describe('TourListSection inscriptions register button', () => {
     );
   });
 
-  it('should hide every register button once the window is closed', () => {
+  it('should keep the register button on every uncovered row once the window is closed', () => {
     const { container } = renderSection({
       state: {
         edition: { actionDate: '2027-02-14', year: 2027 },
@@ -141,8 +142,10 @@ describe('TourListSection inscriptions register button', () => {
       },
       status: 'success',
     });
+    // The closed window is explained by the modal itself (ticket #18), so the
+    // register buttons stay: only a covered Parcours loses its own.
     expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
-      0,
+      TOURS.length,
     );
     // The play buttons stay: the closed window never touches the legacy DOM.
     expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(
