@@ -37,7 +37,7 @@ L'asset émis par la pipeline (`public/geojson/<zone>/<parcours>.geojson`) regro
 _Avoid_: geojson, fichier cartographique
 
 **État de génération**:
-La description versionnée de ce que la pipeline de génération a déjà produit, conservée dans le fichier `scripts/generation-state.json` (committé dans le dépôt) : pour chaque Parcours, l'empreinte de sa trace source et des artefacts produits, plus une constante de version couvrant l'algorithme de routage et le template de Fiche.
+La description versionnée de ce que la pipeline de génération a déjà produit, conservée dans le fichier `scripts/generation-state.json` (committé dans le dépôt) : pour chaque Parcours, l'empreinte de sa trace source, du Point de rendez-vous de sa Zone et des artefacts produits (segments, Fiche), pour chaque Zone l'empreinte de sa Fiche de zone, plus une constante de version couvrant l'algorithme de routage et le template de Fiche.
 _Avoid_: cache, plan de génération, état de l'application
 
 **Plan de génération**:
@@ -57,8 +57,8 @@ Le document PDF imprimable résumant un Parcours (carte, tracé, QR code).
 _Avoid_: PDF, dossier
 
 **Fiche de zone**:
-Le document PDF publié sur le site qui dessine l'ensemble des Parcours d'une Zone pour un type de parcours (à vélo ou à pied). Il est régénéré dès qu'un Parcours de la Zone a changé.
-_Avoid_: carte, pack PDF, Fiche
+Le document PDF publié sur le site qui dessine l'ensemble des Parcours d'une Zone pour un type de parcours (à vélo ou à pied) : la carte d'ensemble de la Zone. Il est régénéré dès qu'un Parcours de la Zone a changé, ou que sa carte n'est plus à jour.
+_Avoid_: pack PDF, Fiche
 
 **Fiche de suivi**:
 Le document imprimable par Zone, destiné aux organisateurs, récapitulant les Inscriptions d'une Édition (Binôme, Parcours) pour le suivi pendant l'action. Il est produit avant l'action, hors du site public.
