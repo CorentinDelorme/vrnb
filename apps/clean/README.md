@@ -99,7 +99,7 @@ Pour chaque **Édition** (voir [GLOSSARY.md](./GLOSSARY.md)), un **Binôme**
 couvre un **Parcours** : une seule inscription par (Parcours, Édition),
 attribuée au premier arrivé. Les prénoms et les noms ne sont jamais publics —
 le site n'expose que les couples (Zone, Parcours) déjà couverts, sous forme de
-badge « Binôme inscrit ».
+badge « Binôme inscrit » placé là où se trouvait le bouton d'inscription.
 
 L'inscription se fait depuis la page d'accueil (bouton « S'inscrire » à côté du
 bouton de lecture du parcours), via les deux endpoints de l'API :

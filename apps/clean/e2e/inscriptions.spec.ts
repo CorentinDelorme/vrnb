@@ -216,10 +216,12 @@ test.describe('Binôme registration', () => {
 
     const modal = page.getByRole('dialog');
     await expect(modal).toBeVisible();
-    // The modal shows the selected tour context before anything is typed:
-    await expect(modal).toContainText('Bruz Sud');
-    await expect(modal).toContainText('14 février 2027');
-    await expect(modal).toContainText('Place du Dr Joly');
+    // The modal shows the selected tour context before anything is typed: the
+    // Zone first, then the Parcours, and the meeting point without a
+    // repeated Zone.
+    await expect(modal.getByText('Zone Bruz Sud — Parcours V2')).toBeVisible();
+    await expect(modal.getByText('14 février 2027')).toBeVisible();
+    await expect(modal.getByText('Point de rendez-vous : Place du Dr Joly')).toBeVisible();
 
     await fillRegistration(page, CONTRACT_BODY);
     // The engagement statement gates the submit: untick it → disabled, then
@@ -448,7 +450,7 @@ test.describe('Anti-bot honeypot and GDPR notice', () => {
 
     const modal = await openRegistrationModal(page, 'V2');
     await expect(modal).toContainText(
-      "Vos noms servent à établir les fiches de suivi de l'action.",
+      "Vos informations servent à établir les fiches de suivi de l'action.",
     );
     await expect(modal).toContainText('Les données sont effacées 90 jours après l');
   });

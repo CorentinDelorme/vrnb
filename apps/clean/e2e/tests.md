@@ -57,8 +57,9 @@ Totals: **95 tests per browser** (88 original + 7 added) × chromium + firefox =
 Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, the legacy DOM contract is unchanged):
 
 3. **`Public inscriptions statuses` (3 tests)**: the covered Parcours of the Édition shows a
-   « Binôme inscrit » badge, obtained after hydration from `GET /api/inscriptions`; that endpoint is
-   intercepted with `page.route`, so the totals above (and the 47 play buttons) stay unchanged.
+   « Binôme inscrit » badge — in the row, where the register button stands, next to the play
+   button — obtained after hydration from `GET /api/inscriptions`; that endpoint is intercepted
+   with `page.route`, so the totals above (and the 47 play buttons) stay unchanged.
 
 4. **`Binôme registration` (4 tests, ticket #17)**: uncovered Parcours rows of an open Édition
    window offer a register button (`aria-label="S'inscrire en Binôme pour le parcours <tourId>"`,
@@ -172,8 +173,11 @@ registration and registration window)
 
 The register button of every uncovered Parcours row is named
 `aria-label="S'inscrire en Binôme pour le parcours <tourId>"` (visible text
-`S'inscrire` first). The modal is the `<dialog className="modal">` element,
-addressed as `getByRole('dialog')`.
+`S'inscrire` first, compact size `btn-xs`/`btn-sm`). The modal is the
+`<dialog className="modal">` element, addressed as `getByRole('dialog')`. Its
+context reads « Zone <zone> — Parcours <tour> », the meeting point is named
+without repeating the Zone, and the engagement statement is « Nous confirmons
+notre participation à ce parcours de nettoyage. »
 
 > Locators inside the modal use `exact: true` on every `getByLabel`:
 > Playwright matches labels by substring, and « Pré**nom** du membre 1 »
@@ -210,7 +214,7 @@ day **after** the action date — the action day itself is still open.
 | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `should hide the honeypot from humans in the modal`                           | Mock GET (open, empty), `goto('/')`, open V2's button                                                                 | One `input[name="website"]` in the modal: present in the DOM, `hidden`, `aria-hidden="true"`, `tabindex="-1"`, `autocomplete="off"`                                                              |
 | `should post the filled honeypot and be refused like any other invalid input` | Script GET (open) + POST 400 `{"error":"invalid-inscription"}`, open V2's button, fill, fill the hidden field, submit | One POST whose body carries the filled `honeypot`; the refusal is silent — the standard « Saisie invalide » message, never an anti-robots hint, and nothing stored (the Parcours stays unbadged) |
-| `should state the data retention of the names in the modal`                   | Mock GET (open, empty), `goto('/')`, open V2's button                                                                 | The modal states « Vos noms servent à établir les fiches de suivi de l'action. Les données sont effacées 90 jours après l'action. »                                                              |
+| `should state the data retention of the names in the modal`                   | Mock GET (open, empty), `goto('/')`, open V2's button                                                                 | The modal states « Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées 90 jours après l'action. »                                                      |
 | `should have no a11y violation on the open registration modal`                | Mock GET (open, empty), `goto('/')`, open V2's button, run the axe audit on the page                                  | No axe violation (the hidden honeypot never breaks the audit)                                                                                                                                    |
 
 ---
@@ -454,32 +458,32 @@ test('should have no a11y violations on home page', async ({ page }) => {
 
 ## Selector Reference
 
-| Element                       | Selector                                                        |
-| ----------------------------- | --------------------------------------------------------------- |
-| VRNB logo                     | `img[alt="VRNB"]`                                               |
-| Back button                   | `a[aria-label="Retour à l'accueil"]`                            |
-| Page title `<h1>`             | `h1` (inside header)                                            |
-| Tour section heading          | `h2` with text "Parcours à vélo" / "Parcours à pied"            |
-| Tour section component        | `app-tour-list-section` with `hasText` filter                   |
-| Tour row                      | `li.list-row`                                                   |
-| Tour play button              | `button[aria-label="Lancer le parcours"]`                       |
-| Register button               | `button[aria-label="S'inscrire en Binôme pour le parcours V2"]` |
-| Covered Parcours badge        | `.badge-success` with text "Binôme inscrit"                     |
-| Registration modal            | `dialog#register_modal_V2` (`getByRole('dialog')`)              |
-| Anti-bot honeypot             | `input[name="website"]` (hidden)                                |
-| "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (hidden on `max-sm`)     |
-| Map                           | `div#map`                                                       |
-| Step items                    | `li.step`                                                       |
-| "Précédent" button            | `getByRole('button', { name: 'Précédent' })`                    |
-| "Suivant" button              | `getByRole('button', { name: 'Suivant' })`                      |
-| "Terminer" button             | `getByRole('button', { name: 'Terminer' })`                     |
-| Menu button                   | `getByText('Menu', { exact: true })`                            |
-| Drawer sidebar                | `.drawer-side ul.menu`                                          |
-| Drawer close                  | `.drawer-side label[aria-label="close sidebar"]`                |
-| Finish modal                  | `dialog#finish_modal`                                           |
-| Modal close                   | `button[aria-label="Fermer"]` inside `dialog#finish_modal`      |
-| Saved tour banner             | `li.list-row` containing "Reprendre le parcours"                |
-| Footer                        | `footer`                                                        |
+| Element                       | Selector                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------ |
+| VRNB logo                     | `img[alt="VRNB"]`                                                                          |
+| Back button                   | `a[aria-label="Retour à l'accueil"]`                                                       |
+| Page title `<h1>`             | `h1` (inside header)                                                                       |
+| Tour section heading          | `h2` with text "Parcours à vélo" / "Parcours à pied"                                       |
+| Tour section component        | `app-tour-list-section` with `hasText` filter                                              |
+| Tour row                      | `li.list-row`                                                                              |
+| Tour play button              | `button[aria-label="Lancer le parcours"]`                                                  |
+| Register button               | `button[aria-label="S'inscrire en Binôme pour le parcours V2"]`                            |
+| Covered Parcours badge        | `.badge-success` with text "Binôme inscrit" (in the row, where the register button stands) |
+| Registration modal            | `dialog#register_modal_V2` (`getByRole('dialog')`)                                         |
+| Anti-bot honeypot             | `input[name="website"]` (hidden)                                                           |
+| "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (hidden on `max-sm`)                                |
+| Map                           | `div#map`                                                                                  |
+| Step items                    | `li.step`                                                                                  |
+| "Précédent" button            | `getByRole('button', { name: 'Précédent' })`                                               |
+| "Suivant" button              | `getByRole('button', { name: 'Suivant' })`                                                 |
+| "Terminer" button             | `getByRole('button', { name: 'Terminer' })`                                                |
+| Menu button                   | `getByText('Menu', { exact: true })`                                                       |
+| Drawer sidebar                | `.drawer-side ul.menu`                                                                     |
+| Drawer close                  | `.drawer-side label[aria-label="close sidebar"]`                                           |
+| Finish modal                  | `dialog#finish_modal`                                                                      |
+| Modal close                   | `button[aria-label="Fermer"]` inside `dialog#finish_modal`                                 |
+| Saved tour banner             | `li.list-row` containing "Reprendre le parcours"                                           |
+| Footer                        | `footer`                                                                                   |
 
 ---
 
