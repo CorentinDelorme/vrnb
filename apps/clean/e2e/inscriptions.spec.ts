@@ -14,6 +14,10 @@ import { expect, test } from '@playwright/test';
  * closed) announces that the window is closed and disables its form, the hidden
  * anti-bot honeypot is in the DOM but invisible to humans, and the modal
  * states how long the names are kept.
+ *
+ * Ticket #34: before the opening bound the home announces the opening date in
+ * letters, client-side once the public state loaded — one sentence per page,
+ * no badge and no register button before the window opens.
  */
 
 /** Public state shape returned by the (mocked) API. */
@@ -43,6 +47,12 @@ const OPEN_STATE = { edition: EDITION, inscriptions: [], registrationOpen: true 
 
 /** Public state of a closed window (the action date is past). */
 const CLOSED_STATE = { edition: EDITION, inscriptions: [], registrationOpen: false } as const;
+
+/**
+ * An instant before the opening bound of the Édition (2027-01-04): the
+ * registration window is not open yet then.
+ */
+const BEFORE_OPENING_DATE = new Date('2026-12-15T12:00:00Z');
 
 /**
  * An instant 2 days before the action date of the Édition (2027-02-14): the
@@ -201,6 +211,51 @@ test.describe('Public inscriptions statuses', () => {
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
       await expect(playButtons).toHaveCount(47);
     });
+  });
+});
+
+/**
+ * The home announcement of the inscriptions opening date (ticket #34): while
+ * the registration window has not opened yet, the loaded home states the
+ * opening date in letters (« Les inscriptions ouvrent le lundi 4 janvier
+ * 2027. », built from the Édition the mocked API answers) instead of a
+ * register button; once the window is open the mention disappears — the site
+ * never states the opposite of what it offers. The mention is rendered
+ * client-side from the public state: the static HTML carries nothing.
+ */
+test.describe('Registration opening announcement', () => {
+  test('should announce the opening date before the window opens, and drop it once open', async ({
+    page,
+  }) => {
+    // The mocked GET re-evaluates this flag on every call, so the second load
+    // (the mocked window now open) answers differently than the first one.
+    let open = false;
+    await mockInscriptionsApi(page, {
+      get: () => ({ edition: EDITION, inscriptions: [], registrationOpen: open }),
+    });
+    // A clock before the opening bound: the closed answer of the API means
+    // « not open yet » (the other closed bound answers the same, see the
+    // closed-window cases below) and the announcement is correct.
+    await page.clock.setFixedTime(BEFORE_OPENING_DATE);
+    await page.goto('/');
+
+    // One single mention for the whole page, with the opening date in
+    // letters, and no register button while the window is not open.
+    const announcement = page.getByText('Les inscriptions ouvrent le lundi 4 janvier 2027.');
+    await expect(announcement).toHaveCount(1);
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+    ).toHaveCount(0);
+
+    // Once the mocked state announces an open window, the mention disappears
+    // (the browser clock still reads before the opening bound: the loaded
+    // server answer is authoritative) and the register button comes back.
+    open = true;
+    await page.reload();
+    await expect(announcement).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+    ).toBeVisible();
   });
 });
 

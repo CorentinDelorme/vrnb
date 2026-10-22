@@ -89,7 +89,18 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    and asserts the jump to `#inscription`. No parity impact: the legacy manual page had no
    sommaire, and the DOM contract of the manual is only extended.
 
-7. **`Calendar file route` (2 tests) and confirmation calendar links, ticket #36**: the
+7. **`Registration opening announcement` (1 test, ticket #34)**: before the opening bound of
+   the Édition (2027-01-04), the home — which shows no badge and no register button then —
+   states the opening date in letters (« Les inscriptions ouvrent le lundi 4 janvier 2027. »)
+   once the public state has loaded, one sentence for the whole page. The mention resolves
+   client-side, so the prerendered HTML carries nothing, and it disappears once the mocked
+   state announces an open window: the mocked GET re-evaluates a mutable flag, `page.reload()`
+   replays the exchange with `registrationOpen: true`, and the browser clock (fixed before
+   the opening bound with `page.clock.setFixedTime`) stays untouched — the loaded server
+   answer is authoritative. No parity impact: the mention is a new element, the legacy DOM
+   contract (47 play buttons, badges, register buttons, modal) is unchanged.
+
+8. **`Calendar file route` (2 tests) and confirmation calendar links, ticket #36**: the
    registration confirmation reached at the end of the full `Binôme registration` flow now
    recalls the meeting point (note sentence, hours from the Édition config, Point de
    rendez-vous) and offers the two agenda links — asserted inside that extended existing
@@ -102,7 +113,7 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    « Calendar file route » intro). No parity impact: no new route of the legacy DOM contract,
    the links exist only on the confirmation panel of the modal.
 
-Totals: **112 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 2 for the calendar file route of ticket #36) × chromium + firefox = **224**.
+Totals: **113 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36) × chromium + firefox = **226**.
 
 ---
 
@@ -162,8 +173,9 @@ Route: `/`
 
 ## File: `e2e/inscriptions.spec.ts`
 
-Route: `/` (tickets #16 + #17 + #18 + #36 — public inscriptions statuses, Binôme
-registration, registration window and confirmation calendar links)
+Route: `/` (tickets #16 + #17 + #18 + #34 + #36 — public inscriptions statuses,
+Binôme registration, registration window, the home announcement of the
+inscriptions opening date and confirmation calendar links)
 
 > `GET /api/inscriptions` is intercepted with `page.route` in every test of this
 > file (both browsers), so the dev server needs no KV credentials. The POST
@@ -195,6 +207,24 @@ registration, registration window and confirmation calendar links)
 | `should badge the covered Parcours after hydration, and only it` | Mock `GET /api/inscriptions` covering `bruz-sud`/`V1`, `goto('/')`              | Exactly one `.badge-success` "Binôme inscrit", inside the V1 row of the Bruz Sud bike section; nothing on V2 |
 | `should leave every row unbadged when the store covers nothing`  | Mock the API with an empty `inscriptions` list, `goto('/')`                     | No "Binôme inscrit" badge                                                                                    |
 | `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, no register button (the coverage is unknown), all 47 play buttons intact          |
+
+### `describe('Registration opening announcement')` (ticket #34)
+
+Before the opening bound of the Édition (2027-01-04), the home shows one
+single mention announcing the opening date in letters, from the loaded
+public state only: the statically prerendered home carries no announcement,
+neither while the public state cannot be loaded (see the degraded cases
+above) nor after the closing bound (see the « Closed registration window »
+cases). The test fixes the browser clock before the opening bound
+(`page.clock.setFixedTime`), so the instant is deterministic, and flips the
+mocked GET from `registrationOpen: false` to `true` (a mutable flag
+re-evaluated on every call) with `page.reload()`: the mention disappears and
+the register button comes back — the loaded server answer is authoritative,
+even with the clock still reading before the opening bound.
+
+| Test name                                                                         | Steps                                                                                                                                                                           | Expected                                                                                                                                                                        |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should announce the opening date before the window opens, and drop it once open` | Fix the clock before the opening bound, mock GET with a mutable `registrationOpen` flag, `goto('/')` (mocked window not open); then flip the flag to `true` and `page.reload()` | Exactly one « Les inscriptions ouvrent le lundi 4 janvier 2027. » mention and no register button; after the reload the mention is gone and the register button of V2 is visible |
 
 ### `describe('Binôme registration')` (ticket #17)
 

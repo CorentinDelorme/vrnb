@@ -1,18 +1,26 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { InscriptionsOutcome } from '../src/app/inscriptions/inscriptions-client';
 import HomePage from './page';
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
-// The inscriptions provider fetches in an effect: fake an unreachable API so
-// the home spec stays deterministic and network-free (badges stay hidden).
+/**
+ * Mutable fixture: each test sets the outcome the mocked fetch answers (the
+ * resolved value, or a never-settling promise so the provider keeps its
+ * loading state). The default is the error outcome so the home spec stays
+ * deterministic and network-free (badges stay hidden).
+ */
+const mockedOutcome = vi.hoisted(() => ({
+  current: { status: 'error' } as InscriptionsOutcome | Promise<never>,
+}));
 // The registration modal imports `postRegistration` from the same module: it
 // is mocked too, so a home-page test submitting the modal never hits a
 // missing export.
 vi.mock('../src/app/inscriptions/inscriptions-client', () => ({
-  fetchInscriptionsOutcome: async () => ({ status: 'error' }) as const,
+  fetchInscriptionsOutcome: async () => mockedOutcome.current,
   postRegistration: async () => ({ status: 'error' }) as const,
 }));
 
@@ -36,6 +44,7 @@ describe('Home page', () => {
   beforeEach(() => {
     localStorage.clear();
     push.mockClear();
+    mockedOutcome.current = { status: 'error' };
   });
 
   it('renders each zone as an open accordion labelled with its name and tour count', async () => {
@@ -133,5 +142,118 @@ describe('Home page', () => {
     const { container } = await renderHomePage();
     const year = new Date().getFullYear().toString();
     expect(container.querySelector('footer')?.textContent).toContain(`©${year} VRNB`);
+  });
+});
+
+/**
+ * The inscriptions opening announcement (ticket #34): before the opening
+ * bound, the loaded home shows one single mention announcing the opening
+ * date in letters (« Les inscriptions ouvrent le lundi 4 janvier 2027. »),
+ * and it goes away as soon as the public state announces an open window.
+ * While the public state is unknown (the fetch has not answered, it failed),
+ * the degraded home keeps showing no mention, no badge and no button — the
+ * statically prerendered page carries nothing: the mention resolves purely
+ * client-side, after the provider's fetch effect. After the closing bound
+ * the mention never comes back.
+ *
+ * The system clock is faked with the `Date` fake only, so the window phase
+ * the provider derives stays deterministic whatever the wall clock of the
+ * runner — the render flow itself uses no timers.
+ */
+describe('Home page inscriptions opening announcement', () => {
+  /** An instant before the opening bound of the Édition (2027-01-04). */
+  const BEFORE_OPENING_CLOCK = new Date('2026-12-15T12:00:00Z');
+  /** An instant inside the open window (between the two bounds). */
+  const WINDOW_CLOCK = new Date('2027-01-10T12:00:00Z');
+  /** An instant 2 days before the action date: the closing bound applies. */
+  const AFTER_CLOSURE_CLOCK = new Date('2027-02-12T09:00:00Z');
+
+  /** The loaded public state of a window, announced open or not open yet. */
+  const state = (registrationOpen: boolean): InscriptionsOutcome => ({
+    state: {
+      edition: {
+        actionDate: '2027-02-14',
+        actionEndTime: '12:00',
+        actionStartTime: '09:00',
+        inscriptionsOpenDate: '2027-01-04',
+        year: 2027,
+      },
+      inscriptions: [],
+      registrationOpen,
+    },
+    status: 'success',
+  });
+
+  /** Pin the fake system clock and the outcome the mocked fetch answers. */
+  function setContext(clock: Date, outcome: InscriptionsOutcome | Promise<never>): void {
+    vi.setSystemTime(clock);
+    mockedOutcome.current = outcome;
+  }
+
+  /** The selectors of the degraded state, asserted per test. */
+  function registerButtons(container: HTMLElement): NodeListOf<HTMLButtonElement> {
+    return container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]');
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('announces the opening date after the provider effect settles, not before', async () => {
+    setContext(BEFORE_OPENING_CLOCK, state(false));
+    // Rendering is synchronous: what a statically prerendered home carries
+    // at first paint (the provider has not fetched yet) is no announcement.
+    const { container } = render(<HomePage />);
+    expect(container.textContent).not.toContain('Les inscriptions ouvrent le');
+
+    await act(async () => {});
+
+    // One single mention for the whole page, with the Édition date in letters.
+    expect(screen.getAllByText('Les inscriptions ouvrent le lundi 4 janvier 2027.')).toHaveLength(
+      1,
+    );
+    // The window is not open yet: still no register button on any row.
+    expect(registerButtons(container)).toHaveLength(0);
+  });
+
+  it('drops the announcement and offers the register buttons once the window is open', async () => {
+    setContext(WINDOW_CLOCK, state(true));
+    const { container } = await renderHomePage();
+
+    expect(screen.queryByText(/Les inscriptions ouvrent le/)).toBeNull();
+    expect(registerButtons(container).length).toBeGreaterThan(0);
+  });
+
+  it('shows nothing while the public state has not answered', async () => {
+    // A never-settling fetch keeps the provider in its loading state.
+    setContext(BEFORE_OPENING_CLOCK, new Promise(() => {}));
+    const { container } = await renderHomePage();
+
+    expect(container.textContent).not.toContain('Les inscriptions ouvrent le');
+    expect(registerButtons(container)).toHaveLength(0);
+    expect(screen.queryByText('Binôme inscrit')).toBeNull();
+  });
+
+  it('shows nothing when the public state failed to load', async () => {
+    setContext(BEFORE_OPENING_CLOCK, { status: 'error' });
+    const { container } = await renderHomePage();
+
+    expect(container.textContent).not.toContain('Les inscriptions ouvrent le');
+    expect(registerButtons(container)).toHaveLength(0);
+    expect(screen.queryByText('Binôme inscrit')).toBeNull();
+  });
+
+  it('shows nothing once the closing bound applies', async () => {
+    // The local clock is past the closure and the state answers closed: the
+    // announcement must not come back.
+    setContext(AFTER_CLOSURE_CLOCK, state(false));
+    const { container } = await renderHomePage();
+
+    expect(screen.queryByText(/Les inscriptions ouvrent le/)).toBeNull();
+    expect(registerButtons(container)).toHaveLength(0);
   });
 });
