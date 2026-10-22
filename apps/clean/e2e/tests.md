@@ -82,12 +82,14 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    could not be loaded) is covered by the unit suite, not by an E2E case.
 
 6. **`Manual — should list every section in the sommaire and jump to it` (1 test)**: the mode
-   d'emploi `/manual` opens with a sommaire that lists every section of the page (principe,
-   inscription d'un binôme, exemple P2, reprendre plus tard, Menu) and links to the `id` of
-   its heading — the page is read on a phone, outdoors. The test asserts the five anchors and
-   that each one resolves to a visible heading, then clicks the « S'inscrire en binôme » link
-   and asserts the jump to `#inscription`. No parity impact: the legacy manual page had no
-   sommaire, and the DOM contract of the manual is only extended.
+   d'emploi `/manual` opens with a sommaire that lists every section of the page — numbered, in
+   reading order: 1. principe, 2. exemple P2, 3. reprendre plus tard, 4. Menu, 5. inscription
+   d'un binôme (LAST after the action-day story, ticket #37) — and links to the `id` of its
+   heading — the page is read on a phone, outdoors. The test asserts the five anchors and
+   that each one resolves to a visible heading (each an `<h2>` carrying its sommaire number),
+   then clicks the « S'inscrire en binôme » link and asserts the jump to `#inscription`. No
+   parity impact: the legacy manual page had no sommaire, and the DOM contract of the manual is
+   only extended.
 
 7. **`Registration opening announcement` (1 test, ticket #34)**: before the opening bound of
    the Édition (2027-01-04), the home — which shows no badge and no register button then —
@@ -492,12 +494,13 @@ following text when it contains `&apos;` — cf. the note in `app/manual/page.ts
 Vitest cannot reproduce it (its JSX transform keeps the space), hence this E2E check.
 
 The sommaire test covers the navigation of the mode d'emploi: every section of the
-page is listed and every anchor resolves to an existing heading.
+page is listed in reading order (numbered titles), the binôme registration is the
+LAST section, and every anchor resolves to an existing heading.
 
-| Test name                                                  | Steps                                                       | Expected                                                                                                                                                 |
-| ---------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keeps spaces around bold words in the rendered copy`      | `goto('/manual')`                                           | 23 spaced French phrases present in the rendered `main` text                                                                                             |
-| `should list every section in the sommaire and jump to it` | `goto('/manual')` → click the « S'inscrire en binôme » link | 5 sommaire links (`#principe`, `#inscription`, `#exemple`, `#reprendre`, `#menu`), each pointing at a visible heading; the click jumps to `#inscription` |
+| Test name                                                  | Steps                                                       | Expected                                                                                                                                                                          |
+| ---------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keeps spaces around bold words in the rendered copy`      | `goto('/manual')`                                           | 24 spaced French phrases present in the rendered `main` text (incl. the arbitrated registration intro and the config-dated window/erasure notes)                                  |
+| `should list every section in the sommaire and jump to it` | `goto('/manual')` → click the « S'inscrire en binôme » link | 5 sommaire links in order (`#principe`, `#exemple`, `#reprendre`, `#menu`, `#inscription`), each pointing at a visible numbered `<h2>` heading; the click jumps to `#inscription` |
 
 ---
 

@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   CURRENT_EDITION,
-  INSCRIPTIONS_RETENTION_DAYS,
-  REGISTRATION_CLOSURE_DAYS,
   formatActionDateLabel,
+  INSCRIPTIONS_RETENTION_DAYS,
   inscriptionsExpiryInstant,
   isRegistrationOpen,
+  REGISTRATION_CLOSURE_DAYS,
+  registrationsCloseDate,
   registrationWindowPhase,
   ttlSecondsUntil,
 } from './edition';
@@ -175,6 +176,55 @@ describe('inscriptionsExpiryInstant', () => {
         year: 2027,
       }).toISOString(),
     ).toBe('2028-02-28T23:00:00.000Z');
+  });
+});
+
+/**
+ * The last day of the registration window (ticket #37): `actionDate` minus
+ * `REGISTRATION_CLOSURE_DAYS`, the closing bound `registrationWindowPhase`
+ * derives on its own. The mode d'emploi names it in letters through
+ * `formatActionDateLabel`, so the closing date on the page never drifts from
+ * the bound the API enforces.
+ */
+describe('registrationsCloseDate', () => {
+  it('should close the 2027 window on 2027-02-11, the last open day', () => {
+    expect(REGISTRATION_CLOSURE_DAYS).toBe(3);
+    expect(registrationsCloseDate(CURRENT_EDITION)).toBe('2027-02-11');
+  });
+
+  it('should use the leap year when crossing February backwards', () => {
+    // Three days before 2024-03-02: 03-01, 02-29 (leap year), 02-28.
+    expect(
+      registrationsCloseDate({
+        actionDate: '2024-03-02',
+        actionEndTime: '12:00',
+        actionStartTime: '09:00',
+        inscriptionsOpenDate: '2024-02-01',
+        year: 2024,
+      }),
+    ).toBe('2024-02-28');
+    // The action day itself may be the 29th of February.
+    expect(
+      registrationsCloseDate({
+        actionDate: '2024-02-29',
+        actionEndTime: '12:00',
+        actionStartTime: '09:00',
+        inscriptionsOpenDate: '2024-01-01',
+        year: 2024,
+      }),
+    ).toBe('2024-02-26');
+  });
+
+  it('should follow the edition passed in, not the bundled one', () => {
+    expect(
+      registrationsCloseDate({
+        actionDate: '2030-05-20',
+        actionEndTime: '12:00',
+        actionStartTime: '09:00',
+        inscriptionsOpenDate: '2030-05-01',
+        year: 2030,
+      }),
+    ).toBe('2030-05-17');
   });
 });
 

@@ -101,6 +101,18 @@ export function isRegistrationOpen(edition: Edition, now: Date): boolean {
   return registrationWindowPhase(edition, now) === 'open';
 }
 
+/**
+ * The last day of the registration window as a `YYYY-MM-DD` calendar date:
+ * `actionDate - REGISTRATION_CLOSURE_DAYS`, the inclusive bound the window
+ * rule (`registrationWindowPhase`) closes after. Pure display data: the mode
+ * d'emploi (page copy) names that date in letters through
+ * `formatActionDateLabel`, so the announced closing day can never drift from
+ * the bound the API enforces — one Édition config, one derivation.
+ */
+export function registrationsCloseDate(edition: Edition): string {
+  return calendarDatePlusDays(edition.actionDate, -REGISTRATION_CLOSURE_DAYS);
+}
+
 /** Storage retention of a Binôme inscription after the action, in days (spec). */
 export const INSCRIPTIONS_RETENTION_DAYS = 90;
 
