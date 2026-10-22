@@ -1,62 +1,31 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { PDFDocument } from 'pdf-lib';
 
 import { ZONES } from '../src/app/zones';
 
+import {
+  errorMessage,
+  matchesZoneFilter,
+  parseGenerationFilters,
+  perfReportPath,
+  writePerfReport,
+  zonePackFiles,
+  zonePackParcours,
+} from './generation-helpers';
+import type { PerfRecorder } from './generation-perf';
+import {
+  buildPerfReport,
+  countersFromIds,
+  createPerfRecorder,
+  formatPerfReport,
+} from './generation-perf';
+import { PACK_SUBJECT, REUSED_FICHE_SUBJECT } from './generation-subjects';
+
 const rootDir = join(import.meta.dirname, '..');
-const pdfDir = join(rootDir, 'public/pdf');
 
-const TOUR_PDF_PATTERN = /^[VP]\d+\.pdf$/;
-const MAP_PDFS = ['Carte_parcours_a_velo.pdf', 'Carte_parcours_a_pied.pdf'];
-
-function sortTourFiles(a: string, b: string): number {
-  if (a[0] !== b[0]) {
-    return a[0] < b[0] ? -1 : 1;
-  }
-  return parseInt(a.slice(1)) - parseInt(b.slice(1));
-}
-
-/**
- * All PDFs belonging to a zone: overview maps, then tour sheets (V then P).
- * The tracking sheets are not part of the pack anymore: the « Fiches de
- * suivi » are generated from the real inscriptions by the referent script
- * (`scripts/extract-inscriptions.ts`), outside the site.
- */
-function getZoneFiles(zoneId: string): string[] {
-  const zoneDir = join(pdfDir, zoneId);
-  if (!existsSync(zoneDir)) {
-    return [];
-  }
-
-  const files: string[] = [];
-  for (const mapPdf of MAP_PDFS) {
-    const mapPath = join(zoneDir, mapPdf);
-    if (existsSync(mapPath)) {
-      files.push(mapPath);
-    }
-  }
-
-  const tourPdfs = readdirSync(zoneDir)
-    .filter((file) => TOUR_PDF_PATTERN.test(file))
-    .sort(sortTourFiles);
-  for (const tourPdf of tourPdfs) {
-    files.push(join(zoneDir, tourPdf));
-  }
-
-  return files;
-}
-
-function parseZoneFilter(): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith('--zone='));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice('--zone='.length)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
-}
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-zone-pdf';
 
 /**
  * Output folder of the packs: the local `scripts/output/` tree, like the
@@ -72,11 +41,17 @@ function parseOutDir(): string {
   return join(import.meta.dirname, 'output', 'packs');
 }
 
-async function mergeZone(zoneId: string, outDir: string): Promise<void> {
-  const files = getZoneFiles(zoneId);
+/**
+ * Merge the published documents of a Zone into one pack.
+ *
+ * Returns the number of documents the pack holds: zero when the Zone has
+ * no document to merge.
+ */
+async function mergeZone(zoneId: string, outDir: string): Promise<number> {
+  const files = zonePackFiles(rootDir, zoneId);
   if (files.length === 0) {
-    console.warn(`skip ${zoneId}: no PDFs found under public/pdf/${zoneId}/`);
-    return;
+    console.warn(`ignoré ${zoneId} : aucun PDF trouvé dans public/pdf/${zoneId}/`);
+    return 0;
   }
 
   const merged = await PDFDocument.create();
@@ -91,22 +66,84 @@ async function mergeZone(zoneId: string, outDir: string): Promise<void> {
 
   mkdirSync(outDir, { recursive: true });
   const outputPath = join(outDir, `${zoneId}.pdf`);
-  writeFileSync(outputPath, await merged.save());
-  console.log(`Generated: ${outputPath} (${merged.getPageCount()} pages)`);
+  try {
+    writeFileSync(outputPath, await merged.save());
+  } catch (error) {
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
+  }
+  console.log(`Généré : ${outputPath} (${merged.getPageCount()} pages)`);
+  return files.length;
 }
 
 async function main(): Promise<void> {
-  const zoneFilter = parseZoneFilter();
-  const outDir = parseOutDir();
-  const zoneIds = ZONES.map((zone) => zone.id).filter((id) => !zoneFilter || zoneFilter.has(id));
+  const perf = createPerfRecorder();
+  /** The Zones of the run, and the Parcours their pack reuses. */
+  let zoneIds: string[] = [];
+  /** The packs the run wrote. */
+  const written: string[] = [];
+  /** The number of documents the packs hold. */
+  let documents = 0;
 
-  if (zoneIds.length === 0) {
-    throw new Error('No zones match the --zone filter.');
-  }
+  try {
+    const filters = parseGenerationFilters(process.argv);
+    const outDir = parseOutDir();
+    zoneIds = ZONES.map((zone) => zone.id).filter((id) => matchesZoneFilter(filters, id));
 
-  for (const zoneId of zoneIds) {
-    await mergeZone(zoneId, outDir);
+    if (zoneIds.length === 0) {
+      throw new Error('Aucune Zone ne correspond au filtre --zone.');
+    }
+
+    for (const zoneId of zoneIds) {
+      await perf.measure(zoneId, async () => {
+        const merged = await mergeZone(zoneId, outDir);
+        if (merged > 0) {
+          written.push(zoneId);
+          documents += merged;
+        }
+      });
+    }
+  } finally {
+    reportRun(perf, zoneIds, written, documents);
   }
+}
+
+/**
+ * Show the `[perf]` block of the run: how long it took, how long each Zone
+ * took, how many documents the packs hold and which Fiches the pack
+ * reused.
+ *
+ * The pack regenerates no Parcours: it merges the documents that are
+ * already published, so every Fiche of the pack is left alone.
+ */
+function reportRun(
+  perf: PerfRecorder,
+  zoneIds: readonly string[],
+  written: readonly string[],
+  documents: number,
+): void {
+  const reused = zoneIds.flatMap((zoneId) => zonePackParcours(rootDir, zoneId));
+
+  const report = buildPerfReport({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    tiles: { fromCache: 0, downloaded: 0 },
+    subjects: [PACK_SUBJECT, REUSED_FICHE_SUBJECT],
+    parcours: countersFromIds(REUSED_FICHE_SUBJECT.id, [], reused, 'up-to-date'),
+    packs: {
+      written: written.map((zoneId) => ({
+        id: `${PACK_SUBJECT.id}/${zoneId}/${zoneId}`,
+        subject: PACK_SUBJECT.id,
+        zoneId,
+        label: zoneId,
+        reason: 'pack-written',
+      })),
+      documents,
+    },
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
 }
 
 main().catch((error: unknown) => {

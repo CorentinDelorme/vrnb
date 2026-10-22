@@ -1,72 +1,73 @@
-import { spawnSync } from 'child_process';
 import { join } from 'path';
+
+import { clearPerfReports, parseFilterValues } from './generation-helpers';
+import { createPerfRecorder } from './generation-perf';
+import { reportRun, runGenerationSteps, selectGenerationSteps } from './generation-steps';
 
 const rootDir = join(import.meta.dirname, '..');
 
-function parseArgValues(flag: string): string[] {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return [];
-  return arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-one';
 
 function hasFlag(flag: string): boolean {
   return process.argv.includes(flag);
 }
 
 function printUsage(): void {
-  console.log(`Usage: bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours]
+  console.log(`Utilisation : bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours] [--force]
 
-Regenerate a single tour or a whole zone without rebuilding everything:
-  routes (OSRM/Valhalla) -> tours data -> tour PDFs.
+Régénérer un seul Parcours ou une seule Zone sans tout reconstruire :
+  segments (OSRM/Valhalla) -> données des Parcours -> Fiches PDF.
 
-Options:
-  --tour=V1,V2    Only these tours (required, unless --zone is set).
-  --zone=<zoneId> Only this zone (required, unless --tour is set).
-  --skip-routes   Skip start/end GPX routing (network calls).
-  --skip-tours    Skip tours-data refresh (distances).
+Options :
+  --tour=V1,V2    Ces Parcours uniquement (requis, sauf si --zone est posé).
+  --zone=<zoneId> Cette Zone uniquement (requis, sauf si --tour est posé).
+  --skip-routes   Ne pas re-router les GPX de début et de fin (appels réseau).
+  --skip-tours    Ne pas recalculer les distances (données des Parcours).
+  --force         Tout régénérer, quels que soient les filtres et l'état.
 `);
 }
 
-function runStep(script: string, filterArgs: string[]): void {
-  console.log(`\n=== ${script} ${filterArgs.join(' ')} ===`);
-  const result = spawnSync('bun', ['tsx', join(rootDir, 'scripts', script), ...filterArgs], {
-    cwd: rootDir,
-    stdio: 'inherit',
+/**
+ * The steps of the run: the same ones as a full generation, minus the
+ * skipped ones. The filters and the `--force` flag are handed to every
+ * step, so a single Parcours follows the same logic as a full run.
+ */
+function selectedSteps(): string[] {
+  return selectGenerationSteps({
+    skipRoutes: hasFlag('--skip-routes'),
+    skipTours: hasFlag('--skip-tours'),
   });
-  if (result.status !== 0) {
-    throw new Error(`Step failed: ${script}`);
-  }
 }
 
-function main(): void {
-  const tours = parseArgValues('--tour');
-  const zones = parseArgValues('--zone');
+async function main(): Promise<void> {
+  const tours = parseFilterValues(process.argv, '--tour') ?? [];
+  const zones = parseFilterValues(process.argv, '--zone') ?? [];
 
   if (tours.length === 0 && zones.length === 0) {
     printUsage();
-    throw new Error('Nothing to generate: pass --tour=<id> and/or --zone=<zoneId>.');
+    throw new Error('Rien à générer : passez --tour=<id> et/ou --zone=<zoneId>.');
   }
 
   const filterArgs: string[] = [];
   if (tours.length > 0) filterArgs.push(`--tour=${tours.join(',')}`);
   if (zones.length > 0) filterArgs.push(`--zone=${zones.join(',')}`);
+  if (hasFlag('--force')) filterArgs.push('--force');
 
-  if (!hasFlag('--skip-routes')) {
-    runStep('generate-start-end-gpx.ts', filterArgs);
+  const steps = selectedSteps();
+  const perf = createPerfRecorder();
+  // The reports of a previous run must never be mistaken for the ones of
+  // this run.
+  clearPerfReports(rootDir);
+
+  try {
+    await runGenerationSteps(steps, filterArgs, rootDir, perf);
+  } finally {
+    reportRun({ script: SCRIPT_NAME, rootDir, perf, steps });
   }
-  if (!hasFlag('--skip-tours')) {
-    runStep('generate-tours.ts', filterArgs);
-  }
-  runStep('generate-pdfs.ts', filterArgs);
 }
 
-try {
-  main();
-} catch (error: unknown) {
+main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
-}
+});

@@ -32,6 +32,19 @@ The Inscriptions feature lets a **Binôme** cover a Parcours for the current Éd
 - **Anti-bot** — the modal carries a hidden honeypot field (`website`); a filled one is refused with the same 400 as any other invalid input (`invalid-inscription`), silently, and nothing is stored.
 - **Human operations** — `bun scripts/extract-inscriptions.ts` writes the « Suivi » sheets (one PDF per Zone and practice type, with the binômes of the registered Parcours filled in) into a gitignored folder, never into `public/` (runbook: `scripts/README-inscriptions-extract.md`); a deregistration is the deletion of the `inscriptions:<year>:<zoneId>:<tourId>` key in the Upstash console (the site has no admin UI).
 
+### Data generation (incremental pipeline)
+
+The generation scripts under `scripts/` are thin orchestrators: the logic lives in pure, unit-tested modules.
+
+- **Versioned state** — `scripts/generation-state.ts` owns the fingerprints (the sha256 of the source trace, of the Point de rendez-vous of the Zone, of the produced start/end segments, of the Fiche and of the Zone overview map) and the version constant `GENERATION_STATE_VERSION`, which covers the routing algorithm and the Fiche template — bumping it invalidates every artefact. The state itself is `scripts/generation-state.json`, **committed in the repository**: a fresh clone therefore behaves like an up-to-date working copy. An unknown fingerprint is an absent key in the file (never a `null`).
+- **Generation plan** — `scripts/generation-plan.ts` is the pure decision of what a run must regenerate: `planGeneration({ state, currentVersion, candidates, zoneMapFingerprints, filters, force })` returns one decision per Parcours (re-route the segments? re-render the Fiche?) and one per Zone overview map, each with its reason (`forced`, `trace-changed`, `meeting-point-changed`, `parcours-changed`, `up-to-date`…). It touches neither the network nor the filesystem: the callers compute the fingerprints.
+- **Network scheduler** — `scripts/network-scheduler.ts` enforces the politeness of the pipeline, per host: one request every 400 ms, at most 2 simultaneous connections, and in-flight de-duplication of identical requests (a tile needed by two Fiches at once is downloaded once). The clock and the `fetch` are injected. `scripts/tile-fetcher.ts` reads the shared disk cache (`scripts/.cache/tiles/`, gitignored) first and only then goes to the network, and exposes the cache-hit / download counters.
+- **Routing** — `scripts/route-parcours.ts` (pure orchestration, two Parcours routed at a time), `scripts/router-client.ts` (OSRM and Valhalla asked at the same time, the shortest answer wins) and `scripts/segment-gpx.ts` (the GPX writer, whose output must not change).
+- **Perf block** — `scripts/generation-perf.ts` builds and renders the `[perf]` block every script ends with: the total duration, the duration of each step, the tiles from cache vs downloaded, and a French recap table of what the run did with every element (the segments, the data, the Fiches, the zone maps and the packs) — one line per element the run changed, one line per group of elements it left alone, with the reason of every decision. `scripts/generation-subjects.ts` owns the French vocabulary of the subjects (their name, the unit they count and their decisions); the scripts pick the subjects they act on. The JSON reports land in `scripts/output/perf/` (gitignored) and the orchestrators merge them.
+- **Orchestration** — `scripts/generation-steps.ts` holds the three steps of the pipeline (`generate:routes` → `generate:tours` → `generate:pdfs`) and the plumbing they share (the reading and the writing of the generation state, the `[perf]` block of an orchestrated run); `generate-all.ts` and `generate-one.ts` run them and aggregate their reports. `generate-one` forwards the filters (`--tour`, `--zone`) and `--force` to every step, so a single Parcours follows the same incremental logic as a full run.
+
+The published documents are the Fiches (`public/pdf/<zone>/<parcours>.pdf`) and the Zone overview maps — the « Fiche de zone » (`public/pdf/<zone>/Carte_parcours_a_velo.pdf`, `..._pied.pdf`). The « Fiches de suivi » are **not** published any more: they are produced locally by `bun scripts/extract-inscriptions.ts`, outside the site, and the Menu only offers the Zone map PDF.
+
 ## Build/Lint/Test Commands
 
 All commands run from `apps/clean/` (dependencies are installed once at the monorepo root with `bun install`).
@@ -63,10 +76,11 @@ bun run check-types     # tsc --noEmit
 # Data generation (details in README.md)
 bun run generate:routes # Start/end GPX segments from the Point de rendez-vous (OSRM, Valhalla fallback)
 bun run generate:tours  # Regenerate tours-data.ts + the precomputed GeoJSON assets
-bun run generate:pdfs   # Regenerate the Fiche PDFs
-bun run generate:one -- --tour=V1 --zone=bruz-sud  # Single Parcours/zone (--skip-routes --skip-tours)
+bun run generate:pdfs   # Regenerate the Fiche PDFs and the Zone overview maps (--force)
+bun run generate:one -- --tour=V1 --zone=bruz-sud  # Single Parcours/zone (--skip-routes --skip-tours --force)
 bun run generate:zone-pdf -- --zone=bruz-sud       # Merge one Zone's PDFs into scripts/output/packs/
-bun run generate:all    # routes + tours + pdfs
+bun run generate:all    # routes + tours + pdfs (incremental; --force regenerates everything)
+bun run generate:state  # Complete the versioned generation state with the committed Fiches
 
 # Inscriptions — referent extraction of the « Fiches de suivi » (local files, never deployed)
 bun scripts/extract-inscriptions.ts  # Extract the Édition inscriptions (see scripts/README-inscriptions-extract.md)
@@ -184,9 +198,9 @@ const tours: any[] = [];
 
 ### Testing
 
-Unit tests — Vitest (jsdom, globals), colocated `*.spec.ts(x)`; component/page specs use `@testing-library/react`. No DI container: shared behavior is extracted into pure functions — that seam (pure-TS modules, 25 tests) is what spec #3 validated; the component/page RTL specs go beyond the spec's minimal seam and were added during implementation as a safety net, not as spec-validated scope.
+Unit tests — Vitest (jsdom, globals), colocated `*.spec.ts(x)`; component/page specs use `@testing-library/react`. No DI container: shared behavior is extracted into pure functions — that seam (pure-TS modules, 25 tests) is what spec #3 validated; the component/page RTL specs go beyond the spec's minimal seam and were added during implementation as a safety net, not as spec-validated scope. The generation pipeline follows the same rule: the **generation plan** (a pure function of fake inputs) and the **network scheduler** (injected clock and `fetch`) are the two seams the unit suite targets, so the incremental decisions and the politeness of the pipeline are checked without touching the network.
 
-- Migration note (implementation): the unit suite was expanded from the 25 pure-TS tests of the spec #3 seam to 290 tests today — the component/page RTL specs (`app/page.spec.tsx`, `app/manual/page.spec.tsx`, `app/not-found.spec.tsx` and friends) and the Inscriptions feature modules (`src/app/inscriptions/*.spec.ts`, `scripts/inscriptions-extract.spec.ts`, `scripts/extract-inscriptions-cli.spec.ts`) — a deliberate safety net before the PR, documented like the E2E deltas in `e2e/tests.md`.
+- Migration note (implementation): the unit suite was expanded from the 25 pure-TS tests of the spec #3 seam to 507 tests today — the component/page RTL specs (`app/page.spec.tsx`, `app/manual/page.spec.tsx`, `app/not-found.spec.tsx` and friends), the Inscriptions feature modules (`src/app/inscriptions/*.spec.ts`, `scripts/inscriptions-extract.spec.ts`, `scripts/extract-inscriptions-cli.spec.ts`) and the generation pipeline modules (`scripts/generation-plan.spec.ts`, `scripts/generation-state.spec.ts`, `scripts/generation-perf.spec.ts`, `scripts/generation-subjects.spec.ts`, `scripts/generation-helpers.spec.ts`, `scripts/generation-messages.spec.ts`, `scripts/generation-steps.spec.ts`, `scripts/network-scheduler.spec.ts`, `scripts/tile-fetcher.spec.ts`, `scripts/route-parcours.spec.ts`, `scripts/router-client.spec.ts`, `scripts/segment-gpx.spec.ts`) — a deliberate safety net before the PR, documented like the E2E deltas in `e2e/tests.md`.
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -238,7 +252,7 @@ apps/clean/
 │   ├── pdf/                   # Fiche PDFs
 │   └── media/ icons/ manual/  # Images, icons, manual screenshots
 ├── e2e/                       # Playwright specs + tests.md (E2E plan)
-└── scripts/                   # Data generation (generate-*.ts) + inscriptions extraction
+└── scripts/                   # Data generation (orchestrators + pure modules) + inscriptions extraction
 ```
 
 ### Package Manager
@@ -270,6 +284,10 @@ apps/clean/
 - `components/register-binome-modal.tsx` — Binôme registration modal (identity, honeypot, GDPR notice)
 - `public/geojson/<zone>/<tour>.geojson` — precomputed asset (see GLOSSARY)
 - `scripts/generate-tours.ts` — data pipeline (tours-data + GeoJSON)
+- `scripts/generation-state.ts` + `scripts/generation-state.json` — the versioned generation state (fingerprints + version constant)
+- `scripts/generation-plan.ts` — the pure generation plan (what must be regenerated, and why)
+- `scripts/generation-perf.ts` — the `[perf]` report of a run
+- `scripts/network-scheduler.ts` + `scripts/tile-fetcher.ts` — polite per-host scheduling and the shared tile cache
 - `scripts/README-inscriptions-extract.md` — referent runbook of the « Suivi » extraction
 - `scripts/suivi-pdf.ts` — PDF renderer of the « Suivi » sheets (the printed tracking sheets)
 - `e2e/tests.md` — E2E test plan

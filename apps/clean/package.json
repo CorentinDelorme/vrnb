@@ -16,9 +16,10 @@
     "generate:tours": "bun tsx scripts/generate-tours.ts && bun run lint:fix",
     "generate:routes": "bun tsx scripts/generate-start-end-gpx.ts",
     "generate:pdfs": "bun tsx scripts/generate-pdfs.ts",
+    "generate:state": "bun tsx scripts/refresh-generation-state.ts",
     "generate:one": "bun tsx scripts/generate-one.ts",
     "generate:zone-pdf": "bun tsx scripts/generate-zone-pdf.ts",
-    "generate:all": "bun run generate:routes && bun run generate:tours && bun run generate:pdfs",
+    "generate:all": "bun tsx scripts/generate-all.ts",
     "e2e": "playwright test"
   },
   "prettier": {

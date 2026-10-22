@@ -1,6 +1,6 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { join } from 'path';
@@ -9,18 +9,72 @@ import sharp from 'sharp';
 
 import { toursData } from '../src/app/tours-data';
 import { getZone } from '../src/app/zones';
+import { createNetworkScheduler } from './network-scheduler';
+import { createTileFetcher } from './tile-fetcher';
+
+import type { GpxSegmentSuffix } from './generation-helpers';
+import {
+  errorMessage,
+  forEachConcurrently,
+  isFilterActive,
+  matchesFilters,
+  parseForceFlag,
+  parseGenerationFilters,
+  pdfRootDir,
+  perfReportPath,
+  practiceLabel,
+  resolveGpxTracePath,
+  tourPdfPath,
+  writePerfReport,
+  zoneMapPdfPath,
+  zonePdfDir,
+} from './generation-helpers';
+import type { PerfRecorder } from './generation-perf';
+import {
+  buildPerfReport,
+  countersFromDecisions,
+  countersFromZoneDecisions,
+  createPerfRecorder,
+  formatPerfReport,
+} from './generation-perf';
+import type { GenerationPlan, PlanCandidate } from './generation-plan';
+import { planGeneration } from './generation-plan';
+import type { ParcoursStateUpdate, ZoneMapStateUpdate } from './generation-state';
+import {
+  GENERATION_STATE_VERSION,
+  fingerprintDocument,
+  fingerprintParcoursArtefacts,
+  generationStatePath,
+  meetingPointFingerprint,
+  nextGenerationState,
+  parcoursStateKey,
+  withFicheFingerprint,
+  zoneMapKey,
+} from './generation-state';
+import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
+import { FICHE_SUBJECT, ZONE_MAP_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
-const pdfDir = join(rootDir, 'public/pdf');
-const gpxDir = join(rootDir, 'public/gpx');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
 const tileCacheDir = join(rootDir, 'scripts', '.cache', 'tiles');
+
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-pdfs';
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_SIZE = 256;
 const USER_AGENT = 'vrnb-clean generate-pdfs';
 const REQUEST_DELAY_MS = 400;
 const REQUEST_TIMEOUT_MS = 30_000;
+/** Maximum number of simultaneous requests to a host (OSM tile usage policy). */
+const MAX_CONCURRENT_REQUESTS_PER_HOST = 2;
+/**
+ * Number of Fiches assembled in parallel. The network scheduler still caps
+ * the tile server at two simultaneous connections and one request every
+ * 400 ms: this constant only overlaps the assembly of a Fiche with the
+ * network wait of another one.
+ */
+const FICHE_CONCURRENCY = 3;
 const MAX_ZOOM = 18;
 const TILE_JPEG_QUALITY = 85;
 const MAP_JPEG_QUALITY = 88;
@@ -73,7 +127,7 @@ interface LogoImage {
 async function loadLogo(): Promise<LogoImage | undefined> {
   try {
     if (!existsSync(logoPath)) {
-      console.warn(`  logo not found: ${logoPath}`);
+      console.warn(`  logo introuvable : ${logoPath}`);
       return undefined;
     }
     const source = sharp(readFileSync(logoPath));
@@ -82,7 +136,7 @@ async function loadLogo(): Promise<LogoImage | undefined> {
     const aspect = (metadata.width ?? 1) / (metadata.height ?? 1);
     return { buffer, aspect };
   } catch (error) {
-    console.warn(`  logo failed: ${error instanceof Error ? error.message : error}`);
+    console.warn(`  échec du logo : ${error instanceof Error ? error.message : error}`);
     return undefined;
   }
 }
@@ -93,7 +147,7 @@ function formatTotal(tour: TourDistances): number {
 
 /** Deep link to the tour page in the deployed app. */
 function tourUrl(tour: TourDistances): string {
-  return `${TOUR_URL_PREFIX}tour/${tour.zoneId}/${tour.name}`;
+  return `${TOUR_URL_PREFIX}tour/${parcoursStateKey(tour.zoneId, tour.name)}`;
 }
 
 /**
@@ -132,13 +186,9 @@ async function buildQrCodeImage(url: string): Promise<Buffer | undefined> {
       .png()
       .toBuffer();
   } catch (error) {
-    console.warn(`  QR code failed: ${error instanceof Error ? error.message : error}`);
+    console.warn(`  échec du QR code : ${error instanceof Error ? error.message : error}`);
     return undefined;
   }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** Older PDFs were committed read-only; make the target writable before saving. */
@@ -149,7 +199,9 @@ function ensureWritable(outputPath: string): void {
   try {
     chmodSync(outputPath, 0o644);
   } catch (error) {
-    console.warn(`  cannot chmod ${outputPath}: ${error instanceof Error ? error.message : error}`);
+    console.warn(
+      `  impossible de modifier les droits de ${outputPath} : ${error instanceof Error ? error.message : error}`,
+    );
   }
 }
 
@@ -241,52 +293,55 @@ function planView(
   return undefined;
 }
 
-// --- OSM tile fetching with disk cache and throttling ---
-
-let lastFetchAt = 0;
+// --- OSM tile fetching: disk cache, network scheduler ---
 
 function tileCachePath(zoom: number, x: number, y: number): string {
   return join(tileCacheDir, String(zoom), String(x), `${y}.jpg`);
 }
 
+/**
+ * The scheduler every tile download goes through: one request every 400 ms
+ * and two at a time per host, and a tile needed by two Fiches at the same
+ * time is downloaded once.
+ */
+const scheduler = createNetworkScheduler({
+  minIntervalMs: REQUEST_DELAY_MS,
+  maxConcurrentPerHost: MAX_CONCURRENT_REQUESTS_PER_HOST,
+});
+
+/** The map tiles: read from the disk cache, downloaded through the scheduler. */
+const tileFetcher = createTileFetcher({
+  scheduler,
+  tileUrl: (zoom, x, y) =>
+    TILE_URL.replace('{z}', String(zoom)).replace('{x}', String(x)).replace('{y}', String(y)),
+  readCache: (zoom, x, y) => {
+    const cachePath = tileCachePath(zoom, x, y);
+    return existsSync(cachePath) ? readFileSync(cachePath) : undefined;
+  },
+  writeCache: (zoom, x, y, tile) => {
+    // Written aside and renamed: a Fiche reading the cache while another one
+    // writes it must not see a half-written tile.
+    const cachePath = tileCachePath(zoom, x, y);
+    const temporaryPath = `${cachePath}.${process.pid}.tmp`;
+    mkdirSync(join(tileCacheDir, String(zoom), String(x)), { recursive: true });
+    writeFileSync(temporaryPath, tile);
+    renameSync(temporaryPath, cachePath);
+  },
+  encode: (downloaded) => sharp(downloaded).jpeg({ quality: TILE_JPEG_QUALITY }).toBuffer(),
+  requestInit: () => ({
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  }),
+  onUnavailable: (zoom, x, y, error) => {
+    console.warn(
+      `  tuile ${zoom}/${x}/${y} indisponible : ${error instanceof Error ? error.message : error}`,
+    );
+  },
+});
+
+/** The tile of a map panel, from the disk cache or from the tile server. */
 async function fetchTile(zoom: number, x: number, y: number): Promise<Buffer | undefined> {
-  const cachePath = tileCachePath(zoom, x, y);
-  if (existsSync(cachePath)) {
-    return readFileSync(cachePath);
-  }
-  const wait = REQUEST_DELAY_MS - (Date.now() - lastFetchAt);
-  if (wait > 0) {
-    await delay(wait);
-  }
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      lastFetchAt = Date.now();
-      const url = TILE_URL.replace('{z}', String(zoom))
-        .replace('{x}', String(x))
-        .replace('{y}', String(y));
-      const res = await fetch(url, {
-        headers: { 'User-Agent': USER_AGENT },
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-      const pngBuffer = Buffer.from(await res.arrayBuffer());
-      const jpegBuffer = await sharp(pngBuffer).jpeg({ quality: TILE_JPEG_QUALITY }).toBuffer();
-      mkdirSync(join(tileCacheDir, String(zoom), String(x)), { recursive: true });
-      writeFileSync(cachePath, jpegBuffer);
-      return jpegBuffer;
-    } catch (error) {
-      if (attempt === 1) {
-        console.warn(
-          `  tile ${zoom}/${x}/${y} unavailable: ${error instanceof Error ? error.message : error}`,
-        );
-        return undefined;
-      }
-      await delay(1000);
-    }
-  }
-  return undefined;
+  return tileFetcher.get(zoom, x, y);
 }
 
 // --- Map panel rendering ---
@@ -353,7 +408,7 @@ async function buildMapBackground(
       .jpeg({ quality })
       .toBuffer();
   } catch (error) {
-    console.warn(`  map background failed: ${error instanceof Error ? error.message : error}`);
+    console.warn(`  échec du fond de carte : ${error instanceof Error ? error.message : error}`);
     return undefined;
   }
 }
@@ -387,7 +442,7 @@ async function renderMapPanel(
     try {
       doc.addImage(dataUrl, 'JPEG', rect.x, rect.y, rect.w, rect.h, mapKey);
     } catch (error) {
-      console.warn(`  addImage failed: ${error instanceof Error ? error.message : error}`);
+      console.warn(`  échec de addImage : ${error instanceof Error ? error.message : error}`);
     }
   } else {
     doc.setFillColor(235, 235, 232);
@@ -477,10 +532,8 @@ const MAP_COLORS: [number, number, number][] = [
 ];
 
 /** GPX path for a tour file, with fallback to the legacy flat layout (pre-zone files). */
-function tourGpxPath(tour: TourDistances, suffix: string): string {
-  const zoned = join(gpxDir, tour.zoneId, tour.name, `${tour.name}${suffix}.gpx`);
-  if (existsSync(zoned)) return zoned;
-  return join(gpxDir, tour.name, `${tour.name}${suffix}.gpx`);
+function tourGpxPath(tour: TourDistances, suffix: GpxSegmentSuffix): string {
+  return resolveGpxTracePath(rootDir, tour.zoneId, tour.name, suffix);
 }
 
 async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined): Promise<void> {
@@ -601,12 +654,16 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   doc.text('Cartes © OpenStreetMap', pageWidth - margin, 282, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
-  const zonePdfDir = join(pdfDir, tour.zoneId);
-  mkdirSync(zonePdfDir, { recursive: true });
-  const outputPath = join(zonePdfDir, `${tour.name}.pdf`);
+  const zoneFolder = zonePdfDir(rootDir, tour.zoneId);
+  mkdirSync(zoneFolder, { recursive: true });
+  const outputPath = tourPdfPath(rootDir, tour.zoneId, tour.name);
   ensureWritable(outputPath);
-  doc.save(outputPath);
-  console.log(`Generated: ${outputPath}`);
+  try {
+    doc.save(outputPath);
+  } catch (error) {
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
+  }
+  console.log(`Généré : ${outputPath}`);
 }
 
 // --- Zone overview maps: one landscape PDF per zone and tour type ---
@@ -616,12 +673,18 @@ interface ZoneTrack {
   readonly coords: LonLat[];
 }
 
+/**
+ * Render the overview map of a Zone.
+ *
+ * Returns whether the document was written: a Zone without any track of
+ * the practice type has no map to render.
+ */
 async function generateZoneMapPdf(
   zoneId: string,
   kind: 'V' | 'P',
   tours: TourDistances[],
   logo: LogoImage | undefined,
-): Promise<void> {
+): Promise<boolean> {
   const zoneName = getZone(zoneId).name;
   const typeLabel = kind === 'V' ? 'Parcours à vélo' : 'Parcours à pied';
   const tracks: ZoneTrack[] = tours
@@ -629,7 +692,7 @@ async function generateZoneMapPdf(
     .filter((track): track is ZoneTrack => !!track.coords && track.coords.length > 0);
 
   if (tracks.length === 0) {
-    return;
+    return false;
   }
 
   const doc = new jsPDF({ orientation: 'landscape' });
@@ -665,8 +728,8 @@ async function generateZoneMapPdf(
   // High resolution for the full-page map (print quality).
   const view = planView(allCoords, rect.w / rect.h, 3072);
   if (!view) {
-    console.warn(`  no map view for ${zoneId} ${kind}`);
-    return;
+    console.warn(`  aucune vue de carte pour ${zoneId} ${kind}`);
+    return false;
   }
 
   const background = await buildMapBackground(view, 92);
@@ -675,7 +738,7 @@ async function generateZoneMapPdf(
     try {
       doc.addImage(dataUrl, 'JPEG', rect.x, rect.y, rect.w, rect.h, `${zoneId}-${kind}-map`);
     } catch (error) {
-      console.warn(`  addImage failed: ${error instanceof Error ? error.message : error}`);
+      console.warn(`  échec de addImage : ${error instanceof Error ? error.message : error}`);
     }
   } else {
     doc.setFillColor(235, 235, 232);
@@ -735,74 +798,250 @@ async function generateZoneMapPdf(
   doc.text('Cartes © OpenStreetMap', pageWidth - margin, footerY, { align: 'right' });
   doc.setTextColor(0, 0, 0);
 
-  const filename = kind === 'V' ? 'Carte_parcours_a_velo.pdf' : 'Carte_parcours_a_pied.pdf';
-  const zonePdfDir = join(pdfDir, zoneId);
-  mkdirSync(zonePdfDir, { recursive: true });
-  const outputPath = join(zonePdfDir, filename);
+  const zoneFolder = zonePdfDir(rootDir, zoneId);
+  mkdirSync(zoneFolder, { recursive: true });
+  const outputPath = zoneMapPdfPath(rootDir, zoneId, kind);
   ensureWritable(outputPath);
-  doc.save(outputPath);
-  console.log(`Generated: ${outputPath}`);
-}
-
-function parseArgValues(flag: string): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
-}
-
-function parseTourFilter(): Set<string> | undefined {
-  return parseArgValues('--tour');
-}
-
-function parseZoneFilter(): Set<string> | undefined {
-  return parseArgValues('--zone');
-}
-
-async function main(): Promise<void> {
-  mkdirSync(pdfDir, { recursive: true });
-  mkdirSync(tileCacheDir, { recursive: true });
-
-  const tourFilter = parseTourFilter();
-  const zoneFilter = parseZoneFilter();
-  const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter(
-    (t) => (!tourFilter || tourFilter.has(t.name)) && (!zoneFilter || zoneFilter.has(t.zoneId)),
-  );
-
-  if ((tourFilter || zoneFilter) && allTours.length === 0) {
-    throw new Error('No tours match the --tour/--zone filter.');
+  try {
+    doc.save(outputPath);
+  } catch (error) {
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
   }
+  console.log(`Généré : ${outputPath}`);
+  return true;
+}
 
-  const logo = await loadLogo();
+// --- The plan of the run: what must be rendered again ---
 
-  for (const tour of allTours) {
-    await generateTourPdf(tour, logo);
-  }
+/**
+ * The fingerprint of the Point de rendez-vous of a Zone.
+ *
+ * The Fiche prints the name of the Point de rendez-vous: a Point de
+ * rendez-vous that changed invalidates the Fiche.
+ */
+function meetingPointFingerprintOf(zoneId: string): string {
+  return meetingPointFingerprint(getZone(zoneId).meetingPoint);
+}
 
-  if (!tourFilter) {
-    const zoneIds = [...new Set(allTours.map((t) => t.zoneId))].sort();
-    const vTours = toursData.vTours.filter((t) => zoneIds.includes(t.zoneId));
-    const pTours = toursData.pTours.filter((t) => zoneIds.includes(t.zoneId));
+/** A Parcours of the run, with the fingerprints of the files it reads. */
+function toCandidate(tour: TourDistances): PlanCandidate {
+  return {
+    zoneId: tour.zoneId,
+    tourId: tour.name,
+    fingerprints: fingerprintParcoursArtefacts(rootDir, tour.zoneId, tour.name),
+    meetingPoint: meetingPointFingerprintOf(tour.zoneId),
+  };
+}
 
-    for (const zoneId of zoneIds) {
-      await generateZoneMapPdf(
-        zoneId,
-        'V',
-        vTours.filter((t) => t.zoneId === zoneId),
-        logo,
-      );
-      await generateZoneMapPdf(
-        zoneId,
-        'P',
-        pTours.filter((t) => t.zoneId === zoneId),
-        logo,
+/**
+ * The fingerprints of the overview maps of the Zones of the run.
+ *
+ * The plan reads the map of the Zone and the practice type it decides
+ * for; a map that is missing, empty or unreadable has no fingerprint.
+ */
+function zoneMapFingerprintsOf(
+  tours: readonly TourDistances[],
+): Record<string, string | undefined> {
+  const fingerprints: Record<string, string | undefined> = {};
+
+  for (const zoneId of new Set(tours.map((tour) => tour.zoneId))) {
+    for (const kind of ['V', 'P'] as const) {
+      fingerprints[zoneMapKey(zoneId, kind)] = fingerprintDocument(
+        zoneMapPdfPath(rootDir, zoneId, kind),
       );
     }
   }
+
+  return fingerprints;
+}
+
+/** Every Parcours of a Zone, whatever the filters of the run: the map shows them all. */
+function toursOfZone(zoneId: string, kind: 'V' | 'P'): TourDistances[] {
+  const tours = kind === 'V' ? toursData.vTours : toursData.pTours;
+  return tours.filter((tour) => tour.zoneId === zoneId);
+}
+
+async function main(): Promise<void> {
+  const perf = createPerfRecorder();
+  /** The plan of the run, `undefined` when the run failed before it. */
+  let plan: GenerationPlan | undefined;
+  /** The Parcours whose Fiche was rendered, and the overview maps written. */
+  const rendered = new Set<string>();
+  const renderedZoneMaps = new Set<string>();
+
+  try {
+    try {
+      mkdirSync(pdfRootDir(rootDir), { recursive: true });
+      mkdirSync(tileCacheDir, { recursive: true });
+    } catch (error) {
+      throw new Error(`impossible de préparer les dossiers de sortie : ${errorMessage(error)}`);
+    }
+
+    const filters = parseGenerationFilters(process.argv);
+    const force = parseForceFlag(process.argv);
+    if (force) {
+      console.log('Mode forcé demandé : toutes les Fiches de la sélection sont régénérées.');
+    }
+    const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter((tour) =>
+      matchesFilters(filters, tour.zoneId, tour.name),
+    );
+
+    if (
+      (isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds)) &&
+      allTours.length === 0
+    ) {
+      throw new Error('Aucun Parcours ne correspond au filtre --tour/--zone.');
+    }
+
+    // The plan decides what the run must render: the Fiche of the Parcours
+    // that changed, and the overview map of the Zones that changed.
+    const statePath = generationStatePath(rootDir);
+    const state = readGenerationStateOrWarn(statePath);
+    const runPlan = planGeneration({
+      state,
+      currentVersion: GENERATION_STATE_VERSION,
+      candidates: allTours.map(toCandidate),
+      zoneMapFingerprints: zoneMapFingerprintsOf(allTours),
+      filters,
+      force,
+    });
+    plan = runPlan;
+
+    const logo = await loadLogo();
+
+    const toursByKey = new Map(
+      allTours.map((tour) => [parcoursStateKey(tour.zoneId, tour.name), tour]),
+    );
+    let failures = 0;
+
+    await perf.measure('Fiches', async () => {
+      await forEachConcurrently(
+        runPlan.decisions.filter((decision) => decision.regenerateFiche),
+        FICHE_CONCURRENCY,
+        async (decision) => {
+          const tour = toursByKey.get(parcoursStateKey(decision.zoneId, decision.tourId));
+          if (!tour) {
+            return;
+          }
+          try {
+            await generateTourPdf(tour, logo);
+            rendered.add(parcoursStateKey(tour.zoneId, tour.name));
+          } catch (error) {
+            failures += 1;
+            console.error(`échec ${tour.name} : ${error instanceof Error ? error.message : error}`);
+          }
+        },
+      );
+    });
+
+    await perf.measure('Cartes de zone', async () => {
+      await forEachConcurrently(
+        runPlan.zoneDecisions.filter((decision) => decision.regenerateZoneMap),
+        FICHE_CONCURRENCY,
+        async (decision) => {
+          try {
+            const written = await generateZoneMapPdf(
+              decision.zoneId,
+              decision.kind,
+              toursOfZone(decision.zoneId, decision.kind),
+              logo,
+            );
+            if (written) {
+              renderedZoneMaps.add(zoneMapKey(decision.zoneId, decision.kind));
+            }
+          } catch (error) {
+            failures += 1;
+            console.error(
+              `échec de la carte ${decision.zoneId} : ${error instanceof Error ? error.message : error}`,
+            );
+          }
+        },
+      );
+    });
+
+    // The state remembers the Fiches that were rendered: the next run knows
+    // they are up to date. A Fiche that failed keeps no fingerprint, so the
+    // next run renders it again.
+    const updates: ParcoursStateUpdate[] = [];
+    for (const decision of runPlan.decisions) {
+      if (!decision.regenerateFiche) {
+        continue;
+      }
+      const key = parcoursStateKey(decision.zoneId, decision.tourId);
+      const fiche = rendered.has(key)
+        ? fingerprintDocument(tourPdfPath(rootDir, decision.zoneId, decision.tourId))
+        : undefined;
+      updates.push({ key, record: withFicheFingerprint(state?.parcours[key], fiche) });
+    }
+
+    // The state remembers the overview maps that were rendered: the next run
+    // knows they are up to date. An overview map that failed keeps no
+    // fingerprint, so the next run renders it again.
+    const zoneMapUpdates: ZoneMapStateUpdate[] = [];
+    for (const decision of runPlan.zoneDecisions) {
+      if (!decision.regenerateZoneMap) {
+        continue;
+      }
+      const key = zoneMapKey(decision.zoneId, decision.kind);
+      const fingerprint = renderedZoneMaps.has(key)
+        ? fingerprintDocument(zoneMapPdfPath(rootDir, decision.zoneId, decision.kind))
+        : undefined;
+      zoneMapUpdates.push({ key, fingerprint });
+    }
+
+    writeGenerationStateOrFail(statePath, nextGenerationState(state, updates, zoneMapUpdates));
+
+    if (failures > 0) {
+      throw new Error(`${failures} Fiche(s) en échec.`);
+    }
+  } finally {
+    reportRun(perf, plan, rendered, renderedZoneMaps);
+  }
+}
+
+/**
+ * Show the `[perf]` block of the run: how long it took, how long the Fiches
+ * and the overview maps took, how many tiles came from the cache and how
+ * many were downloaded, and what the run did with every Fiche and every
+ * overview map.
+ */
+function reportRun(
+  perf: PerfRecorder,
+  plan: GenerationPlan | undefined,
+  rendered: ReadonlySet<string>,
+  renderedZoneMaps: ReadonlySet<string>,
+): void {
+  const stats = tileFetcher.stats;
+  const report = buildPerfReport({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    tiles: { fromCache: stats.cacheHits, downloaded: stats.downloads },
+    subjects: [FICHE_SUBJECT, ZONE_MAP_SUBJECT],
+    parcours: plan
+      ? countersFromDecisions(plan.decisions, {
+          subject: FICHE_SUBJECT.id,
+          label: (decision) => decision.tourId,
+          reason: (decision) => decision.ficheReason,
+          isChanged: (decision) =>
+            decision.regenerateFiche &&
+            rendered.has(parcoursStateKey(decision.zoneId, decision.tourId)),
+        })
+      : { changed: [], unchanged: [] },
+    zoneMaps: plan
+      ? countersFromZoneDecisions(plan.zoneDecisions, {
+          subject: ZONE_MAP_SUBJECT.id,
+          label: (decision) => practiceLabel(decision.kind),
+          reason: (decision) => decision.reason,
+          isChanged: (decision) =>
+            decision.regenerateZoneMap &&
+            renderedZoneMaps.has(zoneMapKey(decision.zoneId, decision.kind)),
+        })
+      : { changed: [], unchanged: [] },
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
 }
 
 main().catch((error: unknown) => {

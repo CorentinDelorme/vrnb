@@ -1,19 +1,42 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import type { FeatureCollection } from 'geojson';
 import { join } from 'path';
+import { format, resolveConfig } from 'prettier';
 
 import { buildTourGeoJsonAsset } from '../src/app/shared/gpx/tour-geojson';
 import { toursData } from '../src/app/tours-data';
-import { DEFAULT_ZONE_ID } from '../src/app/zones';
+
+import type { ParcoursEntry } from './generation-helpers';
+import {
+  compareParcoursIds,
+  geoJsonAssetPath,
+  geoJsonRootDir,
+  isFilterActive,
+  listParcours,
+  parseForceFlag,
+  parseGenerationFilters,
+  perfReportPath,
+  practiceTypeOf,
+  writeFileIfChanged,
+  writePerfReport,
+} from './generation-helpers';
+import type { PerfRecorder } from './generation-perf';
+import {
+  buildPerfReport,
+  countersFromIds,
+  createPerfRecorder,
+  formatPerfReport,
+} from './generation-perf';
+import { parcoursStateKey } from './generation-state';
+import { DATA_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
-const gpxDir = join(rootDir, 'public/gpx');
-const geoJsonDir = join(rootDir, 'public/geojson');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
 
-const TOUR_FOLDER_PATTERN = /^[VP]\d+$/;
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-tours';
 
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
@@ -74,109 +97,59 @@ interface GeneratedTour {
   zoneId: string;
 }
 
-/** List the zone ids found under public/gpx (each zone is a folder of tour folders). */
-function getZoneIds(): string[] {
-  if (!existsSync(gpxDir)) {
-    return [];
-  }
-
-  const zoneIds = readdirSync(gpxDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && !TOUR_FOLDER_PATTERN.test(entry.name))
-    .map((entry) => entry.name);
-
-  // Legacy layout: tour folders directly under public/gpx belong to the default zone.
-  const hasLegacyTours = readdirSync(gpxDir, { withFileTypes: true }).some(
-    (entry) => entry.isDirectory() && TOUR_FOLDER_PATTERN.test(entry.name),
-  );
-  if (hasLegacyTours && !zoneIds.includes(DEFAULT_ZONE_ID)) {
-    zoneIds.push(DEFAULT_ZONE_ID);
-  }
-
-  return zoneIds.sort();
-}
-
-function getTours(prefix: string, zoneId: string, baseDir: string): GeneratedTour[] {
-  if (!existsSync(baseDir)) {
-    return [];
-  }
-
-  const folders = readdirSync(baseDir).filter((f) => f.startsWith(prefix));
-  return folders
-    .map((tourId) => {
-      const gpxPath = join(baseDir, tourId, `${tourId}.gpx`);
-      const startGpxPath = join(baseDir, tourId, `${tourId}_start.gpx`);
-      const endGpxPath = join(baseDir, tourId, `${tourId}_end.gpx`);
-
-      const distance = parseGpxDistance(gpxPath);
-      const startDistance = parseGpxDistance(startGpxPath);
-      const endDistance = parseGpxDistance(endGpxPath);
-
-      return {
-        name: tourId,
-        distance,
-        startDistance,
-        endDistance,
-        zoneId,
-      };
-    })
-    .sort((a, b) => {
-      const numA = parseInt(a.name.slice(1));
-      const numB = parseInt(b.name.slice(1));
-      return numA - numB;
-    });
-}
-
-function zoneBaseDir(zoneId: string): string {
-  // Legacy layout: default-zone tours live directly under public/gpx.
-  if (zoneId === DEFAULT_ZONE_ID && !existsSync(join(gpxDir, DEFAULT_ZONE_ID))) {
-    return gpxDir;
-  }
-  return join(gpxDir, zoneId);
+/** Distances of a Parcours, read from its GPX traces. */
+function readTourDistances(entry: ParcoursEntry): GeneratedTour {
+  return {
+    name: entry.tourId,
+    distance: parseGpxDistance(entry.tracePath),
+    startDistance: parseGpxDistance(entry.startSegmentPath),
+    endDistance: parseGpxDistance(entry.endSegmentPath),
+    zoneId: entry.zoneId,
+  };
 }
 
 /**
- * Emit the precomputed GeoJSON asset for a tour (public/geojson/<zone>/<tour>
- * .geojson): the route plus the start/end segments, each feature tagged with
- * its role, so maps fetch precomputed data at runtime instead of parsing GPX.
+ * The content of the precomputed GeoJSON asset of a Parcours
+ * (public/geojson/<zone>/<tour>.geojson): the route plus the start/end
+ * segments, each feature tagged with its role, so maps fetch precomputed
+ * data at runtime instead of parsing GPX.
  */
-function emitTourGeoJson(zoneId: string, tourId: string): void {
-  const tourGpxDir = join(zoneBaseDir(zoneId), tourId);
+function buildTourGeoJson(entry: ParcoursEntry): string {
   const asset = buildTourGeoJsonAsset({
-    start: readGpxCollection(join(tourGpxDir, `${tourId}_start.gpx`)),
-    tour: readGpxCollection(join(tourGpxDir, `${tourId}.gpx`)),
-    end: readGpxCollection(join(tourGpxDir, `${tourId}_end.gpx`)),
+    start: readGpxCollection(entry.startSegmentPath),
+    tour: readGpxCollection(entry.tracePath),
+    end: readGpxCollection(entry.endSegmentPath),
   });
 
-  const outputDir = join(geoJsonDir, zoneId);
-  try {
-    mkdirSync(outputDir, { recursive: true });
-    writeFileSync(join(outputDir, `${tourId}.geojson`), `${JSON.stringify(asset)}\n`);
-  } catch (error) {
-    throw new Error(
-      `cannot emit ${zoneId}/${tourId}.geojson: ${error instanceof Error ? error.message : error}`,
-    );
-  }
+  return `${JSON.stringify(asset)}\n`;
 }
 
-function parseArgValues(flag: string): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
+/**
+ * Write the precomputed GeoJSON asset of a Parcours, when its content
+ * changed.
+ *
+ * Returns whether the asset was written.
+ */
+function emitTourGeoJson(entry: ParcoursEntry): boolean {
+  try {
+    const outputDir = join(geoJsonRootDir(rootDir), entry.zoneId);
+    mkdirSync(outputDir, { recursive: true });
+    return writeFileIfChanged(
+      geoJsonAssetPath(rootDir, entry.zoneId, entry.tourId),
+      buildTourGeoJson(entry),
+    );
+  } catch (error) {
+    throw new Error(
+      `impossible d'écrire ${parcoursStateKey(entry.zoneId, entry.tourId)}.geojson : ${error instanceof Error ? error.message : error}`,
+    );
+  }
 }
 
 function sortTours(a: GeneratedTour, b: GeneratedTour): number {
   if (a.zoneId !== b.zoneId) {
     return a.zoneId.localeCompare(b.zoneId);
   }
-  if (a.name[0] !== b.name[0]) {
-    return a.name[0] < b.name[0] ? -1 : 1;
-  }
-  return parseInt(a.name.slice(1)) - parseInt(b.name.slice(1));
+  return compareParcoursIds(a.name, b.name);
 }
 
 /**
@@ -185,58 +158,171 @@ function sortTours(a: GeneratedTour, b: GeneratedTour): number {
  * tour is recomputed from the GPX files.
  */
 function mergeTours(existing: GeneratedTour[], fresh: GeneratedTour[]): GeneratedTour[] {
-  const freshKeys = new Set(fresh.map((t) => `${t.zoneId}/${t.name}`));
-  const kept = existing.filter((t) => !freshKeys.has(`${t.zoneId}/${t.name}`));
+  const freshKeys = new Set(fresh.map((tour) => parcoursStateKey(tour.zoneId, tour.name)));
+  const kept = existing.filter((tour) => !freshKeys.has(parcoursStateKey(tour.zoneId, tour.name)));
   return [...kept, ...fresh].sort(sortTours);
 }
 
-const tourFilter = parseArgValues('--tour');
-const zoneFilter = parseArgValues('--zone');
-const filtered = tourFilter !== undefined || zoneFilter !== undefined;
-
-const zoneIds = getZoneIds().filter((zoneId) => !zoneFilter || zoneFilter.has(zoneId));
-if (filtered && zoneIds.length === 0) {
-  throw new Error('No zones match the --tour/--zone filter.');
-}
-const matchesTour = (tour: GeneratedTour): boolean => !tourFilter || tourFilter.has(tour.name);
-const freshVTours = zoneIds.flatMap((zoneId) =>
-  getTours('V', zoneId, zoneBaseDir(zoneId)).filter(matchesTour),
-);
-const freshPTours = zoneIds.flatMap((zoneId) =>
-  getTours('P', zoneId, zoneBaseDir(zoneId)).filter(matchesTour),
-);
-if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
-  throw new Error('No tours match the --tour/--zone filter.');
-}
-
-const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
-const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
-
-// Emit precomputed GeoJSON for every freshly computed tour only; tours kept
-// by the --tour/--zone merge keep their existing asset untouched.
-const freshTours = [...freshVTours, ...freshPTours];
-let emitFailures = 0;
-for (const tour of freshTours) {
-  try {
-    emitTourGeoJson(tour.zoneId, tour.name);
-  } catch (error) {
-    emitFailures += 1;
-    console.error(`fail ${tour.name}: ${error instanceof Error ? error.message : error}`);
-  }
-}
-if (emitFailures > 0) {
-  throw new Error(`${emitFailures} GeoJSON asset(s) failed to emit.`);
-}
-
-const content = `// Auto-generated from public/gpx folder (one folder per zone)
+/**
+ * The catalogue of the Parcours, as it is written in the repository.
+ *
+ * The file is formatted the way Prettier formats it, so the generated file
+ * is always the file the linters expect — and so the comparison with the
+ * file already on the disk tells whether the data of the Parcours changed.
+ */
+async function buildToursData(vTours: GeneratedTour[], pTours: GeneratedTour[]): Promise<string> {
+  const content = `// Auto-generated from public/gpx folder (one folder per zone)
 export const toursData = {
   vTours: ${JSON.stringify(vTours, null, 2).replace(/"/g, "'")},
   pTours: ${JSON.stringify(pTours, null, 2).replace(/"/g, "'")},
 };
 `;
 
-writeFileSync(outputFile, content);
-console.log(
-  `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
-);
-console.log(`Emitted ${freshTours.length} precomputed GeoJSON files under public/geojson/`);
+  const config = await resolveConfig(outputFile);
+  return format(content, { ...config, filepath: outputFile });
+}
+
+async function main(): Promise<void> {
+  const perf = createPerfRecorder();
+  /** The Parcours of the run, and the ones whose data changed. */
+  let scope: string[] = [];
+  const changed = new Set<string>();
+
+  try {
+    const filters = parseGenerationFilters(process.argv);
+    const force = parseForceFlag(process.argv);
+    const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
+
+    if (force) {
+      console.log(
+        "Mode forcé : le catalogue et les assets GeoJSON sont régénérés quoi qu'il arrive.",
+      );
+    }
+
+    const inventory = listParcours(rootDir, filters);
+    const zoneIds = inventory.zoneIds;
+    if (filtered && zoneIds.length === 0) {
+      throw new Error('Aucune Zone ne correspond au filtre --tour/--zone.');
+    }
+    scope = inventory.parcours.map((entry) => parcoursStateKey(entry.zoneId, entry.tourId));
+    const freshTours = await perf.measure('distances', async () =>
+      inventory.parcours.map(readTourDistances),
+    );
+    const freshVTours = freshTours.filter((tour) => practiceTypeOf(tour.name) === 'V');
+    const freshPTours = freshTours.filter((tour) => practiceTypeOf(tour.name) === 'P');
+    if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
+      throw new Error('Aucun Parcours ne correspond au filtre --tour/--zone.');
+    }
+
+    const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
+    const pTours = filtered ? mergeTours(toursData.pTours, freshPTours) : freshPTours;
+
+    // A Parcours whose distances changed is regenerated, even when its
+    // GeoJSON asset did not change: the catalogue holds its new distances.
+    const existingTours = new Map(
+      [...toursData.vTours, ...toursData.pTours].map((tour) => [
+        parcoursStateKey(tour.zoneId, tour.name),
+        tour,
+      ]),
+    );
+    for (const fresh of freshTours) {
+      if (distancesChanged(existingTours.get(parcoursStateKey(fresh.zoneId, fresh.name)), fresh)) {
+        changed.add(parcoursStateKey(fresh.zoneId, fresh.name));
+      }
+    }
+
+    // Emit precomputed GeoJSON for every freshly computed tour only; tours kept
+    // by the --tour/--zone merge keep their existing asset untouched. The asset
+    // is written only when its content changed, so a run that changed nothing
+    // leaves no diff behind.
+    let emitFailures = 0;
+    let emitted = 0;
+    await perf.measure('GeoJSON', async () => {
+      for (const entry of inventory.parcours) {
+        try {
+          if (emitTourGeoJson(entry)) {
+            emitted += 1;
+            changed.add(parcoursStateKey(entry.zoneId, entry.tourId));
+          }
+        } catch (error) {
+          emitFailures += 1;
+          console.error(
+            `échec ${entry.tourId} : ${error instanceof Error ? error.message : error}`,
+          );
+        }
+      }
+    });
+    if (emitFailures > 0) {
+      throw new Error(`${emitFailures} asset(s) GeoJSON n'ont pas pu être écrits.`);
+    }
+
+    // The catalogue is written only when its content changed.
+    await perf.measure('catalogue', async () => {
+      try {
+        if (writeFileIfChanged(outputFile, await buildToursData(vTours, pTours))) {
+          console.log('Catalogue mis à jour : src/app/tours-data.ts.');
+        } else {
+          console.log('Catalogue inchangé : src/app/tours-data.ts laissé tel quel.');
+        }
+      } catch (error) {
+        throw new Error(
+          `impossible d'écrire ${outputFile} : ${error instanceof Error ? error.message : error}`,
+        );
+      }
+    });
+
+    console.log(
+      `Catalogue généré : ${vTours.length} Parcours à vélo, ${pTours.length} Parcours à pied (${zoneIds.join(', ') || 'aucune Zone'})`,
+    );
+    console.log(
+      `${emitted} fichier(s) GeoJSON précalculé écrits dans public/geojson/ (${inventory.parcours.length} calculés)`,
+    );
+  } finally {
+    reportRun(perf, scope, changed);
+  }
+}
+
+/**
+ * Show the `[perf]` block of the run: how long it took, how long each step
+ * took, and what the run did with the data of every Parcours.
+ *
+ * The data step reads no tile: the tile counters of a run are the ones of
+ * the Fiche step.
+ */
+function reportRun(
+  perf: PerfRecorder,
+  scope: readonly string[],
+  changed: ReadonlySet<string>,
+): void {
+  const report = buildPerfReport({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    tiles: { fromCache: 0, downloaded: 0 },
+    subjects: [DATA_SUBJECT],
+    parcours: countersFromIds(DATA_SUBJECT.id, [...changed], scope, 'up-to-date', 'data-changed'),
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
+}
+
+/**
+ * Whether the distances of a Parcours changed since the catalogue on the
+ * disk.
+ */
+function distancesChanged(existing: GeneratedTour | undefined, fresh: GeneratedTour): boolean {
+  if (!existing) {
+    return true;
+  }
+  return (
+    existing.distance !== fresh.distance ||
+    existing.startDistance !== fresh.startDistance ||
+    existing.endDistance !== fresh.endDistance
+  );
+}
+
+main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});

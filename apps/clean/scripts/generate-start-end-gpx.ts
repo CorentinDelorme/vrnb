@@ -1,40 +1,67 @@
 import { gpx } from '@tmcw/togeojson';
 import { DOMParser } from '@xmldom/xmldom';
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 
-import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
+import { getZone } from '../src/app/zones';
+import { createNetworkScheduler } from './network-scheduler';
+import { createRouterClient } from './router-client';
+import { buildSegmentGpx } from './segment-gpx';
+
+import type { ParcoursEntry } from './generation-helpers';
+import {
+  errorMessage,
+  gpxRootDir,
+  listParcours,
+  parseForceFlag,
+  parseGenerationFilters,
+  perfReportPath,
+  practiceLabel,
+  writeFileIfChanged,
+  writePerfReport,
+} from './generation-helpers';
+import type { PerfRecorder } from './generation-perf';
+import {
+  buildPerfReport,
+  countersFromDecisions,
+  createPerfRecorder,
+  formatPerfReport,
+} from './generation-perf';
+import type { GenerationPlan, ParcoursDecision, PlanCandidate } from './generation-plan';
+import { planGeneration } from './generation-plan';
+import type { ParcoursStateUpdate } from './generation-state';
+import {
+  GENERATION_STATE_VERSION,
+  fingerprintParcoursFiles,
+  generationStatePath,
+  meetingPointFingerprint,
+  nextGenerationState,
+  parcoursStateKey,
+} from './generation-state';
+import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
+import { SEGMENTS_SUBJECT } from './generation-subjects';
+import type { LonLat, ParcoursRoute } from './route-parcours';
+import {
+  PARCOURS_ROUTING_CONCURRENCY,
+  ROUTING_MIN_INTERVAL_MS,
+  parcoursSegments,
+  profileForParcours,
+  routeParcours,
+} from './route-parcours';
 
 const rootDir = join(import.meta.dirname, '..');
-const gpxDir = join(rootDir, 'public/gpx');
 
-const OSRM_BASE_URL = 'https://router.project-osrm.org/route/v1';
-const VALHALLA_URL = 'https://valhalla1.openstreetmap.de/route';
-const REQUEST_DELAY_MS = 400;
-const REQUEST_TIMEOUT_MS = 30_000;
+/** Name of the script, as the `[perf]` block of the run shows it. */
+const SCRIPT_NAME = 'generate-start-end-gpx';
 
-type LonLat = [number, number];
+/**
+ * Maximum number of simultaneous requests to a routing server: two, like
+ * the tile server.
+ */
+const MAX_CONCURRENT_REQUESTS_PER_HOST = 2;
 
-type RouterSource = 'osrm' | 'valhalla';
-
-interface RoutedPath {
-  readonly coords: LonLat[];
-  /** Routed distance in meters, as reported by the router. */
-  readonly distanceM: number;
-  readonly source: RouterSource;
-}
-
-function profileForTour(tourId: string): { osrm: 'bicycle' | 'foot'; gpxType: string } {
-  return tourId.startsWith('V')
-    ? { osrm: 'bicycle', gpxType: 'cycling' }
-    : { osrm: 'foot', gpxType: 'walking' };
-}
-
-function getTourEndpoints(
-  tourId: string,
-  baseDir: string,
-): { start: LonLat; end: LonLat } | undefined {
-  const gpxPath = join(baseDir, tourId, `${tourId}.gpx`);
+function getTourEndpoints(entry: ParcoursEntry): { start: LonLat; end: LonLat } | undefined {
+  const gpxPath = entry.tracePath;
   if (!existsSync(gpxPath)) {
     return undefined;
   }
@@ -58,330 +85,281 @@ function getTourEndpoints(
   return { start: [first[0], first[1]], end: [last[0], last[1]] };
 }
 
-interface OsrmResponse {
-  code: string;
-  message?: string;
-  routes?: { geometry?: { coordinates?: number[][] }; distance?: number }[];
+/**
+ * The fingerprints of the Point de rendez-vous of the Zones of the run.
+ *
+ * The segments of a Parcours start and end at the Point de rendez-vous of
+ * its Zone: a Point de rendez-vous that changed invalidates them. The
+ * fingerprint is the sha256 of the name and of the coordinates of the
+ * Point de rendez-vous.
+ */
+function meetingPointFingerprintsOf(zoneIds: readonly string[]): Map<string, string> {
+  const fingerprints = new Map<string, string>();
+
+  for (const zoneId of zoneIds) {
+    fingerprints.set(zoneId, meetingPointFingerprint(getZone(zoneId).meetingPoint));
+  }
+
+  return fingerprints;
 }
 
-interface ValhallaResponse {
-  trip?: {
-    status?: number;
-    status_message?: string;
-    summary?: { length?: number };
-    legs?: { shape?: string }[];
-  };
-}
-
-async function fetchRoute(from: LonLat, to: LonLat, profile: string): Promise<RoutedPath> {
-  const url =
-    `${OSRM_BASE_URL}/${profile}/${from[0]},${from[1]};${to[0]},${to[1]}` +
-    `?overview=full&geometries=geojson`;
-  const res = await fetch(url, {
-    headers: { 'User-Agent': 'vrnb-clean/generate-start-end-gpx' },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  if (!res.ok) {
-    throw new Error(`OSRM HTTP ${res.status} for ${url}`);
-  }
-  const json = (await res.json()) as OsrmResponse;
-  const route = json.routes?.[0];
-  const coords = route?.geometry?.coordinates;
-  if (json.code !== 'Ok' || !coords || coords.length === 0) {
-    throw new Error(`OSRM error: ${json.code}${json.message ? ` (${json.message})` : ''}`);
-  }
+/** The fingerprints of the files of a Parcours, as they are on the disk. */
+function toCandidate(entry: ParcoursEntry, meetingPoint: string | undefined): PlanCandidate {
   return {
-    coords: coords.map(([lon, lat]) => [lon, lat] as LonLat),
-    distanceM: route?.distance ?? 0,
-    source: 'osrm',
+    zoneId: entry.zoneId,
+    tourId: entry.tourId,
+    fingerprints: { ...fingerprintParcoursFiles(entry), fiche: undefined },
+    meetingPoint,
   };
 }
 
-/**
- * Decode a polyline-encoded shape (Valhalla uses precision 6 by default).
- * Returns [lon, lat] pairs.
- */
-function decodePolyline(encoded: string, precision = 6): LonLat[] {
-  const coords: LonLat[] = [];
-  let index = 0;
-  let lat = 0;
-  let lon = 0;
-  const factor = 10 ** precision;
-
-  while (index < encoded.length) {
-    let shift = 0;
-    let result = 0;
-    let byte = 0;
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-    lat += result & 1 ? ~(result >> 1) : result >> 1;
-
-    shift = 0;
-    result = 0;
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-    lon += result & 1 ? ~(result >> 1) : result >> 1;
-
-    coords.push([lon / factor, lat / factor]);
-  }
-
-  return coords;
-}
-
-/**
- * Route with Valhalla. Unlike the OSRM demo server, Valhalla does not force
- * pedestrians and contraflow cyclists onto detours: one-way streets that are
- * legally usable on foot (or by bike in 30 km/h zones, e.g. Rue Gaudrine in
- * Bruz) don't trigger a loop around the block.
- */
-async function fetchValhalla(
-  from: LonLat,
-  to: LonLat,
-  costing: 'bicycle' | 'pedestrian',
-): Promise<RoutedPath> {
-  const res = await fetch(VALHALLA_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'vrnb-clean/generate-start-end-gpx',
-    },
-    body: JSON.stringify({
-      locations: [
-        { lon: from[0], lat: from[1] },
-        { lon: to[0], lat: to[1] },
-      ],
-      costing,
-    }),
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  if (!res.ok) {
-    throw new Error(`Valhalla HTTP ${res.status}`);
-  }
-  const json = (await res.json()) as ValhallaResponse;
-  const trip = json.trip;
-  const shape = trip?.legs?.[0]?.shape;
-  const lengthKm = trip?.summary?.length;
-  if (trip?.status !== 0 || typeof shape !== 'string' || shape.length === 0) {
-    throw new Error(`Valhalla error: ${trip?.status_message ?? 'no route'}`);
-  }
-  const coords = decodePolyline(shape);
-  if (coords.length === 0) {
-    throw new Error('Valhalla error: empty shape');
-  }
-  return { coords, distanceM: (lengthKm ?? 0) * 1000, source: 'valhalla' };
-}
-
-/**
- * Query both routers and keep the shortest path.
- * Falls back to whichever router answered when the other one fails.
- */
-async function resolveRoute(
-  from: LonLat,
-  to: LonLat,
-  kind: 'bicycle' | 'foot',
-): Promise<RoutedPath> {
-  const valhallaCosting = kind === 'bicycle' ? 'bicycle' : 'pedestrian';
-  const outcomes = await Promise.allSettled([
-    fetchRoute(from, to, kind),
-    (async () => {
-      await delay(REQUEST_DELAY_MS);
-      return fetchValhalla(from, to, valhallaCosting);
-    })(),
-  ]);
-  const fulfilled = outcomes
-    .filter(
-      (outcome): outcome is PromiseFulfilledResult<RoutedPath> => outcome.status === 'fulfilled',
-    )
-    .map((outcome) => outcome.value);
-  if (fulfilled.length === 0) {
-    const reasons = outcomes
-      .filter((outcome) => outcome.status === 'rejected')
-      .map((outcome) => String((outcome as PromiseRejectedResult).reason))
-      .join(' | ');
-    throw new Error(`No route from either router: ${reasons}`);
-  }
-  return fulfilled.reduce((best, candidate) =>
-    candidate.distanceM < best.distanceM ? candidate : best,
-  );
-}
-
-function escapeXml(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function buildGpx(name: string, type: string, coords: LonLat[], source: RouterSource): string {
-  const creator = source === 'osrm' ? 'OSRM' : 'Valhalla';
-  const points = coords
-    .map(
-      ([lon, lat]) =>
-        `      <trkpt lat="${lat.toFixed(6)}" lon="${lon.toFixed(6)}">\n      </trkpt>`,
-    )
-    .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (${creator})">
-  <metadata>
-    <link href="https://router.project-osrm.org">
-      <text>OSRM</text>
-    </link>
-  </metadata>
-  <trk>
-    <type>${type}</type>
-    <name>${escapeXml(name)}</name>
-    <trkseg>
-${points}
-    </trkseg>
-  </trk>
-</gpx>
-`;
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function parseArgValues(flag: string): Set<string> | undefined {
-  const arg = process.argv.find((a) => a.startsWith(`${flag}=`));
-  if (!arg) return undefined;
-  const ids = arg
-    .slice(flag.length + 1)
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return ids.length > 0 ? new Set(ids) : undefined;
-}
-
-function parseTourFilter(): Set<string> | undefined {
-  return parseArgValues('--tour');
-}
-
-function parseZoneFilter(): Set<string> | undefined {
-  return parseArgValues('--zone');
-}
-
-interface ZoneTours {
-  readonly zoneId: string;
-  readonly baseDir: string;
-  readonly tourIds: string[];
-}
-
-/** Group tour folders by zone (legacy root-level tours belong to the default zone). */
-function getZoneTours(
-  tourFilter: Set<string> | undefined,
-  zoneFilter: Set<string> | undefined,
-): ZoneTours[] {
-  if (!existsSync(gpxDir)) {
-    throw new Error(`GPX directory not found: ${gpxDir}`);
-  }
-
-  const isTourDir = (name: string): boolean => /^[VP]/.test(name);
-  const sortTours = (a: string, b: string): number => parseInt(a.slice(1)) - parseInt(b.slice(1));
-  const filterTours = (ids: string[]): string[] =>
-    ids.filter((id) => !tourFilter || tourFilter.has(id)).sort(sortTours);
-
-  const result: ZoneTours[] = [];
-  const entries = readdirSync(gpxDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory() || isTourDir(entry.name)) continue;
-    if (zoneFilter && !zoneFilter.has(entry.name)) continue;
-    const baseDir = join(gpxDir, entry.name);
-    const tourIds = filterTours(
-      readdirSync(baseDir, { withFileTypes: true })
-        .filter((tour) => tour.isDirectory() && isTourDir(tour.name))
-        .map((tour) => tour.name),
-    );
-    if (tourIds.length > 0) {
-      result.push({ zoneId: entry.name, baseDir, tourIds });
-    }
-  }
-
-  // Legacy layout: tour folders directly under public/gpx.
-  const legacyIds = filterTours(
-    entries.filter((entry) => entry.isDirectory() && isTourDir(entry.name)).map((e) => e.name),
-  );
-  if (legacyIds.length > 0 && (!zoneFilter || zoneFilter.has(DEFAULT_ZONE_ID))) {
-    result.push({ zoneId: DEFAULT_ZONE_ID, baseDir: gpxDir, tourIds: legacyIds });
-  }
-
-  return result.sort((a, b) => a.zoneId.localeCompare(b.zoneId));
+/** The key of a Parcours in the generation state. */
+function keyOf(decision: ParcoursDecision): string {
+  return parcoursStateKey(decision.zoneId, decision.tourId);
 }
 
 async function main(): Promise<void> {
-  const tourFilter = parseTourFilter();
-  const zoneFilter = parseZoneFilter();
-  const zones = getZoneTours(tourFilter, zoneFilter);
+  const perf = createPerfRecorder();
+  /** The plan of the run, `undefined` when the run failed before it. */
+  let plan: GenerationPlan | undefined;
+  /** The Parcours that were routed. */
+  const routed = new Set<string>();
 
-  if (zones.length === 0 || zones.every((z) => z.tourIds.length === 0)) {
-    throw new Error('No tours found to process.');
-  }
+  try {
+    const filters = parseGenerationFilters(process.argv);
+    const force = parseForceFlag(process.argv);
+    const gpxRoot = gpxRootDir(rootDir);
+    if (!existsSync(gpxRoot)) {
+      throw new Error(`Dossier GPX introuvable : ${gpxRoot}`);
+    }
 
-  let failures = 0;
-
-  for (const { zoneId, baseDir, tourIds } of zones) {
-    const meetingPoint = getZone(zoneId).meetingPoint;
-    const meetingCoords: LonLat = [meetingPoint.coordinates[0], meetingPoint.coordinates[1]];
-
-    console.log(
-      `Zone ${zoneId} — meeting point: ${meetingPoint.name} (${meetingCoords[1]}, ${meetingCoords[0]})`,
+    const inventory = listParcours(rootDir);
+    const entries = new Map(
+      inventory.parcours.map((entry) => [parcoursStateKey(entry.zoneId, entry.tourId), entry]),
     );
-    console.log(`Generating start/end GPX for ${tourIds.length} tours...`);
 
-    for (const tourId of tourIds) {
-      const { osrm, gpxType } = profileForTour(tourId);
-      try {
-        const endpoints = getTourEndpoints(tourId, baseDir);
-        if (!endpoints) {
-          throw new Error(`cannot read endpoints from ${tourId}/${tourId}.gpx`);
-        }
+    const statePath = generationStatePath(rootDir);
+    const state = readGenerationStateOrWarn(statePath);
+    const meetingPoints = meetingPointFingerprintsOf(
+      inventory.parcours.map((entry) => entry.zoneId),
+    );
 
-        const toStart = await resolveRoute(meetingCoords, endpoints.start, osrm);
-        await delay(REQUEST_DELAY_MS);
-        const fromEnd = await resolveRoute(endpoints.end, meetingCoords, osrm);
+    // The plan decides what the run must route: the Parcours whose source
+    // trace changed, the Parcours whose Point de rendez-vous changed, and
+    // only them.
+    plan = planGeneration({
+      state,
+      currentVersion: GENERATION_STATE_VERSION,
+      candidates: inventory.parcours.map((entry) =>
+        toCandidate(entry, meetingPoints.get(entry.zoneId)),
+      ),
+      filters,
+      force,
+    });
 
-        writeFileSync(
-          join(baseDir, tourId, `${tourId}_start.gpx`),
-          buildGpx(
-            `${meetingPoint.name} vers le parcours ${tourId}`,
-            gpxType,
-            toStart.coords,
-            toStart.source,
-          ),
-        );
-        writeFileSync(
-          join(baseDir, tourId, `${tourId}_end.gpx`),
-          buildGpx(
-            `Fin du parcours ${tourId} vers ${meetingPoint.name}`,
-            gpxType,
-            fromEnd.coords,
-            fromEnd.source,
-          ),
-        );
+    if (plan.decisions.length === 0) {
+      throw new Error('Aucun Parcours à traiter.');
+    }
 
-        console.log(
-          `ok ${tourId} (${osrm}): start ${toStart.coords.length} pts` +
-            ` ${Math.round(toStart.distanceM)}m [${toStart.source}], end ${fromEnd.coords.length} pts` +
-            ` ${Math.round(fromEnd.distanceM)}m [${fromEnd.source}]`,
-        );
-      } catch (error) {
-        failures += 1;
-        console.error(`fail ${tourId}: ${error instanceof Error ? error.message : error}`);
+    const toRoute = plan.decisions.filter((decision) => decision.rerouteSegments);
+
+    if (toRoute.length === 0) {
+      console.log('Rien à router : tous les Parcours du run sont à jour.');
+      return;
+    }
+
+    const toRouteKeys = new Set(toRoute.map(keyOf));
+
+    /**
+     * The scheduler every routing request goes through: one request every
+     * 400 ms and two at a time per server, the rate and the load the
+     * pipeline has always had.
+     */
+    const scheduler = createNetworkScheduler({
+      minIntervalMs: ROUTING_MIN_INTERVAL_MS,
+      maxConcurrentPerHost: MAX_CONCURRENT_REQUESTS_PER_HOST,
+    });
+
+    /** The routing servers: OSRM and Valhalla, asked at the same time. */
+    const routerClient = createRouterClient({ scheduler });
+
+    let failures = 0;
+    /** The Parcours that failed. */
+    const failed = new Set<string>();
+
+    for (const zone of inventory.zones) {
+      const zoneId = zone.zoneId;
+      const zoneEntries = zone.parcours.filter((entry) =>
+        toRouteKeys.has(parcoursStateKey(entry.zoneId, entry.tourId)),
+      );
+      if (zoneEntries.length === 0) {
+        continue;
       }
 
-      await delay(REQUEST_DELAY_MS);
+      const meetingPoint = getZone(zoneId).meetingPoint;
+      const meetingCoords: LonLat = [meetingPoint.coordinates[0], meetingPoint.coordinates[1]];
+
+      console.log(
+        `Zone ${zoneId} — point de rendez-vous : ${meetingPoint.name} (${meetingCoords[1]}, ${meetingCoords[0]})`,
+      );
+      console.log(`Génération des GPX de début et de fin de ${zoneEntries.length} Parcours…`);
+
+      await perf.measure(zoneId, async () => {
+        // The Parcours whose trace cannot be read are reported right away; the
+        // other ones are routed two at a time.
+        const parcours: ParcoursRoute[] = [];
+        for (const entry of zoneEntries) {
+          const endpoints = getTourEndpoints(entry);
+          if (!endpoints) {
+            failures += 1;
+            failed.add(parcoursStateKey(entry.zoneId, entry.tourId));
+            console.error(
+              `échec ${entry.tourId} : impossible de lire les extrémités de ${entry.tourId}/${entry.tourId}.gpx`,
+            );
+            continue;
+          }
+          parcours.push({
+            tourId: entry.tourId,
+            profile: profileForParcours(entry.tourId),
+            segments: parcoursSegments(meetingCoords, endpoints),
+          });
+        }
+
+        await routeParcours(parcours, {
+          routeSegment: routerClient.routeSegment,
+          concurrency: PARCOURS_ROUTING_CONCURRENCY,
+          onRouted: (outcome) => {
+            const entry = zoneEntries.find((candidate) => candidate.tourId === outcome.tourId);
+            if (!entry) {
+              throw new Error(`Parcours inconnu : ${outcome.tourId}`);
+            }
+            try {
+              writeFileIfChanged(
+                entry.startSegmentPath,
+                buildSegmentGpx(
+                  `${meetingPoint.name} vers le parcours ${outcome.tourId}`,
+                  outcome.profile.gpxType,
+                  outcome.start.coords,
+                  outcome.start.source,
+                ),
+              );
+              writeFileIfChanged(
+                entry.endSegmentPath,
+                buildSegmentGpx(
+                  `Fin du parcours ${outcome.tourId} vers ${meetingPoint.name}`,
+                  outcome.profile.gpxType,
+                  outcome.end.coords,
+                  outcome.end.source,
+                ),
+              );
+            } catch (error) {
+              throw new Error(
+                `impossible d'écrire les segments de ${outcome.tourId} : ${errorMessage(error)}`,
+              );
+            }
+            routed.add(parcoursStateKey(entry.zoneId, entry.tourId));
+            console.log(
+              `succès ${outcome.tourId} (${practiceLabel(outcome.profile.osrm)}) :` +
+                ` début ${outcome.start.coords.length} pts` +
+                ` ${Math.round(outcome.start.distanceM)} m [${outcome.start.source}],` +
+                ` fin ${outcome.end.coords.length} pts` +
+                ` ${Math.round(outcome.end.distanceM)} m [${outcome.end.source}]`,
+            );
+          },
+          onFailure: (failure) => {
+            failures += 1;
+            failed.add(parcoursStateKey(zoneId, failure.tourId));
+            console.error(
+              `échec ${failure.tourId} : ${failure.error instanceof Error ? failure.error.message : failure.error}`,
+            );
+          },
+        });
+      });
     }
-  }
 
-  if (failures > 0) {
-    throw new Error(`${failures} tour(s) failed.`);
-  }
+    // The state remembers what the pipeline produced: a Parcours that was
+    // routed is up to date, a Parcours that failed is dropped, so the next
+    // run routes it again.
+    writeGenerationStateOrFail(
+      statePath,
+      nextGenerationState(state, stateUpdates(entries, toRoute, routed, failed, meetingPoints)),
+    );
 
-  console.log('Done. Run `bun run generate:tours` to refresh distances.');
+    if (failures > 0) {
+      throw new Error(`${failures} Parcours en échec.`);
+    }
+
+    console.log('Terminé. Lancez `bun run generate:tours` pour recalculer les distances.');
+  } finally {
+    reportRun(perf, plan, routed);
+  }
+}
+
+/**
+ * Show the `[perf]` block of the run: how long it took, how long each Zone
+ * took, and what the run did with the segments of every Parcours.
+ *
+ * The routing step reads no tile: the tile counters of a run are the ones
+ * of the Fiche step.
+ */
+function reportRun(
+  perf: PerfRecorder,
+  plan: GenerationPlan | undefined,
+  routed: ReadonlySet<string>,
+): void {
+  const report = buildPerfReport({
+    script: SCRIPT_NAME,
+    totalMs: perf.totalMs(),
+    steps: perf.steps,
+    tiles: { fromCache: 0, downloaded: 0 },
+    subjects: [SEGMENTS_SUBJECT],
+    parcours: plan
+      ? countersFromDecisions(plan.decisions, {
+          subject: SEGMENTS_SUBJECT.id,
+          label: (decision) => decision.tourId,
+          reason: (decision) => decision.reason,
+          isChanged: (decision) =>
+            decision.rerouteSegments &&
+            routed.has(parcoursStateKey(decision.zoneId, decision.tourId)),
+        })
+      : { changed: [], unchanged: [] },
+  });
+
+  console.log(formatPerfReport(report).join('\n'));
+  writePerfReport(perfReportPath(rootDir, SCRIPT_NAME), report);
+}
+
+/**
+ * The updates the state of the next run holds: the Parcours that were
+ * routed get their new fingerprints, the Parcours that failed get none.
+ *
+ * A Parcours that was routed has no Fiche fingerprint anymore: its Fiche
+ * was rendered from the previous segments, so it is out of date and the
+ * Fiche step renders it again. The fingerprint of the Point de rendez-vous
+ * is recorded: the Parcours was routed from it.
+ */
+function stateUpdates(
+  entries: ReadonlyMap<string, ParcoursEntry>,
+  toRoute: readonly ParcoursDecision[],
+  routed: ReadonlySet<string>,
+  failed: ReadonlySet<string>,
+  meetingPoints: ReadonlyMap<string, string>,
+): ParcoursStateUpdate[] {
+  return toRoute.map((decision) => {
+    const key = keyOf(decision);
+    const entry = entries.get(key);
+    if (failed.has(key) || !routed.has(key) || !entry) {
+      return { key, record: undefined };
+    }
+    return {
+      key,
+      record: {
+        ...fingerprintParcoursFiles(entry),
+        fiche: undefined,
+        meetingPoint: meetingPoints.get(entry.zoneId),
+      },
+    };
+  });
 }
 
 main().catch((error: unknown) => {
