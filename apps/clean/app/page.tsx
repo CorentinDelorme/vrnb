@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
 import { TourListSection } from '../components/tour-list-section';
@@ -12,8 +13,9 @@ import { ZONES } from '../src/app/zones';
  * a tour is in progress, one open accordion per zone listing its bike and
  * walking tours, the Ouest-France press collapse, and the footer. The visible
  * `<h1>` and `<title>` come from the root layout header (spec #3); everything
- * here is statically prerendered, and the resume banner as well as the public
- * inscriptions statuses (ticket #16) hydrate client-side.
+ * here is statically prerendered, and the resume banner, the public
+ * inscriptions statuses (ticket #16) and the inscriptions opening
+ * announcement (ticket #34) hydrate client-side.
  */
 
 /** Press articles shown in the home collapse (content, kept verbatim). */
@@ -49,6 +51,11 @@ export default function HomePage() {
       <ResumeTourBanner />
 
       <InscriptionsStatusProvider>
+        {/* Ticket #34: one single mention announcing the inscriptions opening
+        date while the window has not opened yet, above the zone accordions.
+        Like the statuses themselves (ticket #16), it resolves client-side
+        after hydration — the prerendered HTML carries nothing. */}
+        <InscriptionsOpeningAnnouncement />
         {ZONES.map((zone) => {
           const bikeTours = findZoneTours(zone.id, 'V');
           const walkingTours = findZoneTours(zone.id, 'P');
