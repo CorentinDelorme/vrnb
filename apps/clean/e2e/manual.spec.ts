@@ -25,9 +25,43 @@ test.describe('Manual', () => {
       'Télécharger le PDF : une fiche du parcours',
       "fichier pour aller au départ : le chemin depuis le lieu de rendez-vous jusqu'au départ",
       'Itinéraire pour revenir (via GeoVelo) : ouvre le guidage à vélo de la fin du parcours',
+      "Un binôme, c'est deux bénévoles qui couvrent ensemble le même parcours",
+      "1. Choisissez un parcours libre. Sur l'accueil, chaque parcours encore libre affiche un bouton S'inscrire à côté de son bouton de lecture",
+      "2. Remplissez la fenêtre. Appuyez sur S'inscrire : la fenêtre rappelle la zone, le parcours, la date de l'action et le point de rendez-vous",
+      'puis appuyez sur Inscrire mon binôme',
+      "3. C'est confirmé. Un message vert confirme votre inscription et rappelle la date de l'action et le point de rendez-vous",
+      "Premier arrivé, premier servi : un parcours déjà couvert affiche la pastille Binôme inscrit et ne propose plus d'inscription",
+      "Les inscriptions ferment 3 jours avant la date de l'action : les organisateurs ont besoin de ce temps pour imprimer les fiches de suivi et organiser la journée",
+      "Les noms des membres sont effacés 90 jours après l'action. Ils servent uniquement à établir les fiches de suivi de l'édition",
     ];
     for (const phrase of spaced) {
       expect(text, `missing space around an inline element near: "${phrase}"`).toContain(phrase);
     }
+  });
+
+  /**
+   * The sommaire lists every section of the mode d'emploi and jumps to it: the
+   * page is read on a phone, outdoors, so the reader needs a shortcut to the
+   * part he needs. Every anchor must resolve to an existing heading.
+   */
+  test('should list every section in the sommaire and jump to it', async ({ page }) => {
+    await page.goto('/manual');
+
+    const sommaire = page.getByRole('navigation', { name: 'Sommaire' });
+    const links = sommaire.getByRole('link');
+    await expect(links).toHaveCount(5);
+
+    const anchors = await links.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute('href') ?? ''),
+    );
+    expect(anchors).toEqual(['#principe', '#inscription', '#exemple', '#reprendre', '#menu']);
+
+    for (const anchor of anchors) {
+      await expect(page.locator(anchor)).toBeVisible();
+    }
+
+    await sommaire.getByRole('link', { name: "S'inscrire en binôme" }).click();
+    await expect(page).toHaveURL(/#inscription$/);
+    await expect(page.getByRole('heading', { name: "S'inscrire en binôme" })).toBeVisible();
   });
 });

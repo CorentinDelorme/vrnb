@@ -4,27 +4,58 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { pageTitle } from '../../lib/route-meta';
+import {
+  INSCRIPTIONS_RETENTION_DAYS,
+  REGISTRATION_CLOSURE_DAYS,
+} from '../../src/app/inscriptions/edition';
 
 /**
  * `/manual` — the illustrated mode d'emploi (spec #3, US 5 & 26). Faithful port
- * of the legacy Angular manual page: four cards (principle,
- * P2 walkthrough with screenshots, resume later, Menu drawer), the seven
- * screenshots under `/manual/`, and the back-to-home button. The visible `<h1>`
- * comes from the root layout header; the `<title>` from `pageTitle('/manual')`.
+ * of the legacy Angular manual page: a sommaire, five cards (principle,
+ * binôme registration, P2 walkthrough with screenshots, resume later, Menu
+ * drawer), the manual screenshots under `/manual/`, and the back-to-home
+ * button. The visible `<h1>` comes from the root layout header; the `<title>`
+ * from `pageTitle('/manual')`.
  *
- * Spacing pitfall: the JSX compiler strips the space between an inline element
- * (`<strong>`, `<kbd>`, icon) and the following text when that text contains an
- * HTML entity like `&apos;` (which ESLint forces for apostrophes). Keep the
- * space inside the element (`<strong>Suivant </strong>en bas…`), or wrap the
- * following text in a string expression (`{" de la carte…"}`) when the element
- * has visible padding (e.g. `kbd`). A plain same-line space renders glued, and
- * an explicit `{' '}` does not survive Prettier at element-to-text boundaries.
+ * The sommaire is the list of the sections of the page: each entry links to
+ * the `id` of its heading, so the reader jumps straight to the part he needs
+ * (the page is read on a phone, outdoors, in a hurry). The ids and the
+ * `MANUAL_SECTIONS` entries must stay in sync: the sommaire is rendered from
+ * that single list, so a section can never be missing from it.
+ *
+ * The binôme section illustrates the registration modal with
+ * `/manual/08-inscription-binome.png`: the screenshot carries the action date
+ * of the current Édition, so it has to be captured again when the annual pivot
+ * (`src/app/inscriptions/edition.ts`) moves the action.
+ *
+ * Spacing pitfall: the JSX compiler strips the leading space of a text node
+ * that follows an inline element (`<strong>`, `<kbd>`, icon) or an
+ * interpolation, when that text node spans several lines AND carries an HTML
+ * entity like `&apos;` (which ESLint forces for apostrophes). Keep the space
+ * inside the element (`<strong>Suivant </strong>en bas…`), build a sentence
+ * that carries an interpolation as a single template literal
+ * (`` {`… ${REGISTRATION_CLOSURE_DAYS} jours …`} ``), or wrap the following
+ * text in a string expression (`{" de la carte…"}`) when the element has
+ * visible padding (e.g. `kbd`). A plain same-line space renders glued.
  * Guarded by the `keeps spaces around inline bold words` unit test intent and
  * by `e2e/manual.spec.ts`.
  */
 export async function generateMetadata(): Promise<Metadata> {
   return { title: pageTitle('/manual') };
 }
+
+/**
+ * The sections of the mode d'emploi, in reading order: the anchor id of each
+ * heading and the title the sommaire displays. The single source of truth of
+ * the sommaire — the headings themselves carry the matching `id`.
+ */
+const MANUAL_SECTIONS = [
+  { id: 'principe', title: 'Le principe en 3 temps' },
+  { id: 'inscription', title: "S'inscrire en binôme" },
+  { id: 'exemple', title: 'Exemple : faire le parcours Bruz Sud P2' },
+  { id: 'reprendre', title: 'Reprendre plus tard' },
+  { id: 'menu', title: 'Le bouton Menu pendant le parcours' },
+] as const;
 
 /** Decorative inline icon, equivalent of the legacy `<hugeicons-icon alt="">`. */
 interface InlineIconProps {
@@ -45,9 +76,26 @@ function InlineIcon({ icon }: InlineIconProps) {
 export default function ManualPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
+      <nav aria-label="Sommaire" className="card bg-base-100 shadow-md">
+        <div className="card-body">
+          <h2 className="card-title text-secondary text-xl sm:text-2xl">Sommaire</h2>
+          <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base">
+            {MANUAL_SECTIONS.map((section) => (
+              <li key={section.id}>
+                <a className="link link-secondary" href={`#${section.id}`}>
+                  {section.title}
+                </a>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </nav>
+
       <section className="card bg-base-100 shadow-md">
         <div className="card-body">
-          <h2 className="card-title text-secondary text-xl sm:text-2xl">Le principe en 3 temps</h2>
+          <h2 className="card-title text-secondary scroll-mt-4 text-xl sm:text-2xl" id="principe">
+            Le principe en 3 temps
+          </h2>
           <p className="text-sm sm:text-base">
             Chaque parcours se fait en 3 temps : <strong>aller </strong>jusqu&apos;au départ depuis
             le lieu de rendez-vous, <strong>nettoyer</strong> le parcours en ramassant les déchets,
@@ -89,7 +137,78 @@ export default function ManualPage() {
 
       <section className="card bg-base-100 shadow-md">
         <div className="card-body">
-          <h2 className="card-title text-secondary text-xl sm:text-2xl">
+          <h2
+            className="card-title text-secondary scroll-mt-4 text-xl sm:text-2xl"
+            id="inscription"
+          >
+            S&apos;inscrire en binôme
+          </h2>
+          <p className="text-sm sm:text-base">
+            Un <strong>binôme</strong>, c&apos;est deux bénévoles qui couvrent ensemble le même
+            parcours. Réserver un parcours pour votre binôme est facultatif, mais cela permet aux
+            organisateurs de savoir qui couvre quoi le jour de l&apos;action.
+          </p>
+          <figure className="flex flex-col">
+            <img
+              alt="Fenêtre d'inscription d'un binôme avec les prénoms et noms des deux membres"
+              className="rounded-lg border border-base-300 shadow-sm"
+              loading="lazy"
+              src="/manual/08-inscription-binome.png"
+            />
+            <figcaption className="pt-2 text-center text-sm opacity-70">
+              La fenêtre d&apos;inscription rappelle la zone, le parcours, la date de l&apos;action
+              et le point de rendez-vous.
+            </figcaption>
+          </figure>
+          <ol className="flex flex-col gap-4">
+            <li>
+              <p className="text-sm sm:text-base">
+                <strong>1. Choisissez un parcours libre. </strong>Sur l&apos;accueil, chaque
+                parcours encore libre affiche un bouton <strong>S&apos;inscrire</strong> à côté de
+                son bouton de lecture.
+              </p>
+            </li>
+            <li>
+              <p className="text-sm sm:text-base">
+                <strong>2. Remplissez la fenêtre. </strong>Appuyez sur{' '}
+                <strong>S&apos;inscrire </strong>: la fenêtre rappelle la zone, le parcours, la date
+                de l&apos;action et le point de rendez-vous. Saisissez le prénom et le nom des deux
+                membres du binôme, cochez la case d&apos;engagement, puis appuyez sur{' '}
+                <strong>Inscrire mon binôme</strong>.
+              </p>
+            </li>
+            <li>
+              <p className="text-sm sm:text-base">
+                <strong>3. C&apos;est confirmé. </strong>Un message vert confirme votre inscription
+                et rappelle la date de l&apos;action et le point de rendez-vous.
+              </p>
+            </li>
+          </ol>
+          <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
+            <li>
+              <strong>Premier arrivé, premier servi : </strong>un parcours déjà couvert affiche la
+              pastille <strong>Binôme inscrit </strong>et ne propose plus d&apos;inscription.
+            </li>
+            <li>
+              <strong>
+                {`Les inscriptions ferment ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action :`}
+              </strong>{' '}
+              les organisateurs ont besoin de ce temps pour imprimer les fiches de suivi et
+              organiser la journée.
+            </li>
+            <li>
+              <strong>
+                {`Les noms des membres sont effacés ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`}
+              </strong>{' '}
+              Ils servent uniquement à établir les fiches de suivi de l&apos;édition.
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section className="card bg-base-100 shadow-md">
+        <div className="card-body">
+          <h2 className="card-title text-secondary scroll-mt-4 text-xl sm:text-2xl" id="exemple">
             Exemple : faire le parcours Bruz Sud P2
           </h2>
           <p className="text-sm sm:text-base">
@@ -181,7 +300,9 @@ export default function ManualPage() {
 
       <section className="card bg-base-100 shadow-md">
         <div className="card-body">
-          <h2 className="card-title text-secondary text-xl sm:text-2xl">Reprendre plus tard</h2>
+          <h2 className="card-title text-secondary scroll-mt-4 text-xl sm:text-2xl" id="reprendre">
+            Reprendre plus tard
+          </h2>
           <p className="text-sm sm:text-base">
             Vous devez vous arrêter en plein milieu ? Pas d&apos;inquiétude : votre téléphone garde
             en mémoire l&apos;endroit où vous vous êtes arrêté, même si vous fermez la page ou si
@@ -225,7 +346,7 @@ export default function ManualPage() {
 
       <section className="card bg-base-100 shadow-md">
         <div className="card-body">
-          <h2 className="card-title text-secondary text-xl sm:text-2xl">
+          <h2 className="card-title text-secondary scroll-mt-4 text-xl sm:text-2xl" id="menu">
             Le bouton Menu pendant le parcours
           </h2>
           <p className="text-sm sm:text-base">

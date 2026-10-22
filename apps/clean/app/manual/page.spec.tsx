@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import ManualPage from './page';
@@ -31,6 +31,43 @@ describe('Manual page', () => {
     expect(text).toContain('Menu');
   });
 
+  /**
+   * The sommaire lists every section of the page and links to its heading: a
+   * reader on a phone jumps straight to the part he needs. The links and the
+   * `id` of the headings must never drift apart.
+   */
+  it('should list every section of the page in the sommaire', () => {
+    render(<ManualPage />);
+    const sommaire = screen.getByRole('navigation', { name: 'Sommaire' });
+    const links = within(sommaire).getAllByRole('link');
+    const anchors = links.map((link) => link.getAttribute('href'));
+
+    expect(anchors).toEqual(['#principe', '#inscription', '#exemple', '#reprendre', '#menu']);
+    for (const anchor of anchors) {
+      const id = anchor?.replace('#', '') ?? '';
+      expect(
+        document.getElementById(id),
+        `missing heading for the anchor ${anchor}`,
+      ).not.toBeNull();
+    }
+  });
+
+  it('should explain the binôme registration', () => {
+    const { container } = render(<ManualPage />);
+    const text = (container.textContent ?? '').replace(/\s+/g, ' ');
+
+    expect(screen.getByRole('heading', { name: "S'inscrire en binôme" })).toBeDefined();
+    expect(text).toContain(
+      "Un binôme, c'est deux bénévoles qui couvrent ensemble le même parcours",
+    );
+    expect(text).toContain(
+      "chaque parcours encore libre affiche un bouton S'inscrire à côté de son bouton de lecture",
+    );
+    expect(text).toContain("Les inscriptions ferment 3 jours avant la date de l'action");
+    expect(text).toContain("Les noms des membres sont effacés 90 jours après l'action");
+    expect(text).toContain('un parcours déjà couvert affiche la pastille Binôme inscrit');
+  });
+
   // Regression guard for the JSX whitespace pitfall: a space between an inline
   // element (`<strong>`, `<kbd>`, icon) and the following text is stripped by the
   // compiler when the text contains an HTML entity like `&apos;`. Every sentence
@@ -54,6 +91,13 @@ describe('Manual page', () => {
       'Télécharger le PDF : une fiche du parcours',
       "fichier pour aller au départ : le chemin depuis le lieu de rendez-vous jusqu'au départ",
       'Itinéraire pour revenir (via GeoVelo) : ouvre le guidage à vélo',
+      "Un binôme, c'est deux bénévoles qui couvrent ensemble le même parcours",
+      "1. Choisissez un parcours libre. Sur l'accueil, chaque parcours encore libre affiche un bouton S'inscrire",
+      "2. Remplissez la fenêtre. Appuyez sur S'inscrire : la fenêtre rappelle la zone",
+      "3. C'est confirmé. Un message vert confirme votre inscription",
+      'Premier arrivé, premier servi : un parcours déjà couvert affiche la pastille Binôme inscrit',
+      "Les inscriptions ferment 3 jours avant la date de l'action : les organisateurs ont besoin",
+      "Les noms des membres sont effacés 90 jours après l'action. Ils servent uniquement",
     ];
     for (const phrase of spaced) {
       expect(text, `missing space around inline element near: "${phrase}"`).toContain(phrase);

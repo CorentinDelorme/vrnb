@@ -73,7 +73,7 @@ Le service externe qui fournit les liens d'itinéraire à vélo (depuis ma posit
 _Avoid_: carte GPS, planificateur
 
 **Mode d'emploi**:
-Le guide illustré expliquant comment utiliser l'application pendant un Parcours.
+Le guide illustré expliquant comment utiliser l'application pendant un Parcours et comment inscrire un Binôme pour une Édition. Il s'ouvre sur un sommaire qui renvoie à chaque partie.
 _Avoid_: notice, tutoriel, manuel
 
 **Édition**:

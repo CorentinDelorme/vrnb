@@ -81,7 +81,15 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    unchanged. The modal of a closed window (its own closed state, reached when the public state
    could not be loaded) is covered by the unit suite, not by an E2E case.
 
-Totals: **109 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18) × chromium + firefox = **218**.
+6. **`Manual — should list every section in the sommaire and jump to it` (1 test)**: the mode
+   d'emploi `/manual` opens with a sommaire that lists every section of the page (principe,
+   inscription d'un binôme, exemple P2, reprendre plus tard, Menu) and links to the `id` of
+   its heading — the page is read on a phone, outdoors. The test asserts the five anchors and
+   that each one resolves to a visible heading, then clicks the « S'inscrire en binôme » link
+   and asserts the jump to `#inscription`. No parity impact: the legacy manual page had no
+   sommaire, and the DOM contract of the manual is only extended.
+
+Totals: **110 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire) × chromium + firefox = **220**.
 
 ---
 
@@ -415,9 +423,13 @@ Guards the JSX whitespace pitfall (space stripped between an inline element and 
 following text when it contains `&apos;` — cf. the note in `app/manual/page.tsx`).
 Vitest cannot reproduce it (its JSX transform keeps the space), hence this E2E check.
 
-| Test name                                             | Steps             | Expected                                                     |
-| ----------------------------------------------------- | ----------------- | ------------------------------------------------------------ |
-| `keeps spaces around bold words in the rendered copy` | `goto('/manual')` | 15 spaced French phrases present in the rendered `main` text |
+The sommaire test covers the navigation of the mode d'emploi: every section of the
+page is listed and every anchor resolves to an existing heading.
+
+| Test name                                                  | Steps                                                       | Expected                                                                                                                                                 |
+| ---------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keeps spaces around bold words in the rendered copy`      | `goto('/manual')`                                           | 23 spaced French phrases present in the rendered `main` text                                                                                             |
+| `should list every section in the sommaire and jump to it` | `goto('/manual')` → click the « S'inscrire en binôme » link | 5 sommaire links (`#principe`, `#inscription`, `#exemple`, `#reprendre`, `#menu`), each pointing at a visible heading; the click jumps to `#inscription` |
 
 ---
 
