@@ -50,7 +50,7 @@ function parseOutDir(): string {
 async function mergeZone(zoneId: string, outDir: string): Promise<number> {
   const files = zonePackFiles(rootDir, zoneId);
   if (files.length === 0) {
-    console.warn(`skip ${zoneId}: no PDFs found under public/pdf/${zoneId}/`);
+    console.warn(`ignoré ${zoneId} : aucun PDF trouvé dans public/pdf/${zoneId}/`);
     return 0;
   }
 
@@ -69,9 +69,9 @@ async function mergeZone(zoneId: string, outDir: string): Promise<number> {
   try {
     writeFileSync(outputPath, await merged.save());
   } catch (error) {
-    throw new Error(`cannot write ${outputPath}: ${errorMessage(error)}`);
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
   }
-  console.log(`Generated: ${outputPath} (${merged.getPageCount()} pages)`);
+  console.log(`Généré : ${outputPath} (${merged.getPageCount()} pages)`);
   return files.length;
 }
 
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
     zoneIds = ZONES.map((zone) => zone.id).filter((id) => matchesZoneFilter(filters, id));
 
     if (zoneIds.length === 0) {
-      throw new Error('No zones match the --zone filter.');
+      throw new Error('Aucune Zone ne correspond au filtre --zone.');
     }
 
     for (const zoneId of zoneIds) {

@@ -140,7 +140,7 @@ function emitTourGeoJson(entry: ParcoursEntry): boolean {
     );
   } catch (error) {
     throw new Error(
-      `cannot emit ${parcoursStateKey(entry.zoneId, entry.tourId)}.geojson: ${error instanceof Error ? error.message : error}`,
+      `impossible d'écrire ${parcoursStateKey(entry.zoneId, entry.tourId)}.geojson : ${error instanceof Error ? error.message : error}`,
     );
   }
 }
@@ -194,13 +194,15 @@ async function main(): Promise<void> {
     const filtered = isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds);
 
     if (force) {
-      console.log('Force mode: the catalogue and the GeoJSON assets are regenerated anyway.');
+      console.log(
+        "Mode forcé : le catalogue et les assets GeoJSON sont régénérés quoi qu'il arrive.",
+      );
     }
 
     const inventory = listParcours(rootDir, filters);
     const zoneIds = inventory.zoneIds;
     if (filtered && zoneIds.length === 0) {
-      throw new Error('No zones match the --tour/--zone filter.');
+      throw new Error('Aucune Zone ne correspond au filtre --tour/--zone.');
     }
     scope = inventory.parcours.map((entry) => parcoursStateKey(entry.zoneId, entry.tourId));
     const freshTours = await perf.measure('distances', async () =>
@@ -209,7 +211,7 @@ async function main(): Promise<void> {
     const freshVTours = freshTours.filter((tour) => practiceTypeOf(tour.name) === 'V');
     const freshPTours = freshTours.filter((tour) => practiceTypeOf(tour.name) === 'P');
     if (filtered && freshVTours.length === 0 && freshPTours.length === 0) {
-      throw new Error('No tours match the --tour/--zone filter.');
+      throw new Error('Aucun Parcours ne correspond au filtre --tour/--zone.');
     }
 
     const vTours = filtered ? mergeTours(toursData.vTours, freshVTours) : freshVTours;
@@ -244,34 +246,36 @@ async function main(): Promise<void> {
           }
         } catch (error) {
           emitFailures += 1;
-          console.error(`fail ${entry.tourId}: ${error instanceof Error ? error.message : error}`);
+          console.error(
+            `échec ${entry.tourId} : ${error instanceof Error ? error.message : error}`,
+          );
         }
       }
     });
     if (emitFailures > 0) {
-      throw new Error(`${emitFailures} GeoJSON asset(s) failed to emit.`);
+      throw new Error(`${emitFailures} asset(s) GeoJSON n'ont pas pu être écrits.`);
     }
 
     // The catalogue is written only when its content changed.
     await perf.measure('catalogue', async () => {
       try {
         if (writeFileIfChanged(outputFile, await buildToursData(vTours, pTours))) {
-          console.log('Updated src/app/tours-data.ts.');
+          console.log('Catalogue mis à jour : src/app/tours-data.ts.');
         } else {
-          console.log('Tours data unchanged: src/app/tours-data.ts left as is.');
+          console.log('Catalogue inchangé : src/app/tours-data.ts laissé tel quel.');
         }
       } catch (error) {
         throw new Error(
-          `cannot write ${outputFile}: ${error instanceof Error ? error.message : error}`,
+          `impossible d'écrire ${outputFile} : ${error instanceof Error ? error.message : error}`,
         );
       }
     });
 
     console.log(
-      `Generated tours data: ${vTours.length} bike tours, ${pTours.length} walking tours (${zoneIds.join(', ') || 'no zones'})`,
+      `Catalogue généré : ${vTours.length} Parcours à vélo, ${pTours.length} Parcours à pied (${zoneIds.join(', ') || 'aucune Zone'})`,
     );
     console.log(
-      `Emitted ${emitted} precomputed GeoJSON file(s) under public/geojson/ (${inventory.parcours.length} computed)`,
+      `${emitted} fichier(s) GeoJSON précalculé écrits dans public/geojson/ (${inventory.parcours.length} calculés)`,
     );
   } finally {
     reportRun(perf, scope, changed);

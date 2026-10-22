@@ -462,6 +462,17 @@ export function practiceTypeOf(tourId: string): PracticeType {
   return tourId.startsWith('P') ? 'P' : 'V';
 }
 
+/**
+ * The French name of a practice, as the referent reads it.
+ *
+ * The scripts name the two practices either by their type (`V`, `P`) or
+ * by the routing profile that stands for them (`bicycle`, `foot`): the
+ * console shows them in French, whatever the name it starts from.
+ */
+export function practiceLabel(practice: PracticeType | 'bicycle' | 'foot'): string {
+  return practice === 'V' || practice === 'bicycle' ? 'vélo' : 'pied';
+}
+
 // --- The keys of the generation state ---
 
 /**

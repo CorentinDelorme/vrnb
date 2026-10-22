@@ -16,6 +16,7 @@ import {
   parseForceFlag,
   parseGenerationFilters,
   perfReportPath,
+  practiceLabel,
   writeFileIfChanged,
   writePerfReport,
 } from './generation-helpers';
@@ -129,7 +130,7 @@ async function main(): Promise<void> {
     const force = parseForceFlag(process.argv);
     const gpxRoot = gpxRootDir(rootDir);
     if (!existsSync(gpxRoot)) {
-      throw new Error(`GPX directory not found: ${gpxRoot}`);
+      throw new Error(`Dossier GPX introuvable : ${gpxRoot}`);
     }
 
     const inventory = listParcours(rootDir);
@@ -157,13 +158,13 @@ async function main(): Promise<void> {
     });
 
     if (plan.decisions.length === 0) {
-      throw new Error('No tours found to process.');
+      throw new Error('Aucun Parcours à traiter.');
     }
 
     const toRoute = plan.decisions.filter((decision) => decision.rerouteSegments);
 
     if (toRoute.length === 0) {
-      console.log('Nothing to route: every Parcours of the run is up to date.');
+      console.log('Rien à router : tous les Parcours du run sont à jour.');
       return;
     }
 
@@ -199,9 +200,9 @@ async function main(): Promise<void> {
       const meetingCoords: LonLat = [meetingPoint.coordinates[0], meetingPoint.coordinates[1]];
 
       console.log(
-        `Zone ${zoneId} — meeting point: ${meetingPoint.name} (${meetingCoords[1]}, ${meetingCoords[0]})`,
+        `Zone ${zoneId} — point de rendez-vous : ${meetingPoint.name} (${meetingCoords[1]}, ${meetingCoords[0]})`,
       );
-      console.log(`Generating start/end GPX for ${zoneEntries.length} tours...`);
+      console.log(`Génération des GPX de début et de fin de ${zoneEntries.length} Parcours…`);
 
       await perf.measure(zoneId, async () => {
         // The Parcours whose trace cannot be read are reported right away; the
@@ -213,7 +214,7 @@ async function main(): Promise<void> {
             failures += 1;
             failed.add(parcoursStateKey(entry.zoneId, entry.tourId));
             console.error(
-              `fail ${entry.tourId}: cannot read endpoints from ${entry.tourId}/${entry.tourId}.gpx`,
+              `échec ${entry.tourId} : impossible de lire les extrémités de ${entry.tourId}/${entry.tourId}.gpx`,
             );
             continue;
           }
@@ -230,7 +231,7 @@ async function main(): Promise<void> {
           onRouted: (outcome) => {
             const entry = zoneEntries.find((candidate) => candidate.tourId === outcome.tourId);
             if (!entry) {
-              throw new Error(`Unknown parcours: ${outcome.tourId}`);
+              throw new Error(`Parcours inconnu : ${outcome.tourId}`);
             }
             try {
               writeFileIfChanged(
@@ -253,22 +254,23 @@ async function main(): Promise<void> {
               );
             } catch (error) {
               throw new Error(
-                `cannot write the segments of ${outcome.tourId}: ${errorMessage(error)}`,
+                `impossible d'écrire les segments de ${outcome.tourId} : ${errorMessage(error)}`,
               );
             }
             routed.add(parcoursStateKey(entry.zoneId, entry.tourId));
             console.log(
-              `ok ${outcome.tourId} (${outcome.profile.osrm}): start ${outcome.start.coords.length} pts` +
-                ` ${Math.round(outcome.start.distanceM)}m [${outcome.start.source}],` +
-                ` end ${outcome.end.coords.length} pts` +
-                ` ${Math.round(outcome.end.distanceM)}m [${outcome.end.source}]`,
+              `ok ${outcome.tourId} (${practiceLabel(outcome.profile.osrm)}) :` +
+                ` début ${outcome.start.coords.length} pts` +
+                ` ${Math.round(outcome.start.distanceM)} m [${outcome.start.source}],` +
+                ` fin ${outcome.end.coords.length} pts` +
+                ` ${Math.round(outcome.end.distanceM)} m [${outcome.end.source}]`,
             );
           },
           onFailure: (failure) => {
             failures += 1;
             failed.add(parcoursStateKey(zoneId, failure.tourId));
             console.error(
-              `fail ${failure.tourId}: ${failure.error instanceof Error ? failure.error.message : failure.error}`,
+              `échec ${failure.tourId} : ${failure.error instanceof Error ? failure.error.message : failure.error}`,
             );
           },
         });
@@ -284,10 +286,10 @@ async function main(): Promise<void> {
     );
 
     if (failures > 0) {
-      throw new Error(`${failures} tour(s) failed.`);
+      throw new Error(`${failures} Parcours en échec.`);
     }
 
-    console.log('Done. Run `bun run generate:tours` to refresh distances.');
+    console.log('Terminé. Lancez `bun run generate:tours` pour recalculer les distances.');
   } finally {
     reportRun(perf, plan, routed);
   }

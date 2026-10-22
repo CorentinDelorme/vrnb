@@ -84,10 +84,10 @@ function main(): void {
   const read = readGenerationState(statePath);
 
   if (read.status === 'missing') {
-    throw new Error(`Generation state not found: ${statePath}`);
+    throw new Error(`État de génération introuvable : ${statePath}`);
   }
   if (read.status === 'unreadable') {
-    throw new Error(`Generation state is unreadable: ${statePath} (${read.reason})`);
+    throw new Error(`État de génération illisible : ${statePath} (${read.reason})`);
   }
 
   const state = read.state;
@@ -117,9 +117,11 @@ function main(): void {
   try {
     written = writeGenerationState(statePath, refreshed);
   } catch (error) {
-    throw new Error(`cannot write the generation state (${statePath}): ${errorMessage(error)}`);
+    throw new Error(
+      `impossible d'écrire l'état de génération (${statePath}) : ${errorMessage(error)}`,
+    );
   }
-  console.log(written ? `Updated: ${statePath}` : `Nothing to update: ${statePath}`);
+  console.log(written ? `Mis à jour : ${statePath}` : `Rien à mettre à jour : ${statePath}`);
 }
 
 try {
