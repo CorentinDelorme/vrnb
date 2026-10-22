@@ -12,11 +12,20 @@ import type { BinomeRegistration } from './validation';
  * Browser client of the inscriptions endpoints: relative-URL fetch with an
  * injectable fetch and strict deserialization. GET degrades every failure to
  * the error outcome; POST maps the handler's status codes to the distinct
- * registration outcomes (created/taken/invalid/bot/closed/error).
+ * registration outcomes (created/taken/invalid/not-open/closed/error).
  */
 
+/** The whole Édition field of a valid public state (the two-bound window). */
+const EDITION = {
+  actionDate: '2027-02-14',
+  actionEndTime: '12:00',
+  actionStartTime: '09:00',
+  inscriptionsOpenDate: '2027-01-04',
+  year: 2027,
+} as const;
+
 const STATE = {
-  edition: { actionDate: '2027-02-14', year: 2027 },
+  edition: EDITION,
   inscriptions: [{ tourId: 'V1', zoneId: 'bruz-sud' }],
   registrationOpen: true,
 } as const;
@@ -58,7 +67,7 @@ describe('fetchInscriptionsOutcome', () => {
 describe('parseInscriptionsState', () => {
   it('should keep a well-formed state, filtering unusable rows', () => {
     const state = parseInscriptionsState({
-      edition: { actionDate: '2027-02-14', year: 2027 },
+      edition: EDITION,
       inscriptions: [
         { tourId: 'V1', zoneId: 'bruz-sud' },
         { tourId: 'V2' }, // missing zone
@@ -69,7 +78,7 @@ describe('parseInscriptionsState', () => {
       registrationOpen: false,
     });
     expect(state).toEqual({
-      edition: { actionDate: '2027-02-14', year: 2027 },
+      edition: EDITION,
       inscriptions: [
         { tourId: 'V1', zoneId: 'bruz-sud' },
         { tourId: 'V3', zoneId: 'bruz-sud' },
@@ -83,24 +92,61 @@ describe('parseInscriptionsState', () => {
     expect(parseInscriptionsState('{"inscriptions":[]}')).toBeNull();
     expect(
       parseInscriptionsState({
-        edition: { actionDate: '2027-02-14', year: 2027 },
+        edition: EDITION,
         inscriptions: [],
       }), // registrationOpen missing
     ).toBeNull();
     expect(
       parseInscriptionsState({
-        edition: { actionDate: 2027, year: 'x' },
+        edition: { ...EDITION, actionDate: 2027, year: 'x' },
         inscriptions: [],
         registrationOpen: true,
       }),
     ).toBeNull();
     expect(
       parseInscriptionsState({
-        edition: { actionDate: '2027-02-14', year: 2027 },
+        edition: EDITION,
         inscriptions: 'twelve',
         registrationOpen: true,
       }),
     ).toBeNull();
+  });
+
+  it('should reject the old two-field Édition shape', () => {
+    // The Édition must carry the whole registration window: a payload without
+    // the three two-bound fields degrades to the error outcome, so the UI
+    // falls back on the bundled Édition.
+    expect(
+      parseInscriptionsState({
+        edition: { actionDate: '2027-02-14', year: 2027 },
+        inscriptions: [],
+        registrationOpen: true,
+      }),
+    ).toBeNull();
+  });
+
+  it('should reject an Édition whose window fields are malformed', () => {
+    expect(
+      parseInscriptionsState({
+        edition: { ...EDITION, inscriptionsOpenDate: '04/01/2027' },
+        inscriptions: [],
+        registrationOpen: true,
+      }),
+    ).toBeNull(); // not a `YYYY-MM-DD` opening date
+    expect(
+      parseInscriptionsState({
+        edition: { ...EDITION, actionStartTime: '9h' },
+        inscriptions: [],
+        registrationOpen: true,
+      }),
+    ).toBeNull(); // not an `HH:MM` start hour
+    expect(
+      parseInscriptionsState({
+        edition: { ...EDITION, actionEndTime: '12' },
+        inscriptions: [],
+        registrationOpen: true,
+      }),
+    ).toBeNull(); // not an `HH:MM` end hour
   });
 });
 
@@ -180,6 +226,14 @@ describe('postRegistration', () => {
       async () => new Response('{"error":"registration-closed"}', { status: 400 }),
     );
     expect(closed).toEqual({ status: 'closed' });
+  });
+
+  it('should tell the not-open window apart from the closed window', async () => {
+    const notOpen = await postRegistration(
+      REGISTRATION,
+      async () => new Response('{"error":"registration-not-open"}', { status: 400 }),
+    );
+    expect(notOpen).toEqual({ status: 'not-open' });
   });
 
   it('should map the filled honeypot to the invalid outcome, like any other refusal', async () => {

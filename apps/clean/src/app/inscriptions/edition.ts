@@ -4,8 +4,9 @@
  *
  * Client-safe pure module: the static home page, the `/api/inscriptions`
  * route handler and every other consumer import it without a server-only
- * dependency. "Registration open" is derived as a pure function of the
- * config with an injectable clock, so tests control "today".
+ * dependency. The registration window is derived as a pure function of the
+ * config with an injectable clock (`registrationWindowPhase`: the opening
+ * bound, the open phase, the closing bound), so tests control "today".
  */
 
 /** The annual clean-up action (see GLOSSARY: Édition). */
@@ -14,6 +15,16 @@ export interface Edition {
   readonly year: number;
   /** Action date as a `YYYY-MM-DD` calendar date in `EDITION_TIME_ZONE`. */
   readonly actionDate: string;
+  /**
+   * First day of the registration window, as a `YYYY-MM-DD` calendar date in
+   * `EDITION_TIME_ZONE`. The bound is a DATE, never a timestamp: the window
+   * opens at midnight of that day in the Édition timezone, inclusively.
+   */
+  readonly inscriptionsOpenDate: string;
+  /** Wall-clock start of the action, `HH:MM` in `EDITION_TIME_ZONE` (provisional). */
+  readonly actionStartTime: string;
+  /** Wall-clock end of the action, `HH:MM` in `EDITION_TIME_ZONE` (provisional). */
+  readonly actionEndTime: string;
 }
 
 /**
@@ -21,7 +32,13 @@ export interface Edition {
  * the KV keys (`inscriptions:<year>:<zone>:<tour>`) namespace themselves from
  * `year`, so a new year starts with an empty covered-tours list.
  */
-export const CURRENT_EDITION: Edition = { year: 2027, actionDate: '2027-02-14' };
+export const CURRENT_EDITION: Edition = {
+  actionDate: '2027-02-14',
+  actionEndTime: '12:00',
+  actionStartTime: '09:00',
+  inscriptionsOpenDate: '2027-01-04',
+  year: 2027,
+};
 
 /** The action happens in Bruz (France): calendar boundaries use its timezone. */
 export const EDITION_TIME_ZONE = 'Europe/Paris';
@@ -34,21 +51,54 @@ export const EDITION_TIME_ZONE = 'Europe/Paris';
 export const REGISTRATION_CLOSURE_DAYS = 3;
 
 /**
- * Whether registering a Binôme is possible: the window stays OPEN until
- * `actionDate - REGISTRATION_CLOSURE_DAYS` (the calendar date in the Édition
- * timezone, inclusive) and closes after it — a Binôme can still register 3
- * days before the action, never 2 days before.
+ * Which bound of the registration window applies to "now" — the phases the
+ * ONE window rule distinguishes, shared by the API (`register.ts`,
+ * `public-state.ts`) and the client (`inscriptions-status-provider.tsx`,
+ * the registration modal): window not open yet (before the opening bound,
+ * a refusal the API answers with its own code), open, or closed (after the
+ * closing bound).
+ */
+export type RegistrationWindowPhase = 'not-open-yet' | 'open' | 'closed';
+
+/**
+ * The registration window of the Édition at `now` — the ONE derivation rule
+ * serving both sides of the API. The window opens on `inscriptionsOpenDate`
+ * (inclusive) and closes on `actionDate - REGISTRATION_CLOSURE_DAYS`
+ * (inclusive), both as calendar dates in the Édition timezone; before the
+ * opening and after the closing a registration is refused. With a plausible
+ * Édition the two bounds never overlap (the opening lies weeks before the
+ * closing).
  *
- * The closure exists for the organizers: they need the covered-Parcours list
+ * Pure: the comparison never touches `Date.now()` — pass the current time.
+ */
+export function registrationWindowPhase(edition: Edition, now: Date): RegistrationWindowPhase {
+  const todayInEditionZone = calendarDateInEditionZone(now);
+  if (todayInEditionZone < edition.inscriptionsOpenDate) return 'not-open-yet';
+  return todayInEditionZone <= calendarDatePlusDays(edition.actionDate, -REGISTRATION_CLOSURE_DAYS)
+    ? 'open'
+    : 'closed';
+}
+
+/**
+ * Whether registering a Binôme is possible: exactly the `open` phase of the
+ * two-bound window (see `registrationWindowPhase`). The window stays OPEN
+ * from `inscriptionsOpenDate` until `actionDate - REGISTRATION_CLOSURE_DAYS`
+ * (the calendar date in the Édition timezone, inclusive) and closes after —
+ * a Binôme can still register 3 days before the action, never 2 days before
+ * and never before the Édition opened its inscriptions.
+ *
+ * The closing exists for the organizers: they need the covered-Parcours list
  * before the action to print the tracking sheets and organize the day.
+ * The opening exists for the volunteers: a Parcours registered on an
+ * unfinished route catalogue would have to be cancelled by hand, so the
+ * inscriptions only open once the Édition is published. Announcing an Édition
+ * whose opening date lies ahead keeps its window shut and the API refusing
+ * registrations — an intended, documented effect.
  *
  * Pure: the comparison never touches `Date.now()` — pass the current time.
  */
 export function isRegistrationOpen(edition: Edition, now: Date): boolean {
-  return (
-    calendarDateInEditionZone(now) <=
-    calendarDatePlusDays(edition.actionDate, -REGISTRATION_CLOSURE_DAYS)
-  );
+  return registrationWindowPhase(edition, now) === 'open';
 }
 
 /** Storage retention of a Binôme inscription after the action, in days (spec). */

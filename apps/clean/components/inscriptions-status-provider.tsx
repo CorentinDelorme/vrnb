@@ -3,12 +3,45 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
-import { CURRENT_EDITION, isRegistrationOpen } from '../src/app/inscriptions/edition';
+import type { RegistrationWindowPhase } from '../src/app/inscriptions/edition';
+import { CURRENT_EDITION, registrationWindowPhase } from '../src/app/inscriptions/edition';
 import type { InscriptionsOutcome } from '../src/app/inscriptions/inscriptions-client';
 import { fetchInscriptionsOutcome } from '../src/app/inscriptions/inscriptions-client';
+import type { InscriptionsPublicState } from '../src/app/inscriptions/public-state';
 
 /** Tri-state of the statuses loading: `loading` until the effect resolves. */
 export type InscriptionsStatus = InscriptionsOutcome | { readonly status: 'loading' };
+
+/**
+ * The phase of the registration window at `now`, from ONE rule spread over
+ * the same sources as `isRegistrationWindowOpen`: the server's answer when
+ * the public state loaded (the client and the server always agree), the
+ * bundled Édition and the local clock otherwise (the safety net of a page
+ * whose public state could not be loaded). The `not-open-yet` phase tells
+ * the two window bounds apart on the client side, so the refusal messages
+ * stay distinct. Pure: the clock is injected, never read.
+ */
+export function registrationWindowPhaseOf(
+  status: InscriptionsStatus,
+  now: Date,
+): RegistrationWindowPhase {
+  return status.status === 'success'
+    ? phaseOfLoadedState(status.state, now)
+    : registrationWindowPhase(CURRENT_EDITION, now);
+}
+
+/**
+ * The window phase of a loaded public state: the server's answer is
+ * authoritative, so an open window is taken as is; a closed one is told
+ * apart between the two bounds from the Édition the answer itself carries
+ * and the local clock — a clock that would still read the window open never
+ * reopens what the server answered closed.
+ */
+function phaseOfLoadedState(state: InscriptionsPublicState, now: Date): RegistrationWindowPhase {
+  if (state.registrationOpen) return 'open';
+  const localPhase = registrationWindowPhase(state.edition, now);
+  return localPhase === 'open' ? 'closed' : localPhase;
+}
 
 /**
  * Whether the registration window is open, from ONE rule: the server's answer
@@ -17,9 +50,7 @@ export type InscriptionsStatus = InscriptionsOutcome | { readonly status: 'loadi
  * not be loaded). Pure: the clock is injected, never read.
  */
 export function isRegistrationWindowOpen(status: InscriptionsStatus, now: Date): boolean {
-  return status.status === 'success'
-    ? status.state.registrationOpen
-    : isRegistrationOpen(CURRENT_EDITION, now);
+  return registrationWindowPhaseOf(status, now) === 'open';
 }
 
 const InscriptionsStatusContext = createContext<InscriptionsStatus>({ status: 'loading' });

@@ -25,7 +25,7 @@ import {
 import type { TourRef } from '../src/app/tours-queries';
 import { getZone } from '../src/app/zones';
 import {
-  isRegistrationWindowOpen,
+  registrationWindowPhaseOf,
   useInscriptionsReload,
   useInscriptionsStatus,
 } from './inscriptions-status-provider';
@@ -52,9 +52,12 @@ import {
  *   a filled one is refused by the server with 400 and nothing is stored —
  *   silently, like any other invalid input, so the modal never reveals the
  *   trap;
- * - the closed window: 3 days before the action date, the modal says «
- *   Les inscriptions sont closes » and disables its form (the server refuses
- *   the same requests with 400);
+ * - the registration window bounds: before the opening day of the Édition,
+ *   the modal announces the opening date in letters (« Les inscriptions
+ *   ouvriront le lundi 4 janvier 2027 ») and disables its whole form; after
+ *   the closing bound — 3 days before the action date — it keeps saying «
+ *   Les inscriptions sont closes » and disables it (the server refuses the
+ *   same requests with 400, each bound with its own code);
  * - the shared identity bounds (2 to 60 characters per name, see
  *   `validation.ts`): the submit is enabled as soon as the form is complete
  *   and valid, and each field shows its own error message.
@@ -69,7 +72,8 @@ interface BinomeFormValues {
 }
 
 /** Lifecycle of a registration inside the modal (idle → submitting → outcome). */
-type ModalOutcome = 'idle' | 'submitting' | 'created' | 'taken' | 'invalid' | 'closed' | 'error';
+type ModalOutcome =
+  'idle' | 'submitting' | 'created' | 'taken' | 'invalid' | 'not-open' | 'closed' | 'error';
 
 const EMPTY_BINOME: BinomeFormValues = {
   firstName1: '',
@@ -89,6 +93,13 @@ const IDENTITY_INPUTS = [
 /** French long-form date of the Édition action day (module-scope constant). */
 const ACTION_DATE_LABEL = formatActionDateLabel(CURRENT_EDITION.actionDate);
 
+/**
+ * The message of the not-open-yet registration window (also the `not-open`
+ * 400 answer of the API): the opening date of the Édition is announced in
+ * letters, built from the Édition config like the action-day context line.
+ */
+const NOT_OPEN_YET_MESSAGE = `Les inscriptions ouvriront le ${formatActionDateLabel(CURRENT_EDITION.inscriptionsOpenDate)}.`;
+
 /** The message of the closed registration window (also the 400 answer). */
 const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se ferme ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action.`;
 
@@ -100,7 +111,11 @@ const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se fer
  */
 const GDPR_NOTICE = `Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
 
-/** The explicit French feedback of each refusal of the server (ticket #18). */
+/**
+ * The explicit French feedback of each refusal of the server (ticket #18),
+ * the two window bounds being refused apart since the window gained its
+ * opening bound.
+ */
 const OUTCOME_ALERTS: Readonly<
   Partial<Record<ModalOutcome, { readonly className: string; readonly message: string }>>
 > = {
@@ -112,6 +127,10 @@ const OUTCOME_ALERTS: Readonly<
   invalid: {
     className: 'alert alert-error mt-4 text-sm',
     message: "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
+  },
+  'not-open': {
+    className: 'alert alert-warning mt-4 text-sm',
+    message: NOT_OPEN_YET_MESSAGE,
   },
   closed: {
     className: 'alert alert-warning mt-4 text-sm',
@@ -177,10 +196,14 @@ export function RegisterBinomeModal({
   /**
    * The registration window of the Édition, from the ONE rule of the provider
    * (the server's answer when the public state loaded, the local clock
-   * otherwise): the client and the server always agree.
+   * otherwise): the client and the server always agree. Both window bounds
+   * disable the form and show their own warning — before the opening bound
+   * the opening date is announced in letters, after the closing bound the
+   * closing message unchanged.
    */
-  const registrationOpen = isRegistrationWindowOpen(status, now);
-  const windowClosed = !registrationOpen;
+  const windowPhase = registrationWindowPhaseOf(status, now);
+  const windowNotOpen = windowPhase !== 'open';
+  const notOpenYet = windowPhase === 'not-open-yet';
   const { errors, values: trimmed } = checkIdentityFields(values);
   /** The submit is enabled as soon as the form is complete and valid. */
   const complete = Object.keys(errors).length === 0 && engaged;
@@ -198,7 +221,7 @@ export function RegisterBinomeModal({
 
   const submit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
-    if (!complete || outcome === 'submitting' || windowClosed) return;
+    if (!complete || outcome === 'submitting' || windowNotOpen) return;
     setOutcome('submitting');
     const registration = await postRegistration(identity);
     setOutcome(registration.status);
@@ -275,7 +298,12 @@ export function RegisterBinomeModal({
               </div>
             </div>
 
-            {windowClosed && outcome !== 'closed' ? (
+            {notOpenYet && outcome !== 'not-open' ? (
+              <div className="alert alert-warning mt-4 text-sm sm:text-base" role="alert">
+                {NOT_OPEN_YET_MESSAGE}
+              </div>
+            ) : null}
+            {windowPhase === 'closed' && outcome !== 'closed' ? (
               <div className="alert alert-warning mt-4 text-sm sm:text-base" role="alert">
                 {CLOSED_WINDOW_MESSAGE}
               </div>
@@ -296,7 +324,7 @@ export function RegisterBinomeModal({
                         aria-describedby={showError ? `${field.id}-error` : undefined}
                         aria-invalid={showError ? true : undefined}
                         className="input w-full min-w-0"
-                        disabled={windowClosed}
+                        disabled={windowNotOpen}
                         id={field.id}
                         onBlur={() => setTouched((current) => ({ ...current, [field.key]: true }))}
                         onChange={(event) =>
@@ -330,7 +358,7 @@ export function RegisterBinomeModal({
                 <input
                   checked={engaged}
                   className="checkbox"
-                  disabled={windowClosed}
+                  disabled={windowNotOpen}
                   id="register-engaged"
                   onChange={(event) => setEngaged(event.target.checked)}
                   required
@@ -371,7 +399,7 @@ export function RegisterBinomeModal({
               <div className="modal-action">
                 <button
                   className="btn btn-primary max-sm:btn-sm sm:btn-md"
-                  disabled={!complete || outcome === 'submitting' || windowClosed}
+                  disabled={!complete || outcome === 'submitting' || windowNotOpen}
                   type="submit"
                 >
                   {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}

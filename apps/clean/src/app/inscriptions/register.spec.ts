@@ -17,18 +17,31 @@ import { inscriptionKey } from './upstash-kv';
  * is an atomic first-come reservation on the KV store, the stored value never
  * exceeds the four identity fields, and every outcome is a distinct no-store
  * JSON response (201 created, 409 covered, 400 refused with the code of its
- * status, 500 store failure). Every refusal — filled honeypot, closed
- * registration window, invalid identity, unknown (Zone, Parcours) pair —
- * happens BEFORE the write: the store stays untouched.
+ * status, 500 store failure). Every refusal — filled honeypot, registration
+ * window bound (not open yet before the opening day, closed 3 days before the
+ * action), invalid identity, unknown (Zone, Parcours) pair — happens BEFORE
+ * the write: the store stays untouched.
  */
 
-const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
+const EDITION = {
+  actionDate: '2027-02-14',
+  actionEndTime: '12:00',
+  actionStartTime: '09:00',
+  inscriptionsOpenDate: '2027-01-04',
+  year: 2027,
+} as const;
 
 /** 2027-02-01 late morning in Paris — a plausible registration instant. */
 const NOW = new Date('2027-02-01T09:00:00Z');
 
 /** Two days before the action date: the registration window is closed. */
 const AFTER_CLOSURE_DATE = new Date('2027-02-16T09:00:00Z');
+
+/** The day before the inscriptions open (2027-01-04): the window is not open yet. */
+const BEFORE_OPENING_DATE = new Date('2027-01-03T09:00:00Z');
+
+/** The opening day itself (2027-01-04): the first registration day. */
+const OPENING_DAY_DATE = new Date('2027-01-04T09:00:00Z');
 
 /** The (Zone, Parcours) pairs the fake catalogue knows. */
 const KNOWN_PAIRS = new Set(['bruz-sud:V1', 'bruz-sud:P3']);
@@ -314,6 +327,58 @@ describe('handleInscriptionsPost', () => {
     expect(store.expiries.size).toBe(0);
   });
 
+  it('should answer 400 with its own code before the inscriptions open, storing nothing', async () => {
+    const store = new InMemoryWriteStore();
+    const response = await handleInscriptionsPost(
+      deps(store, BEFORE_OPENING_DATE),
+      request(validBody()),
+    );
+
+    expect(response.status).toBe(400);
+    // The refusal is DISTINCT from the closing one: before the opening day of
+    // the Édition, the inscriptions are not open yet.
+    await expect(response.json()).resolves.toEqual({ error: 'registration-not-open' });
+    // A not-open-yet window never reaches the store either.
+    expect(store.operationLog).toEqual([]);
+    expect(store.values.size).toBe(0);
+    expect(store.expiries.size).toBe(0);
+  });
+
+  it('should accept a registration on the opening day itself', async () => {
+    const store = new InMemoryWriteStore();
+    const response = await handleInscriptionsPost(
+      deps(store, OPENING_DAY_DATE),
+      request(validBody()),
+    );
+
+    expect(response.status).toBe(201);
+    const key = inscriptionKey(2027, 'bruz-sud', 'V1');
+    // The TTL still reaches the erasure deadline exactly: whole seconds from
+    // 2027-01-04T09:00Z to `actionDate + 90` days (2027-05-14T22:00Z).
+    expect(store.operationLog).toEqual([`set-if-absent ${key} ex=11278800`]);
+    expect(store.values.get(key)).toBe(
+      '{"firstName1":"Léa","firstName2":"Marc","lastName1":"Dupont","lastName2":"Martin"}',
+    );
+  });
+
+  it('should parse the body before the window check, even while the inscriptions are not open', async () => {
+    // The guard order stays parse body → window (→ identity → catalogue →
+    // write): an unparseable body keeps the invalid code, whatever the phase
+    // of the registration window.
+    const store = new InMemoryWriteStore();
+    const raw = await handleInscriptionsPost(
+      deps(store, BEFORE_OPENING_DATE),
+      new Request('http://localhost/api/inscriptions', {
+        body: 'not json at all',
+        method: 'POST',
+      }),
+    );
+
+    expect(raw.status).toBe(400);
+    await expect(raw.json()).resolves.toEqual({ error: 'invalid-inscription' });
+    expect(store.values.size).toBe(0);
+  });
+
   it('should refuse each invalid identity field with the invalid code, storing nothing', async () => {
     const invalidBodies = [
       validBody({ firstName1: ' L ' }), // 1 character once trimmed
@@ -337,6 +402,7 @@ describe('handleInscriptionsPost', () => {
       [
         { body: validBody({ honeypot: 'spam' }), code: 'invalid-inscription' },
         { body: validBody({ tourId: 'v1' }), code: 'invalid-inscription' },
+        { body: validBody(), code: 'registration-not-open', now: BEFORE_OPENING_DATE },
         { body: validBody(), code: 'registration-closed', now: AFTER_CLOSURE_DATE },
       ];
     for (const { body, code, now } of cases) {

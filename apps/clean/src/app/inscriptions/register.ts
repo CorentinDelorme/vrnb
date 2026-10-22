@@ -17,9 +17,11 @@
  * - the anti-bot honeypot: a filled hidden field means a bot → the SAME 400
  *   as any other invalid input (`invalid-inscription`), silently: the answer
  *   never names the honeypot, so a bot cannot fingerprint the trap;
- * - the registration window: the window closes 3 days before the action date
- *   (the last registration day is `actionDate - 3`, the action day itself is
- *   closed too) → 400 `registration-closed`;
+ * - the registration window, both bounds with their own code: before the
+ *   opening day of the Édition (`inscriptionsOpenDate`) the inscriptions are
+ *   not open yet → 400 `registration-not-open`, and after the closing bound
+ *   (the last registration day is `actionDate - 3`) → 400
+ *   `registration-closed`;
  * - the identity validation: the four names are required, trimmed and
  *   bounded (see `validation.ts`, the bounds shared with the client), the
  *   (Zone, Parcours) pair must exist in the Parcours catalogue, and the
@@ -27,7 +29,7 @@
  */
 
 import type { Edition } from './edition';
-import { inscriptionsExpiryInstant, isRegistrationOpen, ttlSecondsUntil } from './edition';
+import { inscriptionsExpiryInstant, registrationWindowPhase, ttlSecondsUntil } from './edition';
 import { JSON_HEADERS } from './http';
 import { inscriptionKey } from './upstash-kv';
 import type { BinomeIdentity, BinomeRegistration, ParcoursLookup } from './validation';
@@ -59,12 +61,14 @@ export interface InscriptionsRegistrationDeps {
 }
 
 const INVALID = { error: 'invalid-inscription' } as const;
+const NOT_OPEN = { error: 'registration-not-open' } as const;
 const CLOSED = { error: 'registration-closed' } as const;
 const CONFLICT = { error: 'inscriptions-conflict' } as const;
 const UNAVAILABLE = { error: 'inscriptions-unavailable' } as const;
 
 /** Error body shapes — never any identity of a requester. */
-type RegistrationErrorBody = typeof INVALID | typeof CLOSED | typeof CONFLICT | typeof UNAVAILABLE;
+type RegistrationErrorBody =
+  typeof INVALID | typeof NOT_OPEN | typeof CLOSED | typeof CONFLICT | typeof UNAVAILABLE;
 /** 201 body: the public (zone, tour) pair of the reservation, never names. */
 interface InscriptionCreatedBody {
   readonly inscription: { readonly tourId: string; readonly zoneId: string };
@@ -171,10 +175,14 @@ export async function handleInscriptionsPost(
   } catch {
     return respond(400, INVALID);
   }
-  // The registration window of the Édition: it closes 3 days before the
-  // action date (the last registration day is `actionDate - 3`, and the action
-  // day itself is closed too). Nothing is stored.
-  if (!isRegistrationOpen(deps.edition, deps.now())) return respond(400, CLOSED);
+  // The registration window of the Édition, both bounds with their own code
+  // and neither of them storing anything: before the opening day of the
+  // Édition the inscriptions are not open yet (`registration-not-open`), and
+  // they close 3 days before the action date (the last registration day is
+  // `actionDate - 3`, the action day itself is closed too).
+  const phase = registrationWindowPhase(deps.edition, deps.now());
+  if (phase === 'not-open-yet') return respond(400, NOT_OPEN);
+  if (phase === 'closed') return respond(400, CLOSED);
   // The body validation: the anti-bot honeypot, the four identity fields, the
   // engagement statement and the (Zone, Parcours) pair. A filled honeypot is
   // refused silently, like any other invalid input — no dedicated code, so a

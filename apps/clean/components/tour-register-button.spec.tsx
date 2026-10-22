@@ -27,7 +27,13 @@ vi.mock('./inscriptions-status-provider', async (importOriginal) => ({
   useInscriptionsReload: () => vi.fn(),
   useInscriptionsStatus: () => ({
     state: {
-      edition: { actionDate: '2027-02-14', year: 2027 },
+      edition: {
+        actionDate: '2027-02-14',
+        actionEndTime: '12:00',
+        actionStartTime: '09:00',
+        inscriptionsOpenDate: '2027-01-04',
+        year: 2027,
+      },
       inscriptions: [],
       registrationOpen: true,
     },

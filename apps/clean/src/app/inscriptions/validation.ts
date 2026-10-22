@@ -143,12 +143,20 @@ export function checkIdentityFields(
  *   statement, unknown (Zone, Parcours) pair, filled anti-bot honeypot — the
  *   honeypot is refused silently, without any dedicated code, so a bot
  *   cannot fingerprint it);
+ * - `registration-not-open`: the inscriptions of the Édition are not open
+ *   yet — the registration window has an opening bound
+ *   (`inscriptionsOpenDate` of the Édition) a registration may not predate;
  * - `registration-closed`: the registration window is closed — it closes 3
  *   days before the action date of the Édition.
  */
-export type RegistrationRejection = 'invalid-inscription' | 'registration-closed';
+export type RegistrationRejection =
+  'invalid-inscription' | 'registration-closed' | 'registration-not-open';
 
 /** Whether a string is one of the rejection codes of a 400 answer. */
 export function isRegistrationRejection(value: string): value is RegistrationRejection {
-  return value === 'invalid-inscription' || value === 'registration-closed';
+  return (
+    value === 'invalid-inscription' ||
+    value === 'registration-closed' ||
+    value === 'registration-not-open'
+  );
 }

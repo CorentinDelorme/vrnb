@@ -46,7 +46,13 @@ vi.mock('./inscriptions-status-provider', async (importOriginal) => ({
 /** The public state of an open registration window. */
 const OPEN_STATUS: InscriptionsStatus = {
   state: {
-    edition: { actionDate: '2027-02-14', year: 2027 },
+    edition: {
+      actionDate: '2027-02-14',
+      actionEndTime: '12:00',
+      actionStartTime: '09:00',
+      inscriptionsOpenDate: '2027-01-04',
+      year: 2027,
+    },
     inscriptions: [],
     registrationOpen: true,
   },
@@ -56,12 +62,25 @@ const OPEN_STATUS: InscriptionsStatus = {
 /** The public state of a closed registration window (the action date is past). */
 const CLOSED_STATUS: InscriptionsStatus = {
   state: {
-    edition: { actionDate: '2027-02-14', year: 2027 },
+    edition: {
+      actionDate: '2027-02-14',
+      actionEndTime: '12:00',
+      actionStartTime: '09:00',
+      inscriptionsOpenDate: '2027-01-04',
+      year: 2027,
+    },
     inscriptions: [],
     registrationOpen: false,
   },
   status: 'success',
 };
+
+/**
+ * A post-closure instant of the Édition (2027-02-12 = 2 days before the
+ * action): a window the server answers closed then really is closed, both
+ * for the server answer and for the local clock fallback.
+ */
+const POST_CLOSURE_CLOCK = new Date('2027-02-12T09:00:00Z');
 
 /**
  * jsdom implements no dialog method: patch the two the modal lives on. The
@@ -265,6 +284,23 @@ describe('RegisterBinomeModal', () => {
     expect(mocks.reload).not.toHaveBeenCalled();
   });
 
+  it('should show the distinct not-open feedback on a not-open answer', async () => {
+    renderModal();
+    fillBinome();
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'not-open' });
+
+    fireEvent.click(submitButton());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain(
+        'Les inscriptions ouvriront le lundi 4 janvier 2027',
+      ),
+    );
+
+    expect(screen.getByRole('alert').textContent).toMatch(/Les inscriptions ouvriront le/);
+    expect(screen.getByRole('alert').textContent).not.toMatch(/closes/);
+    expect(mocks.reload).not.toHaveBeenCalled();
+  });
+
   it('should show the distinct network-error feedback without reloading', async () => {
     renderModal();
     fillBinome();
@@ -327,8 +363,10 @@ describe('RegisterBinomeModal honeypot and GDPR notice', () => {
 });
 
 /**
- * The closed registration window (ticket #18): the modal announces that the
- * window is closed (3 days before the action) and disables its whole form.
+ * The closed registration window: after the closing bound (3 days before the
+ * action), the modal announces that the window is closed and disables its
+ * whole form. The clock is injected (post-closure instant) so the render does
+ * not depend on the wall clock of the runner.
  */
 describe('RegisterBinomeModal closed window', () => {
   beforeEach(() => {
@@ -338,7 +376,7 @@ describe('RegisterBinomeModal closed window', () => {
   });
 
   it('should announce the closed window and disable the form', () => {
-    renderModal();
+    renderModalAt(POST_CLOSURE_CLOCK);
 
     expect(screen.getByRole('alert').textContent).toContain('Les inscriptions sont closes');
     expect(screen.getByRole('alert').textContent).toContain("3 jours avant la date de l'action");
@@ -353,7 +391,63 @@ describe('RegisterBinomeModal closed window', () => {
   });
 
   it('should never post a registration while the window is closed', () => {
-    renderModal();
+    renderModalAt(POST_CLOSURE_CLOCK);
+    fillBinome();
+
+    fireEvent.click(submitButton());
+    expect(mocks.postRegistration).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The not-open-yet registration window (spec #32): before the opening bound
+ * of the Édition, the modal announces the opening date in letters and
+ * disables its whole form, distinguishing itself from the closed-window
+ * message — whether the public state is loaded (the server answers a closed
+ * window while the inscriptions are not open yet — the state of the site at
+ * publication) or falls back on the local clock.
+ */
+describe('RegisterBinomeModal not-open-yet window', () => {
+  /** An instant before the opening day of the Édition (2027-01-04). */
+  const BEFORE_OPENING_CLOCK = new Date('2027-01-02T09:00:00Z');
+
+  beforeEach(() => {
+    mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
+    mocks.reload.mockReset();
+    status.current = { status: 'loading' };
+  });
+
+  it('should announce the opening date in letters and disable the form', () => {
+    renderModalAt(BEFORE_OPENING_CLOCK);
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 4 janvier 2027',
+    );
+    expect(screen.queryByText(/Les inscriptions sont closes/)).toBeNull();
+    for (const input of identityInputs()) {
+      expect(input.disabled).toBe(true);
+    }
+    expect(
+      (screen.getByRole('checkbox', { name: /confirmons notre participation/ }) as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should announce the opening date on a public state the server answers closed before opening', () => {
+    // The server answers registrationOpen=false (the site state at
+    // publication): the local clock of the modal tells the two bounds apart.
+    status.current = CLOSED_STATUS;
+    renderModalAt(BEFORE_OPENING_CLOCK);
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 4 janvier 2027',
+    );
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should never post a registration while the window is not open yet', () => {
+    renderModalAt(BEFORE_OPENING_CLOCK);
     fillBinome();
 
     fireEvent.click(submitButton());
@@ -378,6 +472,15 @@ describe('RegisterBinomeModal local clock fallback', () => {
     renderModalAt(new Date('2027-02-12T09:00:00Z'));
 
     expect(screen.getByRole('alert').textContent).toContain('Les inscriptions sont closes');
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should announce the opening date on its own clock when it predates the opening', () => {
+    renderModalAt(new Date('2026-12-01T09:00:00Z'));
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 4 janvier 2027',
+    );
     expect(submitButton().disabled).toBe(true);
   });
 

@@ -99,7 +99,7 @@ describe('the shared bounds and labels', () => {
 
 describe('isRegistrationRejection', () => {
   it('should recognize the rejection codes of a 400 answer', () => {
-    for (const code of ['invalid-inscription', 'registration-closed']) {
+    for (const code of ['invalid-inscription', 'registration-closed', 'registration-not-open']) {
       expect(isRegistrationRejection(code)).toBe(true);
     }
     // The anti-bot honeypot has no dedicated code: it is refused like any

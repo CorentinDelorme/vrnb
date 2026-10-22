@@ -12,8 +12,16 @@ import { inscriptionKey } from './upstash-kv';
  * injected config. A store outage degrades to a JSON 502.
  */
 
-const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
+const EDITION = {
+  actionDate: '2027-02-14',
+  actionEndTime: '12:00',
+  actionStartTime: '09:00',
+  inscriptionsOpenDate: '2027-01-04',
+  year: 2027,
+} as const;
 
+/** 2027-01-03 — the day before the inscriptions open: registration not open yet. */
+const NOT_OPEN_YET_CLOCK = new Date('2027-01-03T09:00:00Z');
 /** 2027-02-10 late morning in Paris — registration still open. */
 const OPEN_CLOCK = new Date('2027-02-10T09:00:00Z');
 /** 2027-02-11 late morning in Paris — the last registration day, still open. */
@@ -157,6 +165,10 @@ describe('getInscriptionsState', () => {
   });
 
   it('should derive registrationOpen from the Édition config and the injected clock', async () => {
+    // Before the opening day of the Édition (2027-01-04), not open yet.
+    await expect(getInscriptionsState(deps([], NOT_OPEN_YET_CLOCK))).resolves.toMatchObject({
+      registrationOpen: false,
+    });
     await expect(getInscriptionsState(deps([], OPEN_CLOCK))).resolves.toMatchObject({
       registrationOpen: true,
     });
