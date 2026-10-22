@@ -14,7 +14,8 @@ export interface Zone {
 /**
  * All touring zones. Existing tours belong to "bruz-sud".
  * To add a new zone, append an entry here,
- * add its GPX files under `public/gpx/<zone-id>/`, then run `bun run generate:tours`.
+ * add its GPX files under `public/gpx/<zone-id>/`,
+ * then run `bun run generate:all` (see the README).
  */
 export const ZONES: readonly Zone[] = [
   {
