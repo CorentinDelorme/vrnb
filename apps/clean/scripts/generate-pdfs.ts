@@ -51,6 +51,7 @@ import {
   zoneMapKey,
 } from './generation-state';
 import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
+import { FICHE_SUBJECT, ZONE_MAP_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
@@ -58,6 +59,11 @@ const tileCacheDir = join(rootDir, 'scripts', '.cache', 'tiles');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-pdfs';
+
+/** The name of a practice type, as the referent reads it. */
+function practiceTypeLabel(kind: 'V' | 'P'): string {
+  return kind === 'V' ? 'vélo' : 'pied';
+}
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_SIZE = 256;
@@ -910,12 +916,6 @@ async function main(): Promise<void> {
     );
     let failures = 0;
 
-    for (const decision of plan.decisions) {
-      if (!decision.regenerateFiche) {
-        console.log(`skip ${decision.tourId} (${decision.ficheReason})`);
-      }
-    }
-
     await perf.measure('Fiches', async () => {
       await forEachConcurrently(
         runPlan.decisions.filter((decision) => decision.regenerateFiche),
@@ -936,13 +936,7 @@ async function main(): Promise<void> {
       );
     });
 
-    for (const decision of plan.zoneDecisions) {
-      if (!decision.regenerateZoneMap) {
-        console.log(`skip ${decision.zoneId} ${decision.kind} map (${decision.reason})`);
-      }
-    }
-
-    await perf.measure('zone maps', async () => {
+    await perf.measure('Cartes de zone', async () => {
       await forEachConcurrently(
         runPlan.zoneDecisions.filter((decision) => decision.regenerateZoneMap),
         FICHE_CONCURRENCY,
@@ -1010,7 +1004,8 @@ async function main(): Promise<void> {
 /**
  * Show the `[perf]` block of the run: how long it took, how long the Fiches
  * and the overview maps took, how many tiles came from the cache and how
- * many were downloaded, and how many Parcours were rendered again.
+ * many were downloaded, and what the run did with every Fiche and every
+ * overview map.
  */
 function reportRun(
   perf: PerfRecorder,
@@ -1024,22 +1019,27 @@ function reportRun(
     totalMs: perf.totalMs(),
     steps: perf.steps,
     tiles: { fromCache: stats.cacheHits, downloaded: stats.downloads },
+    subjects: [FICHE_SUBJECT, ZONE_MAP_SUBJECT],
     parcours: plan
-      ? countersFromDecisions(
-          plan.decisions,
-          (decision) =>
+      ? countersFromDecisions(plan.decisions, {
+          subject: FICHE_SUBJECT.id,
+          label: (decision) => decision.tourId,
+          reason: (decision) => decision.ficheReason,
+          isChanged: (decision) =>
             decision.regenerateFiche &&
             rendered.has(parcoursStateKey(decision.zoneId, decision.tourId)),
-        )
-      : { regenerated: [], skipped: [] },
+        })
+      : { changed: [], unchanged: [] },
     zoneMaps: plan
-      ? countersFromZoneDecisions(
-          plan.zoneDecisions,
-          (decision) =>
+      ? countersFromZoneDecisions(plan.zoneDecisions, {
+          subject: ZONE_MAP_SUBJECT.id,
+          label: (decision) => practiceTypeLabel(decision.kind),
+          reason: (decision) => decision.reason,
+          isChanged: (decision) =>
             decision.regenerateZoneMap &&
             renderedZoneMaps.has(zoneMapKey(decision.zoneId, decision.kind)),
-        )
-      : { regenerated: [], skipped: [] },
+        })
+      : { changed: [], unchanged: [] },
   });
 
   console.log(formatPerfReport(report).join('\n'));

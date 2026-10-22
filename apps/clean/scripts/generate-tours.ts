@@ -30,6 +30,7 @@ import {
   formatPerfReport,
 } from './generation-perf';
 import { parcoursStateKey } from './generation-state';
+import { DATA_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
@@ -279,7 +280,7 @@ async function main(): Promise<void> {
 
 /**
  * Show the `[perf]` block of the run: how long it took, how long each step
- * took, and how many Parcours changed.
+ * took, and what the run did with the data of every Parcours.
  *
  * The data step reads no tile: the tile counters of a run are the ones of
  * the Fiche step.
@@ -294,7 +295,8 @@ function reportRun(
     totalMs: perf.totalMs(),
     steps: perf.steps,
     tiles: { fromCache: 0, downloaded: 0 },
-    parcours: countersFromIds([...changed], scope),
+    subjects: [DATA_SUBJECT],
+    parcours: countersFromIds(DATA_SUBJECT.id, [...changed], scope, 'up-to-date', 'data-changed'),
   });
 
   console.log(formatPerfReport(report).join('\n'));

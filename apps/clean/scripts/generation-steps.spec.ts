@@ -85,7 +85,8 @@ describe('readStepReports', () => {
         totalMs: 1_000,
         steps: [],
         tiles: { fromCache: 10, downloaded: 2 },
-        parcours: { regenerated: ['bruz-sud/V1'], skipped: [] },
+        subjects: [],
+        parcours: { changed: [], unchanged: [] },
       }),
     );
 

@@ -130,36 +130,68 @@ bun run generate:one -- --tour=V1 --force  # Un seul parcours, régénéré quoi
 ### Le bloc `[perf]` (chrono)
 
 Chaque script se termine par un bloc `[perf]` : la durée totale, la durée de chaque étape,
-les tuiles relues dans le cache et téléchargées, et les parcours régénérés et ignorés.
+les tuiles relues dans le cache et téléchargées, et le récapitulatif de ce que le run a
+fait de chaque élément de la pipeline (les segments, les données, les fiches, les cartes
+de zone, les packs). Le bloc est en français : c'est le référent qui le lit.
+
+Le récapitulatif liste **ce qui a été refait** — une ligne par élément, avec la raison de
+la décision — et **ce qui a été laissé tel quel** — une ligne par groupe d'éléments, avec
+le nombre d'éléments du groupe. Le groupe s'accorde en nombre : « 1 Fiche ignorée », « 28
+Fiches ignorées ».
 
 ```text
-[perf] generate-all
-  total duration: 21.4 s
-  step generate:routes: 12.3 s
-  step generate:tours: 0.4 s
-  step generate:pdfs: 8.1 s
-  tiles: 512 from cache, 37 downloaded
-  Parcours: 2 regenerated, 45 skipped
-  zone maps: 1 regenerated, 2 skipped
+[perf] generate-pdfs — durée totale : 1 m 12 s
+
+  Métrique                   Valeur
+  ───────────────────────────────────
+  Étape « Fiches »           1 m 05 s
+  Étape « Cartes de zone »   7.0 s
+  Tuiles en cache            120
+  Tuiles téléchargées        8
+  Fiches regénérées          1
+  Fiches ignorées            47
+  Cartes de zone regénérées  1
+  Cartes de zone ignorées    3
+
+  Sujet          Élément    Zone               Décision   Raison
+  ────────────────────────────────────────────────────────────────────────
+  Fiche          V1         bruz-sud           regénérée  parcours modifié
+  Carte de zone  vélo       bruz-sud           regénérée  parcours modifié
+  Fiche          28 Fiches  bruz-sud           ignorées   à jour
+  Fiche          13 Fiches  bruz-ker-lann      ignorées   à jour
+  Fiche          6 Fiches   bruz-vau-gaillard  ignorées   à jour
+  Carte de zone  1 carte    bruz-sud           ignorée    à jour
+  Carte de zone  1 carte    bruz-ker-lann      ignorée    à jour
+  Carte de zone  1 carte    bruz-vau-gaillard  ignorée    à jour
 ```
 
-Un run qui ne change rien l'annonce : `nothing changed: no Parcours and no zone map was
-regenerated`. Les compteurs sont exacts, filtres `--tour` / `--zone` compris. Les rapports
-détaillés sont écrits en JSON dans `scripts/output/perf/` (dossier gitignoré) et fusionnés
-par l'orchestrateur.
+Un run qui ne change rien l'annonce : `rien n'a changé : aucun Parcours régénéré`. Les
+compteurs sont exacts, filtres `--tour` / `--zone` compris. Les rapports détaillés sont
+écrits en JSON dans `scripts/output/perf/` (dossier gitignoré) et fusionnés par
+l'orchestrateur : le bloc d'un `generate:all` montre l'union des étapes qu'il a lancées.
 
 Le script des packs (`generate:zone-pdf`) ne régénère aucun parcours — il fusionne les
 documents déjà publiés — mais il écrit des fichiers : son bloc annonce donc les packs
-qu'il a écrits et les documents qu'ils contiennent, et il ne dit jamais « nothing
-changed ».
+qu'il a écrits, les documents qu'ils contiennent et les fiches qu'il réutilise, et il ne
+dit jamais « rien n'a changé ».
 
 ```text
-[perf] generate-zone-pdf
-  total duration: 1.2 s
-  step bruz-sud: 1.1 s
-  tiles: 0 from cache, 0 downloaded
-  Parcours: 0 regenerated, 47 skipped
-  packs: 1 written, 49 documents
+[perf] generate-zone-pdf — durée totale : 1.2 s
+
+  Métrique             Valeur
+  ───────────────────────────
+  Étape « bruz-sud »   1.1 s
+  Tuiles en cache      0
+  Tuiles téléchargées  0
+  Packs écrits         1
+  Packs réutilisés     0
+  Fiches réutilisées   47
+  Documents des packs  49
+
+  Sujet  Élément    Zone      Décision     Raison
+  ──────────────────────────────────────────────────────────
+  Pack   bruz-sud   bruz-sud  écrit        documents publiés
+  Fiche  47 Fiches  bruz-sud  réutilisées  à jour
 ```
 
 ### Politesse envers les serveurs communautaires
@@ -198,13 +230,13 @@ Quatre vérifications, à faire sur une copie de travail (elles ne doivent rien 
 le disque, hormis l'état de génération inchangé) :
 
 1. **Run idempotent** — `bun run generate:all` sans rien modifier : le bloc `[perf]`
-   annonce `nothing changed`, les compteurs de tuiles sont à 0 (aucun appel réseau) et
+   annonce `rien n'a changé`, les compteurs de tuiles sont à 0 (aucun appel réseau) et
    `git status` ne montre aucune modification.
 2. **Une trace modifiée** — modifier `public/gpx/<zone>/<parcours>/<parcours>.gpx`, puis
    relancer `bun run generate:all` : seul ce parcours est re-routé et sa fiche re-rendue
-   (`Parcours: 1 regenerated, 46 skipped`), les autres tracés et les autres fiches sont
-   intacts. Changer le Point de rendez-vous d'une zone (`src/app/zones.ts`) a le même
-   effet : tous les parcours de la zone sont re-routés.
+   (le récapitulatif annonce `Segments re-routés 1` et `Fiches regénérées 1`), les autres
+   tracés et les autres fiches sont intacts. Changer le Point de rendez-vous d'une zone
+   (`src/app/zones.ts`) a le même effet : tous les parcours de la zone sont re-routés.
 3. **`--force`** — `bun run generate:all -- --force` : tous les segments et toutes les
    fiches sont régénérés, quel que soit l'état.
 4. **Routeur indisponible** — rendre le routeur injoignable (couper le réseau, ou

@@ -38,6 +38,7 @@ import {
   parcoursStateKey,
 } from './generation-state';
 import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
+import { SEGMENTS_SUBJECT } from './generation-subjects';
 import type { LonLat, ParcoursRoute } from './route-parcours';
 import {
   PARCOURS_ROUTING_CONCURRENCY,
@@ -160,11 +161,6 @@ async function main(): Promise<void> {
     }
 
     const toRoute = plan.decisions.filter((decision) => decision.rerouteSegments);
-    for (const decision of plan.decisions) {
-      if (!decision.rerouteSegments) {
-        console.log(`skip ${decision.tourId} (${decision.reason})`);
-      }
-    }
 
     if (toRoute.length === 0) {
       console.log('Nothing to route: every Parcours of the run is up to date.');
@@ -299,7 +295,7 @@ async function main(): Promise<void> {
 
 /**
  * Show the `[perf]` block of the run: how long it took, how long each Zone
- * took, and how many Parcours were routed again.
+ * took, and what the run did with the segments of every Parcours.
  *
  * The routing step reads no tile: the tile counters of a run are the ones
  * of the Fiche step.
@@ -314,14 +310,17 @@ function reportRun(
     totalMs: perf.totalMs(),
     steps: perf.steps,
     tiles: { fromCache: 0, downloaded: 0 },
+    subjects: [SEGMENTS_SUBJECT],
     parcours: plan
-      ? countersFromDecisions(
-          plan.decisions,
-          (decision) =>
+      ? countersFromDecisions(plan.decisions, {
+          subject: SEGMENTS_SUBJECT.id,
+          label: (decision) => decision.tourId,
+          reason: (decision) => decision.reason,
+          isChanged: (decision) =>
             decision.rerouteSegments &&
             routed.has(parcoursStateKey(decision.zoneId, decision.tourId)),
-        )
-      : { regenerated: [], skipped: [] },
+        })
+      : { changed: [], unchanged: [] },
   });
 
   console.log(formatPerfReport(report).join('\n'));
