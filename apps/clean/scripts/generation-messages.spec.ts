@@ -111,6 +111,7 @@ const ENGLISH_FRAGMENTS: Readonly<Record<string, readonly string[]>> = {
     'Updated: ${statePath}',
     'Nothing to update: ${statePath}',
   ],
+  'generation-state.ts': ['the state file holds no version'],
 };
 
 describe('the console output of the generation scripts', () => {

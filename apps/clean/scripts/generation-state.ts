@@ -379,7 +379,7 @@ export function readGenerationState(path: string): GenerationStateRead {
   }
 
   if (!isRecord(parsed) || typeof parsed.version !== 'number') {
-    return { status: 'unreadable', reason: 'the state file holds no version' };
+    return { status: 'unreadable', reason: "le fichier d'état ne porte aucune version" };
   }
 
   const parcours: Record<string, ParcoursGenerationRecord> = {};
