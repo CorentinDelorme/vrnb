@@ -22,7 +22,7 @@ import {
   writeFileIfChanged,
   writePerfReport,
 } from './generation-helpers';
-import type { PerfRecorder, PerfSubject } from './generation-perf';
+import type { PerfRecorder } from './generation-perf';
 import {
   buildPerfReport,
   countersFromIds,
@@ -30,24 +30,13 @@ import {
   formatPerfReport,
 } from './generation-perf';
 import { parcoursStateKey } from './generation-state';
+import { DATA_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
 const outputFile = join(rootDir, 'src/app/tours-data.ts');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-tours';
-
-/**
- * The data of the Parcours: what the run updated, and what it left alone.
- */
-const DATA_SUBJECT: PerfSubject = {
-  id: 'données',
-  label: 'Données',
-  plural: 'données',
-  unit: { singular: 'donnée', plural: 'données' },
-  changed: { singular: 'mise à jour', plural: 'mises à jour' },
-  unchanged: { singular: 'inchangée', plural: 'inchangées' },
-};
 
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);

@@ -50,6 +50,19 @@ const SEGMENTS_SUBJECT: PerfSubject = {
   unchanged: { singular: 'ignoré', plural: 'ignorés' },
 };
 
+/**
+ * The Fiches the packs reuse: the subject announces the same decision
+ * whatever the case.
+ */
+const REUSED_FICHE_SUBJECT: PerfSubject = {
+  id: 'fiche-reutilisée',
+  label: 'Fiche',
+  plural: 'Fiches',
+  unit: { singular: 'Fiche', plural: 'Fiches' },
+  changed: { singular: 'réutilisée', plural: 'réutilisées' },
+  unchanged: { singular: 'réutilisée', plural: 'réutilisées' },
+};
+
 describe('formatDuration', () => {
   it('should show a duration under a second in milliseconds', () => {
     expect(formatDuration(950)).toBe('950 ms');
@@ -155,7 +168,7 @@ describe('formatPerfReport', () => {
       '  Fiche  V1        bruz-sud       regénérée  parcours modifié',
       '  Fiche  V2        bruz-sud       regénérée  fiche modifiée',
       '  Fiche  2 Fiches  bruz-sud       ignorées   à jour',
-      '  Fiche  1 Fiche   bruz-ker-lann  ignorées   à jour',
+      '  Fiche  1 Fiche   bruz-ker-lann  ignorée    à jour',
     ]);
   });
 
@@ -280,9 +293,9 @@ describe('formatPerfReport', () => {
       '  Sujet          Élément   Zone           Décision  Raison',
       '  ────────────────────────────────────────────────────────',
       '  Fiche          2 Fiches  bruz-sud       ignorées  à jour',
-      '  Fiche          1 Fiche   bruz-ker-lann  ignorées  à jour',
-      '  Carte de zone  1 carte   bruz-sud       ignorées  à jour',
-      '  Carte de zone  1 carte   bruz-ker-lann  ignorées  à jour',
+      '  Fiche          1 Fiche   bruz-ker-lann  ignorée   à jour',
+      '  Carte de zone  1 carte   bruz-sud       ignorée   à jour',
+      '  Carte de zone  1 carte   bruz-ker-lann  ignorée   à jour',
       '',
       "  rien n'a changé : aucun Parcours ni aucune carte de zone régénérés",
     ]);
@@ -337,11 +350,44 @@ describe('formatPerfReport', () => {
       '',
       '  Sujet          Élément  Zone      Décision  Raison',
       '  ──────────────────────────────────────────────────',
-      '  Fiche          1 Fiche  bruz-sud  ignorées  à jour',
-      '  Carte de zone  1 carte  bruz-sud  ignorées  à jour',
+      '  Fiche          1 Fiche  bruz-sud  ignorée   à jour',
+      '  Carte de zone  1 carte  bruz-sud  ignorée   à jour',
       '',
       "  rien n'a changé : aucun Parcours ni aucune carte de zone régénérés",
     ]);
+  });
+
+  it('should show one row per subject when it announces the same decision either way', () => {
+    const report = buildPerfReport({
+      script: 'generate-zone-pdf',
+      totalMs: 1_000,
+      steps: [],
+      tiles: { fromCache: 0, downloaded: 0 },
+      subjects: [REUSED_FICHE_SUBJECT],
+      parcours: {
+        changed: [],
+        unchanged: [
+          {
+            id: 'fiche-reutilisée/bruz-sud/V1',
+            subject: 'fiche-reutilisée',
+            zoneId: 'bruz-sud',
+            label: 'V1',
+            reason: 'up-to-date',
+          },
+          {
+            id: 'fiche-reutilisée/bruz-sud/V2',
+            subject: 'fiche-reutilisée',
+            zoneId: 'bruz-sud',
+            label: 'V2',
+            reason: 'up-to-date',
+          },
+        ],
+      },
+    });
+
+    const rows = formatPerfReport(report).filter((line) => line.includes('Fiches réutilisées'));
+
+    expect(rows).toEqual(['  Fiches réutilisées   2']);
   });
 
   it('should tell a run that changed nothing from a run that did something', () => {
@@ -377,7 +423,7 @@ describe('formatPerfReport', () => {
       '',
       '  Sujet     Élément    Zone      Décision  Raison',
       '  ───────────────────────────────────────────────',
-      '  Segments  1 segment  bruz-sud  ignorés   à jour',
+      '  Segments  1 segment  bruz-sud  ignoré    à jour',
       '',
       "  rien n'a changé : aucun Parcours régénéré",
     ]);

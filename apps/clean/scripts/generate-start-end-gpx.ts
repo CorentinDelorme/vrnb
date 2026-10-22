@@ -19,7 +19,7 @@ import {
   writeFileIfChanged,
   writePerfReport,
 } from './generation-helpers';
-import type { PerfRecorder, PerfSubject } from './generation-perf';
+import type { PerfRecorder } from './generation-perf';
 import {
   buildPerfReport,
   countersFromDecisions,
@@ -38,6 +38,7 @@ import {
   parcoursStateKey,
 } from './generation-state';
 import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
+import { SEGMENTS_SUBJECT } from './generation-subjects';
 import type { LonLat, ParcoursRoute } from './route-parcours';
 import {
   PARCOURS_ROUTING_CONCURRENCY,
@@ -51,19 +52,6 @@ const rootDir = join(import.meta.dirname, '..');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-start-end-gpx';
-
-/**
- * The segments of the Parcours: what the run re-routed, and what it left
- * alone.
- */
-const SEGMENTS_SUBJECT: PerfSubject = {
-  id: 'segments',
-  label: 'Segments',
-  plural: 'segments',
-  unit: { singular: 'segment', plural: 'segments' },
-  changed: { singular: 're-routé', plural: 're-routés' },
-  unchanged: { singular: 'ignoré', plural: 'ignorés' },
-};
 
 /**
  * Maximum number of simultaneous requests to a routing server: two, like

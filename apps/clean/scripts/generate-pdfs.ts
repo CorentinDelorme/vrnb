@@ -28,7 +28,7 @@ import {
   zoneMapPdfPath,
   zonePdfDir,
 } from './generation-helpers';
-import type { PerfRecorder, PerfSubject } from './generation-perf';
+import type { PerfRecorder } from './generation-perf';
 import {
   buildPerfReport,
   countersFromDecisions,
@@ -51,6 +51,7 @@ import {
   zoneMapKey,
 } from './generation-state';
 import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
+import { FICHE_SUBJECT, ZONE_MAP_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
@@ -58,32 +59,6 @@ const tileCacheDir = join(rootDir, 'scripts', '.cache', 'tiles');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-pdfs';
-
-/**
- * The Fiches of the Parcours: what the run rendered again, and what it
- * left alone.
- */
-const FICHE_SUBJECT: PerfSubject = {
-  id: 'fiche',
-  label: 'Fiche',
-  plural: 'Fiches',
-  unit: { singular: 'Fiche', plural: 'Fiches' },
-  changed: { singular: 'regénérée', plural: 'regénérées' },
-  unchanged: { singular: 'ignorée', plural: 'ignorées' },
-};
-
-/**
- * The overview maps of the Zones: what the run rendered again, and what it
- * left alone.
- */
-const ZONE_MAP_SUBJECT: PerfSubject = {
-  id: 'carte de zone',
-  label: 'Carte de zone',
-  plural: 'cartes de zone',
-  unit: { singular: 'carte', plural: 'cartes' },
-  changed: { singular: 'regénérée', plural: 'regénérées' },
-  unchanged: { singular: 'ignorée', plural: 'ignorées' },
-};
 
 /** The name of a practice type, as the referent reads it. */
 function practiceTypeLabel(kind: 'V' | 'P'): string {

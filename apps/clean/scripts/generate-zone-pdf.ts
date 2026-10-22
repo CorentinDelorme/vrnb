@@ -13,43 +13,19 @@ import {
   zonePackFiles,
   zonePackParcours,
 } from './generation-helpers';
-import type { PerfRecorder, PerfSubject } from './generation-perf';
+import type { PerfRecorder } from './generation-perf';
 import {
   buildPerfReport,
   countersFromIds,
   createPerfRecorder,
   formatPerfReport,
 } from './generation-perf';
+import { PACK_SUBJECT, REUSED_FICHE_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-zone-pdf';
-
-/**
- * The packs of the Zones: what the run wrote, and what it left alone.
- */
-const PACK_SUBJECT: PerfSubject = {
-  id: 'pack',
-  label: 'Pack',
-  plural: 'packs',
-  unit: { singular: 'pack', plural: 'packs' },
-  changed: { singular: 'écrit', plural: 'écrits' },
-  unchanged: { singular: 'réutilisé', plural: 'réutilisés' },
-};
-
-/**
- * The Fiches the packs reuse: the pack script renders no Fiche, it merges
- * the ones that are already published.
- */
-const REUSED_FICHE_SUBJECT: PerfSubject = {
-  id: 'fiche',
-  label: 'Fiche',
-  plural: 'Fiches',
-  unit: { singular: 'Fiche', plural: 'Fiches' },
-  changed: { singular: 'regénérée', plural: 'regénérées' },
-  unchanged: { singular: 'réutilisée', plural: 'réutilisées' },
-};
 
 /**
  * Output folder of the packs: the local `scripts/output/` tree, like the

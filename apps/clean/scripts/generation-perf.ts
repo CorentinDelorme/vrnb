@@ -496,6 +496,10 @@ export function formatPerfReport(report: PerfReport): string[] {
  * The metrics of a run: the duration of each step, the tiles of the run
  * and, for every subject the run acted on, the number of elements it
  * changed and the number of elements it left alone.
+ *
+ * A subject that announces the same decision either way (the pack script
+ * never regenerates a Fiche: it reuses the published ones) gets a single
+ * row, with the number of elements it holds.
  */
 function metricsTable(report: PerfReport): string[] {
   const rows: string[][] = [];
@@ -513,8 +517,15 @@ function metricsTable(report: PerfReport): string[] {
     if (changed === 0 && unchanged === 0) {
       continue;
     }
-    rows.push([`${capitalize(subject.plural)} ${subject.changed.plural}`, String(changed)]);
-    rows.push([`${capitalize(subject.plural)} ${subject.unchanged.plural}`, String(unchanged)]);
+    const name = capitalize(subject.plural);
+    if (subject.changed.plural === subject.unchanged.plural) {
+      // The subject announces the same decision either way: one row, with
+      // the number of elements it holds.
+      rows.push([`${name} ${subject.changed.plural}`, String(changed + unchanged)]);
+      continue;
+    }
+    rows.push([`${name} ${subject.changed.plural}`, String(changed)]);
+    rows.push([`${name} ${subject.unchanged.plural}`, String(unchanged)]);
   }
 
   if (report.packs) {
@@ -527,6 +538,10 @@ function metricsTable(report: PerfReport): string[] {
 /**
  * The recap of what the run did: one row per element it changed, then one
  * row per group of elements it left alone.
+ *
+ * A group agrees in number: a group of one element takes the singular
+ * decision and the singular unit, a group of several takes the plural
+ * ones.
  *
  * The table is omitted when the run holds no element at all.
  */
@@ -547,11 +562,12 @@ function elementsTable(report: PerfReport): string[] {
   for (const group of groupedElements(report)) {
     const subject = subjectOf(report, group.subject);
     const unit = group.count === 1 ? subject?.unit.singular : subject?.unit.plural;
+    const decision = group.count === 1 ? subject?.unchanged.singular : subject?.unchanged.plural;
     rows.push([
       subject?.label ?? group.subject,
       `${group.count} ${unit ?? group.subject}`,
       group.zoneId || EMPTY_CELL,
-      subject?.unchanged.plural ?? reasonLabel(group.reason),
+      decision ?? reasonLabel(group.reason),
       reasonLabel(group.reason),
     ]);
   }

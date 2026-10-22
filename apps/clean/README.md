@@ -136,7 +136,8 @@ de zone, les packs). Le bloc est en français : c'est le référent qui le lit.
 
 Le récapitulatif liste **ce qui a été refait** — une ligne par élément, avec la raison de
 la décision — et **ce qui a été laissé tel quel** — une ligne par groupe d'éléments, avec
-le nombre d'éléments du groupe.
+le nombre d'éléments du groupe. Le groupe s'accorde en nombre : « 1 Fiche ignorée », « 28
+Fiches ignorées ».
 
 ```text
 [perf] generate-pdfs — durée totale : 1 m 12 s
@@ -159,9 +160,9 @@ le nombre d'éléments du groupe.
   Fiche          28 Fiches  bruz-sud           ignorées   à jour
   Fiche          13 Fiches  bruz-ker-lann      ignorées   à jour
   Fiche          6 Fiches   bruz-vau-gaillard  ignorées   à jour
-  Carte de zone  1 carte    bruz-sud           ignorées   à jour
-  Carte de zone  1 carte    bruz-ker-lann      ignorées   à jour
-  Carte de zone  1 carte    bruz-vau-gaillard  ignorées   à jour
+  Carte de zone  1 carte    bruz-sud           ignorée    à jour
+  Carte de zone  1 carte    bruz-ker-lann      ignorée    à jour
+  Carte de zone  1 carte    bruz-vau-gaillard  ignorée    à jour
 ```
 
 Un run qui ne change rien l'annonce : `rien n'a changé : aucun Parcours régénéré`. Les
@@ -171,7 +172,8 @@ l'orchestrateur : le bloc d'un `generate:all` montre l'union des étapes qu'il a
 
 Le script des packs (`generate:zone-pdf`) ne régénère aucun parcours — il fusionne les
 documents déjà publiés — mais il écrit des fichiers : son bloc annonce donc les packs
-qu'il a écrits et les documents qu'ils contiennent, et il ne dit jamais « rien n'a changé ».
+qu'il a écrits, les documents qu'ils contiennent et les fiches qu'il réutilise, et il ne
+dit jamais « rien n'a changé ».
 
 ```text
 [perf] generate-zone-pdf — durée totale : 1.2 s
@@ -183,7 +185,6 @@ qu'il a écrits et les documents qu'ils contiennent, et il ne dit jamais « rien
   Tuiles téléchargées  0
   Packs écrits         1
   Packs réutilisés     0
-  Fiches regénérées    0
   Fiches réutilisées   47
   Documents des packs  49
 
