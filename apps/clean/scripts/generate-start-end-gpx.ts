@@ -19,7 +19,7 @@ import {
   writeFileIfChanged,
   writePerfReport,
 } from './generation-helpers';
-import type { PerfRecorder } from './generation-perf';
+import type { PerfRecorder, PerfSubject } from './generation-perf';
 import {
   buildPerfReport,
   countersFromDecisions,
@@ -51,6 +51,19 @@ const rootDir = join(import.meta.dirname, '..');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-start-end-gpx';
+
+/**
+ * The segments of the Parcours: what the run re-routed, and what it left
+ * alone.
+ */
+const SEGMENTS_SUBJECT: PerfSubject = {
+  id: 'segments',
+  label: 'Segments',
+  plural: 'segments',
+  unit: { singular: 'segment', plural: 'segments' },
+  changed: { singular: 're-routé', plural: 're-routés' },
+  unchanged: { singular: 'ignoré', plural: 'ignorés' },
+};
 
 /**
  * Maximum number of simultaneous requests to a routing server: two, like
@@ -160,11 +173,6 @@ async function main(): Promise<void> {
     }
 
     const toRoute = plan.decisions.filter((decision) => decision.rerouteSegments);
-    for (const decision of plan.decisions) {
-      if (!decision.rerouteSegments) {
-        console.log(`skip ${decision.tourId} (${decision.reason})`);
-      }
-    }
 
     if (toRoute.length === 0) {
       console.log('Nothing to route: every Parcours of the run is up to date.');
@@ -299,7 +307,7 @@ async function main(): Promise<void> {
 
 /**
  * Show the `[perf]` block of the run: how long it took, how long each Zone
- * took, and how many Parcours were routed again.
+ * took, and what the run did with the segments of every Parcours.
  *
  * The routing step reads no tile: the tile counters of a run are the ones
  * of the Fiche step.
@@ -314,14 +322,17 @@ function reportRun(
     totalMs: perf.totalMs(),
     steps: perf.steps,
     tiles: { fromCache: 0, downloaded: 0 },
+    subjects: [SEGMENTS_SUBJECT],
     parcours: plan
-      ? countersFromDecisions(
-          plan.decisions,
-          (decision) =>
+      ? countersFromDecisions(plan.decisions, {
+          subject: SEGMENTS_SUBJECT.id,
+          label: (decision) => decision.tourId,
+          reason: (decision) => decision.reason,
+          isChanged: (decision) =>
             decision.rerouteSegments &&
             routed.has(parcoursStateKey(decision.zoneId, decision.tourId)),
-        )
-      : { regenerated: [], skipped: [] },
+        })
+      : { changed: [], unchanged: [] },
   });
 
   console.log(formatPerfReport(report).join('\n'));

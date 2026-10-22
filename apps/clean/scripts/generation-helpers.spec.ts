@@ -402,7 +402,36 @@ describe('writePerfReport', () => {
       totalMs: 1_000,
       steps: [{ name: 'Fiches', durationMs: 900 }],
       tiles: { fromCache: 10, downloaded: 2 },
-      parcours: { regenerated: ['bruz-sud/V1'], skipped: ['bruz-sud/V2'] },
+      subjects: [
+        {
+          id: 'fiche',
+          label: 'Fiche',
+          plural: 'Fiches',
+          unit: { singular: 'Fiche', plural: 'Fiches' },
+          changed: { singular: 'regénérée', plural: 'regénérées' },
+          unchanged: { singular: 'ignorée', plural: 'ignorées' },
+        },
+      ],
+      parcours: {
+        changed: [
+          {
+            id: 'fiche/bruz-sud/V1',
+            subject: 'fiche',
+            zoneId: 'bruz-sud',
+            label: 'V1',
+            reason: 'parcours-changed',
+          },
+        ],
+        unchanged: [
+          {
+            id: 'fiche/bruz-sud/V2',
+            subject: 'fiche',
+            zoneId: 'bruz-sud',
+            label: 'V2',
+            reason: 'up-to-date',
+          },
+        ],
+      },
     });
 
     expect(writePerfReport(perfReportPath(rootDir, 'generate-pdfs'), report)).toBe(true);

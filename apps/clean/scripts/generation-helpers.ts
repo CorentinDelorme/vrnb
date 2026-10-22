@@ -18,7 +18,14 @@ import { basename, dirname, join } from 'path';
 
 import { DEFAULT_ZONE_ID } from '../src/app/zones';
 
-import type { PackCounters, PerfReport } from './generation-perf';
+import type {
+  PackCounters,
+  PerfCounters,
+  PerfElement,
+  PerfPlural,
+  PerfReport,
+  PerfSubject,
+} from './generation-perf';
 
 /**
  * Values of a `--flag=a,b` option: the first matching argument wins, the
@@ -154,15 +161,76 @@ export function readPerfReport(path: string): PerfReport | undefined {
       downloaded:
         isRecord(raw.tiles) && typeof raw.tiles.downloaded === 'number' ? raw.tiles.downloaded : 0,
     },
-    parcours: {
-      regenerated: readIds(raw.parcours, 'regenerated'),
-      skipped: readIds(raw.parcours, 'skipped'),
-    },
-    zoneMaps: {
-      regenerated: readIds(raw.zoneMaps, 'regenerated'),
-      skipped: readIds(raw.zoneMaps, 'skipped'),
-    },
+    subjects: readSubjects(raw.subjects),
+    parcours: readCounters(raw.parcours),
+    zoneMaps: readCounters(raw.zoneMaps),
     packs: readPacks(raw.packs),
+  };
+}
+
+/** The subjects of a report, with the vocabulary the recap table reads. */
+function readSubjects(value: unknown): PerfSubject[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((subject) => {
+    if (!isRecord(subject) || typeof subject.id !== 'string') {
+      return [];
+    }
+    const label = typeof subject.label === 'string' ? subject.label : subject.id;
+    const plural = typeof subject.plural === 'string' ? subject.plural : label;
+    return [
+      {
+        id: subject.id,
+        label,
+        plural,
+        unit: readPlural(subject.unit, label),
+        changed: readPlural(subject.changed, ''),
+        unchanged: readPlural(subject.unchanged, ''),
+      },
+    ];
+  });
+}
+
+/** A French expression of a report, in the singular and in the plural. */
+function readPlural(value: unknown, fallback: string): PerfPlural {
+  if (!isRecord(value)) {
+    return { singular: fallback, plural: fallback };
+  }
+  const singular = typeof value.singular === 'string' ? value.singular : fallback;
+  const plural = typeof value.plural === 'string' ? value.plural : singular;
+  return { singular, plural };
+}
+
+/** The elements of a report, with the reason of every decision. */
+function readElements(value: unknown): PerfElement[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((element) => {
+    if (!isRecord(element) || typeof element.id !== 'string') {
+      return [];
+    }
+    return [
+      {
+        id: element.id,
+        subject: typeof element.subject === 'string' ? element.subject : '',
+        zoneId: typeof element.zoneId === 'string' ? element.zoneId : '',
+        label: typeof element.label === 'string' ? element.label : '',
+        reason: typeof element.reason === 'string' ? element.reason : '',
+      },
+    ];
+  });
+}
+
+/** The elements of a counter of a report. */
+function readCounters(value: unknown): PerfCounters {
+  if (!isRecord(value)) {
+    return { changed: [], unchanged: [] };
+  }
+  return {
+    changed: readElements(value.changed),
+    unchanged: readElements(value.unchanged),
   };
 }
 
@@ -172,7 +240,7 @@ function readPacks(value: unknown): PackCounters | undefined {
     return undefined;
   }
   return {
-    written: readIds(value, 'written'),
+    written: readElements(value.written),
     documents: typeof value.documents === 'number' ? value.documents : 0,
   };
 }
@@ -183,14 +251,6 @@ function readPacks(value: unknown): PackCounters | undefined {
  */
 export function clearPerfReports(rootDir: string): void {
   rmSync(perfReportsDir(rootDir), { recursive: true, force: true });
-}
-
-/** The ids of a counter of a report. */
-function readIds(value: unknown, key: string): string[] {
-  if (!isRecord(value) || !Array.isArray(value[key])) {
-    return [];
-  }
-  return value[key].filter((id): id is string => typeof id === 'string');
 }
 
 /** Whether a value is a JSON object. */

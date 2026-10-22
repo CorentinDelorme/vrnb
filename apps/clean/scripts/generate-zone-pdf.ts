@@ -13,7 +13,7 @@ import {
   zonePackFiles,
   zonePackParcours,
 } from './generation-helpers';
-import type { PerfRecorder } from './generation-perf';
+import type { PerfRecorder, PerfSubject } from './generation-perf';
 import {
   buildPerfReport,
   countersFromIds,
@@ -25,6 +25,31 @@ const rootDir = join(import.meta.dirname, '..');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-zone-pdf';
+
+/**
+ * The packs of the Zones: what the run wrote, and what it left alone.
+ */
+const PACK_SUBJECT: PerfSubject = {
+  id: 'pack',
+  label: 'Pack',
+  plural: 'packs',
+  unit: { singular: 'pack', plural: 'packs' },
+  changed: { singular: 'écrit', plural: 'écrits' },
+  unchanged: { singular: 'réutilisé', plural: 'réutilisés' },
+};
+
+/**
+ * The Fiches the packs reuse: the pack script renders no Fiche, it merges
+ * the ones that are already published.
+ */
+const REUSED_FICHE_SUBJECT: PerfSubject = {
+  id: 'fiche',
+  label: 'Fiche',
+  plural: 'Fiches',
+  unit: { singular: 'Fiche', plural: 'Fiches' },
+  changed: { singular: 'regénérée', plural: 'regénérées' },
+  unchanged: { singular: 'réutilisée', plural: 'réutilisées' },
+};
 
 /**
  * Output folder of the packs: the local `scripts/output/` tree, like the
@@ -108,11 +133,11 @@ async function main(): Promise<void> {
 
 /**
  * Show the `[perf]` block of the run: how long it took, how long each Zone
- * took, how many documents the packs hold and how many Parcours the pack
+ * took, how many documents the packs hold and which Fiches the pack
  * reused.
  *
  * The pack regenerates no Parcours: it merges the documents that are
- * already published, so every Parcours of the pack is left alone.
+ * already published, so every Fiche of the pack is left alone.
  */
 function reportRun(
   perf: PerfRecorder,
@@ -127,8 +152,18 @@ function reportRun(
     totalMs: perf.totalMs(),
     steps: perf.steps,
     tiles: { fromCache: 0, downloaded: 0 },
-    parcours: countersFromIds([], reused),
-    packs: { written, documents },
+    subjects: [PACK_SUBJECT, REUSED_FICHE_SUBJECT],
+    parcours: countersFromIds(REUSED_FICHE_SUBJECT.id, [], reused, 'up-to-date'),
+    packs: {
+      written: written.map((zoneId) => ({
+        id: `${PACK_SUBJECT.id}/${zoneId}/${zoneId}`,
+        subject: PACK_SUBJECT.id,
+        zoneId,
+        label: zoneId,
+        reason: 'pack-written',
+      })),
+      documents,
+    },
   });
 
   console.log(formatPerfReport(report).join('\n'));

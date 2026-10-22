@@ -22,7 +22,7 @@ import {
   writeFileIfChanged,
   writePerfReport,
 } from './generation-helpers';
-import type { PerfRecorder } from './generation-perf';
+import type { PerfRecorder, PerfSubject } from './generation-perf';
 import {
   buildPerfReport,
   countersFromIds,
@@ -36,6 +36,18 @@ const outputFile = join(rootDir, 'src/app/tours-data.ts');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-tours';
+
+/**
+ * The data of the Parcours: what the run updated, and what it left alone.
+ */
+const DATA_SUBJECT: PerfSubject = {
+  id: 'données',
+  label: 'Données',
+  plural: 'données',
+  unit: { singular: 'donnée', plural: 'données' },
+  changed: { singular: 'mise à jour', plural: 'mises à jour' },
+  unchanged: { singular: 'inchangée', plural: 'inchangées' },
+};
 
 function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
@@ -279,7 +291,7 @@ async function main(): Promise<void> {
 
 /**
  * Show the `[perf]` block of the run: how long it took, how long each step
- * took, and how many Parcours changed.
+ * took, and what the run did with the data of every Parcours.
  *
  * The data step reads no tile: the tile counters of a run are the ones of
  * the Fiche step.
@@ -294,7 +306,8 @@ function reportRun(
     totalMs: perf.totalMs(),
     steps: perf.steps,
     tiles: { fromCache: 0, downloaded: 0 },
-    parcours: countersFromIds([...changed], scope),
+    subjects: [DATA_SUBJECT],
+    parcours: countersFromIds(DATA_SUBJECT.id, [...changed], scope, 'up-to-date', 'data-changed'),
   });
 
   console.log(formatPerfReport(report).join('\n'));
