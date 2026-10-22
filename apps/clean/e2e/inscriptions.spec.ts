@@ -251,6 +251,23 @@ test.describe('Binôme registration', () => {
     await submit.click();
 
     await expect(modal).toContainText('Votre binôme est inscrit');
+    // The confirmation is a meeting point (ticket #36): the note sentence,
+    // the hours and both agenda links appear only once the 201 is confirmed.
+    await expect(modal).toContainText(
+      "Notez la zone et le nom du parcours pour le jour de l'action",
+    );
+    await expect(modal).toContainText('Bruz Sud — V2.');
+    await expect(modal).toContainText('le dimanche 14 février 2027 de 9h à 12h');
+    await expect(modal).toContainText('Point de rendez-vous : Place du Dr Joly');
+    const googleLink = modal.getByRole('link', { name: 'Google Agenda' });
+    await expect(googleLink).toHaveAttribute(
+      'href',
+      /https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/,
+    );
+    await expect(googleLink).toHaveAttribute('target', '_blank');
+    await expect(googleLink).toHaveAttribute('rel', 'noopener noreferrer');
+    const icsLink = modal.getByRole('link', { name: 'Fichier calendrier (.ics)' });
+    await expect(icsLink).toHaveAttribute('href', '/api/calendrier/bruz-sud/V2');
     // One exact POST, then the statuses reload without a page reload:
     expect(postBodies).toHaveLength(1);
     expect(JSON.parse(postBodies[0] ?? '{}')).toEqual(CONTRACT_BODY);
@@ -477,5 +494,41 @@ test.describe('Anti-bot honeypot and GDPR notice', () => {
       .disableRules(['meta-viewport', 'color-contrast'])
       .analyze();
     expect(results.violations).toEqual([]);
+  });
+});
+
+/**
+ * The calendar file route of ticket #36: the thin adapter serving the pure
+ * module's .ics content for a known (Zone, Parcours) couple, answering 404
+ * with no file for an unknown one. The route needs no KV store (the calendar
+ * file carries no personal data), so the real dev-server route is exercised
+ * over `page.request`, request-level like the `page.route` interceptions of
+ * this spec are page-level — no click navigation is triggered for a file the
+ * browser would download.
+ */
+test.describe('Calendar file route', () => {
+  test('should serve the Édition event file for a known couple', async ({ page }) => {
+    const response = await page.request.get('/api/calendrier/bruz-sud/V1');
+
+    expect(response.status()).toBe(200);
+    // The served file is a calendar file, delivered as an explicit download
+    // named after the Zone and the Parcours.
+    expect(response.headers()['content-type']).toContain('text/calendar');
+    expect(response.headers()['content-disposition']).toContain('calendrier-bruz-sud-v1.ics');
+    // The Édition event carries the stable (year, zone, parcours) id, and
+    // names the action, the Zone and the Parcours.
+    const content = await response.text();
+    expect(content).toContain('BEGIN:VCALENDAR');
+    expect(content).toContain('UID:vrnb-2027-bruz-sud-v1@vrnb-site');
+    expect(content).toContain('SUMMARY:Ramassage VRNB — Bruz Sud (V1)');
+    expect(content).toContain('Point de rendez-vous');
+  });
+
+  test('should answer 404 with no file for an unknown couple', async ({ page }) => {
+    const response = await page.request.get('/api/calendrier/impossible/UNKNOWN');
+
+    expect(response.status()).toBe(404);
+    // No file at all: the body is empty, never an HTML error page.
+    expect(await response.text()).toBe('');
   });
 });

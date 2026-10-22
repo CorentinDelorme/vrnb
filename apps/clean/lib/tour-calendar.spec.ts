@@ -2,7 +2,12 @@ import { Buffer } from 'node:buffer';
 
 import { describe, expect, it } from 'vitest';
 
-import { tourGoogleCalendarUrl, tourIcsContent, type TourCalendarEvent } from './tour-calendar';
+import {
+  actionHoursLabel,
+  tourGoogleCalendarUrl,
+  tourIcsContent,
+  type TourCalendarEvent,
+} from './tour-calendar';
 
 /**
  * The pure calendar module of a registered Parcours (ticket #35): the Google
@@ -11,6 +16,9 @@ import { tourGoogleCalendarUrl, tourIcsContent, type TourCalendarEvent } from '.
  * id — plus the injected generation instant for the .ics only. Every
  * expectation is a known-good literal (worked example of the 2027 Édition,
  * Bruz Sud, V1): February 14th 2027 is a Sunday, 9h–12h CET (UTC+1).
+ *
+ * Ticket #36 adds `actionHoursLabel`, the hours fragment (« de 9h à 12h »)
+ * the calendar description and the confirmation panel word identically.
  */
 
 const EDITION_2027 = {
@@ -36,6 +44,24 @@ const SPICY_POINT_DE_RDV = 'Rond-point, arrêt Sud; le \\ pratique\n(note)';
 /** The two generation instants used to prove DTSTAMP is the only difference. */
 const GENERATED_AT_1 = new Date('2026-10-22T15:45:00Z');
 const GENERATED_AT_2 = new Date('2026-11-30T08:30:00Z');
+
+describe('actionHoursLabel', () => {
+  it('should word the action hours exactly as the calendar description does', () => {
+    expect(actionHoursLabel(EDITION_2027)).toBe('de 9h à 12h');
+  });
+
+  it('should keep the minutes when the action does not start nor end on the hour', () => {
+    expect(
+      actionHoursLabel({ ...EDITION_2027, actionStartTime: '09:30', actionEndTime: '13:15' }),
+    ).toBe('de 9h30 à 13h15');
+  });
+
+  it('should refuse a malformed Édition wall time', () => {
+    expect(() => actionHoursLabel({ ...EDITION_2027, actionEndTime: '24:00' })).toThrow(
+      /Invalid action wall time/,
+    );
+  });
+});
 
 describe('tourGoogleCalendarUrl', () => {
   it('should build the full 2027 / Bruz Sud (V1) template URL', () => {

@@ -491,3 +491,88 @@ describe('RegisterBinomeModal local clock fallback', () => {
     expect(identityInputs()[0]?.disabled).toBe(false);
   });
 });
+
+/**
+ * The confirmation panel (ticket #36): once the registration is created, the
+ * panel becomes a meeting point — it asks to note the zone and the Parcours
+ * name, recalls the action hours from the Édition config around the action
+ * date, keeps naming the Point de rendez-vous, and offers the two agenda
+ * links (Google Calendar in a new tab, the .ics file served by the calendar
+ * route). Both links exist ONLY on this state, never outside the
+ * confirmation.
+ */
+describe('RegisterBinomeModal confirmation with calendar links', () => {
+  /** Fill + submit a valid form, then wait until the confirmation shows. */
+  async function renderConfirmation(): Promise<void> {
+    renderModal();
+    fillBinome();
+    fireEvent.click(submitButton());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('Votre binôme est inscrit'),
+    );
+  }
+
+  beforeEach(() => {
+    mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
+    mocks.reload.mockReset();
+    status.current = OPEN_STATUS;
+  });
+
+  it('should recall the day with its hours, the note sentence and the meeting point', async () => {
+    await renderConfirmation();
+
+    // The hours come from the Édition config (09:00 → 9h, 12:00 → 12h) and
+    // wrap the action date, exactly like the calendar description words it.
+    expect(screen.getByRole('alert').textContent).toContain(
+      'le dimanche 14 février 2027 de 9h à 12h',
+    );
+    // The note-to-take sentence carries the data, never a literal.
+    const note = screen.getByText(/Notez la zone et le nom du parcours/).textContent ?? '';
+    expect(note).toContain("pour le jour de l'action");
+    expect(note).toContain('Bruz Sud — V1.');
+    // The Point de rendez-vous stays named on the confirmation.
+    expect(screen.getByText(/Point de rendez-vous/).textContent).toContain('Place du Dr Joly');
+  });
+
+  it('should offer the two agenda links on the confirmation', async () => {
+    await renderConfirmation();
+
+    // Google Calendar: a plausible template link built by the pure module,
+    // carrying the Zone and the Parcours, opened in a new tab.
+    const google = screen.getByRole('link', { name: 'Google Agenda' }) as HTMLAnchorElement;
+    expect(google.href.startsWith('https://calendar.google.com/calendar/render?')).toBe(true);
+    const googleUrl = new URL(google.href);
+    expect(googleUrl.searchParams.get('action')).toBe('TEMPLATE');
+    expect(googleUrl.searchParams.get('text')).toBe('Ramassage VRNB — Bruz Sud (V1)');
+    expect(googleUrl.searchParams.get('location')).toBe(
+      'Point de rendez-vous\u00a0: Place du Dr Joly',
+    );
+    expect(google.target).toBe('_blank');
+    expect(google.rel).toContain('noopener');
+
+    // The .ics file points to the calendar route of the exact couple, with
+    // no .ics suffix in the URL (the filename arrives through the header).
+    const ics = screen.getByRole('link', { name: 'Fichier calendrier (.ics)' });
+    expect(ics.getAttribute('href')).toBe('/api/calendrier/bruz-sud/V1');
+  });
+
+  it('should show no calendar link nor note before the submission', () => {
+    renderModal();
+
+    expect(screen.queryByRole('link', { name: 'Google Agenda' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Fichier calendrier (.ics)' })).toBeNull();
+    expect(screen.queryByText(/Notez la zone et le nom du parcours/)).toBeNull();
+  });
+
+  it('should show no calendar link on a refusal', async () => {
+    renderModal();
+    fillBinome();
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'taken' });
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('couvert'));
+
+    expect(screen.queryByRole('link', { name: 'Google Agenda' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Fichier calendrier (.ics)' })).toBeNull();
+    expect(screen.queryByText(/Notez la zone et le nom du parcours/)).toBeNull();
+  });
+});

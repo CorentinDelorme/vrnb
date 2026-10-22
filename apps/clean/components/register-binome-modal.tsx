@@ -1,9 +1,16 @@
 'use client';
 
-import { CalendarDaysIcon, CancelIcon, Location01Icon } from '@hugeicons/core-free-icons';
+import {
+  CalendarAdd01Icon,
+  CalendarDaysIcon,
+  CancelIcon,
+  Location01Icon,
+  StickyNote01Icon,
+} from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useRef, useState } from 'react';
 
+import { actionHoursLabel, tourGoogleCalendarUrl } from '../lib/tour-calendar';
 import {
   CURRENT_EDITION,
   INSCRIPTIONS_RETENTION_DAYS,
@@ -61,6 +68,15 @@ import {
  * - the shared identity bounds (2 to 60 characters per name, see
  *   `validation.ts`): the submit is enabled as soon as the form is complete
  *   and valid, and each field shows its own error message.
+ *
+ * Ticket #36 turns the created outcome into a meeting point: the confirmation
+ * explicitly asks to note the zone and the Parcours name, recalls the action
+ * hours of the Édition config around the action date, keeps naming the Point
+ * de rendez-vous and offers the two agenda links — the Google Calendar link
+ * built by the pure `tour-calendar` module (opened in a new tab) and the
+ * calendar file link towards `/api/calendrier/<zone>/<parcours>`. Both links
+ * exist ONLY on this state, never on the form, never anywhere else on the
+ * site (not in the Menu, not on the home page, not in the mode d'emploi).
  */
 
 /** The four identity fields of the Binôme form, as controlled inputs. */
@@ -92,6 +108,14 @@ const IDENTITY_INPUTS = [
 
 /** French long-form date of the Édition action day (module-scope constant). */
 const ACTION_DATE_LABEL = formatActionDateLabel(CURRENT_EDITION.actionDate);
+
+/**
+ * French hours of the Édition action (module-scope constant): « de 9h à 12h »
+ * from the Édition `HH:MM` strings through the pure module the calendar
+ * artefacts (Google link and .ics file) use too, so the confirmation and the
+ * calendar files recall the hours with the same wording.
+ */
+const ACTION_HOURS_LABEL = actionHoursLabel(CURRENT_EDITION);
 
 /**
  * The message of the not-open-yet registration window (also the `not-open`
@@ -194,6 +218,13 @@ export function RegisterBinomeModal({
 
   const zone = getZone(tour.zoneId);
   /**
+   * The note-to-take sentence of the confirmation (ticket #36), built as one
+   * string: the zone and the Parcours come from the selected tour (never a
+   * literal), and the JSX compiler would glue text following an HTML entity
+   * (spacing pitfall, see `GDPR_NOTICE`).
+   */
+  const noteSentence = `Notez la zone et le nom du parcours pour le jour de l'action\u00a0: ${zone.name} — ${tour.tourId}.`;
+  /**
    * The registration window of the Édition, from the ONE rule of the provider
    * (the server's answer when the public state loaded, the local clock
    * otherwise): the client and the server always agree. Both window bounds
@@ -258,8 +289,22 @@ export function RegisterBinomeModal({
             <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
               <span>
                 <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
-                {ACTION_DATE_LABEL} au point de rendez-vous ci-dessous.
+                {ACTION_DATE_LABEL} {ACTION_HOURS_LABEL} au point de rendez-vous ci-dessous.
               </span>
+            </div>
+            {/*
+              The note-to-take sentence (ticket #36): the zone and the Parcours
+              name come from the data (the selected tour), never a literal —
+              the sentence is built as one string so the values cannot be
+              glued by the JSX compiler (spacing pitfall).
+            */}
+            <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
+              <HugeiconsIcon
+                icon={StickyNote01Icon}
+                strokeWidth={1.5}
+                className="text-secondary mt-0.5 size-5 shrink-0"
+              />
+              <span>{noteSentence}</span>
             </div>
             <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
               <HugeiconsIcon
@@ -270,6 +315,46 @@ export function RegisterBinomeModal({
               <span>
                 Point de rendez-vous&nbsp;: <strong>{zone.meetingPoint.name}</strong>
               </span>
+            </div>
+            {/*
+              The two agenda links (ticket #36): the user-facing labels differ
+              but the wording served in the artefact is the pure module's —
+              the Google link is built by `tourGoogleCalendarUrl` (opens in a
+              new tab) and the file link points to the route of the exact
+              (zone, parcours) couple, with no `.ics` suffix in the URL (the
+              filename arrives through the response header).
+            */}
+            <div className="mt-4 text-sm sm:text-base">
+              <div className="flex items-start gap-2">
+                <HugeiconsIcon
+                  icon={CalendarAdd01Icon}
+                  strokeWidth={1.5}
+                  className="text-secondary mt-0.5 size-5 shrink-0"
+                />
+                <span>L&apos;ajouter à mon agenda&nbsp;:</span>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <a
+                  className="btn btn-outline max-sm:btn-sm sm:btn-md"
+                  href={`/api/calendrier/${tour.zoneId}/${tour.tourId}`}
+                >
+                  Fichier calendrier (.ics)
+                </a>
+                <a
+                  className="btn btn-primary max-sm:btn-sm sm:btn-md"
+                  href={tourGoogleCalendarUrl({
+                    edition: CURRENT_EDITION,
+                    pointDeRendezVous: zone.meetingPoint.name,
+                    tourId: tour.tourId,
+                    zoneId: tour.zoneId,
+                    zoneName: zone.name,
+                  })}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Google Agenda
+                </a>
+              </div>
             </div>
             <div className="modal-action">
               <button className="btn btn-primary" onClick={close}>

@@ -89,7 +89,20 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    and asserts the jump to `#inscription`. No parity impact: the legacy manual page had no
    sommaire, and the DOM contract of the manual is only extended.
 
-Totals: **110 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire) × chromium + firefox = **220**.
+7. **`Calendar file route` (2 tests) and confirmation calendar links, ticket #36**: the
+   registration confirmation reached at the end of the full `Binôme registration` flow now
+   recalls the meeting point (note sentence, hours from the Édition config, Point de
+   rendez-vous) and offers the two agenda links — asserted inside that extended existing
+   case, not as new cases. The two NEW cases exercise the thin adapter route
+   `/api/calendrier/<zone>/<parcours>` against the real dev server at request level
+   (`page.request.get`): a known (Zone, Parcours) couple answers 200 `text/calendar` with an
+   explicit filename and the RFC 5545 body (stable event id `UID:vrnb-2027-<zone>-<parcours>@vrnb-site`,
+   `SUMMARY` carrying the action, the Zone and the Parcours), an unknown couple answers 404
+   with an empty body. The route needs no KV store, so no interception is needed (see the
+   « Calendar file route » intro). No parity impact: no new route of the legacy DOM contract,
+   the links exist only on the confirmation panel of the modal.
+
+Totals: **112 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 2 for the calendar file route of ticket #36) × chromium + firefox = **224**.
 
 ---
 
@@ -149,12 +162,17 @@ Route: `/`
 
 ## File: `e2e/inscriptions.spec.ts`
 
-Route: `/` (tickets #16 + #17 + #18 — public inscriptions statuses, Binôme
-registration and registration window)
+Route: `/` (tickets #16 + #17 + #18 + #36 — public inscriptions statuses, Binôme
+registration, registration window and confirmation calendar links)
 
 > `GET /api/inscriptions` is intercepted with `page.route` in every test of this
 > file (both browsers), so the dev server needs no KV credentials. The POST
 > direction is scripted through the same `page.route` handler, assert by assert.
+>
+> The calendar file route of ticket #36 is the exception: unlike the Inscriptions
+> API, `/api/calendrier/<zone>/<parcours>` needs no KV store, so its two cases
+> hit the real dev-server route over `page.request.get` (see the « Calendar file
+> route » describe).
 >
 > The Inscriptions API itself and the Upstash KV adapter are not exercised here:
 > they are covered by the unit suite (`src/app/inscriptions/*.spec.ts`), and the
@@ -197,12 +215,12 @@ notre participation à ce parcours de nettoyage. »
 > page.getByRole('dialog').getByLabel('Nom du membre 1', { exact: true });
 > ```
 
-| Test name                                                                      | Steps                                                                                                                                                                                                                                                                                                          | Expected                                                                                                                                                                                                              |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `should register through the modal: 201, confirmation, badge, button gone`     | Script GET (empty → covered) + POST 201 `{"inscription":{…}}` with `page.route`, `goto('/')`, open V2's button, assert modal context (Zone « Bruz Sud », action date « 14 février 2027 », meeting point), fill, tick, submit (the engagement statement gates the submit: untick → disabled, re-tick → enabled) | Exactly one POST carrying the full contract body (4 identity fields, `engaged: true`, `honeypot: ''`, `zoneId`/`tourId`); confirmation text « Votre binôme est inscrit »; V2 badged; register button gone — no reload |
-| `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                                                                                                                                               | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                                                          |
-| `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                                                                                                                                                 | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                                                    |
-| `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                                                                                                                                       | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                                                       |
+| Test name                                                                      | Steps                                                                                                                                                                                                                                                                                                          | Expected                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should register through the modal: 201, confirmation, badge, button gone`     | Script GET (empty → covered) + POST 201 `{"inscription":{…}}` with `page.route`, `goto('/')`, open V2's button, assert modal context (Zone « Bruz Sud », action date « 14 février 2027 », meeting point), fill, tick, submit (the engagement statement gates the submit: untick → disabled, re-tick → enabled) | Exactly one POST carrying the full contract body (4 identity fields, `engaged: true`, `honeypot: ''`, `zoneId`/`tourId`); confirmation text « Votre binôme est inscrit » recalled as a meeting point (ticket #36): note sentence « Notez la zone et le nom du parcours pour le jour de l'action : Bruz Sud — V2. », hours « de 9h à 12h », « Point de rendez-vous : Place du Dr Joly », and the two agenda links — Google Calendar anchor (`target="_blank"`, `rel="noopener noreferrer"`, template URL built by the pure module) and `.ics` anchor with the exact href `/api/calendrier/bruz-sud/V2`; V2 badged; register button gone — no reload |
+| `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                                                                                                                                               | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                                                                                                                                                 | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                                                                                                                                       | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 ### `describe('Closed registration window')` (ticket #18)
 
@@ -229,6 +247,26 @@ button is shown, so the site never offers a registration it cannot honor.
 | `should post the filled honeypot and be refused like any other invalid input` | Script GET (open) + POST 400 `{"error":"invalid-inscription"}`, open V2's button, fill, fill the hidden field, submit                          | One POST whose body carries the filled `honeypot`; the refusal is silent — the standard « Saisie invalide » message, never an anti-robots hint, and nothing stored (the Parcours stays unbadged, its register button stays) |
 | `should state the data retention of the names in the modal`                   | Mock GET (open, empty), `goto('/')`, open V2's button                                                                                          | The modal states « Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées 90 jours après l'action. »                                                                                 |
 | `should have no a11y violation on the open registration modal`                | Mock GET (open, empty), `goto('/')`, open V2's button, run the axe audit on the page (the `meta-viewport` and `color-contrast` rules disabled) | No axe violation (the hidden honeypot never breaks the audit)                                                                                                                                                               |
+
+### `describe('Calendar file route')` (ticket #36)
+
+The route `/api/calendrier/<zone>/<parcours>` is a thin adapter over the pure
+calendar module (`lib/tour-calendar.ts`): it serves the Édition event of a
+registered Parcours and needs no KV store, so these two cases hit the **real
+dev-server route** at request level (`page.request.get`) — the `page.route`
+interception of the Inscriptions API is not needed here, and no link is
+clicked (the served file is a download, read through the response instead).
+
+| Test name                                                | Steps                                        | Expected                                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------------- | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should serve the Édition event file for a known couple` | Request `/api/calendrier/bruz-sud/V1`        | HTTP 200; `content-type` contains `text/calendar` ; `content-disposition` carries the explicit filename `calendrier-bruz-sud-v1.ics` ; the body carries `BEGIN:VCALENDAR`, the stable `UID:vrnb-2027-bruz-sud-v1@vrnb-site`, `SUMMARY:Ramassage VRNB — Bruz Sud (V1)` and the Point de rendez-vous |
+| `should answer 404 with no file for an unknown couple`   | Request `/api/calendrier/impossible/UNKNOWN` | HTTP 404 with an empty body (no file at all, never an HTML error page)                                                                                                                                                                                                                             |
+
+> The confirmation links themselves (Google Calendar built by the pure module,
+> `.ics` href of the exact couple) are asserted in the extended « Binôme
+> registration » flow above; the `.ics` file content is unit-covered by
+> `lib/tour-calendar.spec.ts` — these two cases only check the adapter's
+> served response.
 
 ---
 

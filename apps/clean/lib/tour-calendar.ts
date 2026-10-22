@@ -126,6 +126,17 @@ function eventDescription(event: TourCalendarEvent): string {
 }
 
 /**
+ * French hours of the action, « de 9h à 12h », from the Édition `HH:MM`
+ * strings. The ONE source of that wording: the .ics/Google description (this
+ * module) and the registration confirmation panel (ticket #36) recall the
+ * hours through it, so the screen and the calendar artefacts never drift
+ * apart. Malformed config is a developer error, said in English.
+ */
+export function actionHoursLabel(edition: Edition): string {
+  return formatActionHours(edition.actionStartTime, edition.actionEndTime);
+}
+
+/**
  * French hours of the action, « de 9h à 12h » from the Édition `HH:MM`
  * strings. Malformed config is a developer error, said in English.
  */
