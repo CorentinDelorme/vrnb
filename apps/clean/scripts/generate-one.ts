@@ -14,7 +14,7 @@ function hasFlag(flag: string): boolean {
 }
 
 function printUsage(): void {
-  console.log(`Usage : bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours] [--force]
+  console.log(`Utilisation : bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours] [--force]
 
 Régénérer un seul Parcours ou une seule Zone sans tout reconstruire :
   segments (OSRM/Valhalla) -> données des Parcours -> Fiches PDF.

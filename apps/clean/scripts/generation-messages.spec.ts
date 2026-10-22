@@ -33,6 +33,7 @@ const ENGLISH_FRAGMENTS: Readonly<Record<string, readonly string[]>> = {
   'generate-all.ts': [],
   'generate-one.ts': [
     'Usage: bun tsx scripts/generate-one.ts',
+    'Usage : bun tsx scripts/generate-one.ts',
     'Regenerate a single tour or a whole zone without rebuilding everything:',
     'routes (OSRM/Valhalla) -> tours data -> tour PDFs.',
     'Options:',
@@ -71,6 +72,7 @@ const ENGLISH_FRAGMENTS: Readonly<Record<string, readonly string[]>> = {
     'Unknown parcours: ${outcome.tourId}',
     'cannot write the segments of ${outcome.tourId}: ${errorMessage(error)}',
     '(${outcome.profile.osrm}): start ${outcome.start.coords.length} pts',
+    'ok ${outcome.tourId}',
     'end ${outcome.end.coords.length} pts',
     '${Math.round(outcome.end.distanceM)}m [${outcome.end.source}]',
     'fail ${failure.tourId}: ${failure.error instanceof Error ? failure.error.message : failure.error}',

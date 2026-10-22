@@ -259,7 +259,7 @@ async function main(): Promise<void> {
             }
             routed.add(parcoursStateKey(entry.zoneId, entry.tourId));
             console.log(
-              `ok ${outcome.tourId} (${practiceLabel(outcome.profile.osrm)}) :` +
+              `succès ${outcome.tourId} (${practiceLabel(outcome.profile.osrm)}) :` +
                 ` début ${outcome.start.coords.length} pts` +
                 ` ${Math.round(outcome.start.distanceM)} m [${outcome.start.source}],` +
                 ` fin ${outcome.end.coords.length} pts` +
