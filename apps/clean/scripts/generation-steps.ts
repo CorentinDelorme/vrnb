@@ -123,7 +123,7 @@ export async function runGenerationSteps(
         stdio: 'inherit',
       });
       if (result.status !== 0) {
-        throw new Error(`Step failed: ${script}`);
+        throw new Error(`Étape en échec : ${script}`);
       }
     });
   }
@@ -142,7 +142,7 @@ export function readGenerationStateOrWarn(statePath: string): GenerationState | 
 
   if (read.status === 'unreadable') {
     console.warn(
-      `Warning: the generation state is unreadable (${read.reason}), everything will be regenerated.`,
+      `Attention : l'état de génération est illisible (${read.reason}), tout sera régénéré.`,
     );
     return undefined;
   }
@@ -160,7 +160,9 @@ export function writeGenerationStateOrFail(statePath: string, state: GenerationS
   try {
     writeGenerationState(statePath, state);
   } catch (error) {
-    console.error(`cannot write the generation state (${statePath}): ${errorMessage(error)}`);
+    console.error(
+      `impossible d'écrire l'état de génération (${statePath}) : ${errorMessage(error)}`,
+    );
   }
 }
 

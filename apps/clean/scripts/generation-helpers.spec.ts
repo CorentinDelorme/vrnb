@@ -19,6 +19,7 @@ import {
   parseGenerationFilters,
   parseParcoursStateKey,
   perfReportPath,
+  practiceLabel,
   practiceTypeOf,
   readPerfReport,
   resolveGpxTracePath,
@@ -506,6 +507,18 @@ describe('practiceTypeOf', () => {
   it('should read the practice type of a Parcours from its id', () => {
     expect(practiceTypeOf('V1')).toBe('V');
     expect(practiceTypeOf('P13')).toBe('P');
+  });
+});
+
+describe('practiceLabel', () => {
+  it('should name the two practices in French', () => {
+    expect(practiceLabel('V')).toBe('vélo');
+    expect(practiceLabel('P')).toBe('pied');
+  });
+
+  it('should name the practices the routing profiles stand for', () => {
+    expect(practiceLabel('bicycle')).toBe('vélo');
+    expect(practiceLabel('foot')).toBe('pied');
   });
 });
 

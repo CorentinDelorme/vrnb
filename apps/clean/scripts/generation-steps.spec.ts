@@ -138,7 +138,7 @@ describe('readGenerationStateOrWarn', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     expect(readGenerationStateOrWarn(statePath)).toBeUndefined();
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('unreadable'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('illisible'));
   });
 
   it('should not warn when the state file is missing', () => {

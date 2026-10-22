@@ -22,6 +22,7 @@ import {
   parseGenerationFilters,
   pdfRootDir,
   perfReportPath,
+  practiceLabel,
   resolveGpxTracePath,
   tourPdfPath,
   writePerfReport,
@@ -59,11 +60,6 @@ const tileCacheDir = join(rootDir, 'scripts', '.cache', 'tiles');
 
 /** Name of the script, as the `[perf]` block of the run shows it. */
 const SCRIPT_NAME = 'generate-pdfs';
-
-/** The name of a practice type, as the referent reads it. */
-function practiceTypeLabel(kind: 'V' | 'P'): string {
-  return kind === 'V' ? 'vélo' : 'pied';
-}
 
 const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 const TILE_SIZE = 256;
@@ -131,7 +127,7 @@ interface LogoImage {
 async function loadLogo(): Promise<LogoImage | undefined> {
   try {
     if (!existsSync(logoPath)) {
-      console.warn(`  logo not found: ${logoPath}`);
+      console.warn(`  logo introuvable : ${logoPath}`);
       return undefined;
     }
     const source = sharp(readFileSync(logoPath));
@@ -140,7 +136,7 @@ async function loadLogo(): Promise<LogoImage | undefined> {
     const aspect = (metadata.width ?? 1) / (metadata.height ?? 1);
     return { buffer, aspect };
   } catch (error) {
-    console.warn(`  logo failed: ${error instanceof Error ? error.message : error}`);
+    console.warn(`  échec du logo : ${error instanceof Error ? error.message : error}`);
     return undefined;
   }
 }
@@ -190,7 +186,7 @@ async function buildQrCodeImage(url: string): Promise<Buffer | undefined> {
       .png()
       .toBuffer();
   } catch (error) {
-    console.warn(`  QR code failed: ${error instanceof Error ? error.message : error}`);
+    console.warn(`  échec du QR code : ${error instanceof Error ? error.message : error}`);
     return undefined;
   }
 }
@@ -203,7 +199,9 @@ function ensureWritable(outputPath: string): void {
   try {
     chmodSync(outputPath, 0o644);
   } catch (error) {
-    console.warn(`  cannot chmod ${outputPath}: ${error instanceof Error ? error.message : error}`);
+    console.warn(
+      `  impossible de modifier les droits de ${outputPath} : ${error instanceof Error ? error.message : error}`,
+    );
   }
 }
 
@@ -336,7 +334,7 @@ const tileFetcher = createTileFetcher({
   }),
   onUnavailable: (zoom, x, y, error) => {
     console.warn(
-      `  tile ${zoom}/${x}/${y} unavailable: ${error instanceof Error ? error.message : error}`,
+      `  tuile ${zoom}/${x}/${y} indisponible : ${error instanceof Error ? error.message : error}`,
     );
   },
 });
@@ -410,7 +408,7 @@ async function buildMapBackground(
       .jpeg({ quality })
       .toBuffer();
   } catch (error) {
-    console.warn(`  map background failed: ${error instanceof Error ? error.message : error}`);
+    console.warn(`  échec du fond de carte : ${error instanceof Error ? error.message : error}`);
     return undefined;
   }
 }
@@ -444,7 +442,7 @@ async function renderMapPanel(
     try {
       doc.addImage(dataUrl, 'JPEG', rect.x, rect.y, rect.w, rect.h, mapKey);
     } catch (error) {
-      console.warn(`  addImage failed: ${error instanceof Error ? error.message : error}`);
+      console.warn(`  échec de addImage : ${error instanceof Error ? error.message : error}`);
     }
   } else {
     doc.setFillColor(235, 235, 232);
@@ -663,9 +661,9 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   try {
     doc.save(outputPath);
   } catch (error) {
-    throw new Error(`cannot write ${outputPath}: ${errorMessage(error)}`);
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
   }
-  console.log(`Generated: ${outputPath}`);
+  console.log(`Généré : ${outputPath}`);
 }
 
 // --- Zone overview maps: one landscape PDF per zone and tour type ---
@@ -730,7 +728,7 @@ async function generateZoneMapPdf(
   // High resolution for the full-page map (print quality).
   const view = planView(allCoords, rect.w / rect.h, 3072);
   if (!view) {
-    console.warn(`  no map view for ${zoneId} ${kind}`);
+    console.warn(`  aucune vue de carte pour ${zoneId} ${kind}`);
     return false;
   }
 
@@ -740,7 +738,7 @@ async function generateZoneMapPdf(
     try {
       doc.addImage(dataUrl, 'JPEG', rect.x, rect.y, rect.w, rect.h, `${zoneId}-${kind}-map`);
     } catch (error) {
-      console.warn(`  addImage failed: ${error instanceof Error ? error.message : error}`);
+      console.warn(`  échec de addImage : ${error instanceof Error ? error.message : error}`);
     }
   } else {
     doc.setFillColor(235, 235, 232);
@@ -807,9 +805,9 @@ async function generateZoneMapPdf(
   try {
     doc.save(outputPath);
   } catch (error) {
-    throw new Error(`cannot write ${outputPath}: ${errorMessage(error)}`);
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
   }
-  console.log(`Generated: ${outputPath}`);
+  console.log(`Généré : ${outputPath}`);
   return true;
 }
 
@@ -876,13 +874,13 @@ async function main(): Promise<void> {
       mkdirSync(pdfRootDir(rootDir), { recursive: true });
       mkdirSync(tileCacheDir, { recursive: true });
     } catch (error) {
-      throw new Error(`cannot prepare the output folders: ${errorMessage(error)}`);
+      throw new Error(`impossible de préparer les dossiers de sortie : ${errorMessage(error)}`);
     }
 
     const filters = parseGenerationFilters(process.argv);
     const force = parseForceFlag(process.argv);
     if (force) {
-      console.log('Force mode requested: every Fiche of the selection is rendered.');
+      console.log('Mode forcé demandé : toutes les Fiches de la sélection sont régénérées.');
     }
     const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter((tour) =>
       matchesFilters(filters, tour.zoneId, tour.name),
@@ -892,7 +890,7 @@ async function main(): Promise<void> {
       (isFilterActive(filters.tourIds) || isFilterActive(filters.zoneIds)) &&
       allTours.length === 0
     ) {
-      throw new Error('No tours match the --tour/--zone filter.');
+      throw new Error('Aucun Parcours ne correspond au filtre --tour/--zone.');
     }
 
     // The plan decides what the run must render: the Fiche of the Parcours
@@ -930,7 +928,7 @@ async function main(): Promise<void> {
             rendered.add(parcoursStateKey(tour.zoneId, tour.name));
           } catch (error) {
             failures += 1;
-            console.error(`fail ${tour.name}: ${error instanceof Error ? error.message : error}`);
+            console.error(`échec ${tour.name} : ${error instanceof Error ? error.message : error}`);
           }
         },
       );
@@ -954,7 +952,7 @@ async function main(): Promise<void> {
           } catch (error) {
             failures += 1;
             console.error(
-              `fail ${decision.zoneId} map: ${error instanceof Error ? error.message : error}`,
+              `échec de la carte ${decision.zoneId} : ${error instanceof Error ? error.message : error}`,
             );
           }
         },
@@ -994,7 +992,7 @@ async function main(): Promise<void> {
     writeGenerationStateOrFail(statePath, nextGenerationState(state, updates, zoneMapUpdates));
 
     if (failures > 0) {
-      throw new Error(`${failures} Fiche(s) failed.`);
+      throw new Error(`${failures} Fiche(s) en échec.`);
     }
   } finally {
     reportRun(perf, plan, rendered, renderedZoneMaps);
@@ -1033,7 +1031,7 @@ function reportRun(
     zoneMaps: plan
       ? countersFromZoneDecisions(plan.zoneDecisions, {
           subject: ZONE_MAP_SUBJECT.id,
-          label: (decision) => practiceTypeLabel(decision.kind),
+          label: (decision) => practiceLabel(decision.kind),
           reason: (decision) => decision.reason,
           isChanged: (decision) =>
             decision.regenerateZoneMap &&

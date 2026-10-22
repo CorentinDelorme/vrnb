@@ -14,18 +14,17 @@ function hasFlag(flag: string): boolean {
 }
 
 function printUsage(): void {
-  console.log(`Usage: bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours] [--force]
+  console.log(`Utilisation : bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours] [--force]
 
-Regenerate a single tour or a whole zone without rebuilding everything:
-  routes (OSRM/Valhalla) -> tours data -> tour PDFs.
+Régénérer un seul Parcours ou une seule Zone sans tout reconstruire :
+  segments (OSRM/Valhalla) -> données des Parcours -> Fiches PDF.
 
-Options:
-  --tour=V1,V2    Only these tours (required, unless --zone is set).
-  --zone=<zoneId> Only this zone (required, unless --tour is set).
-  --skip-routes   Skip start/end GPX routing (network calls).
-  --skip-tours    Skip tours-data refresh (distances).
-  --force         Regenerate everything the filters select, whatever the
-                  generation state says.
+Options :
+  --tour=V1,V2    Ces Parcours uniquement (requis, sauf si --zone est posé).
+  --zone=<zoneId> Cette Zone uniquement (requis, sauf si --tour est posé).
+  --skip-routes   Ne pas re-router les GPX de début et de fin (appels réseau).
+  --skip-tours    Ne pas recalculer les distances (données des Parcours).
+  --force         Tout régénérer, quels que soient les filtres et l'état.
 `);
 }
 
@@ -47,7 +46,7 @@ async function main(): Promise<void> {
 
   if (tours.length === 0 && zones.length === 0) {
     printUsage();
-    throw new Error('Nothing to generate: pass --tour=<id> and/or --zone=<zoneId>.');
+    throw new Error('Rien à générer : passez --tour=<id> et/ou --zone=<zoneId>.');
   }
 
   const filterArgs: string[] = [];
