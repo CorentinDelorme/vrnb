@@ -59,8 +59,11 @@ dans `public/gpx/<zone>/<id>/<id>.gpx`, puis lance les scripts de génération
 (routes, données, fiches) et affiche un résumé (fichiers importés, IDs
 attribués, succès/échec par Parcours) avec les logs détaillés dépliables.
 
-Le Parcours apparaît immédiatement sur l'accueil, dans l'accordéon de sa Zone,
-après un rechargement de la page.
+Le Parcours apparaît alors sur l'accueil, dans l'accordéon de sa Zone,
+**après redémarrage du serveur de développement** (`bun run dev`) : comme les
+pages sont pré-rendues statiquement (SSG), un simple rechargement de la page
+ne suffit pas à faire apparaître les nouvelles pages de Parcours générées par
+l'import.
 
 ### Méthode manuelle (développeurs)
 
