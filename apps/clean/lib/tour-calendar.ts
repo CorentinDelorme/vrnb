@@ -10,8 +10,8 @@ import {
  * Calendar artefacts of a registered Parcours (ticket #35): the Google
  * Calendar link and the .ics file content, built from plain data — the Édition
  * (action day, start/end hours), the Zone (stable id, display name, Point de
- * rendez-vous) and the Parcours id — plus the injected generation instant for
- * the .ics. Pure and self-contained: no DOM, no network (the Google URL is a
+ * rendez-vous, postal address) and the Parcours id — plus the injected
+ * generation instant for the .ics. Pure and self-contained: no DOM, no network (the Google URL is a
  * string built from data, never fetched), no dependency outside the project.
  *
  * No personal data enters the module — the Binôme names never leave the store
@@ -26,9 +26,15 @@ import {
 
 /** Inputs of the calendar artefacts: plain display data, never a personal name. */
 export interface TourCalendarEvent {
+  /**
+   * Full postal address of the event location (« Place du Docteur Joly, Pl.
+   * du Dr Joly, 35170 Bruz, France »), geocodable: it feeds the calendar
+   * LOCATION verbatim.
+   */
+  readonly address: string;
   /** The Édition the event belongs to (action day + start/end hours). */
   readonly edition: Edition;
-  /** Point de rendez-vous of the Zone, as displayed. */
+  /** Point de rendez-vous of the Zone, as displayed (it feeds the description). */
   readonly pointDeRendezVous: string;
   /** The Parcours id, as displayed (e.g. `V1`). */
   readonly tourId: string;
@@ -42,7 +48,7 @@ export interface TourCalendarEvent {
 const GOOGLE_CALENDAR_RENDER_URL = 'https://calendar.google.com/calendar/render';
 
 /** Title of the event: the action, the Zone, the Parcours. */
-const ACTION_TITLE = 'Ramassage VRNB';
+const ACTION_TITLE = 'Action ramassage des déchets VRNB';
 
 /** Calendar boilerplate: the producer id (RFC 5545 §3.7.3). */
 const ICS_PRODID = '-//VRNB//Ramassage des déchets à Bruz//FR';
@@ -52,9 +58,10 @@ const MAX_CONTENT_LINE_OCTETS = 75;
 
 /**
  * Google Calendar link of the registered Parcours event: event bounds in
- * Paris time (`dates` + `ctz`), title, description and Point de rendez-vous
- * location, URL-encoded (WHATWG form-urlencoded, readable in the browser).
- * Pure: nothing is fetched, the string is the artefact.
+ * Paris time (`dates` + `ctz`), title, description and location (the Point
+ * de rendez-vous postal address), URL-encoded (WHATWG form-urlencoded,
+ * readable in the browser). Pure: nothing is fetched, the string is the
+ * artefact.
  */
 export function tourGoogleCalendarUrl(event: TourCalendarEvent): string {
   const startDate = event.edition.actionDate;
@@ -101,15 +108,16 @@ export function tourIcsContent(event: TourCalendarEvent, generatedAt: Date): str
 
 /** Event title: the action, the Zone, the Parcours. */
 function eventSummary(event: TourCalendarEvent): string {
-  return `${ACTION_TITLE} — ${event.zoneName} (${event.tourId})`;
+  return `${ACTION_TITLE} - ${event.zoneName} (${event.tourId})`;
 }
 
 /**
- * The Point de rendez-vous as a French location line: tomorrow's calendar
- * readers see the event place, named explicitly like the site does.
+ * The event location: the full postal address of the Point de rendez-vous,
+ * verbatim — tomorrow's calendar readers see the exact place, and Google
+ * Calendar itself geocodes it.
  */
 function eventLocation(event: TourCalendarEvent): string {
-  return `Point de rendez-vous\u00a0: ${event.pointDeRendezVous}`;
+  return event.address;
 }
 
 /**

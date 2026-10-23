@@ -1,7 +1,10 @@
 import type { Position } from 'geojson';
 
 export interface ZoneMeetingPoint {
+  /** Meeting point name, as displayed on the site. */
   readonly name: string;
+  /** Full postal address of the meeting point (geocodable by Google Calendar). */
+  readonly address: string;
   readonly coordinates: Position;
 }
 
@@ -23,6 +26,7 @@ export const ZONES: readonly Zone[] = [
     name: 'Bruz Sud',
     meetingPoint: {
       name: `Place du Dr Joly`,
+      address: 'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
       coordinates: [-1.747083, 48.024417],
     },
   },
@@ -31,6 +35,7 @@ export const ZONES: readonly Zone[] = [
     name: 'Bruz Vau Gaillard',
     meetingPoint: {
       name: `Place du Dr Joly`,
+      address: 'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
       coordinates: [-1.747083, 48.024417],
     },
   },
@@ -39,6 +44,7 @@ export const ZONES: readonly Zone[] = [
     name: 'Bruz Ker Lann',
     meetingPoint: {
       name: `Place du Dr Joly`,
+      address: 'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
       coordinates: [-1.747083, 48.024417],
     },
   },

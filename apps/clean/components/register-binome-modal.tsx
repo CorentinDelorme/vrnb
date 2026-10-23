@@ -280,7 +280,7 @@ export function RegisterBinomeModal({
    * literal), and the JSX compiler would glue text following an HTML entity
    * (spacing pitfall, see `GDPR_NOTICE`).
    */
-  const noteSentence = `Notez la zone et le nom du parcours pour le jour de l'action\u00a0: ${zone.name} — ${tour.tourId}.`;
+  const noteSentence = `Notez la zone et le nom du parcours pour le jour de l'action\u00a0: ${zone.name} - ${tour.tourId}.`;
   /**
    * The registration window of the Édition, from the ONE rule of the provider
    * (the server's answer when the public state loaded, the local clock
@@ -343,7 +343,7 @@ export function RegisterBinomeModal({
 
         <h3 className="text-xl font-bold">Inscription du binôme</h3>
         <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
-          Zone <span className="text-base-content font-medium">{zone.name}</span> — Parcours{' '}
+          Zone <span className="text-base-content font-medium">{zone.name}</span> - Parcours{' '}
           <span className="text-base-content font-medium">{tour.tourId}</span>
         </p>
 
@@ -380,12 +380,13 @@ export function RegisterBinomeModal({
               </span>
             </div>
             {/*
-              The two agenda links (ticket #36): the user-facing labels differ
-              but the wording served in the artefact is the pure module's —
-              the Google link is built by `tourGoogleCalendarUrl` (opens in a
-              new tab) and the file link points to the route of the exact
-              (zone, parcours) couple, with no `.ics` suffix in the URL (the
-              filename arrives through the response header).
+              The two agenda links (ticket #36): Google Agenda first — the
+              one-click path on a phone — then the .ics file; the user-facing
+              labels differ but the wording served in the artefact is the pure
+              module's — the Google link is built by `tourGoogleCalendarUrl`
+              (opens in a new tab) and the file link points to the route of
+              the exact (zone, parcours) couple, with no `.ics` suffix in the
+              URL (the filename arrives through the response header).
             */}
             <div className="mt-4 text-sm sm:text-base">
               <div className="flex items-start gap-2">
@@ -398,14 +399,9 @@ export function RegisterBinomeModal({
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <a
-                  className="btn btn-outline max-sm:btn-sm sm:btn-md"
-                  href={`/api/calendrier/${tour.zoneId}/${tour.tourId}`}
-                >
-                  Fichier calendrier (.ics)
-                </a>
-                <a
                   className="btn btn-primary max-sm:btn-sm sm:btn-md"
                   href={tourGoogleCalendarUrl({
+                    address: zone.meetingPoint.address,
                     edition,
                     pointDeRendezVous: zone.meetingPoint.name,
                     tourId: tour.tourId,
@@ -416,6 +412,12 @@ export function RegisterBinomeModal({
                   target="_blank"
                 >
                   Google Agenda
+                </a>
+                <a
+                  className="btn btn-outline max-sm:btn-sm sm:btn-md"
+                  href={`/api/calendrier/${tour.zoneId}/${tour.tourId}`}
+                >
+                  Fichier calendrier (.ics)
                 </a>
               </div>
             </div>
@@ -434,7 +436,9 @@ export function RegisterBinomeModal({
                   strokeWidth={1.5}
                   className="text-secondary mt-0.5 size-5 shrink-0"
                 />
-                <span>Jour de l&apos;action&nbsp;: {actionDateLabel}</span>
+                <span>
+                  Jour de l&apos;action&nbsp;: {actionDateLabel} {actionHours}
+                </span>
               </div>
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
