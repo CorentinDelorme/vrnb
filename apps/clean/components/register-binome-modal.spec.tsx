@@ -155,11 +155,14 @@ describe('RegisterBinomeModal', () => {
   it('should show the tour context: Zone, Parcours, action day, meeting point', () => {
     renderModal();
     const context = screen.getByText(/Zone/).textContent ?? '';
-    // The Zone comes first, then the Parcours: « Zone Bruz Sud — Parcours V1 ».
+    // The Zone comes first, then the Parcours: « Zone Bruz Sud - Parcours V1 ».
     expect(context).toContain('Bruz Sud');
     expect(context).toContain('V1');
     expect(context.indexOf('Bruz Sud')).toBeLessThan(context.indexOf('V1'));
-    expect(screen.getByText(/Jour de l'action/).textContent).toContain('14 février 2027');
+    // The action day carries its hours, both from the Édition config.
+    expect(screen.getByText(/Jour de l'action/).textContent).toContain(
+      'dimanche 14 février 2027 de 9h à 12h',
+    );
     expect(screen.getAllByText(/Point de rendez-vous/).length).toBeGreaterThan(0);
     // The meeting point is named without repeating the Zone.
     expect(screen.getByText(/Point de rendez-vous/).textContent).toContain('Place du Dr Joly');
@@ -553,7 +556,7 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
     // The note-to-take sentence carries the data, never a literal.
     const note = screen.getByText(/Notez la zone et le nom du parcours/).textContent ?? '';
     expect(note).toContain("pour le jour de l'action");
-    expect(note).toContain('Bruz Sud — V1.');
+    expect(note).toContain('Bruz Sud - V1.');
     // The Point de rendez-vous stays named on the confirmation.
     expect(screen.getByText(/Point de rendez-vous/).textContent).toContain('Place du Dr Joly');
   });
@@ -567,9 +570,11 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
     expect(google.href.startsWith('https://calendar.google.com/calendar/render?')).toBe(true);
     const googleUrl = new URL(google.href);
     expect(googleUrl.searchParams.get('action')).toBe('TEMPLATE');
-    expect(googleUrl.searchParams.get('text')).toBe('Ramassage VRNB — Bruz Sud (V1)');
+    expect(googleUrl.searchParams.get('text')).toBe(
+      'Action ramassage des déchets VRNB - Bruz Sud (V1)',
+    );
     expect(googleUrl.searchParams.get('location')).toBe(
-      'Point de rendez-vous\u00a0: Place du Dr Joly',
+      'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
     );
     expect(google.target).toBe('_blank');
     expect(google.rel).toContain('noopener');
@@ -578,6 +583,8 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
     // no .ics suffix in the URL (the filename arrives through the header).
     const ics = screen.getByRole('link', { name: 'Fichier calendrier (.ics)' });
     expect(ics.getAttribute('href')).toBe('/api/calendrier/bruz-sud/V1');
+    // Google Agenda comes first, then the file (the one-click path first).
+    expect(google.compareDocumentPosition(ics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('should show no calendar link nor note before the submission', () => {

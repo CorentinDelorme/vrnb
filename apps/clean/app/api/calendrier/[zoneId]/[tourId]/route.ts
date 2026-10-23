@@ -41,6 +41,7 @@ export async function GET(
   // the lookup cannot fall back here (the fallback serves the UI only).
   const zone = getZone(zoneId);
   const event: TourCalendarEvent = {
+    address: zone.meetingPoint.address,
     edition: CURRENT_EDITION,
     pointDeRendezVous: zone.meetingPoint.name,
     tourId,

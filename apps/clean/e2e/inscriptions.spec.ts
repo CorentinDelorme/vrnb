@@ -284,7 +284,7 @@ test.describe('Binôme registration', () => {
     // The modal shows the selected tour context before anything is typed: the
     // Zone first, then the Parcours, and the meeting point without a
     // repeated Zone.
-    await expect(modal.getByText('Zone Bruz Sud — Parcours V2')).toBeVisible();
+    await expect(modal.getByText('Zone Bruz Sud - Parcours V2')).toBeVisible();
     await expect(modal.getByText('14 février 2027')).toBeVisible();
     await expect(modal.getByText('Point de rendez-vous : Place du Dr Joly')).toBeVisible();
 
@@ -305,7 +305,7 @@ test.describe('Binôme registration', () => {
     await expect(modal).toContainText(
       "Notez la zone et le nom du parcours pour le jour de l'action",
     );
-    await expect(modal).toContainText('Bruz Sud — V2.');
+    await expect(modal).toContainText('Bruz Sud - V2.');
     await expect(modal).toContainText('le dimanche 14 février 2027 de 9h à 12h');
     await expect(modal).toContainText('Point de rendez-vous : Place du Dr Joly');
     const googleLink = modal.getByRole('link', { name: 'Google Agenda' });
@@ -317,6 +317,11 @@ test.describe('Binôme registration', () => {
     await expect(googleLink).toHaveAttribute('rel', 'noopener noreferrer');
     const icsLink = modal.getByRole('link', { name: 'Fichier calendrier (.ics)' });
     await expect(icsLink).toHaveAttribute('href', '/api/calendrier/bruz-sud/V2');
+    // Google Agenda comes first, then the file (the one-click path first):
+    // the two anchors are the only links of the dialog.
+    await expect(
+      modal.getByRole('link').evaluateAll((links) => links.map((link) => link.textContent?.trim())),
+    ).resolves.toEqual(['Google Agenda', 'Fichier calendrier (.ics)']);
     // One exact POST, then the statuses reload without a page reload:
     expect(postBodies).toHaveLength(1);
     expect(JSON.parse(postBodies[0] ?? '{}')).toEqual(CONTRACT_BODY);
@@ -569,7 +574,8 @@ test.describe('Calendar file route', () => {
     const content = await response.text();
     expect(content).toContain('BEGIN:VCALENDAR');
     expect(content).toContain('UID:vrnb-2027-bruz-sud-v1@vrnb-site');
-    expect(content).toContain('SUMMARY:Ramassage VRNB — Bruz Sud (V1)');
+    expect(content).toContain('SUMMARY:Action ramassage des déchets VRNB - Bruz Sud (V1)');
+    expect(content).toContain('LOCATION:Place du Docteur Joly');
     expect(content).toContain('Point de rendez-vous');
   });
 

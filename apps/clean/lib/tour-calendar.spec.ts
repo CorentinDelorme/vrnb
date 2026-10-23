@@ -12,10 +12,11 @@ import {
 /**
  * The pure calendar module of a registered Parcours (ticket #35): the Google
  * Calendar URL and the .ics content built from plain data — Édition (action
- * day + hours), Zone (stable id, name, Point de rendez-vous) and the Parcours
- * id — plus the injected generation instant for the .ics only. Every
- * expectation is a known-good literal (worked example of the 2027 Édition,
- * Bruz Sud, V1): February 14th 2027 is a Sunday, 9h–12h CET (UTC+1).
+ * day + hours), Zone (stable id, name, Point de rendez-vous, postal address)
+ * and the Parcours id — plus the injected generation instant for the .ics
+ * only. Every expectation is a known-good literal (worked example of the
+ * 2027 Édition, Bruz Sud, V1): February 14th 2027 is a Sunday, 9h–12h CET
+ * (UTC+1).
  *
  * Ticket #36 adds `actionHoursLabel`, the hours fragment (« de 9h à 12h »)
  * the calendar description and the confirmation panel word identically.
@@ -31,6 +32,7 @@ const EDITION_2027 = {
 
 /** The (Édition, Zone, Parcours) triple of the worked example. */
 const BRUZ_SUD_V1: TourCalendarEvent = {
+  address: 'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
   edition: EDITION_2027,
   pointDeRendezVous: 'Place du Dr Joly',
   tourId: 'V1',
@@ -38,8 +40,8 @@ const BRUZ_SUD_V1: TourCalendarEvent = {
   zoneName: 'Bruz Sud',
 };
 
-/** A spicy event spot exercising every RFC 5545 reserved character. */
-const SPICY_POINT_DE_RDV = 'Rond-point, arrêt Sud; le \\ pratique\n(note)';
+/** A spicy event place exercising every RFC 5545 reserved character. */
+const SPICY_PLACE = 'Rond-point, arrêt Sud; le \\ pratique\n(note)';
 
 /** The two generation instants used to prove DTSTAMP is the only difference. */
 const GENERATED_AT_1 = new Date('2026-10-22T15:45:00Z');
@@ -67,13 +69,13 @@ describe('tourGoogleCalendarUrl', () => {
   it('should build the full 2027 / Bruz Sud (V1) template URL', () => {
     expect(tourGoogleCalendarUrl(BRUZ_SUD_V1)).toBe(
       'https://calendar.google.com/calendar/render?action=TEMPLATE' +
-        '&text=Ramassage+VRNB+%E2%80%94+Bruz+Sud+%28V1%29' +
+        '&text=Action+ramassage+des+d%C3%A9chets+VRNB+-+Bruz+Sud+%28V1%29' +
         '&dates=20270214T090000%2F20270214T120000' +
         '&ctz=Europe%2FParis' +
         '&details=Votre+bin%C3%B4me+est+inscrit+sur+le+parcours+V1+de+la+zone+Bruz+Sud.' +
         '+Rendez-vous+le+dimanche+14+f%C3%A9vrier+2027+de+9h+%C3%A0+12h.+' +
         'Point+de+rendez-vous%C2%A0%3A+Place+du+Dr+Joly.' +
-        '&location=Point+de+rendez-vous%C2%A0%3A+Place+du+Dr+Joly',
+        '&location=Place+du+Docteur+Joly%2C+Pl.+du+Dr+Joly%2C+35170+Bruz%2C+France',
     );
   });
 
@@ -82,7 +84,7 @@ describe('tourGoogleCalendarUrl', () => {
     expect(url.origin).toBe('https://calendar.google.com');
     expect(url.pathname).toBe('/calendar/render');
     expect(url.searchParams.get('action')).toBe('TEMPLATE');
-    expect(url.searchParams.get('text')).toBe('Ramassage VRNB — Bruz Sud (V1)');
+    expect(url.searchParams.get('text')).toBe('Action ramassage des déchets VRNB - Bruz Sud (V1)');
   });
 
   it('should carry the Paris-time event bounds and the ctz timezone', () => {
@@ -100,26 +102,29 @@ describe('tourGoogleCalendarUrl', () => {
     );
   });
 
-  it('should carry the Point de rendez-vous in the location', () => {
+  it('should carry the postal address of the meeting point in the location', () => {
     const url = new URL(tourGoogleCalendarUrl(BRUZ_SUD_V1));
-    expect(url.searchParams.get('location')).toBe('Point de rendez-vous\u00a0: Place du Dr Joly');
+    expect(url.searchParams.get('location')).toBe(
+      'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
+    );
   });
 
   it('should survive reserved characters through URL decoding', () => {
     const spicy: TourCalendarEvent = {
       ...BRUZ_SUD_V1,
-      pointDeRendezVous: SPICY_POINT_DE_RDV,
+      // Both place fields are spicy: the address feeds the location, the
+      // Point de rendez-vous feeds the description.
+      address: SPICY_PLACE,
+      pointDeRendezVous: SPICY_PLACE,
     };
     const url = new URL(tourGoogleCalendarUrl(spicy));
-    expect(url.searchParams.get('location')).toBe(
-      `Point de rendez-vous\u00a0: ${SPICY_POINT_DE_RDV}`,
-    );
-    expect(url.searchParams.get('details')).toContain(SPICY_POINT_DE_RDV);
+    expect(url.searchParams.get('location')).toBe(SPICY_PLACE);
+    expect(url.searchParams.get('details')).toContain(SPICY_PLACE);
   });
 
   it('should follow the event passed in, not the worked example', () => {
     const url = new URL(tourGoogleCalendarUrl({ ...BRUZ_SUD_V1, tourId: 'P3' }));
-    expect(url.searchParams.get('text')).toBe('Ramassage VRNB — Bruz Sud (P3)');
+    expect(url.searchParams.get('text')).toBe('Action ramassage des déchets VRNB - Bruz Sud (P3)');
     expect(url.searchParams.get('dates')).toBe('20270214T090000/20270214T120000');
   });
 });
@@ -144,8 +149,12 @@ describe('tourIcsContent', () => {
 
   it('should title, locate and describe the event', () => {
     const content = tourIcsContent(BRUZ_SUD_V1, GENERATED_AT_1);
-    expect(content).toContain('SUMMARY:Ramassage VRNB — Bruz Sud (V1)\r\n');
-    expect(content).toContain('LOCATION:Point de rendez-vous\u00a0: Place du Dr Joly\r\n');
+    expect(content).toContain('SUMMARY:Action ramassage des déchets VRNB - Bruz Sud (V1)\r\n');
+    // The LOCATION commas are escaped in the raw content, so the round-trip
+    // through unfold+unescape is how the address is asserted.
+    expect(contentProperty(BRUZ_SUD_V1, 'LOCATION:')).toBe(
+      'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
+    );
     expect(contentProperty(BRUZ_SUD_V1, 'DESCRIPTION:')).toBe(
       'Votre binôme est inscrit sur le parcours V1 de la zone Bruz Sud. ' +
         'Rendez-vous le dimanche 14 février 2027 de 9h à 12h. ' +
@@ -186,15 +195,19 @@ describe('tourIcsContent', () => {
   });
 
   it('should escape reserved characters (RFC 5545)', () => {
-    const spicy: TourCalendarEvent = { ...BRUZ_SUD_V1, pointDeRendezVous: SPICY_POINT_DE_RDV };
+    const spicy: TourCalendarEvent = {
+      ...BRUZ_SUD_V1,
+      address: SPICY_PLACE,
+      pointDeRendezVous: SPICY_PLACE,
+    };
     // Every reserved character escapes where it stands and round-trips back
     // through the unfold+unescape reading (the line folds along the way).
-    expect(contentProperty(spicy, 'LOCATION:')).toBe(
-      `Point de rendez-vous\u00a0: ${SPICY_POINT_DE_RDV}`,
+    expect(contentProperty(spicy, 'LOCATION:')).toBe(SPICY_PLACE);
+    expect(contentProperty(spicy, 'SUMMARY:')).toBe(
+      'Action ramassage des déchets VRNB - Bruz Sud (V1)',
     );
-    expect(contentProperty(spicy, 'SUMMARY:')).toBe('Ramassage VRNB — Bruz Sud (V1)');
     // The description carries the place too, so the same escaping flows there.
-    expect(contentProperty(spicy, 'DESCRIPTION:').endsWith(`${SPICY_POINT_DE_RDV}.`)).toBe(true);
+    expect(contentProperty(spicy, 'DESCRIPTION:').endsWith(`${SPICY_PLACE}.`)).toBe(true);
   });
 
   it('should fold long lines at 75 octets and unfold to the original description', () => {
@@ -212,7 +225,12 @@ describe('tourIcsContent', () => {
   });
 
   it('should keep every contended line intact across the fold', () => {
-    const spicy: TourCalendarEvent = { ...BRUZ_SUD_V1, pointDeRendezVous: SPICY_POINT_DE_RDV };
+    // Both place fields are spicy: the now-longer LOCATION folds too.
+    const spicy: TourCalendarEvent = {
+      ...BRUZ_SUD_V1,
+      address: SPICY_PLACE,
+      pointDeRendezVous: SPICY_PLACE,
+    };
     const content = tourIcsContent(spicy, GENERATED_AT_1);
     for (const line of content.split('\r\n')) {
       expect(Buffer.byteLength(line, 'utf8')).toBeLessThanOrEqual(75);
@@ -221,8 +239,9 @@ describe('tourIcsContent', () => {
     expect(contentProperty(spicy, 'DESCRIPTION:')).toBe(
       'Votre binôme est inscrit sur le parcours V1 de la zone Bruz Sud. ' +
         'Rendez-vous le dimanche 14 février 2027 de 9h à 12h. ' +
-        `Point de rendez-vous\u00a0: ${SPICY_POINT_DE_RDV}.`,
+        `Point de rendez-vous\u00a0: ${SPICY_PLACE}.`,
     );
+    expect(contentProperty(spicy, 'LOCATION:')).toBe(SPICY_PLACE);
   });
 
   it('should be deterministic for the same inputs', () => {
