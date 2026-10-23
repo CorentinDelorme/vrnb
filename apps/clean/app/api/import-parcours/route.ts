@@ -1,3 +1,4 @@
+import { spawnSync } from 'child_process';
 import { mkdir, readdir, writeFile } from 'fs/promises';
 import { notFound } from 'next/navigation';
 import { join } from 'path';
@@ -37,6 +38,48 @@ function json(status: number, body: unknown): Response {
 /** Whether a raw value is a valid practice type. */
 function isPracticeType(value: unknown): value is PracticeType {
   return value === 'P' || value === 'V';
+}
+
+/** Name of a generation script as exposed in the API response logs. */
+type ScriptName = 'generate:routes' | 'generate:tours' | 'generate:pdfs';
+
+/** Captured stdout/stderr of a single generation script run. */
+interface ScriptLog {
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+/** The full log payload of the import: one entry per generation script. */
+type GenerationLogs = {
+  readonly [name in ScriptName]: ScriptLog;
+};
+
+/**
+ * Launch one generation script synchronously (`bun tsx scripts/<file>
+ * --zone=<zone> --tour=<ids>`) and capture its stdout and stderr (the
+ * `[perf]` block is printed to stdout at the end of each run).
+ */
+function runGenerationScript(file: string, zoneId: string, tourIds: string[]): ScriptLog {
+  const scriptsRoot = join(process.cwd(), 'scripts');
+  const result = spawnSync(
+    'bun',
+    ['tsx', join(scriptsRoot, file), `--zone=${zoneId}`, `--tour=${tourIds.join(',')}`],
+    { cwd: process.cwd(), encoding: 'utf8' },
+  );
+  return { stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
+}
+
+/**
+ * Launch the three generation scripts sequentially (one after the other),
+ * filtered on the zone and the imported ids, and aggregate the stdout and
+ * stderr of each. Order per spec: routes → tours → pdfs.
+ */
+function runGenerationScripts(zoneId: string, tourIds: string[]): GenerationLogs {
+  return {
+    'generate:routes': runGenerationScript('generate-start-end-gpx.ts', zoneId, tourIds),
+    'generate:tours': runGenerationScript('generate-tours.ts', zoneId, tourIds),
+    'generate:pdfs': runGenerationScript('generate-pdfs.ts', zoneId, tourIds),
+  };
 }
 
 /**
@@ -87,8 +130,7 @@ async function handleImportParcours(request: Request): Promise<Response> {
   const practiceTypeRaw = formData.get('practiceType');
   const fileEntries = formData.getAll('files');
 
-  const zoneId =
-    typeof zoneIdRaw === 'string' && zoneIdRaw.length > 0 ? zoneIdRaw : undefined;
+  const zoneId = typeof zoneIdRaw === 'string' && zoneIdRaw.length > 0 ? zoneIdRaw : undefined;
   const practiceType = isPracticeType(practiceTypeRaw) ? practiceTypeRaw : undefined;
   const files = fileEntries.filter((entry): entry is File => entry instanceof File);
 
@@ -111,5 +153,7 @@ async function handleImportParcours(request: Request): Promise<Response> {
     nextNumber += 1;
   }
 
-  return json(200, { ids });
+  const logs = runGenerationScripts(zoneId, ids);
+
+  return json(200, { ids, logs });
 }
