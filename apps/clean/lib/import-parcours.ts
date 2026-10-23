@@ -21,7 +21,7 @@ export interface ScriptLog {
 /** The full log payload of the import: one entry per generation script. */
 export type GenerationLogs = {
   readonly [name in ScriptName]: ScriptLog;
-}
+};
 
 /** Parsed answer of `POST /api/import-parcours`. */
 export interface ImportResponse {
@@ -37,7 +37,11 @@ export const SCRIPT_LABELS: Readonly<Record<ScriptName, string>> = {
 };
 
 /** Generation scripts in the order the API runs them. */
-export const SCRIPTS: readonly ScriptName[] = ['generate:routes', 'generate:tours', 'generate:pdfs'];
+export const SCRIPTS: readonly ScriptName[] = [
+  'generate:routes',
+  'generate:tours',
+  'generate:pdfs',
+];
 
 export function isScriptLog(value: unknown): value is ScriptLog {
   return (

@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 
-import { ZONES } from '../src/app/zones';
 import {
   ImportResponse,
+  isImportResponse,
   PracticeType,
   SCRIPT_LABELS,
   SCRIPTS,
-  isImportResponse,
 } from '../lib/import-parcours';
+import { ZONES } from '../src/app/zones';
 
 /** URL of the Parcours import API route (ticket #42 / #43). */
 const IMPORT_API_URL = '/api/import-parcours';
@@ -130,11 +130,7 @@ export function ImportParcoursForm() {
             />
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary w-full"
-            disabled={isDisabled}
-          >
+          <button type="submit" className="btn btn-primary w-full" disabled={isDisabled}>
             {importing ? 'Importation…' : 'Importer'}
           </button>
         </form>
@@ -189,9 +185,7 @@ export function ImportParcoursForm() {
                     {log.stderr !== '' && (
                       <>
                         <div className="font-mono mb-1">stderr</div>
-                        <pre className="font-mono whitespace-pre-wrap break-all">
-                          {log.stderr}
-                        </pre>
+                        <pre className="font-mono whitespace-pre-wrap break-all">{log.stderr}</pre>
                       </>
                     )}
                     {log.stdout === '' && log.stderr === '' && (

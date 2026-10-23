@@ -2,12 +2,8 @@ import { spawnSync } from 'child_process';
 import { mkdir, readdir, writeFile } from 'fs/promises';
 import { join } from 'path';
 
+import { GenerationLogs, PracticeType, ScriptLog } from '../../../lib/import-parcours';
 import { toursData } from '../../../src/app/tours-data';
-import {
-  GenerationLogs,
-  PracticeType,
-  ScriptLog,
-} from '../../../lib/import-parcours';
 
 /**
  * `POST /api/import-parcours` — Parcours import API (tickets #42, #43, #44).
@@ -130,7 +126,10 @@ async function takenNumbers(zoneId: string, practiceType: PracticeType): Promise
  * Throws `ZoneCapacityError` when every slot of the zone is taken.
  */
 class ZoneCapacityError extends Error {
-  constructor(readonly zoneId: string, readonly practiceType: PracticeType) {
+  constructor(
+    readonly zoneId: string,
+    readonly practiceType: PracticeType,
+  ) {
     super(`Zone ${zoneId} is full for practice ${practiceType}`);
     this.name = 'ZoneCapacityError';
   }
