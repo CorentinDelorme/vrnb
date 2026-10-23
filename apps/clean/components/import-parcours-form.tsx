@@ -72,7 +72,7 @@ export function ImportParcoursForm() {
 
   return (
     <>
-      <div className="card bg-base-100 shadow-sm p-6 space-y-5">
+      <div className="card bg-base-100 shadow-sm p-6 space-y-5 max-w-xl mx-auto">
         <form onSubmit={handleImport} className="space-y-5">
           <div className="space-y-2">
             <label htmlFor="import-zone-id" className="label">

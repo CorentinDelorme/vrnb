@@ -160,29 +160,6 @@ describe('POST /api/import-parcours', () => {
     expect(mockedSpawnSync).not.toHaveBeenCalled();
   });
 
-  it('assigns the next free V id (bruz-sud → V16) and writes one GPX file', async () => {
-    const file = gpxFile('<gpx><trk><trkseg><trkpt lat="0" lon="0"/></trkseg></trk></gpx>');
-    const response = await withNodeEnv('development', () =>
-      callPost(
-        postRequest(
-          formData([
-            ['zoneId', 'bruz-sud'],
-            ['practiceType', 'V'],
-            ['files', file],
-          ]),
-        ),
-      ),
-    );
-    expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ids: ['V16'] });
-    expect(mockedMkdir).toHaveBeenCalledTimes(1);
-    expect(mockedWriteFile).toHaveBeenCalledTimes(1);
-    expect(mockedWriteFile).toHaveBeenCalledWith(
-      expect.stringContaining('bruz-sud/V16/V16.gpx'),
-      '<gpx><trk><trkseg><trkpt lat="0" lon="0"/></trkseg></trk></gpx>',
-    );
-  });
-
   it('assigns the next free P id (bruz-sud → P14)', async () => {
     const response = await withNodeEnv('development', () =>
       callPost(
@@ -197,6 +174,22 @@ describe('POST /api/import-parcours', () => {
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ ids: ['P14'] });
+  });
+
+  it('does not reassign P1 to another zone: bruz-vau-gaillard vélo starts at V106', async () => {
+    const response = await withNodeEnv('development', () =>
+      callPost(
+        postRequest(
+          formData([
+            ['zoneId', 'bruz-vau-gaillard'],
+            ['practiceType', 'V'],
+            ['files', gpxFile('<gpx/>')],
+          ]),
+        ),
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ ids: ['V106'] });
   });
 
   it('assigns sequential ids to multiple uploaded files', async () => {

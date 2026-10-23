@@ -70,6 +70,23 @@ function runGenerationScripts(zoneId: string, tourIds: string[]): GenerationLogs
 }
 
 /**
+ * Offsets de numérotation par zone : chaque zone dispose d'une marge de 100
+ * identifiants (bruz-sud: 1–99, bruz-vau-gaillard: 100–199,
+ * bruz-ker-lann: 200–299) afin que les Parcours d'une zone n'empiètent jamais
+ * sur ceux d'une autre.
+ */
+const ZONE_ID_OFFSETS: Readonly<Record<string, number>> = {
+  'bruz-sud': 0,
+  'bruz-vau-gaillard': 100,
+  'bruz-ker-lann': 200,
+};
+
+/** Offset de numérotation d'une zone (0 par défaut pour une zone inconnue). */
+function zoneIdOffset(zoneId: string): number {
+  return ZONE_ID_OFFSETS[zoneId] ?? 0;
+}
+
+/**
  * The numbers already taken for `practiceType` in `zoneId`, collected from two
  * sources: the `public/gpx/<zone>/` folders and the generated catalogue
  * `tours-data.ts` (vTours / pTours filtered by zoneId).
@@ -106,6 +123,25 @@ async function takenNumbers(zoneId: string, practiceType: PracticeType): Promise
   return numbers;
 }
 
+/**
+ * The next free number for `practiceType` in `zoneId`, within the zone's
+ * 100-ID margin (offset+1 .. offset+99). When every slot is taken, falls
+ * back to max+1.
+ */
+function nextFreeNumber(zoneId: string, practiceType: PracticeType, taken: number[]): number {
+  const offset = zoneIdOffset(zoneId);
+  const takenSet = new Set(taken);
+
+  for (let n = offset + 1; n <= offset + 99; n += 1) {
+    if (!takenSet.has(n)) {
+      return n;
+    }
+  }
+
+  // All 100 slots of the zone are taken: go beyond the margin.
+  return taken.length > 0 ? Math.max(...taken) + 1 : offset + 1;
+}
+
 /** Pure handler over the incoming request. */
 async function handleImportParcours(request: Request): Promise<Response> {
   if (process.env.NODE_ENV !== 'development') {
@@ -126,7 +162,7 @@ async function handleImportParcours(request: Request): Promise<Response> {
   }
 
   const taken = await takenNumbers(zoneId, practiceType);
-  let nextNumber = taken.length > 0 ? Math.max(...taken) + 1 : 1;
+  let nextNumber = nextFreeNumber(zoneId, practiceType, taken);
 
   const ids: string[] = [];
   for (const file of files) {
