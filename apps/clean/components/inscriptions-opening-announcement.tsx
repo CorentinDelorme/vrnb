@@ -1,5 +1,8 @@
 'use client';
 
+import { InformationCircleIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+
 import { CURRENT_EDITION, formatActionDateLabel } from '../src/app/inscriptions/edition';
 import { registrationWindowPhaseOf, useInscriptionsStatus } from './inscriptions-status-provider';
 
@@ -24,8 +27,12 @@ import { registrationWindowPhaseOf, useInscriptionsStatus } from './inscriptions
  * alone, so a window that opens after the first load (statuses reload)
  * removes it without any page reload.
  *
- * Styled like the modal's warning alerts (DaisyUI `alert alert-warning`),
- * with the home spacing rhythm (`mb-4 sm:mb-8`) of the sibling cards.
+ * Styled as a DaisyUI `alert alert-info` (a coming date is information, not
+ * a warning), opened by a decorative information-circle icon (aria-hidden —
+ * the sentence itself is the announced content). The `.alert` grid places
+ * the icon in its own column and the sentence in the second one, so the
+ * spacing between them comes from the grid gap, not from a literal space.
+ * Home spacing rhythm (`mb-4 sm:mb-8`) of the sibling cards.
  */
 interface InscriptionsOpeningAnnouncementProps {
   /**
@@ -60,7 +67,8 @@ export function InscriptionsOpeningAnnouncement({
   // (present, spec-fixed), the modal's « ouvriront » — and both take the
   // date from the ONE `formatActionDateLabel` derivation of `edition.ts`.
   return (
-    <div className="alert alert-warning mb-4 sm:mb-8 text-sm sm:text-base" role="alert">
+    <div className="alert alert-info mb-4 sm:mb-8 text-sm sm:text-base" role="alert">
+      <HugeiconsIcon aria-hidden="true" icon={InformationCircleIcon} strokeWidth={1.5} />
       {`Les inscriptions ouvrent le ${formatActionDateLabel(edition.inscriptionsOpenDate)}.`}
     </div>
   );

@@ -76,7 +76,16 @@ describe('InscriptionsOpeningAnnouncement', () => {
     render(<InscriptionsOpeningAnnouncement now={BEFORE_OPENING_CLOCK} />);
 
     const alert = screen.getByRole('alert');
+    expect(alert.className).toContain('alert-info');
     expect(alert.textContent).toBe('Les inscriptions ouvrent le lundi 4 janvier 2027.');
+    // The alert opens with a decorative information-circle icon: visible to
+    // the eye, transparent to screen readers (the sentence is the message).
+    // Two nodes then: the svg element, then the text node. The visible
+    // spacing comes from the alert grid gap, not from a literal space.
+    expect(alert.childNodes).toHaveLength(2);
+    // SVG elements keep their lowercase tag name in the DOM namespace.
+    expect(alert.firstElementChild?.tagName).toBe('svg');
+    expect(alert.firstElementChild?.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('should drop the announcement once the loaded public state answers an open window', () => {
