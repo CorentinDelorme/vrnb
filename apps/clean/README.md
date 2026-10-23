@@ -402,14 +402,30 @@ le site n'expose que les couples (Zone, Parcours) déjà couverts, sous forme de
 badge « Binôme inscrit » placé là où se trouvait le bouton d'inscription.
 
 L'inscription se fait depuis la page d'accueil (bouton « S'inscrire » à côté du
-bouton de lecture du parcours), via les deux endpoints de l'API :
+bouton de lecture du parcours), via les endpoints de l'API :
 
-- `GET /api/inscriptions` — l'état public de l'Édition : l'année, la date de
-  l'action, l'ouverture de la fenêtre d'inscription et la liste des Parcours
-  couverts (**200**) ; si le KV est injoignable, la réponse est un **502**
-  `{"error":"inscriptions-unavailable"}` ;
+- `GET /api/inscriptions` — l'état public de l'Édition : l'Édition complète
+  (l'année, la date de l'action, la date d'ouverture des inscriptions, les
+  heures de l'action), l'ouverture de la fenêtre (`registrationOpen`) et la
+  liste des Parcours couverts (**200**) ; si le KV est injoignable, la réponse
+  est un **502** `{"error":"inscriptions-unavailable"}` ;
 - `POST /api/inscriptions` — l'inscription d'un binôme sur un Parcours (les
-  deux membres et l'engagement à participer ensemble).
+  deux membres et l'engagement à participer ensemble). Le refus est un **400**
+  portant l'une des trois causes : `invalid-inscription` (saisie invalide),
+  `registration-not-open` (avant la date d'ouverture de l'Édition) ou
+  `registration-closed` (après la fermeture, 3 jours avant l'action) ; un
+  **409** quand un autre binôme a couvert le Parcours entre-temps, et rien
+  n'est stocké sur aucun refus ;
+- `GET /api/calendrier/<zone>/<parcours>` — le fichier calendrier (.ics) de
+  l'action du couple (Zone, Parcours) : **200** `text/calendar` avec un nom de
+  fichier explicite (`calendrier-<zone>-<parcours>.ics`), **404** sans fichier
+  si le couple est inconnu du catalogue. Cette route ne touche pas au KV : le
+  fichier ne contient aucune donnée personnelle.
+
+À la confirmation d'une inscription, le formulaire affiche les deux liens
+agenda du Parcours — « Google Agenda » (ouvre un nouvel onglet) et « Fichier
+calendrier (.ics) » (le fichier ci-dessus) — et uniquement là : ils
+n'existent sur aucune autre page du site.
 
 Aucun de ces endpoints ne renvoie de nom : ils exposent uniquement les couples
 (Zone, Parcours). Les noms restent dans le KV et ne sont lus que par le script
@@ -470,7 +486,8 @@ désistement — est dans
 
 | Quand | Qui | Quoi |
 |---|---|---|
-| À l'annonce de l'Édition | Mainteneur | Mettre à jour `year` et `actionDate` dans `src/app/inscriptions/edition.ts` (un seul commit) |
+| À l'annonce de l'Édition | Mainteneur | Mettre à jour `CURRENT_EDITION` dans `src/app/inscriptions/edition.ts`, sa forme complète : `year`, `actionDate`, `inscriptionsOpenDate`, `actionStartTime`, `actionEndTime` (un seul commit) |
+| Avant la date d'ouverture de l'Édition | — | Rien : la fenêtre n'est pas encore ouverte — l'accueil n'affiche pas de bouton « S'inscrire » (il annonce la date d'ouverture à la place) et l'API refuse chaque inscription avec `registration-not-open` |
 | 3 jours avant la date de l'action | — | Rien : la fenêtre d'inscription se ferme d'elle-même (`REGISTRATION_CLOSURE_DAYS = 3`) et le bouton « S'inscrire » disparaît de l'accueil, le temps d'imprimer les fiches et d'organiser la journée |
 | Avant l'action, à chaque vague d'inscriptions | Référent | Régénérer et imprimer les fiches de suivi (`bun scripts/extract-inscriptions.ts`) |
 | À tout moment (désistement) | Référent | Supprimer la clé `inscriptions:<année>:<zoneId>:<parcours>` dans la console Upstash : le parcours redevient disponible |
@@ -492,10 +509,14 @@ d'inscription.
 ### Rotation annuelle de l'Édition
 
 `src/app/inscriptions/edition.ts` (`CURRENT_EDITION`) est le **point de bascule
-unique** de l'année : `year` (le nom de l'Édition) et `actionDate` (le jour de
-l'action). Les clés du KV sont indexées par année (`inscriptions:<année>:…`) :
-la nouvelle Édition repart donc d'une liste de Parcours couverts vide, sans
-aucune autre opération.
+unique** de l'année : la forme complète de l'Édition — `year` (le nom de
+l'Édition), `actionDate` (le jour de l'action), `inscriptionsOpenDate` (la date
+d'ouverture des inscriptions) et `actionStartTime` / `actionEndTime` (les
+heures de l'action, de `09:00` à `12:00`). Les clés du KV sont indexées par année
+(`inscriptions:<année>:…`) : la nouvelle Édition repart donc d'une liste de
+Parcours couverts vide, sans aucune autre opération — un seul commit déplace
+tout le basculement, les dates et heures annoncées par le site comme les dates
+des fichiers calendrier (.ics).
 
 ## Tests
 

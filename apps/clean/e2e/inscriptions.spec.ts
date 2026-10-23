@@ -14,23 +14,39 @@ import { expect, test } from '@playwright/test';
  * closed) announces that the window is closed and disables its form, the hidden
  * anti-bot honeypot is in the DOM but invisible to humans, and the modal
  * states how long the names are kept.
+ *
+ * Ticket #34: before the opening bound the home announces the opening date in
+ * letters, client-side once the public state loaded — one sentence per page,
+ * no badge and no register button before the window opens.
  */
+
+/** Édition echoed in every (mocked) state. */
+const EDITION = {
+  actionDate: '2027-02-14',
+  actionEndTime: '12:00',
+  actionStartTime: '09:00',
+  inscriptionsOpenDate: '2027-01-04',
+  year: 2027,
+} as const;
 
 /** Public state shape returned by the (mocked) API. */
 const COVERED_V1 = {
-  edition: { actionDate: '2027-02-14', year: 2027 },
+  edition: EDITION,
   inscriptions: [{ tourId: 'V1', zoneId: 'bruz-sud' }],
   registrationOpen: true,
 } as const;
-
-/** Édition echoed in every (mocked) state. */
-const EDITION = { actionDate: '2027-02-14', year: 2027 } as const;
 
 /** Public state of an open window covering nothing. */
 const OPEN_STATE = { edition: EDITION, inscriptions: [], registrationOpen: true } as const;
 
 /** Public state of a closed window (the action date is past). */
 const CLOSED_STATE = { edition: EDITION, inscriptions: [], registrationOpen: false } as const;
+
+/**
+ * An instant before the opening bound of the Édition (2027-01-04): the
+ * registration window is not open yet then.
+ */
+const BEFORE_OPENING_DATE = new Date('2026-12-15T12:00:00Z');
 
 /**
  * An instant 2 days before the action date of the Édition (2027-02-14): the
@@ -192,6 +208,51 @@ test.describe('Public inscriptions statuses', () => {
   });
 });
 
+/**
+ * The home announcement of the inscriptions opening date (ticket #34): while
+ * the registration window has not opened yet, the loaded home states the
+ * opening date in letters (« Les inscriptions ouvrent le lundi 4 janvier
+ * 2027. », built from the Édition the mocked API answers) instead of a
+ * register button; once the window is open the mention disappears — the site
+ * never states the opposite of what it offers. The mention is rendered
+ * client-side from the public state: the static HTML carries nothing.
+ */
+test.describe('Registration opening announcement', () => {
+  test('should announce the opening date before the window opens, and drop it once open', async ({
+    page,
+  }) => {
+    // The mocked GET re-evaluates this flag on every call, so the second load
+    // (the mocked window now open) answers differently than the first one.
+    let open = false;
+    await mockInscriptionsApi(page, {
+      get: () => ({ edition: EDITION, inscriptions: [], registrationOpen: open }),
+    });
+    // A clock before the opening bound: the closed answer of the API means
+    // « not open yet » (the other closed bound answers the same, see the
+    // closed-window cases below) and the announcement is correct.
+    await page.clock.setFixedTime(BEFORE_OPENING_DATE);
+    await page.goto('/');
+
+    // One single mention for the whole page, with the opening date in
+    // letters, and no register button while the window is not open.
+    const announcement = page.getByText('Les inscriptions ouvrent le lundi 4 janvier 2027.');
+    await expect(announcement).toHaveCount(1);
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+    ).toHaveCount(0);
+
+    // Once the mocked state announces an open window, the mention disappears
+    // (the browser clock still reads before the opening bound: the loaded
+    // server answer is authoritative) and the register button comes back.
+    open = true;
+    await page.reload();
+    await expect(announcement).toHaveCount(0);
+    await expect(
+      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+    ).toBeVisible();
+  });
+});
+
 test.describe('Binôme registration', () => {
   test('should register through the modal: 201, confirmation, badge, button gone', async ({
     page,
@@ -223,7 +284,7 @@ test.describe('Binôme registration', () => {
     // The modal shows the selected tour context before anything is typed: the
     // Zone first, then the Parcours, and the meeting point without a
     // repeated Zone.
-    await expect(modal.getByText('Zone Bruz Sud — Parcours V2')).toBeVisible();
+    await expect(modal.getByText('Zone Bruz Sud - Parcours V2')).toBeVisible();
     await expect(modal.getByText('14 février 2027')).toBeVisible();
     await expect(modal.getByText('Point de rendez-vous : Place du Dr Joly')).toBeVisible();
 
@@ -239,6 +300,28 @@ test.describe('Binôme registration', () => {
     await submit.click();
 
     await expect(modal).toContainText('Votre binôme est inscrit');
+    // The confirmation is a meeting point (ticket #36): the note sentence,
+    // the hours and both agenda links appear only once the 201 is confirmed.
+    await expect(modal).toContainText(
+      "Notez la zone et le nom du parcours pour le jour de l'action",
+    );
+    await expect(modal).toContainText('Bruz Sud - V2.');
+    await expect(modal).toContainText('le dimanche 14 février 2027 de 9h à 12h');
+    await expect(modal).toContainText('Point de rendez-vous : Place du Dr Joly');
+    const googleLink = modal.getByRole('link', { name: 'Google Agenda' });
+    await expect(googleLink).toHaveAttribute(
+      'href',
+      /https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/,
+    );
+    await expect(googleLink).toHaveAttribute('target', '_blank');
+    await expect(googleLink).toHaveAttribute('rel', 'noopener noreferrer');
+    const icsLink = modal.getByRole('link', { name: 'Fichier calendrier (.ics)' });
+    await expect(icsLink).toHaveAttribute('href', '/api/calendrier/bruz-sud/V2');
+    // Google Agenda comes first, then the file (the one-click path first):
+    // the two anchors are the only links of the dialog.
+    await expect(
+      modal.getByRole('link').evaluateAll((links) => links.map((link) => link.textContent?.trim())),
+    ).resolves.toEqual(['Google Agenda', 'Fichier calendrier (.ics)']);
     // One exact POST, then the statuses reload without a page reload:
     expect(postBodies).toHaveLength(1);
     expect(JSON.parse(postBodies[0] ?? '{}')).toEqual(CONTRACT_BODY);
@@ -465,5 +548,42 @@ test.describe('Anti-bot honeypot and GDPR notice', () => {
       .disableRules(['meta-viewport', 'color-contrast'])
       .analyze();
     expect(results.violations).toEqual([]);
+  });
+});
+
+/**
+ * The calendar file route of ticket #36: the thin adapter serving the pure
+ * module's .ics content for a known (Zone, Parcours) couple, answering 404
+ * with no file for an unknown one. The route needs no KV store (the calendar
+ * file carries no personal data), so the real dev-server route is exercised
+ * over `page.request`, request-level like the `page.route` interceptions of
+ * this spec are page-level — no click navigation is triggered for a file the
+ * browser would download.
+ */
+test.describe('Calendar file route', () => {
+  test('should serve the Édition event file for a known couple', async ({ page }) => {
+    const response = await page.request.get('/api/calendrier/bruz-sud/V1');
+
+    expect(response.status()).toBe(200);
+    // The served file is a calendar file, delivered as an explicit download
+    // named after the Zone and the Parcours.
+    expect(response.headers()['content-type']).toContain('text/calendar');
+    expect(response.headers()['content-disposition']).toContain('calendrier-bruz-sud-v1.ics');
+    // The Édition event carries the stable (year, zone, parcours) id, and
+    // names the action, the Zone and the Parcours.
+    const content = await response.text();
+    expect(content).toContain('BEGIN:VCALENDAR');
+    expect(content).toContain('UID:vrnb-2027-bruz-sud-v1@vrnb-site');
+    expect(content).toContain('SUMMARY:Action ramassage des déchets VRNB - Bruz Sud (V1)');
+    expect(content).toContain('LOCATION:Place du Docteur Joly');
+    expect(content).toContain('Point de rendez-vous');
+  });
+
+  test('should answer 404 with no file for an unknown couple', async ({ page }) => {
+    const response = await page.request.get('/api/calendrier/impossible/UNKNOWN');
+
+    expect(response.status()).toBe(404);
+    // No file at all: the body is empty, never an HTML error page.
+    expect(await response.text()).toBe('');
   });
 });

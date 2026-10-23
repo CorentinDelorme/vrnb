@@ -82,14 +82,40 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    could not be loaded) is covered by the unit suite, not by an E2E case.
 
 6. **`Manual — should list every section in the sommaire and jump to it` (1 test)**: the mode
-   d'emploi `/manual` opens with a sommaire that lists every section of the page (principe,
-   inscription d'un binôme, exemple P2, reprendre plus tard, Menu) and links to the `id` of
-   its heading — the page is read on a phone, outdoors. The test asserts the five anchors and
-   that each one resolves to a visible heading, then clicks the « S'inscrire en binôme » link
-   and asserts the jump to `#inscription`. No parity impact: the legacy manual page had no
-   sommaire, and the DOM contract of the manual is only extended.
+   d'emploi `/manual` opens with a sommaire that lists every section of the page — numbered, in
+   reading order: 1. principe, 2. exemple P2, 3. reprendre plus tard, 4. Menu, 5. inscription
+   d'un binôme (LAST after the action-day story, ticket #37) — and links to the `id` of its
+   heading — the page is read on a phone, outdoors. The test asserts the five anchors and
+   that each one resolves to a visible heading (each an `<h2>` carrying its sommaire number),
+   then clicks the « S'inscrire en binôme » link and asserts the jump to `#inscription`. No
+   parity impact: the legacy manual page had no sommaire, and the DOM contract of the manual is
+   only extended.
 
-Totals: **110 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire) × chromium + firefox = **220**.
+7. **`Registration opening announcement` (1 test, ticket #34)**: before the opening bound of
+   the Édition (2027-01-04), the home — which shows no badge and no register button then —
+   states the opening date in letters (« Les inscriptions ouvrent le lundi 4 janvier 2027. »)
+   once the public state has loaded, one sentence for the whole page. The mention resolves
+   client-side, so the prerendered HTML carries nothing, and it disappears once the mocked
+   state announces an open window: the mocked GET re-evaluates a mutable flag, `page.reload()`
+   replays the exchange with `registrationOpen: true`, and the browser clock (fixed before
+   the opening bound with `page.clock.setFixedTime`) stays untouched — the loaded server
+   answer is authoritative. No parity impact: the mention is a new element, the legacy DOM
+   contract (47 play buttons, badges, register buttons, modal) is unchanged.
+
+8. **`Calendar file route` (2 tests) and confirmation calendar links, ticket #36**: the
+   registration confirmation reached at the end of the full `Binôme registration` flow now
+   recalls the meeting point (note sentence, hours from the Édition config, Point de
+   rendez-vous) and offers the two agenda links — asserted inside that extended existing
+   case, not as new cases. The two NEW cases exercise the thin adapter route
+   `/api/calendrier/<zone>/<parcours>` against the real dev server at request level
+   (`page.request.get`): a known (Zone, Parcours) couple answers 200 `text/calendar` with an
+   explicit filename and the RFC 5545 body (stable event id `UID:vrnb-2027-<zone>-<parcours>@vrnb-site`,
+   `SUMMARY` carrying the action, the Zone and the Parcours), an unknown couple answers 404
+   with an empty body. The route needs no KV store, so no interception is needed (see the
+   « Calendar file route » intro). No parity impact: no new route of the legacy DOM contract,
+   the links exist only on the confirmation panel of the modal.
+
+Totals: **113 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36) × chromium + firefox = **226**.
 
 ---
 
@@ -149,12 +175,18 @@ Route: `/`
 
 ## File: `e2e/inscriptions.spec.ts`
 
-Route: `/` (tickets #16 + #17 + #18 — public inscriptions statuses, Binôme
-registration and registration window)
+Route: `/` (tickets #16 + #17 + #18 + #34 + #36 — public inscriptions statuses,
+Binôme registration, registration window, the home announcement of the
+inscriptions opening date and confirmation calendar links)
 
 > `GET /api/inscriptions` is intercepted with `page.route` in every test of this
 > file (both browsers), so the dev server needs no KV credentials. The POST
 > direction is scripted through the same `page.route` handler, assert by assert.
+>
+> The calendar file route of ticket #36 is the exception: unlike the Inscriptions
+> API, `/api/calendrier/<zone>/<parcours>` needs no KV store, so its two cases
+> hit the real dev-server route over `page.request.get` (see the « Calendar file
+> route » describe).
 >
 > The Inscriptions API itself and the Upstash KV adapter are not exercised here:
 > they are covered by the unit suite (`src/app/inscriptions/*.spec.ts`), and the
@@ -178,13 +210,31 @@ registration and registration window)
 | `should leave every row unbadged when the store covers nothing`  | Mock the API with an empty `inscriptions` list, `goto('/')`                     | No "Binôme inscrit" badge                                                                                    |
 | `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, no register button (the coverage is unknown), all 47 play buttons intact          |
 
+### `describe('Registration opening announcement')` (ticket #34)
+
+Before the opening bound of the Édition (2027-01-04), the home shows one
+single mention announcing the opening date in letters, from the loaded
+public state only: the statically prerendered home carries no announcement,
+neither while the public state cannot be loaded (see the degraded cases
+above) nor after the closing bound (see the « Closed registration window »
+cases). The test fixes the browser clock before the opening bound
+(`page.clock.setFixedTime`), so the instant is deterministic, and flips the
+mocked GET from `registrationOpen: false` to `true` (a mutable flag
+re-evaluated on every call) with `page.reload()`: the mention disappears and
+the register button comes back — the loaded server answer is authoritative,
+even with the clock still reading before the opening bound.
+
+| Test name                                                                         | Steps                                                                                                                                                                           | Expected                                                                                                                                                                        |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should announce the opening date before the window opens, and drop it once open` | Fix the clock before the opening bound, mock GET with a mutable `registrationOpen` flag, `goto('/')` (mocked window not open); then flip the flag to `true` and `page.reload()` | Exactly one « Les inscriptions ouvrent le lundi 4 janvier 2027. » mention and no register button; after the reload the mention is gone and the register button of V2 is visible |
+
 ### `describe('Binôme registration')` (ticket #17)
 
 The register button of every uncovered Parcours row is named
 `aria-label="S'inscrire en binôme pour le parcours <tourId>"` (visible text
 `S'inscrire` first, compact size `btn-xs`/`btn-sm`). The modal is the
 `<dialog className="modal">` element, addressed as `getByRole('dialog')`. Its
-context reads « Zone <zone> — Parcours <tour> », the meeting point is named
+context reads « Zone <zone> - Parcours <tour> », the meeting point is named
 without repeating the Zone, and the engagement statement is « Nous confirmons
 notre participation à ce parcours de nettoyage. »
 
@@ -197,12 +247,12 @@ notre participation à ce parcours de nettoyage. »
 > page.getByRole('dialog').getByLabel('Nom du membre 1', { exact: true });
 > ```
 
-| Test name                                                                      | Steps                                                                                                                                                                                                                                                                                                          | Expected                                                                                                                                                                                                              |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `should register through the modal: 201, confirmation, badge, button gone`     | Script GET (empty → covered) + POST 201 `{"inscription":{…}}` with `page.route`, `goto('/')`, open V2's button, assert modal context (Zone « Bruz Sud », action date « 14 février 2027 », meeting point), fill, tick, submit (the engagement statement gates the submit: untick → disabled, re-tick → enabled) | Exactly one POST carrying the full contract body (4 identity fields, `engaged: true`, `honeypot: ''`, `zoneId`/`tourId`); confirmation text « Votre binôme est inscrit »; V2 badged; register button gone — no reload |
-| `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                                                                                                                                               | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                                                          |
-| `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                                                                                                                                                 | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                                                    |
-| `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                                                                                                                                       | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                                                       |
+| Test name                                                                      | Steps                                                                                                                                                                                                                                                                                                                      | Expected                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should register through the modal: 201, confirmation, badge, button gone`     | Script GET (empty → covered) + POST 201 `{"inscription":{…}}` with `page.route`, `goto('/')`, open V2's button, assert modal context (Zone « Bruz Sud », action date « 14 février 2027 de 9h à 12h », meeting point), fill, tick, submit (the engagement statement gates the submit: untick → disabled, re-tick → enabled) | Exactly one POST carrying the full contract body (4 identity fields, `engaged: true`, `honeypot: ''`, `zoneId`/`tourId`); confirmation text « Votre binôme est inscrit » recalled as a meeting point (ticket #36): note sentence « Notez la zone et le nom du parcours pour le jour de l'action : Bruz Sud - V2. », hours « de 9h à 12h », « Point de rendez-vous : Place du Dr Joly », and the two agenda links — Google Calendar anchor FIRST (`target="_blank"`, `rel="noopener noreferrer"`, template URL built by the pure module), then the `.ics` anchor with the exact href `/api/calendrier/bruz-sud/V2` — the DOM order of the two links asserted; V2 badged; register button gone — no reload |
+| `should keep the typed values between a close without submitting and a reopen` | Mock GET (open, empty), `goto('/')`, open P3's button, type P1 first name + P2 last name, close via "Fermer", reopen P3's button                                                                                                                                                                                           | Dialog hidden when closed, same values still there after reopening (the modal stays mounted)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `should show no register button on a covered tour but keep its badge`          | Mock GET covering `bruz-sud`/`V1`, `goto('/')`                                                                                                                                                                                                                                                                             | V1 badged, no register button for it, its play button intact (legacy DOM contract)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `should guard a 409 race: message in the modal, then badge on the reload`      | Script GET (empty → covered) + POST 409 `{"error":"inscriptions-conflict"}`, `goto('/')`, open P2's button, fill, submit                                                                                                                                                                                                   | One POST; « couvert par un autre binôme » message in the modal; the client-side statuses reload reveals the new covered state (P2 badged, register button gone)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ### `describe('Closed registration window')` (ticket #18)
 
@@ -229,6 +279,26 @@ button is shown, so the site never offers a registration it cannot honor.
 | `should post the filled honeypot and be refused like any other invalid input` | Script GET (open) + POST 400 `{"error":"invalid-inscription"}`, open V2's button, fill, fill the hidden field, submit                          | One POST whose body carries the filled `honeypot`; the refusal is silent — the standard « Saisie invalide » message, never an anti-robots hint, and nothing stored (the Parcours stays unbadged, its register button stays) |
 | `should state the data retention of the names in the modal`                   | Mock GET (open, empty), `goto('/')`, open V2's button                                                                                          | The modal states « Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées 90 jours après l'action. »                                                                                 |
 | `should have no a11y violation on the open registration modal`                | Mock GET (open, empty), `goto('/')`, open V2's button, run the axe audit on the page (the `meta-viewport` and `color-contrast` rules disabled) | No axe violation (the hidden honeypot never breaks the audit)                                                                                                                                                               |
+
+### `describe('Calendar file route')` (ticket #36)
+
+The route `/api/calendrier/<zone>/<parcours>` is a thin adapter over the pure
+calendar module (`lib/tour-calendar.ts`): it serves the Édition event of a
+registered Parcours and needs no KV store, so these two cases hit the **real
+dev-server route** at request level (`page.request.get`) — the `page.route`
+interception of the Inscriptions API is not needed here, and no link is
+clicked (the served file is a download, read through the response instead).
+
+| Test name                                                | Steps                                        | Expected                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `should serve the Édition event file for a known couple` | Request `/api/calendrier/bruz-sud/V1`        | HTTP 200; `content-type` contains `text/calendar` ; `content-disposition` carries the explicit filename `calendrier-bruz-sud-v1.ics` ; the body carries `BEGIN:VCALENDAR`, the stable `UID:vrnb-2027-bruz-sud-v1@vrnb-site`, the title `SUMMARY:Action ramassage des déchets VRNB - Bruz Sud (V1)`, the full postal address `LOCATION:Place du Docteur Joly…` and the Point de rendez-vous in the description |
+| `should answer 404 with no file for an unknown couple`   | Request `/api/calendrier/impossible/UNKNOWN` | HTTP 404 with an empty body (no file at all, never an HTML error page)                                                                                                                                                                                                                                                                                                                                        |
+
+> The confirmation links themselves (Google Calendar built by the pure module,
+> `.ics` href of the exact couple) are asserted in the extended « Binôme
+> registration » flow above; the `.ics` file content is unit-covered by
+> `lib/tour-calendar.spec.ts` — these two cases only check the adapter's
+> served response.
 
 ---
 
@@ -424,12 +494,13 @@ following text when it contains `&apos;` — cf. the note in `app/manual/page.ts
 Vitest cannot reproduce it (its JSX transform keeps the space), hence this E2E check.
 
 The sommaire test covers the navigation of the mode d'emploi: every section of the
-page is listed and every anchor resolves to an existing heading.
+page is listed in reading order (numbered titles), the binôme registration is the
+LAST section, and every anchor resolves to an existing heading.
 
-| Test name                                                  | Steps                                                       | Expected                                                                                                                                                 |
-| ---------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `keeps spaces around bold words in the rendered copy`      | `goto('/manual')`                                           | 23 spaced French phrases present in the rendered `main` text                                                                                             |
-| `should list every section in the sommaire and jump to it` | `goto('/manual')` → click the « S'inscrire en binôme » link | 5 sommaire links (`#principe`, `#inscription`, `#exemple`, `#reprendre`, `#menu`), each pointing at a visible heading; the click jumps to `#inscription` |
+| Test name                                                  | Steps                                                       | Expected                                                                                                                                                                          |
+| ---------------------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keeps spaces around bold words in the rendered copy`      | `goto('/manual')`                                           | 24 spaced French phrases present in the rendered `main` text (incl. the arbitrated registration intro and the config-dated window/erasure notes)                                  |
+| `should list every section in the sommaire and jump to it` | `goto('/manual')` → click the « S'inscrire en binôme » link | 5 sommaire links in order (`#principe`, `#exemple`, `#reprendre`, `#menu`, `#inscription`), each pointing at a visible numbered `<h2>` heading; the click jumps to `#inscription` |
 
 ---
 

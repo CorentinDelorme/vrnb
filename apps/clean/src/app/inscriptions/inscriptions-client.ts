@@ -10,6 +10,7 @@
 
 import type { TourRef } from '../tours-queries';
 import type { Edition } from './edition';
+import { isCalendarDate, isWallTime } from './edition';
 import type { InscriptionsPublicState } from './public-state';
 import type { BinomeRegistration, RegistrationRejection } from './validation';
 import { isRegistrationRejection } from './validation';
@@ -65,11 +66,34 @@ export function parseInscriptionsState(payload: unknown): InscriptionsPublicStat
   return { edition, inscriptions: tourRefs, registrationOpen };
 }
 
-/** Narrow the Édition field of the public state. */
+/**
+ * Narrow the Édition field of the public state: the year must be a number
+ * and the whole registration window must be present with plausible formats —
+ * the `actionDate`/`inscriptionsOpenDate` calendar dates as `YYYY-MM-DD` and
+ * the action hours as strict `HH:MM` wall times (the shared validators of
+ * `edition.ts`). A partial or malformed Édition degrades the whole state to
+ * the error outcome, so the UI falls back on the bundled `CURRENT_EDITION`
+ * instead of guessing from half of a config.
+ */
 function isEdition(value: unknown): value is Edition {
   if (value === null || typeof value !== 'object') return false;
-  const { actionDate, year } = value as { actionDate?: unknown; year?: unknown };
-  return typeof actionDate === 'string' && typeof year === 'number';
+  const { actionDate, actionEndTime, actionStartTime, inscriptionsOpenDate, year } = value as {
+    actionDate?: unknown;
+    actionEndTime?: unknown;
+    actionStartTime?: unknown;
+    inscriptionsOpenDate?: unknown;
+    year?: unknown;
+  };
+  return (
+    typeof actionDate === 'string' &&
+    typeof year === 'number' &&
+    typeof inscriptionsOpenDate === 'string' &&
+    isCalendarDate(inscriptionsOpenDate) &&
+    typeof actionStartTime === 'string' &&
+    isWallTime(actionStartTime) &&
+    typeof actionEndTime === 'string' &&
+    isWallTime(actionEndTime)
+  );
 }
 
 /** Narrow one (zone, Parcours) row of the public state. */
@@ -82,7 +106,8 @@ function isTourRef(value: unknown): value is TourRef {
 /**
  * Outcome of a registration POST, the mirror of the handler's contract:
  * `created` (201), `taken` (409 — the Parcours is covered), `invalid` (400 —
- * the form is not acceptable), `closed` (400 — the registration window of the
+ * the form is not acceptable), `not-open` (400 — the Édition has not opened
+ * its inscriptions yet), `closed` (400 — the registration window of the
  * Édition is closed) and `error` (anything else: 500, network failure). Each
  * status carries its own explicit French message in the modal.
  */
@@ -90,6 +115,7 @@ export type RegistrationOutcome =
   | { readonly status: 'created' }
   | { readonly status: 'taken' }
   | { readonly status: 'invalid' }
+  | { readonly status: 'not-open' }
   | { readonly status: 'closed' }
   | { readonly status: 'error' };
 
@@ -148,9 +174,11 @@ export async function postRegistration(
     if (response.status === 409) return { status: 'taken' };
     if (response.status === 400) {
       const rejection = await readRejection(response);
-      // The anti-bot honeypot is refused like any other invalid input: the
-      // server never names it, so the client shows the standard invalid
-      // message and a bot cannot fingerprint the trap.
+      // Each bound of the registration window is announced on its own (the
+      // modal explains both), and the anti-bot honeypot is refused like any
+      // other invalid input: the server never names it, so the client shows
+      // the standard invalid message and a bot cannot fingerprint the trap.
+      if (rejection === 'registration-not-open') return { status: 'not-open' };
       if (rejection === 'registration-closed') return { status: 'closed' };
       return { status: 'invalid' };
     }

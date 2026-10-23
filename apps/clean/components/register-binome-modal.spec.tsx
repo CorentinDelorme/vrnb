@@ -46,7 +46,13 @@ vi.mock('./inscriptions-status-provider', async (importOriginal) => ({
 /** The public state of an open registration window. */
 const OPEN_STATUS: InscriptionsStatus = {
   state: {
-    edition: { actionDate: '2027-02-14', year: 2027 },
+    edition: {
+      actionDate: '2027-02-14',
+      actionEndTime: '12:00',
+      actionStartTime: '09:00',
+      inscriptionsOpenDate: '2027-01-04',
+      year: 2027,
+    },
     inscriptions: [],
     registrationOpen: true,
   },
@@ -56,12 +62,25 @@ const OPEN_STATUS: InscriptionsStatus = {
 /** The public state of a closed registration window (the action date is past). */
 const CLOSED_STATUS: InscriptionsStatus = {
   state: {
-    edition: { actionDate: '2027-02-14', year: 2027 },
+    edition: {
+      actionDate: '2027-02-14',
+      actionEndTime: '12:00',
+      actionStartTime: '09:00',
+      inscriptionsOpenDate: '2027-01-04',
+      year: 2027,
+    },
     inscriptions: [],
     registrationOpen: false,
   },
   status: 'success',
 };
+
+/**
+ * A post-closure instant of the Édition (2027-02-12 = 2 days before the
+ * action): a window the server answers closed then really is closed, both
+ * for the server answer and for the local clock fallback.
+ */
+const POST_CLOSURE_CLOCK = new Date('2027-02-12T09:00:00Z');
 
 /**
  * jsdom implements no dialog method: patch the two the modal lives on. The
@@ -136,11 +155,14 @@ describe('RegisterBinomeModal', () => {
   it('should show the tour context: Zone, Parcours, action day, meeting point', () => {
     renderModal();
     const context = screen.getByText(/Zone/).textContent ?? '';
-    // The Zone comes first, then the Parcours: « Zone Bruz Sud — Parcours V1 ».
+    // The Zone comes first, then the Parcours: « Zone Bruz Sud - Parcours V1 ».
     expect(context).toContain('Bruz Sud');
     expect(context).toContain('V1');
     expect(context.indexOf('Bruz Sud')).toBeLessThan(context.indexOf('V1'));
-    expect(screen.getByText(/Jour de l'action/).textContent).toContain('14 février 2027');
+    // The action day carries its hours, both from the Édition config.
+    expect(screen.getByText(/Jour de l'action/).textContent).toContain(
+      'dimanche 14 février 2027 de 9h à 12h',
+    );
     expect(screen.getAllByText(/Point de rendez-vous/).length).toBeGreaterThan(0);
     // The meeting point is named without repeating the Zone.
     expect(screen.getByText(/Point de rendez-vous/).textContent).toContain('Place du Dr Joly');
@@ -265,6 +287,23 @@ describe('RegisterBinomeModal', () => {
     expect(mocks.reload).not.toHaveBeenCalled();
   });
 
+  it('should show the distinct not-open feedback on a not-open answer', async () => {
+    renderModal();
+    fillBinome();
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'not-open' });
+
+    fireEvent.click(submitButton());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain(
+        'Les inscriptions ouvriront le lundi 4 janvier 2027',
+      ),
+    );
+
+    expect(screen.getByRole('alert').textContent).toMatch(/Les inscriptions ouvriront le/);
+    expect(screen.getByRole('alert').textContent).not.toMatch(/closes/);
+    expect(mocks.reload).not.toHaveBeenCalled();
+  });
+
   it('should show the distinct network-error feedback without reloading', async () => {
     renderModal();
     fillBinome();
@@ -327,8 +366,10 @@ describe('RegisterBinomeModal honeypot and GDPR notice', () => {
 });
 
 /**
- * The closed registration window (ticket #18): the modal announces that the
- * window is closed (3 days before the action) and disables its whole form.
+ * The closed registration window: after the closing bound (3 days before the
+ * action), the modal announces that the window is closed and disables its
+ * whole form. The clock is injected (post-closure instant) so the render does
+ * not depend on the wall clock of the runner.
  */
 describe('RegisterBinomeModal closed window', () => {
   beforeEach(() => {
@@ -338,7 +379,7 @@ describe('RegisterBinomeModal closed window', () => {
   });
 
   it('should announce the closed window and disable the form', () => {
-    renderModal();
+    renderModalAt(POST_CLOSURE_CLOCK);
 
     expect(screen.getByRole('alert').textContent).toContain('Les inscriptions sont closes');
     expect(screen.getByRole('alert').textContent).toContain("3 jours avant la date de l'action");
@@ -353,7 +394,87 @@ describe('RegisterBinomeModal closed window', () => {
   });
 
   it('should never post a registration while the window is closed', () => {
-    renderModal();
+    renderModalAt(POST_CLOSURE_CLOCK);
+    fillBinome();
+
+    fireEvent.click(submitButton());
+    expect(mocks.postRegistration).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The not-open-yet registration window (spec #32): before the opening bound
+ * of the Édition, the modal announces the opening date in letters and
+ * disables its whole form, distinguishing itself from the closed-window
+ * message — whether the public state is loaded (the server answers a closed
+ * window while the inscriptions are not open yet — the state of the site at
+ * publication) or falls back on the local clock.
+ */
+describe('RegisterBinomeModal not-open-yet window', () => {
+  /** An instant before the opening day of the Édition (2027-01-04). */
+  const BEFORE_OPENING_CLOCK = new Date('2027-01-02T09:00:00Z');
+
+  beforeEach(() => {
+    mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
+    mocks.reload.mockReset();
+    status.current = { status: 'loading' };
+  });
+
+  it('should announce the opening date in letters and disable the form', () => {
+    renderModalAt(BEFORE_OPENING_CLOCK);
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 4 janvier 2027',
+    );
+    expect(screen.queryByText(/Les inscriptions sont closes/)).toBeNull();
+    for (const input of identityInputs()) {
+      expect(input.disabled).toBe(true);
+    }
+    expect(
+      (screen.getByRole('checkbox', { name: /confirmons notre participation/ }) as HTMLInputElement)
+        .disabled,
+    ).toBe(true);
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should announce the opening date on a public state the server answers closed before opening', () => {
+    // The server answers registrationOpen=false (the site state at
+    // publication): the local clock of the modal tells the two bounds apart.
+    status.current = CLOSED_STATUS;
+    renderModalAt(BEFORE_OPENING_CLOCK);
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 4 janvier 2027',
+    );
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should announce the opening date of the Édition the public state carries', () => {
+    // A loaded state whose Édition differs from the bundled one: the
+    // announcement quotes the date THE STATE ANSWERED (the same source rule
+    // as the home announcement), never the bundled fallback.
+    const laterEdition = {
+      actionDate: '2028-06-18',
+      actionEndTime: '17:00',
+      actionStartTime: '09:00',
+      inscriptionsOpenDate: '2028-04-03',
+      year: 2028,
+    } as const;
+    status.current = {
+      state: { edition: laterEdition, inscriptions: [], registrationOpen: false },
+      status: 'success',
+    };
+    renderModalAt(new Date('2028-03-15T09:00:00Z'));
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 3 avril 2028.',
+    );
+    expect(screen.getByRole('alert').textContent).not.toContain('2027');
+    expect(submitButton().disabled).toBe(true);
+  });
+
+  it('should never post a registration while the window is not open yet', () => {
+    renderModalAt(BEFORE_OPENING_CLOCK);
     fillBinome();
 
     fireEvent.click(submitButton());
@@ -381,10 +502,108 @@ describe('RegisterBinomeModal local clock fallback', () => {
     expect(submitButton().disabled).toBe(true);
   });
 
+  it('should announce the opening date on its own clock when it predates the opening', () => {
+    renderModalAt(new Date('2026-12-01T09:00:00Z'));
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 4 janvier 2027',
+    );
+    expect(submitButton().disabled).toBe(true);
+  });
+
   it('should keep the window open on its own clock on the last registration day', () => {
     renderModalAt(new Date('2027-02-11T09:00:00Z'));
 
     expect(screen.queryByText(/Les inscriptions sont closes/)).toBeNull();
     expect(identityInputs()[0]?.disabled).toBe(false);
+  });
+});
+
+/**
+ * The confirmation panel (ticket #36): once the registration is created, the
+ * panel becomes a meeting point — it asks to note the zone and the Parcours
+ * name, recalls the action hours from the Édition config around the action
+ * date, keeps naming the Point de rendez-vous, and offers the two agenda
+ * links (Google Calendar in a new tab, the .ics file served by the calendar
+ * route). Both links exist ONLY on this state, never outside the
+ * confirmation.
+ */
+describe('RegisterBinomeModal confirmation with calendar links', () => {
+  /** Fill + submit a valid form, then wait until the confirmation shows. */
+  async function renderConfirmation(): Promise<void> {
+    renderModal();
+    fillBinome();
+    fireEvent.click(submitButton());
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toContain('Votre binôme est inscrit'),
+    );
+  }
+
+  beforeEach(() => {
+    mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
+    mocks.reload.mockReset();
+    status.current = OPEN_STATUS;
+  });
+
+  it('should recall the day with its hours, the note sentence and the meeting point', async () => {
+    await renderConfirmation();
+
+    // The hours come from the Édition config (09:00 → 9h, 12:00 → 12h) and
+    // wrap the action date, exactly like the calendar description words it.
+    expect(screen.getByRole('alert').textContent).toContain(
+      'le dimanche 14 février 2027 de 9h à 12h',
+    );
+    // The note-to-take sentence carries the data, never a literal.
+    const note = screen.getByText(/Notez la zone et le nom du parcours/).textContent ?? '';
+    expect(note).toContain("pour le jour de l'action");
+    expect(note).toContain('Bruz Sud - V1.');
+    // The Point de rendez-vous stays named on the confirmation.
+    expect(screen.getByText(/Point de rendez-vous/).textContent).toContain('Place du Dr Joly');
+  });
+
+  it('should offer the two agenda links on the confirmation', async () => {
+    await renderConfirmation();
+
+    // Google Calendar: a plausible template link built by the pure module,
+    // carrying the Zone and the Parcours, opened in a new tab.
+    const google = screen.getByRole('link', { name: 'Google Agenda' }) as HTMLAnchorElement;
+    expect(google.href.startsWith('https://calendar.google.com/calendar/render?')).toBe(true);
+    const googleUrl = new URL(google.href);
+    expect(googleUrl.searchParams.get('action')).toBe('TEMPLATE');
+    expect(googleUrl.searchParams.get('text')).toBe(
+      'Action ramassage des déchets VRNB - Bruz Sud (V1)',
+    );
+    expect(googleUrl.searchParams.get('location')).toBe(
+      'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
+    );
+    expect(google.target).toBe('_blank');
+    expect(google.rel).toContain('noopener');
+
+    // The .ics file points to the calendar route of the exact couple, with
+    // no .ics suffix in the URL (the filename arrives through the header).
+    const ics = screen.getByRole('link', { name: 'Fichier calendrier (.ics)' });
+    expect(ics.getAttribute('href')).toBe('/api/calendrier/bruz-sud/V1');
+    // Google Agenda comes first, then the file (the one-click path first).
+    expect(google.compareDocumentPosition(ics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('should show no calendar link nor note before the submission', () => {
+    renderModal();
+
+    expect(screen.queryByRole('link', { name: 'Google Agenda' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Fichier calendrier (.ics)' })).toBeNull();
+    expect(screen.queryByText(/Notez la zone et le nom du parcours/)).toBeNull();
+  });
+
+  it('should show no calendar link on a refusal', async () => {
+    renderModal();
+    fillBinome();
+    mocks.postRegistration.mockResolvedValueOnce({ status: 'taken' });
+    fireEvent.click(submitButton());
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('couvert'));
+
+    expect(screen.queryByRole('link', { name: 'Google Agenda' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Fichier calendrier (.ics)' })).toBeNull();
+    expect(screen.queryByText(/Notez la zone et le nom du parcours/)).toBeNull();
   });
 });

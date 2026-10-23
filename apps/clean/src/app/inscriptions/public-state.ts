@@ -45,7 +45,7 @@ export interface InscriptionsStore {
 /** Public body of `GET /api/inscriptions` — no personal names, ever. */
 export interface InscriptionsPublicState {
   readonly edition: Edition;
-  /** Registration for the Édition is open until 3 days before the action date. */
+  /** Registration is open within the Édition window (opening bound to the day 3 days before the action). */
   readonly registrationOpen: boolean;
   /** Names-free list of covered (zone, Parcours) pairs, sorted for stability. */
   readonly inscriptions: readonly TourRef[];

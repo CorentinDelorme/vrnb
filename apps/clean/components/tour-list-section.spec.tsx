@@ -27,7 +27,13 @@ function setStatus(next: InscriptionsStatus): void {
 
 const SUCCESS: InscriptionsStatus = {
   state: {
-    edition: { actionDate: '2027-02-14', year: 2027 },
+    edition: {
+      actionDate: '2027-02-14',
+      actionEndTime: '12:00',
+      actionStartTime: '09:00',
+      inscriptionsOpenDate: '2027-01-04',
+      year: 2027,
+    },
     inscriptions: [{ tourId: 'V1', zoneId: 'bruz-sud' }],
     registrationOpen: true,
   },
@@ -156,7 +162,13 @@ describe('TourListSection inscriptions register button', () => {
   it('should hide the register button on every row once the window is closed', () => {
     const { container } = renderSection({
       state: {
-        edition: { actionDate: '2027-02-14', year: 2027 },
+        edition: {
+          actionDate: '2027-02-14',
+          actionEndTime: '12:00',
+          actionStartTime: '09:00',
+          inscriptionsOpenDate: '2027-01-04',
+          year: 2027,
+        },
         inscriptions: [],
         registrationOpen: false,
       },

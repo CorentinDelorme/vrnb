@@ -11,22 +11,24 @@ No business database: all data is embedded (generated `src/app/tours-data.ts` an
 
 Routes (anything else renders the 404 page, spec #3 US 25):
 
-| Route                  | Page                                                          |
-| ---------------------- | ------------------------------------------------------------- |
-| `/`                    | Home — zone and Parcours list                                 |
-| `/manual`              | Mode d'emploi                                                 |
-| `/tours/<zone>/<P\|V>` | Zone map (Type de parcours: `P` à pied, `V` vélo)             |
-| `/tour/<zone>/<id>`    | Parcours page — the three Étapes                              |
-| `/api/inscriptions`    | Inscriptions API — GET public state, POST binôme registration |
+| Route                             | Page                                                                 |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `/`                               | Home — zone and Parcours list                                        |
+| `/manual`                         | Mode d'emploi                                                        |
+| `/tours/<zone>/<P\|V>`            | Zone map (Type de parcours: `P` à pied, `V` vélo)                    |
+| `/tour/<zone>/<id>`               | Parcours page — the three Étapes                                     |
+| `/api/inscriptions`               | Inscriptions API — GET public state, POST binôme registration        |
+| `/api/calendrier/<zone>/<tourId>` | Fichier calendrier (.ics) — agenda link of a (Zone, Parcours) couple |
 
 ### Inscriptions (Édition)
 
 The Inscriptions feature lets a **Binôme** cover a Parcours for the current Édition, first come first served. The core lives in `src/app/inscriptions/` (pure modules), the Next adapters in `app/api/inscriptions/route.ts` and the UI in `components/register-binome-modal.tsx`, `components/tour-register-button.tsx` and `components/inscriptions-status-provider.tsx`.
 
-- **Annual pivot** — `src/app/inscriptions/edition.ts` holds `CURRENT_EDITION` (`{ year, actionDate }`) and `EDITION_TIME_ZONE` (`Europe/Paris`). Bumping those values is the whole yearly rotation; `isRegistrationOpen(edition, now)` keeps the window open until `actionDate - REGISTRATION_CLOSURE_DAYS` (3 days: the organizers need that time to print the tracking sheets and organize the day) and closes it after; the register button disappears from the home list with the window.
+- **Annual pivot** — `src/app/inscriptions/edition.ts` holds `CURRENT_EDITION` (`{ year, actionDate, inscriptionsOpenDate, actionStartTime, actionEndTime }`) and `EDITION_TIME_ZONE` (`Europe/Paris`). Bumping those values is the whole yearly rotation. The registration window has two bounds, derived by `registrationWindowPhase(edition, now)` (injectable clock): `not-open-yet` (before `inscriptionsOpenDate`, the home announces the opening date while offering no registration), then `open` until `actionDate - REGISTRATION_CLOSURE_DAYS` (3 days: the organizers need that time to print the tracking sheets and organize the day), then `closed`; `isRegistrationOpen` is exactly the `open` phase. On the client, `registrationWindowPhaseOf` (`components/inscriptions-status-provider.tsx`) takes the loaded server answer as authoritative (a local clock that reads the window open never reopens what the server answered closed), falling back to the bundled Édition plus the local clock; the register button and the « Binôme inscrit » badge follow the window.
 - **Action slot** — the home list shows the « Binôme inscrit » badge on a covered Parcours and the register button on a free one, but only once the public state answered: while it loads, and when it fails, the slot stays empty (the site never offers a registration it cannot honor).
 - **KV contract** — one key per covered Parcours, `inscriptions:<year>:<zoneId>:<tourId>`, holding only the four identity fields. The reservation is atomic (`SET … NX EX`), so the first Binôme wins and a loser gets 409 without anything stored. Names never leave the store: the public state only exposes (zoneId, tourId) pairs. The coverage comes from the KEY alone: a key seeded by hand in the Upstash console covers its Parcours, whatever its value holds.
-- **API contract** — `GET /api/inscriptions` answers **200** with the public state (Édition, `registrationOpen`, the covered (Zone, Parcours) pairs) and **502** `{"error":"inscriptions-unavailable"}` when the KV store is unreachable; `POST /api/inscriptions` answers **201** (created), **409** (the Parcours was covered meanwhile), **400** (`invalid-inscription` or `registration-closed`) and **500** (`inscriptions-unavailable`).
+- **API contract** — `GET /api/inscriptions` answers **200** with the public state (Édition, `registrationOpen`, the covered (Zone, Parcours) pairs) and **502** `{"error":"inscriptions-unavailable"}` when the KV store is unreachable; `POST /api/inscriptions` answers **201** (created), **409** (the Parcours was covered meanwhile), **400** — `invalid-inscription`, or `registration-not-open` before the opening bound, or `registration-closed` after, every refusal storing nothing — and **500** (`inscriptions-unavailable`).
+- **Calendar** — the pure module `lib/tour-calendar.ts` builds the agenda artefacts of a registered Parcours (`tourGoogleCalendarUrl`, `tourIcsContent`, `actionHoursLabel`) from the Édition config alone, with the stable event id `vrnb-<year>-<zoneId>-<tourId>@vrnb-site` and no personal data; the route `app/api/calendrier/[zoneId]/[tourId]/route.ts` injects the generation instant and serves **200** `text/calendar` (explicit filename `calendrier-<zoneId>-<tourId>.ics`), **404** with no file for an unknown (Zone, Parcours) couple. The two agenda links live only in the confirmation of the modal (`components/register-binome-modal.tsx`), and while the window is `not-open-yet` the home announcement `components/inscriptions-opening-announcement.tsx` replaces the register button with the opening date in letters.
 - **Retention** — every key is created with a TTL reaching `actionDate + INSCRIPTIONS_RETENTION_DAYS` (90) days in `EDITION_TIME_ZONE`, so the personal data expires with no cron and no manual purge.
 - **Environment** — `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` feed the Upstash REST adapter (names only, never values in the repo).
 - **Anti-bot** — the modal carries a hidden honeypot field (`website`); a filled one is refused with the same 400 as any other invalid input (`invalid-inscription`), silently, and nothing is stored.

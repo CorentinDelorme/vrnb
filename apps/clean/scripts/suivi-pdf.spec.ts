@@ -10,7 +10,13 @@ import { renderSuiviSheetPdf } from './suivi-pdf';
  * text of the sheet can be asserted.
  */
 const SHEET: SuiviSheet = {
-  edition: { actionDate: '2027-02-14', year: 2027 },
+  edition: {
+    actionDate: '2027-02-14',
+    actionEndTime: '12:00',
+    actionStartTime: '09:00',
+    inscriptionsOpenDate: '2027-01-04',
+    year: 2027,
+  },
   fileName: 'Suivi_parcours_a_velo.pdf',
   practice: 'V',
   rows: [
