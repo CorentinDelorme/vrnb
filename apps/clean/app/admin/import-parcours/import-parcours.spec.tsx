@@ -9,7 +9,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 const fetchMock = vi.fn();
 
 beforeEach(() => {
-  fetchMock.mockResolvedValue({ text: async () => '{}' });
+  fetchMock.mockResolvedValue({ ok: true, json: async () => ({}) });
   vi.stubGlobal('fetch', fetchMock);
 });
 
@@ -82,13 +82,88 @@ describe('ImportParcoursForm', () => {
     expect(files[0]).toBeInstanceOf(File);
   });
 
-  it('displays the raw API response after import', async () => {
-    fetchMock.mockResolvedValueOnce({ text: async () => '{"imported":2}' });
+  it('displays the import summary with the assigned IDs after import', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ids: ['V16', 'V17'],
+        logs: {
+          'generate:routes': { stdout: '', stderr: '' },
+          'generate:tours': { stdout: '', stderr: '' },
+          'generate:pdfs': { stdout: '', stderr: '' },
+        },
+      }),
+    });
     render(<ImportParcoursForm />);
     const fileInput = screen.getByLabelText('Fichiers GPX') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [GPX_FILE] } });
     fireEvent.click(screen.getByRole('button', { name: 'Importer' }));
-    await screen.findByText("Réponse de l'API");
-    await screen.findByText('{"imported":2}');
+    await screen.findByText('2 fichiers importés — IDs attribués : V16, V17');
+    await screen.findByText('V16');
+    await screen.findByText('V17');
+  });
+
+  it('marks every assigned Parcours as a success in the summary', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ids: ['P14'],
+        logs: {
+          'generate:routes': { stdout: '', stderr: '' },
+          'generate:tours': { stdout: '', stderr: '' },
+          'generate:pdfs': { stdout: '', stderr: '' },
+        },
+      }),
+    });
+    render(<ImportParcoursForm />);
+    const fileInput = screen.getByLabelText('Fichiers GPX') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [GPX_FILE] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Importer' }));
+    await screen.findByText('1 fichier importé — IDs attribués : P14');
+    const successBadge = screen.getByText('Succès');
+    expect(successBadge.closest('li')?.textContent).toContain('P14');
+  });
+
+  it('displays collapsible logs per generation script after import', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ids: ['V16'],
+        logs: {
+          'generate:routes': {
+            stdout: 'routage terminé\n[perf] durée totale : 1,2 s',
+            stderr: '',
+          },
+          'generate:tours': { stdout: '', stderr: 'attention : fichier manquant' },
+          'generate:pdfs': { stdout: 'PDF généré avec succès', stderr: '' },
+        },
+      }),
+    });
+    const { container } = render(<ImportParcoursForm />);
+    const fileInput = screen.getByLabelText('Fichiers GPX') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [GPX_FILE] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Importer' }));
+
+    await screen.findByText('Logs des scripts de génération');
+
+    // One collapsible per generation script, in pipeline order.
+    const details = Array.from(container.querySelectorAll('details'));
+    expect(details).toHaveLength(3);
+    expect(details.map((element) => element.querySelector('summary')?.textContent)).toEqual([
+      'Tronçons de parcours (start/end)',
+      'Parcours et catalogue',
+      'Fiches PDF',
+    ]);
+
+    // Stdout (including the [perf] block) and stderr are rendered in each block.
+    await screen.findByText(/\[perf\] durée totale : 1,2 s/);
+    await screen.findByText('attention : fichier manquant');
+    await screen.findByText('PDF généré avec succès');
+
+    // Clicking a summary toggles the native <details> open state.
+    const toursDetails = details[1];
+    expect(toursDetails.hasAttribute('open')).toBe(false);
+    fireEvent.click(toursDetails.querySelector('summary')!);
+    expect(toursDetails.hasAttribute('open')).toBe(true);
   });
 });
