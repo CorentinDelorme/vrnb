@@ -47,7 +47,7 @@ describe('zoneMapTours', () => {
 
   it('returns the bike tour names of another zone', () => {
     const names = zoneMapTours('bruz-vau-gaillard', 'V');
-    expect(names).toEqual(['V20', 'V21', 'V22', 'V23', 'V24', 'V25']);
+    expect(names).toEqual(['V100', 'V101', 'V102', 'V103', 'V104', 'V105']);
   });
 
   it('returns no names for a zone without tours of that type', () => {

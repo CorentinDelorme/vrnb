@@ -28,7 +28,7 @@ describe('pageTitle', () => {
   });
 
   it('returns the tour title for a tour route', () => {
-    expect(pageTitle('/tour/bruz-vau-gaillard/V20')).toBe('Bruz Vau Gaillard - Parcours V20');
+    expect(pageTitle('/tour/bruz-vau-gaillard/V100')).toBe('Bruz Vau Gaillard - Parcours V100');
   });
 
   it('falls back to the home title for an unknown path', () => {
