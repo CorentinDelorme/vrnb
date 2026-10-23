@@ -36,7 +36,7 @@ describe('ImportParcoursForm', () => {
     render(<ImportParcoursForm />);
     const selects = screen.getAllByRole('combobox');
     const zoneSelect = screen.getByLabelText('Zone') as HTMLSelectElement;
-    const practiceSelect = screen.getByLabelText('Type de pratique') as HTMLSelectElement;
+    const practiceSelect = screen.getByLabelText('Type de parcours') as HTMLSelectElement;
     expect(selects[0]).toBe(zoneSelect);
     expect(selects[1]).toBe(practiceSelect);
     expect(Array.from(practiceSelect.options).map((option) => option.value)).toEqual(['P', 'V']);
@@ -57,6 +57,20 @@ describe('ImportParcoursForm', () => {
   it('renders the import button', () => {
     render(<ImportParcoursForm />);
     expect(screen.getByRole('button', { name: 'Importer' })).not.toBeNull();
+  });
+
+  it('disables the import button when no GPX file is selected', () => {
+    render(<ImportParcoursForm />);
+    const button = screen.getByRole('button', { name: 'Importer' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+  });
+
+  it('enables the import button once a GPX file is selected', () => {
+    render(<ImportParcoursForm />);
+    const fileInput = screen.getByLabelText('Fichiers GPX') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [GPX_FILE] } });
+    const button = screen.getByRole('button', { name: 'Importer' }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
   });
 
   it('posts the selected zone and the GPX files to the import API on submit', async () => {
