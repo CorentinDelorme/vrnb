@@ -125,21 +125,31 @@ async function takenNumbers(zoneId: string, practiceType: PracticeType): Promise
 
 /**
  * The next free number for `practiceType` in `zoneId`, within the zone's
- * 100-ID margin (offset+1 .. offset+99). When every slot is taken, falls
- * back to max+1.
+ * 100-ID margin. Bruz Sud (offset 0) starts at 1 because there is no P0/V0;
+ * the other zones start at their offset (Vau Gaillard at 100, Ker Lann at 200).
+ * Throws `ZoneCapacityError` when every slot of the zone is taken.
  */
+class ZoneCapacityError extends Error {
+  constructor(readonly zoneId: string, readonly practiceType: PracticeType) {
+    super(`Zone ${zoneId} is full for practice ${practiceType}`);
+    this.name = 'ZoneCapacityError';
+  }
+}
+
 function nextFreeNumber(zoneId: string, practiceType: PracticeType, taken: number[]): number {
   const offset = zoneIdOffset(zoneId);
+  // Bruz Sud starts at 1 (no P0/V0); every other zone starts at its offset.
+  const start = offset === 0 ? 1 : offset;
+  const end = offset + 99;
   const takenSet = new Set(taken);
 
-  for (let n = offset + 1; n <= offset + 99; n += 1) {
+  for (let n = start; n <= end; n += 1) {
     if (!takenSet.has(n)) {
       return n;
     }
   }
 
-  // All 100 slots of the zone are taken: go beyond the margin.
-  return taken.length > 0 ? Math.max(...taken) + 1 : offset + 1;
+  throw new ZoneCapacityError(zoneId, practiceType);
 }
 
 /** Pure handler over the incoming request. */
@@ -162,18 +172,34 @@ async function handleImportParcours(request: Request): Promise<Response> {
   }
 
   const taken = await takenNumbers(zoneId, practiceType);
-  let nextNumber = nextFreeNumber(zoneId, practiceType, taken);
+  const takenSet = new Set(taken);
 
   const ids: string[] = [];
-  for (const file of files) {
-    const id = `${practiceType}${nextNumber}`;
-    ids.push(id);
+  try {
+    let nextNumber = nextFreeNumber(zoneId, practiceType, Array.from(takenSet));
+    for (const file of files) {
+      const id = `${practiceType}${nextNumber}`;
+      ids.push(id);
+      takenSet.add(nextNumber);
 
-    const idDir = join(GPX_ROOT, zoneId, id);
-    await mkdir(idDir, { recursive: true });
-    await writeFile(join(idDir, `${id}.gpx`), await file.text());
+      const idDir = join(GPX_ROOT, zoneId, id);
+      await mkdir(idDir, { recursive: true });
+      await writeFile(join(idDir, `${id}.gpx`), await file.text());
 
-    nextNumber += 1;
+      // Compute the next number before the next file so a full zone raises
+      // ZoneCapacityError instead of spilling into the next zone's margin.
+      nextNumber = nextFreeNumber(zoneId, practiceType, Array.from(takenSet));
+    }
+  } catch (error) {
+    if (error instanceof ZoneCapacityError) {
+      return json(400, {
+        error: 'zone-capacity-exceeded',
+        zoneId,
+        practiceType,
+        message: `Zone ${zoneId} is full for practice ${practiceType} (${error.message})`,
+      });
+    }
+    throw error;
   }
 
   const logs = runGenerationScripts(zoneId, ids);
