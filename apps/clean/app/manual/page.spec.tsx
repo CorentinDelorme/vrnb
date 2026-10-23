@@ -188,7 +188,7 @@ describe('Manual page', () => {
       `la fenêtre se ferme ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action`,
     );
     expect(text).toContain(
-      `Les noms des membres sont effacés ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`,
+      `Les informations sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`,
     );
 
     // The opening and the closing dates, in letters, from the Édition config.
@@ -205,9 +205,6 @@ describe('Manual page', () => {
     const text = renderedText(container);
     expect(text).toContain(
       'Premier arrivé, premier servi : le premier binôme à inscrire couvre le parcours, les suivants en choisissent un autre.',
-    );
-    expect(text).toContain(
-      'Les organisateurs ont besoin de ce temps pour imprimer les fiches de suivi et organiser la journée',
     );
     expect(text).toContain("Ils servent uniquement à établir les fiches de suivi de l'édition");
   });
@@ -253,7 +250,7 @@ describe('Manual page', () => {
       "3. La confirmation s'affiche. Un message vert confirme votre inscription",
       'Premier arrivé, premier servi : le premier binôme à inscrire couvre le parcours',
       "Les inscriptions ouvrent le lundi 4 janvier 2027 et sont possibles jusqu'au jeudi 11 février 2027 : la fenêtre se ferme 3 jours avant la date de l'action",
-      "Les noms des membres sont effacés 90 jours après l'action. Ils servent uniquement",
+      "Les informations sont effacées 90 jours après l'action. Ils servent uniquement",
     ];
     for (const phrase of spaced) {
       expect(text, `missing space around inline element near: "${phrase}"`).toContain(phrase);

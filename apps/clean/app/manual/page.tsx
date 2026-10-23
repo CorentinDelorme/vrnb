@@ -93,7 +93,7 @@ const WINDOW_CLOSE_NOTE = `Les inscriptions ouvrent le ${INSCRIPTIONS_OPEN_LABEL
  * The names-erasure note (one string): the delay comes from the Édition
  * config, never a typed number.
  */
-const NAMES_ERASURE_NOTE = `Les noms des membres sont effacés ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
+const NAMES_ERASURE_NOTE = `Les informations sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
 
 /** Decorative inline icon, equivalent of the legacy `<hugeicons-icon alt="">`. */
 interface InlineIconProps {
@@ -403,9 +403,6 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         </li>
         <li>
           <strong>{WINDOW_CLOSE_NOTE}</strong>
-          {
-            ' Les organisateurs ont besoin de ce temps pour imprimer les fiches de suivi et organiser la journée.'
-          }
         </li>
         <li>
           <strong>{NAMES_ERASURE_NOTE}</strong>
