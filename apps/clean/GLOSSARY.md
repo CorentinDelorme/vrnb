@@ -73,7 +73,7 @@ Le service externe qui fournit les liens d'itinéraire à vélo (depuis ma posit
 _Avoid_: carte GPS, planificateur
 
 **Mode d'emploi**:
-Le guide illustré expliquant comment utiliser l'application pendant un Parcours et comment inscrire un Binôme pour une Édition. Il s'ouvre sur un sommaire qui renvoie à chaque partie.
+Le guide illustré expliquant comment utiliser l'application pendant un Parcours et comment inscrire un Binôme pour une Édition. Il s'ouvre sur un sommaire qui renvoie à chaque partie : la navigation porte le label « Sommaire », et chaque entrée saute à sa section numérotée — cinq parties, la dernière étant « S'inscrire en binôme » (le mode d'emploi raconte d'abord le jour de l'action, l'inscription vient ensuite).
 _Avoid_: notice, tutoriel, manuel
 
 **Édition**:
@@ -81,7 +81,7 @@ L'événement annuel de ramassage, identifié par une année et une date de l'ac
 _Avoid_: l'année seule, campagne
 
 **Inscription**:
-L'enregistrement du Binôme qui couvre un Parcours pour une Édition, unique par (Parcours, Édition) et confirmé au premier Binôme arrivé. Les prénoms et noms enregistrés sont effacés automatiquement 90 jours après la date de l'action.
+L'enregistrement du Binôme qui couvre un Parcours pour une Édition, unique par (Parcours, Édition) et confirmé au premier Binôme arrivé. La fenêtre d'inscription a deux bornes : elle n'est pas ouverte depuis le déploiement — elle ouvre à la date configurée dans l'Édition (`inscriptionsOpenDate`) — et elle se ferme 3 jours avant la date de l'action. Les prénoms et noms enregistrés sont effacés automatiquement 90 jours après la date de l'action.
 _Avoid_: réservation, résa
 
 **Binôme**:
