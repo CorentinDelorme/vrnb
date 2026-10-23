@@ -5,6 +5,7 @@
     "CI",
     "DATABASE_URL",
     "HOME",
+    "NODE_ENV",
     "PAYLOAD_SECRET",
     "PAYLOAD_USER_EMAIL",
     "PAYLOAD_USER_PASSWORD",
