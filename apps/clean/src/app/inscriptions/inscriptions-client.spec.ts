@@ -148,6 +148,26 @@ describe('parseInscriptionsState', () => {
       }),
     ).toBeNull(); // not an `HH:MM` end hour
   });
+
+  it('should reject a well-shaped but impossible wall time', () => {
+    // The strict `HH:MM` validator shared with `edition.ts` (review fix): an
+    // hour past midnight or digits that no clock could read are refused like
+    // any malformed field — the UI falls back on the bundled Édition.
+    expect(
+      parseInscriptionsState({
+        edition: { ...EDITION, actionStartTime: '99:99' },
+        inscriptions: [],
+        registrationOpen: true,
+      }),
+    ).toBeNull();
+    expect(
+      parseInscriptionsState({
+        edition: { ...EDITION, actionEndTime: '24:00' },
+        inscriptions: [],
+        registrationOpen: true,
+      }),
+    ).toBeNull();
+  });
 });
 
 /** One complete registration fixture, tweakable per test. */

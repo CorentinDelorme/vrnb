@@ -1,5 +1,10 @@
 import type { Edition } from '../src/app/inscriptions/edition';
-import { EDITION_TIME_ZONE, formatActionDateLabel } from '../src/app/inscriptions/edition';
+import {
+  EDITION_TIME_ZONE,
+  formatActionDateLabel,
+  isCalendarDate,
+  isWallTime,
+} from '../src/app/inscriptions/edition';
 
 /**
  * Calendar artefacts of a registered Parcours (ticket #35): the Google
@@ -44,9 +49,6 @@ const ICS_PRODID = '-//VRNB//Ramassage des déchets à Bruz//FR';
 
 /** Maximum octets of one .ics content line before RFC 5545 §3.1 folding. */
 const MAX_CONTENT_LINE_OCTETS = 75;
-
-/** A wall time of the Édition config (`HH:MM`, as it already is when "edit"). */
-const WALL_TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 /**
  * Google Calendar link of the registered Parcours event: event bounds in
@@ -144,24 +146,27 @@ function formatActionHours(startTime: string, endTime: string): string {
   return `de ${frenchHourLabel(startTime)} à ${frenchHourLabel(endTime)}`;
 }
 
-/** French short hour of one `HH:MM` wall time (`09:00` → `9h`, `13:30` → `13h30`). */
+/**
+ * French short hour of one `HH:MM` wall time (`09:00` → `9h`, `13:30` →
+ * `13h30`). Malformed config — anything but a strict `HH:MM` wall time, the
+ * shared validator of `edition.ts` — is a developer error, said in English.
+ */
 function frenchHourLabel(wallTime: string): string {
-  const match = WALL_TIME_PATTERN.exec(wallTime);
-  if (match === null) throw new Error(`Invalid action wall time: ${wallTime}`);
-  const hour = Number.parseInt(match[1], 10).toString();
-  const minutes = match[2];
+  if (!isWallTime(wallTime)) throw new Error(`Invalid action wall time: ${wallTime}`);
+  const [hourText, minutes] = wallTime.split(':');
+  const hour = Number.parseInt(hourText ?? '', 10).toString();
   return `${hour}h${minutes === '00' ? '' : minutes}`;
 }
 
 /**
  * Compact local timestamp `YYYYMMDDTHHMMSS` of an Édition wall bound
  * (`2027-02-14`, `09:00` → `20270214T090000`). The timezone stays with the
- * qualifier (`ctz`, `TZID`) — no UTC cross-computation.
+ * qualifier (`ctz`, `TZID`) — no UTC cross-computation. Malformed bounds —
+ * anything but the strict shared shapes of `edition.ts` — are a developer
+ * error, said in English.
  */
 function icsWallTimestamp(calendarDate: string, wallTime: string): string {
-  const dateMatch = /^\d{4}-\d{2}-\d{2}$/.exec(calendarDate);
-  const timeMatch = WALL_TIME_PATTERN.exec(wallTime);
-  if (dateMatch === null || timeMatch === null) {
+  if (!isCalendarDate(calendarDate) || !isWallTime(wallTime)) {
     throw new Error(`Invalid Édition action schedule: ${calendarDate} ${wallTime}`);
   }
   return `${calendarDate.replaceAll('-', '')}T${wallTime.replaceAll(':', '')}00`;

@@ -13,13 +13,14 @@ import type { InscriptionsPublicState } from '../src/app/inscriptions/public-sta
 export type InscriptionsStatus = InscriptionsOutcome | { readonly status: 'loading' };
 
 /**
- * The phase of the registration window at `now`, from ONE rule spread over
- * the same sources as `isRegistrationWindowOpen`: the server's answer when
- * the public state loaded (the client and the server always agree), the
- * bundled Édition and the local clock otherwise (the safety net of a page
- * whose public state could not be loaded). The `not-open-yet` phase tells
- * the two window bounds apart on the client side, so the refusal messages
- * stay distinct. Pure: the clock is injected, never read.
+ * The phase of the registration window at `now`, from ONE rule — the rule
+ * the boolean summariser `isRegistrationWindowOpen` below stands on: the
+ * server's answer when the public state loaded (the client and the server
+ * always agree), the bundled Édition and the local clock otherwise (the
+ * safety net of a page whose public state could not be loaded). The
+ * `not-open-yet` phase tells the two window bounds apart on the client
+ * side, so the refusal messages stay distinct. Pure: the clock is injected,
+ * never read.
  */
 export function registrationWindowPhaseOf(
   status: InscriptionsStatus,
@@ -44,10 +45,13 @@ function phaseOfLoadedState(state: InscriptionsPublicState, now: Date): Registra
 }
 
 /**
- * Whether the registration window is open, from ONE rule: the server's answer
- * when the public state loaded (the client and the server always agree), the
- * local clock otherwise (the safety net of a page whose public state could
- * not be loaded). Pure: the clock is injected, never read.
+ * Whether the registration window is open — the boolean summariser of
+ * `registrationWindowPhaseOf` above (kept as the seam for the consumers
+ * needing only the yes/no answer, while consumers telling the two bounds
+ * apart take the phase itself), from ONE rule: the server's answer when the
+ * public state loaded (the client and the server always agree), the local
+ * clock otherwise (the safety net of a page whose public state could not be
+ * loaded). Pure: the clock is injected, never read.
  */
 export function isRegistrationWindowOpen(status: InscriptionsStatus, now: Date): boolean {
   return registrationWindowPhaseOf(status, now) === 'open';

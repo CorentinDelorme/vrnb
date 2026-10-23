@@ -117,6 +117,27 @@ export function registrationsCloseDate(edition: Edition): string {
 export const INSCRIPTIONS_RETENTION_DAYS = 90;
 
 /**
+ * `YYYY-MM-DD` calendar-date shape of the Édition date fields (`2027-02-14`).
+ * Client-safe pure helper, shared by the validators that narrow an Édition —
+ * the local arithmetic (`calendarDatePlusDays`) and the browser client
+ * (`inscriptions-client.ts`) — so no consumer re-implements the pattern.
+ */
+export function isCalendarDate(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+/**
+ * Strict `HH:MM` wall-time shape of the Édition action hours: hours stay
+ * under 24 (`00`–`23`), minutes under 60 (`00`–`59`) — `99:99` or `24:00`
+ * is well shaped but not a time. Client-safe pure helper, the ONE strict
+ * validator the calendar artefacts (`lib/tour-calendar.ts`) and the browser
+ * client (`inscriptions-client.ts`) share.
+ */
+export function isWallTime(value: string): boolean {
+  return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
+}
+
+/**
  * French long date of a calendar date of the Édition — « dimanche 14 février
  * 2027 ». Client-safe pure helper: the registration modal (browser) and the
  * referent extraction script (Node) format the action day through it, so the
@@ -168,7 +189,7 @@ export function ttlSecondsUntil(instant: Date, now: Date): number {
 
 /** `YYYY-MM-DD` calendar date `n` days after `calendarDate` (pure UTC arithmetic). */
 function calendarDatePlusDays(calendarDate: string, days: number): string {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(calendarDate)) {
+  if (!isCalendarDate(calendarDate)) {
     throw new Error(`Invalid calendar date ${calendarDate}`);
   }
   const [year, month, date] = calendarDate.split('-').map((part) => Number.parseInt(part, 10));

@@ -11,6 +11,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import { useEffect, useRef, useState } from 'react';
 
 import { actionHoursLabel, tourGoogleCalendarUrl } from '../lib/tour-calendar';
+import type { Edition, RegistrationWindowPhase } from '../src/app/inscriptions/edition';
 import {
   CURRENT_EDITION,
   INSCRIPTIONS_RETENTION_DAYS,
@@ -106,23 +107,19 @@ const IDENTITY_INPUTS = [
   { id: 'register-last-name-2', key: 'lastName2' },
 ] as const satisfies readonly { readonly id: string; readonly key: IdentityField }[];
 
-/** French long-form date of the Édition action day (module-scope constant). */
-const ACTION_DATE_LABEL = formatActionDateLabel(CURRENT_EDITION.actionDate);
-
-/**
- * French hours of the Édition action (module-scope constant): « de 9h à 12h »
- * from the Édition `HH:MM` strings through the pure module the calendar
- * artefacts (Google link and .ics file) use too, so the confirmation and the
- * calendar files recall the hours with the same wording.
- */
-const ACTION_HOURS_LABEL = actionHoursLabel(CURRENT_EDITION);
-
 /**
  * The message of the not-open-yet registration window (also the `not-open`
- * 400 answer of the API): the opening date of the Édition is announced in
- * letters, built from the Édition config like the action-day context line.
+ * 400 answer of the API): the opening date of the ÉDITION IN PLAY announced
+ * in letters — a function of the edition because that date is quoted from
+ * the loaded public state's Édition when it loaded (the same source rule as
+ * the home announcement) and from the bundled `CURRENT_EDITION` otherwise.
+ * The verb tense is intentional: the modal promises (« ouvriront ») where
+ * the home states (« ouvrent », spec-fixed); both dates are derived by the
+ * ONE `formatActionDateLabel`.
  */
-const NOT_OPEN_YET_MESSAGE = `Les inscriptions ouvriront le ${formatActionDateLabel(CURRENT_EDITION.inscriptionsOpenDate)}.`;
+function notOpenYetMessage(edition: Edition): string {
+  return `Les inscriptions ouvriront le ${formatActionDateLabel(edition.inscriptionsOpenDate)}.`;
+}
 
 /** The message of the closed registration window (also the 400 answer). */
 const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se ferme ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action.`;
@@ -136,35 +133,15 @@ const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se fer
 const GDPR_NOTICE = `Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
 
 /**
- * The explicit French feedback of each refusal of the server (ticket #18),
- * the two window bounds being refused apart since the window gained its
- * opening bound.
+ * One alert the modal renders: its class and its (single) French sentence.
+ * There is exactly ONE mapping per DOM spot — `windowBoundAlert` above the
+ * form, `outcomeAlerts` inside it — and no date quoted here leaves the
+ * `formatActionDateLabel` derivation of `edition.ts`.
  */
-const OUTCOME_ALERTS: Readonly<
-  Partial<Record<ModalOutcome, { readonly className: string; readonly message: string }>>
-> = {
-  taken: {
-    className: 'alert alert-warning mt-4 text-sm',
-    message:
-      "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
-  },
-  invalid: {
-    className: 'alert alert-error mt-4 text-sm',
-    message: "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
-  },
-  'not-open': {
-    className: 'alert alert-warning mt-4 text-sm',
-    message: NOT_OPEN_YET_MESSAGE,
-  },
-  closed: {
-    className: 'alert alert-warning mt-4 text-sm',
-    message: CLOSED_WINDOW_MESSAGE,
-  },
-  error: {
-    className: 'alert alert-error mt-4 text-sm',
-    message: 'Une erreur est survenue : réessayez dans quelques instants.',
-  },
-};
+interface ModalAlert {
+  readonly className: string;
+  readonly message: string;
+}
 
 /** The inline French feedback of each identity field error. */
 const FIELD_ERROR_MESSAGES: Readonly<Record<IdentityFieldError, string>> = {
@@ -172,6 +149,73 @@ const FIELD_ERROR_MESSAGES: Readonly<Record<IdentityFieldError, string>> = {
   'too-short': `${IDENTITY_FIELD_MIN_LENGTH} caractères minimum.`,
   'too-long': `${IDENTITY_FIELD_MAX_LENGTH} caractères maximum.`,
 };
+
+/**
+ * The explicit French feedback of each refusal of the server (ticket #18),
+ * mapped by outcome — the two window bounds refused apart since the window
+ * gained its opening bound. Built per render from the Édition in play: the
+ * `not-open` bound announces the opening date of THAT Édition (the loaded
+ * public state's answer, the bundled `CURRENT_EDITION` otherwise — see
+ * `notOpenYetMessage`), the other sentences never change. The created,
+ * submitting and idle outcomes have no refusal alert of their own.
+ */
+function outcomeAlerts(edition: Edition): Readonly<Partial<Record<ModalOutcome, ModalAlert>>> {
+  return {
+    taken: {
+      className: 'alert alert-warning mt-4 text-sm',
+      message:
+        "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
+    },
+    invalid: {
+      className: 'alert alert-error mt-4 text-sm',
+      message:
+        "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
+    },
+    'not-open': {
+      className: 'alert alert-warning mt-4 text-sm',
+      message: notOpenYetMessage(edition),
+    },
+    closed: {
+      className: 'alert alert-warning mt-4 text-sm',
+      message: CLOSED_WINDOW_MESSAGE,
+    },
+    error: {
+      className: 'alert alert-error mt-4 text-sm',
+      message: 'Une erreur est survenue : réessayez dans quelques instants.',
+    },
+  };
+}
+
+/** The warning alert of the pre-submit window bound, above the form. */
+const WINDOW_BOUND_ALERT_CLASS = 'alert alert-warning mt-4 text-sm sm:text-base';
+
+/**
+ * The window-bound warning shown above the form while the window forbids
+ * registering — ONE block for the two bounds (they used to be two
+ * near-duplicated JSX blocks): the not-open-yet bound announces the opening
+ * date in letters, the closed bound notes it is closed. It stands down when
+ * the outcome of the SAME bound (a 400 `not-open`/`closed` answer) already
+ * quotes that sentence inside the form, and never renders on the open
+ * phase.
+ */
+function windowBoundAlert(
+  edition: Edition,
+  outcome: ModalOutcome,
+  windowPhase: RegistrationWindowPhase,
+): ModalAlert | null {
+  switch (windowPhase) {
+    case 'not-open-yet':
+      return outcome === 'not-open'
+        ? null
+        : { className: WINDOW_BOUND_ALERT_CLASS, message: notOpenYetMessage(edition) };
+    case 'open':
+      return null;
+    case 'closed':
+      return outcome === 'closed'
+        ? null
+        : { className: WINDOW_BOUND_ALERT_CLASS, message: CLOSED_WINDOW_MESSAGE };
+  }
+}
 
 interface RegisterBinomeModalProps {
   /** Called when the dialog closes, whatever the way (button, Escape, backdrop). */
@@ -218,6 +262,19 @@ export function RegisterBinomeModal({
 
   const zone = getZone(tour.zoneId);
   /**
+   * The Édition IN PLAY — the one every date quoted here comes from: the
+   * loaded public state's Édition when the server answered (the same source
+   * rule as the home announcement), the bundled `CURRENT_EDITION` otherwise
+   * (loading and fetch-error fallbacks). Derived once, so the opening
+   * announcement, the action-day context, the confirmation and the Google
+   * Calendar link always quote the same Édition.
+   */
+  const edition = status.status === 'success' ? status.state.edition : CURRENT_EDITION;
+  /** The context of the action day, built from that Édition alone. */
+  const actionDateLabel = formatActionDateLabel(edition.actionDate);
+  /** The hours of the action, through the calendar module's own helper. */
+  const actionHours = actionHoursLabel(edition);
+  /**
    * The note-to-take sentence of the confirmation (ticket #36), built as one
    * string: the zone and the Parcours come from the selected tour (never a
    * literal), and the JSX compiler would glue text following an HTML entity
@@ -228,13 +285,12 @@ export function RegisterBinomeModal({
    * The registration window of the Édition, from the ONE rule of the provider
    * (the server's answer when the public state loaded, the local clock
    * otherwise): the client and the server always agree. Both window bounds
-   * disable the form and show their own warning — before the opening bound
-   * the opening date is announced in letters, after the closing bound the
-   * closing message unchanged.
+   * disable the form and warn through the ONE `windowBoundAlert` block —
+   * before the opening bound the opening date is announced in letters, after
+   * the closing bound the closing message unchanged.
    */
   const windowPhase = registrationWindowPhaseOf(status, now);
   const windowNotOpen = windowPhase !== 'open';
-  const notOpenYet = windowPhase === 'not-open-yet';
   const { errors, values: trimmed } = checkIdentityFields(values);
   /** The submit is enabled as soon as the form is complete and valid. */
   const complete = Object.keys(errors).length === 0 && engaged;
@@ -264,7 +320,14 @@ export function RegisterBinomeModal({
     }
   };
 
-  const outcomeAlert = OUTCOME_ALERTS[outcome];
+  /**
+   * The alert of the last submit outcome (inside the form), from the SAME
+   * edition-derived registry the pre-form bound warning uses (`null` before
+   * any submission).
+   */
+  const outcomeAlert = outcomeAlerts(edition)[outcome];
+  /** The window-bound warning above the form (`null` on the open phase). */
+  const boundAlert = windowBoundAlert(edition, outcome, windowPhase);
 
   return (
     <dialog className="modal" id={`register_modal_${tour.tourId}`} ref={dialogRef}>
@@ -289,7 +352,7 @@ export function RegisterBinomeModal({
             <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
               <span>
                 <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
-                {ACTION_DATE_LABEL} {ACTION_HOURS_LABEL} au point de rendez-vous ci-dessous.
+                {actionDateLabel} {actionHours} au point de rendez-vous ci-dessous.
               </span>
             </div>
             {/*
@@ -343,7 +406,7 @@ export function RegisterBinomeModal({
                 <a
                   className="btn btn-primary max-sm:btn-sm sm:btn-md"
                   href={tourGoogleCalendarUrl({
-                    edition: CURRENT_EDITION,
+                    edition,
                     pointDeRendezVous: zone.meetingPoint.name,
                     tourId: tour.tourId,
                     zoneId: tour.zoneId,
@@ -371,7 +434,7 @@ export function RegisterBinomeModal({
                   strokeWidth={1.5}
                   className="text-secondary mt-0.5 size-5 shrink-0"
                 />
-                <span>Jour de l&apos;action&nbsp;: {ACTION_DATE_LABEL}</span>
+                <span>Jour de l&apos;action&nbsp;: {actionDateLabel}</span>
               </div>
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
@@ -383,14 +446,12 @@ export function RegisterBinomeModal({
               </div>
             </div>
 
-            {notOpenYet && outcome !== 'not-open' ? (
-              <div className="alert alert-warning mt-4 text-sm sm:text-base" role="alert">
-                {NOT_OPEN_YET_MESSAGE}
-              </div>
-            ) : null}
-            {windowPhase === 'closed' && outcome !== 'closed' ? (
-              <div className="alert alert-warning mt-4 text-sm sm:text-base" role="alert">
-                {CLOSED_WINDOW_MESSAGE}
+            {/* The window-bound warning, resolved through the ONE helper
+                for both bounds; it stands down when the outcome of the same
+                bound already quotes the sentence inside the form. */}
+            {boundAlert ? (
+              <div className={boundAlert.className} role="alert">
+                {boundAlert.message}
               </div>
             ) : null}
 

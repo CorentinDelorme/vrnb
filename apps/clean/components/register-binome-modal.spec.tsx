@@ -446,6 +446,30 @@ describe('RegisterBinomeModal not-open-yet window', () => {
     expect(submitButton().disabled).toBe(true);
   });
 
+  it('should announce the opening date of the Édition the public state carries', () => {
+    // A loaded state whose Édition differs from the bundled one: the
+    // announcement quotes the date THE STATE ANSWERED (the same source rule
+    // as the home announcement), never the bundled fallback.
+    const laterEdition = {
+      actionDate: '2028-06-18',
+      actionEndTime: '17:00',
+      actionStartTime: '09:00',
+      inscriptionsOpenDate: '2028-04-03',
+      year: 2028,
+    } as const;
+    status.current = {
+      state: { edition: laterEdition, inscriptions: [], registrationOpen: false },
+      status: 'success',
+    };
+    renderModalAt(new Date('2028-03-15T09:00:00Z'));
+
+    expect(screen.getByRole('alert').textContent).toContain(
+      'Les inscriptions ouvriront le lundi 3 avril 2028.',
+    );
+    expect(screen.getByRole('alert').textContent).not.toContain('2027');
+    expect(submitButton().disabled).toBe(true);
+  });
+
   it('should never post a registration while the window is not open yet', () => {
     renderModalAt(BEFORE_OPENING_CLOCK);
     fillBinome();

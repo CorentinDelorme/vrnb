@@ -20,19 +20,6 @@ import { expect, test } from '@playwright/test';
  * no badge and no register button before the window opens.
  */
 
-/** Public state shape returned by the (mocked) API. */
-const COVERED_V1 = {
-  edition: {
-    actionDate: '2027-02-14',
-    actionEndTime: '12:00',
-    actionStartTime: '09:00',
-    inscriptionsOpenDate: '2027-01-04',
-    year: 2027,
-  },
-  inscriptions: [{ tourId: 'V1', zoneId: 'bruz-sud' }],
-  registrationOpen: true,
-} as const;
-
 /** Édition echoed in every (mocked) state. */
 const EDITION = {
   actionDate: '2027-02-14',
@@ -40,6 +27,13 @@ const EDITION = {
   actionStartTime: '09:00',
   inscriptionsOpenDate: '2027-01-04',
   year: 2027,
+} as const;
+
+/** Public state shape returned by the (mocked) API. */
+const COVERED_V1 = {
+  edition: EDITION,
+  inscriptions: [{ tourId: 'V1', zoneId: 'bruz-sud' }],
+  registrationOpen: true,
 } as const;
 
 /** Public state of an open window covering nothing. */

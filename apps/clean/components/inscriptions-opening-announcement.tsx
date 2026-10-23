@@ -56,6 +56,9 @@ export function InscriptionsOpeningAnnouncement({
   if (status.status !== 'success' || registrationWindowPhaseOf(status, now) !== 'not-open-yet') {
     return null;
   }
+  // The two sentence sites are tensed apart on purpose — here « ouvrent »
+  // (present, spec-fixed), the modal's « ouvriront » — and both take the
+  // date from the ONE `formatActionDateLabel` derivation of `edition.ts`.
   return (
     <div className="alert alert-warning mb-4 sm:mb-8 text-sm sm:text-base" role="alert">
       {`Les inscriptions ouvrent le ${formatActionDateLabel(edition.inscriptionsOpenDate)}.`}

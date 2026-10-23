@@ -10,6 +10,7 @@
 
 import type { TourRef } from '../tours-queries';
 import type { Edition } from './edition';
+import { isCalendarDate, isWallTime } from './edition';
 import type { InscriptionsPublicState } from './public-state';
 import type { BinomeRegistration, RegistrationRejection } from './validation';
 import { isRegistrationRejection } from './validation';
@@ -69,9 +70,10 @@ export function parseInscriptionsState(payload: unknown): InscriptionsPublicStat
  * Narrow the Édition field of the public state: the year must be a number
  * and the whole registration window must be present with plausible formats —
  * the `actionDate`/`inscriptionsOpenDate` calendar dates as `YYYY-MM-DD` and
- * the action hours as `HH:MM`. A partial or malformed Édition degrades the
- * whole state to the error outcome, so the UI falls back on the bundled
- * `CURRENT_EDITION` instead of guessing from half of a config.
+ * the action hours as strict `HH:MM` wall times (the shared validators of
+ * `edition.ts`). A partial or malformed Édition degrades the whole state to
+ * the error outcome, so the UI falls back on the bundled `CURRENT_EDITION`
+ * instead of guessing from half of a config.
  */
 function isEdition(value: unknown): value is Edition {
   if (value === null || typeof value !== 'object') return false;
@@ -85,20 +87,13 @@ function isEdition(value: unknown): value is Edition {
   return (
     typeof actionDate === 'string' &&
     typeof year === 'number' &&
+    typeof inscriptionsOpenDate === 'string' &&
     isCalendarDate(inscriptionsOpenDate) &&
+    typeof actionStartTime === 'string' &&
     isWallTime(actionStartTime) &&
+    typeof actionEndTime === 'string' &&
     isWallTime(actionEndTime)
   );
-}
-
-/** `YYYY-MM-DD` calendar-date shape of the Édition date fields. */
-function isCalendarDate(value: unknown): value is string {
-  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-/** `HH:MM` wall-time shape of the Édition action hours. */
-function isWallTime(value: unknown): value is string {
-  return typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
 }
 
 /** Narrow one (zone, Parcours) row of the public state. */

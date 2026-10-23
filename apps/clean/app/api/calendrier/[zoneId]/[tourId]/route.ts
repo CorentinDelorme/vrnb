@@ -5,9 +5,7 @@ import { findParcours } from '../../../../../src/app/tours-queries';
 import { getZone } from '../../../../../src/app/zones';
 
 /** Headers of a served calendar file (RFC 5545, UTF-8). */
-const ICS_HEADERS: Readonly<{ readonly 'content-type': string }> = {
-  'content-type': 'text/calendar; charset=utf-8',
-};
+const ICS_HEADERS = { 'content-type': 'text/calendar; charset=utf-8' } as const;
 
 /**
  * `/api/calendrier/<zone>/<parcours>` — the calendar file (.ics) of a
