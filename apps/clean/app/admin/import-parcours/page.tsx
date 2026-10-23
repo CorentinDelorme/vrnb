@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { ImportParcoursForm } from '../../../components/import-parcours-form';
+import { HOME_TITLE } from '../../../lib/route-meta';
 
 /**
  * `/admin/import-parcours` — Parcours import page (ticket #43).
@@ -12,7 +13,7 @@ import { ImportParcoursForm } from '../../../components/import-parcours-form';
  */
 
 export function generateMetadata(): Metadata {
-  return { title: 'Import de parcours' };
+  return { title: `${HOME_TITLE} - Import de parcours` };
 }
 
 export default function ImportParcoursPage() {
