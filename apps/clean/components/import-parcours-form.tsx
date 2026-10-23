@@ -15,16 +15,64 @@ const PRACTICE_TYPES: readonly { readonly label: string; readonly value: Practic
 /** URL of the Parcours import API route (ticket #42 / #43). */
 const IMPORT_API_URL = '/api/import-parcours';
 
+/** Name of a generation script as exposed in the API response logs. */
+type ScriptName = 'generate:routes' | 'generate:tours' | 'generate:pdfs';
+
+/** Captured stdout/stderr of a single generation script run. */
+interface ScriptLog {
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+/** Parsed answer of `POST /api/import-parcours` (ticket #45). */
+interface ImportResponse {
+  readonly ids: readonly string[];
+  readonly logs: { readonly [name in ScriptName]: ScriptLog };
+}
+
+/** Friendly French label of each generation script, displayed in the logs UI. */
+const SCRIPT_LABELS: Readonly<Record<ScriptName, string>> = {
+  'generate:routes': 'Tronçons de parcours (start/end)',
+  'generate:tours': 'Parcours et catalogue',
+  'generate:pdfs': 'Fiches PDF',
+};
+
+/** Generation scripts in the order the API runs them. */
+const SCRIPTS: readonly ScriptName[] = ['generate:routes', 'generate:tours', 'generate:pdfs'];
+
+function isScriptLog(value: unknown): value is ScriptLog {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as ScriptLog).stdout === 'string' &&
+    typeof (value as ScriptLog).stderr === 'string'
+  );
+}
+
+function isImportResponse(value: unknown): value is ImportResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const { ids, logs } = value as ImportResponse;
+  return (
+    Array.isArray(ids) &&
+    ids.every((id): id is string => typeof id === 'string') &&
+    typeof logs === 'object' &&
+    logs !== null &&
+    Object.values(logs).every(isScriptLog)
+  );
+}
+
 export function ImportParcoursForm() {
   const [zoneId, setZoneId] = useState<string>(ZONES[0]?.id ?? '');
   const [practiceType, setPracticeType] = useState<PracticeType>('P');
-  const [apiResponse, setApiResponse] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<ImportResponse | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
 
   async function handleImport(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
-    setApiResponse(null);
+    setImportResult(null);
     setApiError(null);
     setImporting(true);
 
@@ -32,8 +80,23 @@ export function ImportParcoursForm() {
 
     try {
       const response = await fetch(IMPORT_API_URL, { method: 'POST', body: formData });
-      const body = await response.text();
-      setApiResponse(body);
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const message =
+          body && typeof body === 'object' && 'error' in body
+            ? String(body.error)
+            : `Échec de l&apos;importation (HTTP ${response.status})`;
+        setApiError(message);
+        return;
+      }
+
+      if (!isImportResponse(body)) {
+        setApiError('Réponse de l’API inattendue');
+        return;
+      }
+
+      setImportResult(body);
     } catch (error) {
       setApiError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -99,11 +162,62 @@ export function ImportParcoursForm() {
         {importing ? 'Importation…' : 'Importer'}
       </button>
 
-      {apiResponse !== null && (
-        <div className="card bg-base-100 border border-base-300 p-4">
-          <h3 className="text-sm font-semibold">Réponse de l&apos;API</h3>
-          <pre className="text-xs break-all">{apiResponse}</pre>
-        </div>
+      {importResult !== null && (
+        <>
+          <div className="card bg-base-100 border border-base-300 p-4">
+            <h3 className="text-sm font-semibold">Résultat de l&apos;importation</h3>
+            <p className="text-sm">
+              {importResult.ids.length} fichier{importResult.ids.length > 1 ? 's' : ''} importé
+              {importResult.ids.length > 1 ? 's' : ''} — IDs attribués :{' '}
+              {importResult.ids.join(', ')}
+            </p>
+            <ul className="list list-disc list-inside mt-3 space-y-1 text-sm">
+              {importResult.ids.map((id) => (
+                <li key={id} className="flex items-center gap-2">
+                  <span className="badge badge-success badge-sm">Succès</span>
+                  {id}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="card bg-base-100 border border-base-300 p-4 mt-4">
+            <h3 className="text-sm font-semibold mb-3">Logs des scripts de génération</h3>
+            {SCRIPTS.map((script) => {
+              const log = importResult.logs[script];
+              return (
+                <details
+                  key={script}
+                  className="collapse collapse-arrow border-b border-base-300 last:border-b-0"
+                  aria-label={`Logs du script ${script}`}
+                >
+                  <summary className="collapse-title text-sm font-semibold">
+                    {SCRIPT_LABELS[script]}
+                  </summary>
+                  <div className="collapse-content p-3 text-xs">
+                    {log.stdout !== '' && (
+                      <>
+                        <div className="font-mono mb-1">stdout</div>
+                        <pre className="font-mono whitespace-pre-wrap break-all mb-2">
+                          {log.stdout}
+                        </pre>
+                      </>
+                    )}
+                    {log.stderr !== '' && (
+                      <>
+                        <div className="font-mono mb-1">stderr</div>
+                        <pre className="font-mono whitespace-pre-wrap break-all">{log.stderr}</pre>
+                      </>
+                    )}
+                    {log.stdout === '' && log.stderr === '' && (
+                      <p className="text-xs">Aucune sortie de ce script.</p>
+                    )}
+                  </div>
+                </details>
+              );
+            })}
+          </div>
+        </>
       )}
 
       {apiError !== null && (
