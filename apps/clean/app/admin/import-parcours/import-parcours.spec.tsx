@@ -88,9 +88,9 @@ describe('ImportParcoursForm', () => {
       json: async () => ({
         ids: ['V16', 'V17'],
         logs: {
-          'generate:routes': { stdout: '', stderr: '' },
-          'generate:tours': { stdout: '', stderr: '' },
-          'generate:pdfs': { stdout: '', stderr: '' },
+          'generate:routes': { stdout: '', stderr: '', ok: true },
+          'generate:tours': { stdout: '', stderr: '', ok: true },
+          'generate:pdfs': { stdout: '', stderr: '', ok: true },
         },
       }),
     });
@@ -103,15 +103,15 @@ describe('ImportParcoursForm', () => {
     await screen.findByText('V17');
   });
 
-  it('marks every assigned Parcours as a success in the summary', async () => {
+  it('marks every assigned Parcours as a success when all scripts succeeded', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
         ids: ['P14'],
         logs: {
-          'generate:routes': { stdout: '', stderr: '' },
-          'generate:tours': { stdout: '', stderr: '' },
-          'generate:pdfs': { stdout: '', stderr: '' },
+          'generate:routes': { stdout: '', stderr: '', ok: true },
+          'generate:tours': { stdout: '', stderr: '', ok: true },
+          'generate:pdfs': { stdout: '', stderr: '', ok: true },
         },
       }),
     });
@@ -124,6 +124,27 @@ describe('ImportParcoursForm', () => {
     expect(successBadge.closest('li')?.textContent).toContain('P14');
   });
 
+  it('marks every assigned Parcours as a failure when a generation script failed', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ids: ['V16'],
+        logs: {
+          'generate:routes': { stdout: '', stderr: 'échec du routage', ok: false },
+          'generate:tours': { stdout: '', stderr: '', ok: false },
+          'generate:pdfs': { stdout: '', stderr: '', ok: false },
+        },
+      }),
+    });
+    render(<ImportParcoursForm />);
+    const fileInput = screen.getByLabelText('Fichiers GPX') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [GPX_FILE] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Importer' }));
+    await screen.findByText('1 fichier importé — IDs attribués : V16');
+    const failureBadge = screen.getByText('Échec');
+    expect(failureBadge.closest('li')?.textContent).toContain('V16');
+  });
+
   it('displays collapsible logs per generation script after import', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -133,9 +154,10 @@ describe('ImportParcoursForm', () => {
           'generate:routes': {
             stdout: 'routage terminé\n[perf] durée totale : 1,2 s',
             stderr: '',
+            ok: true,
           },
-          'generate:tours': { stdout: '', stderr: 'attention : fichier manquant' },
-          'generate:pdfs': { stdout: 'PDF généré avec succès', stderr: '' },
+          'generate:tours': { stdout: '', stderr: 'attention : fichier manquant', ok: true },
+          'generate:pdfs': { stdout: 'PDF généré avec succès', stderr: '', ok: true },
         },
       }),
     });

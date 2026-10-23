@@ -3,65 +3,21 @@
 import { useState } from 'react';
 
 import { ZONES } from '../src/app/zones';
+import {
+  ImportResponse,
+  PracticeType,
+  SCRIPT_LABELS,
+  SCRIPTS,
+  isImportResponse,
+} from '../lib/import-parcours';
 
-/** `P` = à pied, `V` = à vélo (see GLOSSARY: Type de parcours). */
-type PracticeType = 'P' | 'V';
+/** URL of the Parcours import API route (ticket #42 / #43). */
+const IMPORT_API_URL = '/api/import-parcours';
 
 const PRACTICE_TYPES: readonly { readonly label: string; readonly value: PracticeType }[] = [
   { label: 'À pied', value: 'P' },
   { label: 'À vélo', value: 'V' },
 ];
-
-/** URL of the Parcours import API route (ticket #42 / #43). */
-const IMPORT_API_URL = '/api/import-parcours';
-
-/** Name of a generation script as exposed in the API response logs. */
-type ScriptName = 'generate:routes' | 'generate:tours' | 'generate:pdfs';
-
-/** Captured stdout/stderr of a single generation script run. */
-interface ScriptLog {
-  readonly stdout: string;
-  readonly stderr: string;
-}
-
-/** Parsed answer of `POST /api/import-parcours` (ticket #45). */
-interface ImportResponse {
-  readonly ids: readonly string[];
-  readonly logs: { readonly [name in ScriptName]: ScriptLog };
-}
-
-/** Friendly French label of each generation script, displayed in the logs UI. */
-const SCRIPT_LABELS: Readonly<Record<ScriptName, string>> = {
-  'generate:routes': 'Tronçons de parcours (start/end)',
-  'generate:tours': 'Parcours et catalogue',
-  'generate:pdfs': 'Fiches PDF',
-};
-
-/** Generation scripts in the order the API runs them. */
-const SCRIPTS: readonly ScriptName[] = ['generate:routes', 'generate:tours', 'generate:pdfs'];
-
-function isScriptLog(value: unknown): value is ScriptLog {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    typeof (value as ScriptLog).stdout === 'string' &&
-    typeof (value as ScriptLog).stderr === 'string'
-  );
-}
-
-function isImportResponse(value: unknown): value is ImportResponse {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-  const { ids, logs } = value as ImportResponse;
-  return (
-    Array.isArray(ids) &&
-    ids.every((id): id is string => typeof id === 'string') &&
-    typeof logs === 'object' &&
-    logs !== null &&
-    Object.values(logs).every(isScriptLog)
-  );
-}
 
 export function ImportParcoursForm() {
   const [zoneId, setZoneId] = useState<string>(ZONES[0]?.id ?? '');
@@ -172,12 +128,17 @@ export function ImportParcoursForm() {
               {importResult.ids.join(', ')}
             </p>
             <ul className="list list-disc list-inside mt-3 space-y-1 text-sm">
-              {importResult.ids.map((id) => (
-                <li key={id} className="flex items-center gap-2">
-                  <span className="badge badge-success badge-sm">Succès</span>
-                  {id}
-                </li>
-              ))}
+              {importResult.ids.map((id) => {
+                const allOk = Object.values(importResult.logs).every((log) => log.ok);
+                return (
+                  <li key={id} className="flex items-center gap-2">
+                    <span className={`badge badge-sm ${allOk ? 'badge-success' : 'badge-error'}`}>
+                      {allOk ? 'Succès' : 'Échec'}
+                    </span>
+                    {id}
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -221,8 +182,8 @@ export function ImportParcoursForm() {
       )}
 
       {apiError !== null && (
-        <div className="card bg-base-100 border border-red-500 p-4">
-          <h3 className="text-sm font-semibold text-red-700">Erreur</h3>
+        <div className="card bg-base-100 border border-base-300 p-4">
+          <h3 className="text-sm font-semibold">Erreur</h3>
           <pre className="text-xs break-all">{apiError}</pre>
         </div>
       )}

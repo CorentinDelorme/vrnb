@@ -42,13 +42,9 @@ function postRequest(formData: FormData): Request {
   return stubRequest(formData);
 }
 
-/** Calls `POST` and converts a `notFound()` throw into a 404 Response, as Next.js does. */
+/** Calls `POST` and returns its `Response` (the route answers 404 directly). */
 async function callPost(request: Request): Promise<Response> {
-  try {
-    return await POST(request);
-  } catch {
-    return new Response(null, { status: 404 });
-  }
+  return await POST(request);
 }
 
 function gpxFile(content: string): File {
@@ -305,9 +301,21 @@ describe('POST /api/import-parcours', () => {
     expect(await response.json()).toEqual({
       ids: ['V16'],
       logs: {
-        'generate:routes': { stdout: 'stdout-generate:routes', stderr: 'stderr-generate:routes' },
-        'generate:tours': { stdout: 'stdout-generate:tours', stderr: 'stderr-generate:tours' },
-        'generate:pdfs': { stdout: 'stdout-generate:pdfs', stderr: 'stderr-generate:pdfs' },
+        'generate:routes': {
+          stdout: 'stdout-generate:routes',
+          stderr: 'stderr-generate:routes',
+          ok: true,
+        },
+        'generate:tours': {
+          stdout: 'stdout-generate:tours',
+          stderr: 'stderr-generate:tours',
+          ok: true,
+        },
+        'generate:pdfs': {
+          stdout: 'stdout-generate:pdfs',
+          stderr: 'stderr-generate:pdfs',
+          ok: true,
+        },
       },
     });
   });

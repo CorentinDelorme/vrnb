@@ -15,7 +15,7 @@ export function generateMetadata(): Metadata {
   return { title: 'Import de parcours' };
 }
 
-export default function ImportParcoursPage() {
+export function ImportParcoursPage() {
   if (process.env.NODE_ENV !== 'development') {
     notFound();
   }

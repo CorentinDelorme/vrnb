@@ -1,26 +1,27 @@
 import { spawnSync } from 'child_process';
 import { mkdir, readdir, writeFile } from 'fs/promises';
-import { notFound } from 'next/navigation';
 import { join } from 'path';
 
 import { toursData } from '../../../src/app/tours-data';
+import {
+  GenerationLogs,
+  PracticeType,
+  ScriptLog,
+} from '../../../lib/import-parcours';
 
 /**
  * `POST /api/import-parcours` — Parcours import API (tickets #42, #43, #44).
  *
  * Protected by `NODE_ENV === 'development'`: in any other environment the route
- * answers 404 via `notFound()`. In development it accepts a `FormData` carrying
+ * answers 404 via a `Response`. In development it accepts a `FormData` carrying
  * `zoneId`, `practiceType` ('P' | 'V') and `files` (multiple GPX files),
  * attributes each file a Parcours id (`<lettre><numero>`, e.g. `V16`), writes
  * the GPX trace to `public/gpx/<zone>/<id>/<id>.gpx` and answers `200` with
- * the list of assigned ids `{ ids: [...] }`.
+ * the list of assigned ids `{ ids: [...] }` and the generation logs.
  */
 export async function POST(request: Request): Promise<Response> {
   return handleImportParcours(request);
 }
-
-/** A practice type chosen by the user on the import form. */
-type PracticeType = 'P' | 'V';
 
 const GPX_ROOT = join(process.cwd(), 'public/gpx');
 
@@ -40,20 +41,6 @@ function isPracticeType(value: unknown): value is PracticeType {
   return value === 'P' || value === 'V';
 }
 
-/** Name of a generation script as exposed in the API response logs. */
-type ScriptName = 'generate:routes' | 'generate:tours' | 'generate:pdfs';
-
-/** Captured stdout/stderr of a single generation script run. */
-interface ScriptLog {
-  readonly stdout: string;
-  readonly stderr: string;
-}
-
-/** The full log payload of the import: one entry per generation script. */
-type GenerationLogs = {
-  readonly [name in ScriptName]: ScriptLog;
-};
-
 /**
  * Launch one generation script synchronously (`bun tsx scripts/<file>
  * --zone=<zone> --tour=<ids>`) and capture its stdout and stderr (the
@@ -66,7 +53,7 @@ function runGenerationScript(file: string, zoneId: string, tourIds: string[]): S
     ['tsx', join(scriptsRoot, file), `--zone=${zoneId}`, `--tour=${tourIds.join(',')}`],
     { cwd: process.cwd(), encoding: 'utf8' },
   );
-  return { stdout: result.stdout ?? '', stderr: result.stderr ?? '' };
+  return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', ok: result.status === 0 };
 }
 
 /**
@@ -122,7 +109,7 @@ async function takenNumbers(zoneId: string, practiceType: PracticeType): Promise
 /** Pure handler over the incoming request. */
 async function handleImportParcours(request: Request): Promise<Response> {
   if (process.env.NODE_ENV !== 'development') {
-    notFound();
+    return new Response(null, { status: 404 });
   }
 
   const formData = await request.formData();
