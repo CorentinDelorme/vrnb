@@ -160,14 +160,14 @@ Route: `/`
 | `should list all 13 walking tours (P1–P13)`                  | `goto('/')`                 | 13 tour rows under Bruz Sud walking section, names P1 through P13 (Bruz Ker Lann adds a second walking section) |
 | `should display distance in km for V1 (1,1 km)`              | `goto('/')`                 | V1 row contains text "1,1 km nettoyage · 4,2 km total" (both distances, French format)                          |
 | `should display distance in meters for tours under 1km`      | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m nettoyage · 2,5 km total"                                                     |
-| `should have play button on each tour row`                   | `goto('/')`                 | 49 buttons with `aria-label="Lancer le parcours"`                                                               |
+| `should have play button on each tour row`                   | `goto('/')`                 | 47 buttons with `aria-label="Lancer le parcours"`                                                               |
 
 #### Filtering by type (ticket #51)
 
 | Test name                                                        | Steps                        | Expected                                                                                           |
 | ---------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
 | `the filter bar sits above the zones with "Tous" checked`        | `goto('/')`                  | `section[aria-label="Filtres de parcours"]` visible; "Tous" checked, "À pied" / "À vélo" unchecked |
-| `filtering to "À vélo" hides walking rows, then "Tous" restores` | `goto('/')` → click "À vélo" | Walking heading gone, 34 play buttons, Bruz Sud badge "15 parcours"; click "Tous" → 49 buttons     |
+| `filtering to "À vélo" hides walking rows, then "Tous" restores` | `goto('/')` → click "À vélo" | Walking heading gone, 34 play buttons, Bruz Sud badge "15 parcours"; click "Tous" → 47 buttons     |
 
 | `should show "Voir tous les parcours" link for bike tours` | `goto('/')` (desktop) | Link visible in V section, href `/tours/bruz-sud/V` |
 | `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop) | Link visible in P section, href `/tours/bruz-sud/P` |
@@ -176,8 +176,8 @@ Route: `/`
 
 | Test name                                                                      | Steps                           | Expected                                                                                                                                 |
 | ------------------------------------------------------------------------------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `the two distance sliders sit in the bar, "tout" by default, all rows visible` | `goto('/')`                     | 4 slider handles (`role="slider"`), "Distance de nettoyage" / "Distance totale" present, two "tout" labels, 49 play buttons              |
-| `moving the cleaning-distance min bound filters rows; returning restores them` | `goto('/')` → ArrowRight on min | Min bound 0,5 → 1 km, one "tout" left, play buttons drop below 49 but stay above 0; ArrowLeft → 0,5 km, two "tout", 49 play buttons back |
+| `the two distance sliders sit in the bar, "tout" by default, all rows visible` | `goto('/')`                     | 4 slider handles (`role="slider"`), "Distance de nettoyage" / "Distance totale" present, two "tout" labels, 47 play buttons              |
+| `moving the cleaning-distance min bound filters rows; returning restores them` | `goto('/')` → ArrowRight on min | Min bound 0,5 → 1 km, one "tout" left, play buttons drop below 47 but stay above 0; ArrowLeft → 0,5 km, two "tout", 47 play buttons back |
 
 #### Counter and empty state (ticket #53)
 
@@ -187,7 +187,7 @@ Route: `/`
 | `shows a plural counter when filtering to "À vélo"`                      | `goto('/')` → click "À vélo"                                                      | "34 parcours affichés" visible; click "Tous" → counter gone                                                      |
 | `shows a singular counter when exactly one tour matches`                 | `goto('/')` → click "À vélo" → 7× ArrowRight on cleaning min                      | "1 parcours affiché" visible                                                                                     |
 | `shows the empty state message and a reset button when zero tours match` | `goto('/')` → click "À pied" → 7× ArrowRight on cleaning min                      | "Aucun parcours ne correspond à ces filtres" visible, "Réinitialiser les filtres" button visible, 0 play buttons |
-| `resets every filter when clicking "Réinitialiser les filtres"`          | `goto('/')` → click "À pied" → 7× ArrowRight on cleaning min → click reset button | Back to "Tous" checked, two "tout" labels, 49 play buttons, no counter, no empty message                         |
+| `resets every filter when clicking "Réinitialiser les filtres"`          | `goto('/')` → click "À pied" → 7× ArrowRight on cleaning min → click reset button | Back to "Tous" checked, two "tout" labels, 47 play buttons, no counter, no empty message                         |
 
 #### Saved tour banner
 
@@ -233,7 +233,7 @@ inscriptions opening date and confirmation calendar links)
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `should badge the covered Parcours after hydration, and only it` | Mock `GET /api/inscriptions` covering `bruz-sud`/`V1`, `goto('/')`              | Exactly one `.badge-success` "Binôme inscrit", inside the V1 row of the Bruz Sud bike section; nothing on V2 |
 | `should leave every row unbadged when the store covers nothing`  | Mock the API with an empty `inscriptions` list, `goto('/')`                     | No "Binôme inscrit" badge                                                                                    |
-| `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, no register button (the coverage is unknown), all 49 play buttons intact          |
+| `should degrade silently when the API fails`                     | Mock the API with HTTP 502 `{ error: 'inscriptions-unavailable' }`, `goto('/')` | No "Binôme inscrit" badge, no register button (the coverage is unknown), all 47 play buttons intact          |
 
 ### `describe('Registration opening announcement')` (ticket #34)
 
@@ -292,8 +292,8 @@ button is shown, so the site never offers a registration it cannot honor.
 
 | Test name                                                                | Steps                                                                                                                        | Expected                                                                                              |
 | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `should hide the register button once the window is closed`              | Fix the clock 2 days before the action date, mock GET with `registrationOpen: false`, `goto('/')`                            | No register button on the rows (the window closes 3 days before the action); the 49 play buttons stay |
-| `should hide the register button when the public state cannot be loaded` | Fix the clock after the closure, mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`                     | No register button, no badge; the 49 play buttons stay                                                |
+| `should hide the register button once the window is closed`              | Fix the clock 2 days before the action date, mock GET with `registrationOpen: false`, `goto('/')`                            | No register button on the rows (the window closes 3 days before the action); the 47 play buttons stay |
+| `should hide the register button when the public state cannot be loaded` | Fix the clock after the closure, mock GET with HTTP 502 (the public state cannot be loaded), `goto('/')`                     | No register button, no badge; the 47 play buttons stay                                                |
 | `should offer the register button on the last registration day`          | Fix the clock on the last registration day (2027-02-11, 3 days before the action), mock GET with the open state, `goto('/')` | The register button of V2 is visible                                                                  |
 
 ### `describe('Anti-bot honeypot and GDPR notice')` (ticket #18)
@@ -502,7 +502,7 @@ Uses `test.use({ viewport: { width: 390, height: 844 } })` (iPhone 12 dimensions
 | Test name                                              | Steps                                             | Expected                                           |
 | ------------------------------------------------------ | ------------------------------------------------- | -------------------------------------------------- |
 | `should show "Voir tous les parcours" links on mobile` | `goto('/')`                                       | Links visible (full-width button under the header) |
-| `should still display all tour rows on mobile`         | `goto('/')`                                       | 49 play buttons present                            |
+| `should still display all tour rows on mobile`         | `goto('/')`                                       | 47 play buttons present                            |
 | `should render tour page with functional dock buttons` | `goto('/tour/bruz-sud/V1')`                       | "Précédent" and "Suivant" visible                  |
 | `should allow step navigation on mobile`               | Full step flow → "Terminer"                       | Finish modal opens                                 |
 | `should render map on mobile tours page`               | `goto('/tours/bruz-sud/V')`                       | `div#map` visible                                  |

@@ -70,11 +70,11 @@ describe('ZoneList', () => {
     expect(zone('Bruz Ker Lann')).toBeDefined();
 
     expect(screen.getAllByText('Parcours à vélo')).toHaveLength(3);
-    expect(screen.getAllByText('Parcours à pied')).toHaveLength(2);
+    expect(screen.getAllByText('Parcours à pied')).toHaveLength(1);
 
     expect(summaryText('Bruz Sud')).toContain('28 parcours');
     expect(summaryText('Bruz Vau Gaillard')).toContain('6 parcours');
-    expect(summaryText('Bruz Ker Lann')).toContain('15 parcours');
+    expect(summaryText('Bruz Ker Lann')).toContain('13 parcours');
   });
 
   it('hides the walking sections and keeps the bike sections when filtering to "À vélo"', () => {
@@ -102,15 +102,14 @@ describe('ZoneList', () => {
     fireEvent.click(inputFor('À pied'));
     expect(inputFor('À pied').checked).toBe(true);
 
-    // Bruz Sud (13 walking) and Bruz Ker Lann (2 walking) stay; Bruz Vau Gaillard (no walking tour) vanishes.
+    // Bruz Sud (13 walking) stays; Bruz Ker Lann now has no walking tour (P200/P201 removed) and vanishes, like Bruz Vau Gaillard.
     expect(zone('Bruz Sud')).toBeDefined();
     expect(summaryText('Bruz Sud')).toContain('13 parcours');
-    expect(zone('Bruz Ker Lann')).toBeDefined();
-    expect(summaryText('Bruz Ker Lann')).toContain('2 parcours');
     expect(screen.queryByLabelText('Zone Bruz Vau Gaillard')).toBeNull();
+    expect(screen.queryByLabelText('Zone Bruz Ker Lann')).toBeNull();
 
-    // Two walking headings remain (one per remaining zone).
-    expect(screen.getAllByText('Parcours à pied')).toHaveLength(2);
+    // A single walking heading remains (Bruz Sud).
+    expect(screen.getAllByText('Parcours à pied')).toHaveLength(1);
   });
 
   it('comes back to every zone when switching back to "Tous"', () => {
@@ -188,8 +187,8 @@ describe('ZoneList', () => {
     expect(screen.getAllByText('tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
-    // Every zone and all 49 play buttons are back.
+    // Every zone and all 47 play buttons are back.
     expect(zone('Bruz Vau Gaillard')).toBeDefined();
-    expect(screen.getAllByRole('button', { name: /Lancer le parcours/ })).toHaveLength(49);
+    expect(screen.getAllByRole('button', { name: /Lancer le parcours/ })).toHaveLength(47);
   });
 });

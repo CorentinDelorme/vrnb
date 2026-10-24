@@ -114,7 +114,7 @@ describe('Home page', () => {
     expect(screen.getAllByRole('slider')).toHaveLength(4);
     // Both families span their whole axis by default: "tout" label on each.
     expect(screen.getAllByText('tout')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(49);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
   });
 
   it('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async () => {
@@ -124,8 +124,8 @@ describe('Home page', () => {
     const cleaningMin = sliders[0];
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
 
-    // Invariant without filter: every section and all 49 play buttons.
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(49);
+    // Invariant without filter: every section and all 47 play buttons.
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
 
     // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
     cleaningMin.focus();
@@ -133,14 +133,14 @@ describe('Home page', () => {
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('1');
     expect(screen.getAllByText('tout')).toHaveLength(1); // cleaning is no longer "tout"
     const after = screen.getAllByRole('button', { name: 'Lancer le parcours' });
-    expect(after.length).toBeLessThan(49);
+    expect(after.length).toBeLessThan(47);
     expect(after.length).toBeGreaterThan(0);
 
     // Return to the axis extreme: everything comes back.
     fireEvent.keyDown(cleaningMin, { key: 'ArrowLeft' });
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
     expect(screen.getAllByText('tout')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(49);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
   });
 
   it('shows no counter when no filter is active', async () => {
@@ -214,7 +214,7 @@ describe('Home page', () => {
     expect(screen.getAllByText('tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(49);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
   });
 
   it('links each section to its zone map and labels every play button', async () => {

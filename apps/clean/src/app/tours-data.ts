@@ -276,22 +276,6 @@ export const toursData = {
   ],
   pTours: [
     {
-      name: 'P200',
-      distance: 0,
-      startDistance: 0,
-      endDistance: 0,
-      totalDistance: 0,
-      zoneId: 'bruz-ker-lann',
-    },
-    {
-      name: 'P201',
-      distance: 0,
-      startDistance: 0,
-      endDistance: 0,
-      totalDistance: 0,
-      zoneId: 'bruz-ker-lann',
-    },
-    {
       name: 'P1',
       distance: 1.1,
       startDistance: 0.1,

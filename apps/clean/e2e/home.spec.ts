@@ -124,8 +124,8 @@ test.describe('Home page', () => {
     test('should have play button on each tour row', async ({ page }) => {
       await page.goto('/');
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-      // 15 bike + 13 walking (Bruz Sud) + 6 bike (Vau Gaillard) + 13 bike + 2 walking (Ker Lann) = 49 total
-      await expect(playButtons).toHaveCount(49);
+      // 15 bike + 13 walking (Bruz Sud) + 6 bike (Vau Gaillard) + 13 bike (Ker Lann) = 47 total
+      await expect(playButtons).toHaveCount(47);
     });
 
     test('should show "Voir tous les parcours" link for bike tours', async ({ page }) => {
@@ -168,12 +168,12 @@ test.describe('Home page', () => {
     }) => {
       await page.goto('/');
 
-      // Invariant without filter: every section and all 49 play buttons.
+      // Invariant without filter: every section and all 47 play buttons.
       await expect(page.locator('details[aria-label="Zone Bruz Sud"]')).toBeVisible();
       await expect(page.locator('details[aria-label="Zone Bruz Vau Gaillard"]')).toBeVisible();
       await expect(page.locator('details[aria-label="Zone Bruz Ker Lann"]')).toBeVisible();
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        49,
+        47,
       );
       await expect(
         page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
@@ -209,7 +209,7 @@ test.describe('Home page', () => {
       await page.getByRole('radio', { name: 'Tous' }).click();
       await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        49,
+        47,
       );
       await expect(
         page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
@@ -228,7 +228,7 @@ test.describe('Home page', () => {
       await expect(page.locator('[role="slider"]')).toHaveCount(4);
       await expect(page.getByText('tout')).toHaveCount(2);
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        49,
+        47,
       );
     });
 
@@ -241,9 +241,9 @@ test.describe('Home page', () => {
       const cleaningMin = sliders.nth(0);
       await expect(cleaningMin).toHaveAttribute('aria-valuenow', '0.5');
 
-      // Invariant without filter: all 49 play buttons.
+      // Invariant without filter: all 47 play buttons.
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        49,
+        47,
       );
 
       // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
@@ -252,14 +252,14 @@ test.describe('Home page', () => {
       await expect(page.getByText('tout')).toHaveCount(1); // cleaning is no longer "tout"
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
       const remaining = await playButtons.count();
-      expect(remaining).toBeLessThan(49);
+      expect(remaining).toBeLessThan(47);
       expect(remaining).toBeGreaterThan(0);
 
       // Return to the axis extreme: everything comes back.
       await cleaningMin.press('ArrowLeft');
       await expect(cleaningMin).toHaveAttribute('aria-valuenow', '0.5');
       await expect(page.getByText('tout')).toHaveCount(2);
-      await expect(playButtons).toHaveCount(49);
+      await expect(playButtons).toHaveCount(47);
     });
   });
 
@@ -342,7 +342,7 @@ test.describe('Home page', () => {
       await expect(page.getByText(/Aucun parcours/)).not.toBeVisible();
       await expect(page.getByText(/parcours affich/)).not.toBeVisible();
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        49,
+        47,
       );
     });
   });
