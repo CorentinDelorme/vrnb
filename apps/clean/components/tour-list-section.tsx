@@ -5,12 +5,15 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import type * as React from 'react';
 
+import { cn } from '@/components/lib/utils';
 import { formatDistance } from '../src/app/tours-format';
 import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
 import { TourRegisterButton } from './tour-register-button';
+import { Badge } from './ui/badge';
+import { buttonVariants } from './ui/button';
 
 /**
  * Tour list section — port of the legacy Angular `tour-list-section` component
@@ -113,15 +116,16 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               <h2 className="text-secondary text-xl font-bold tracking-wide sm:text-2xl">
                 {title}
               </h2>
-              <span className="badge badge-secondary badge-sm sm:badge-md">
-                {tours.length} parcours
-              </span>
+              <Badge variant="secondary">{tours.length} parcours</Badge>
             </div>
           </div>
 
           <Link
-            className="btn btn-primary btn-sm max-sm:w-full sm:btn-md shrink-0"
             href={`/tours/${zoneId}/${type}`}
+            className={cn(
+              buttonVariants({ variant: 'default', size: 'sm' }),
+              'max-sm:w-full shrink-0',
+            )}
           >
             Voir tous les parcours
           </Link>

@@ -6,10 +6,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Fragment } from 'react';
 
+import { cn } from '@/components/lib/utils';
 import { headerFlags, pageTitle } from '../lib/route-meta';
 import { MenuDrawer } from './menu-drawer';
 import { MenuLinks } from './menu-links';
 import { TourDrawerLinks } from './tour-drawer-links';
+import { buttonVariants } from './ui/button';
 
 /**
  * App header — port of the legacy Angular root template (`app.html`): back
@@ -32,7 +34,11 @@ export function AppHeader() {
           them — and drag the title along — on /manual). */}
       <div className="col-start-1 flex items-center gap-4">
         {flags.showBack ? (
-          <Link className="btn btn-primary btn-sm" href="/" aria-label="Retour à l'accueil">
+          <Link
+            href="/"
+            aria-label="Retour à l'accueil"
+            className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
+          >
             <HugeiconsIcon
               className="text-primary-content"
               icon={ArrowLeftIcon}
