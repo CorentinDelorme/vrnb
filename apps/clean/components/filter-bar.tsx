@@ -73,62 +73,61 @@ export function FilterBar({
       aria-label="Filtres de parcours"
     >
       <div className="card-body">
-        <fieldset className="border-0 p-0 mb-3">
-          <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
-            Type de parcours
-          </legend>
-          <div className="join mt-2">
-            {TYPE_CHOICES.map((choice) => {
-              const active = type === choice.value;
-              return (
-                <label
-                  key={choice.value}
-                  className={`btn btn-sm join-item ${active ? 'btn-active' : ''}`}
-                  title={choice.label}
-                >
-                  <input
-                    type="radio"
-                    name="tour-type"
-                    value={choice.value}
-                    checked={active}
-                    onChange={() => onTypeChange(choice.value)}
-                    className="radio radio-sm"
-                    aria-label={choice.label}
-                  />
-                  {choice.label}
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
+        <div className="flex flex-col sm:flex-row gap-4">
+          <fieldset className="border-0 p-0 mb-3 sm:flex-1">
+            <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
+              Type de parcours
+            </legend>
+            <div className="join mt-2">
+              {TYPE_CHOICES.map((choice) => {
+                const active = type === choice.value;
+                return (
+                  <label
+                    key={choice.value}
+                    className={`btn btn-sm join-item ${active ? 'btn-active' : ''}`}
+                    title={choice.label}
+                  >
+                    <input
+                      type="radio"
+                      name="tour-type"
+                      value={choice.value}
+                      checked={active}
+                      onChange={() => onTypeChange(choice.value)}
+                      // No visible radio circle (design feedback), but keep a
+                      // real size so the input stays clickable (Playwright
+                      // cannot action an opacity:0 / 1x1px element).
+                      className="appearance-none w-5 h-5 bg-transparent border-0 cursor-pointer"
+                      aria-label={choice.label}
+                    />
+                    {choice.label}
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
 
-        <fieldset className="border-0 p-0 mb-3">
-          <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
-            Distance de nettoyage
-          </legend>
-          <DistanceRangeSlider
-            label="Distance de nettoyage"
-            min={0.5}
-            max={4}
-            step={0.5}
-            value={cleaning}
-            onChange={onCleaningChange}
-          />
-        </fieldset>
+          <fieldset className="border-0 p-0 mb-3 sm:flex-1" aria-label="Distance de nettoyage">
+            <DistanceRangeSlider
+              label="Distance de nettoyage"
+              min={0.5}
+              max={4}
+              step={0.5}
+              value={cleaning}
+              onChange={onCleaningChange}
+            />
+          </fieldset>
 
-        <fieldset className="border-0 p-0 mb-3">
-          <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
-            Distance totale
-          </legend>
-          <DistanceRangeSlider
-            label="Distance totale"
-            min={2}
-            max={11}
-            step={1}
-            value={total}
-            onChange={onTotalChange}
-          />
-        </fieldset>
+          <fieldset className="border-0 p-0 mb-3 sm:flex-1" aria-label="Distance totale">
+            <DistanceRangeSlider
+              label="Distance totale"
+              min={2}
+              max={11}
+              step={1}
+              value={total}
+              onChange={onTotalChange}
+            />
+          </fieldset>
+        </div>
 
         {/* Ticket #53: counter or empty state, only when a filter touches. */}
         {filterTouched ? (
