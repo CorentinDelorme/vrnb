@@ -129,18 +129,14 @@ export function FilterBar({
           </fieldset>
         </div>
 
-        {/* Ticket #53: counter or empty state, only when a filter touches. */}
+        {/* Ticket #53: counter or empty-state message, plus a reset button
+             whenever at least one filter touches (permanent reset button). */}
         {filterTouched ? (
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             {displayedCount === 0 ? (
-              <>
-                <p className="text-sm font-medium text-base-content/70">
-                  Aucun parcours ne correspond à ces filtres
-                </p>
-                <button type="button" className="btn btn-xs btn-secondary" onClick={onReset}>
-                  Réinitialiser les filtres
-                </button>
-              </>
+              <p className="text-sm font-medium text-base-content/70">
+                Aucun parcours ne correspond à ces filtres
+              </p>
             ) : (
               <p className="text-sm font-medium text-base-content/70">
                 {displayedCount === 1
@@ -148,6 +144,9 @@ export function FilterBar({
                   : `${displayedCount} parcours affichés`}
               </p>
             )}
+            <button type="button" className="btn btn-xs btn-secondary" onClick={onReset}>
+              Réinitialiser les filtres
+            </button>
           </div>
         ) : null}
       </div>
