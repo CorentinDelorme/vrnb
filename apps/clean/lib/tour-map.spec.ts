@@ -34,7 +34,7 @@ describe('getStepDistance', () => {
     distance: 3.2,
     startDistance: 1.1,
     endDistance: 0.8,
-    total: 5.1,
+    totalDistance: 5.1,
   };
 
   it('should return the start distance for step 0', () => {

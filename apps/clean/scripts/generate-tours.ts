@@ -94,7 +94,7 @@ interface GeneratedTour {
   distance: number;
   startDistance: number;
   endDistance: number;
-  total: number;
+  totalDistance: number;
   zoneId: string;
 }
 
@@ -119,7 +119,7 @@ function readTourDistances(entry: ParcoursEntry): GeneratedTour {
     distance,
     startDistance,
     endDistance,
-    total: tourTotal(startDistance, distance, endDistance),
+    totalDistance: tourTotal(startDistance, distance, endDistance),
     zoneId: entry.zoneId,
   };
 }
@@ -336,7 +336,7 @@ function distancesChanged(existing: GeneratedTour | undefined, fresh: GeneratedT
     existing.distance !== fresh.distance ||
     existing.startDistance !== fresh.startDistance ||
     existing.endDistance !== fresh.endDistance ||
-    existing.total !== fresh.total
+    existing.totalDistance !== fresh.totalDistance
   );
 }
 
