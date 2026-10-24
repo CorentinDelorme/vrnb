@@ -3,19 +3,21 @@ import { expect, test } from '@playwright/test';
 test.describe('Mobile viewport', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('should hide "Voir tous les parcours" links on mobile', async ({ page }) => {
+  test('should show "Voir tous les parcours" links on mobile', async ({ page }) => {
     await page.goto('/');
-    const bikeSection = page.locator('app-tour-list-section', {
-      hasText: 'Parcours à vélo',
-    });
-    const link = bikeSection.getByRole('link', { name: 'Voir tous les parcours' });
-    await expect(link).not.toBeVisible();
+    // Bruz Sud is the only zone with both practice types, so per zone the
+    // section locator is unique.
+    const sudZone = page.locator('details[aria-label="Zone Bruz Sud"]');
 
-    const walkingSection = page.locator('app-tour-list-section', {
-      hasText: 'Parcours à pied',
-    });
-    const walkLink = walkingSection.getByRole('link', { name: 'Voir tous les parcours' });
-    await expect(walkLink).not.toBeVisible();
+    const link = sudZone
+      .locator('app-tour-list-section', { hasText: 'Parcours à vélo' })
+      .getByRole('link', { name: 'Voir tous les parcours' });
+    await expect(link).toBeVisible();
+
+    const walkLink = sudZone
+      .locator('app-tour-list-section', { hasText: 'Parcours à pied' })
+      .getByRole('link', { name: 'Voir tous les parcours' });
+    await expect(walkLink).toBeVisible();
   });
 
   test('should still display all tour rows on mobile', async ({ page }) => {

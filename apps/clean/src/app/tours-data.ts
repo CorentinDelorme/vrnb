@@ -332,5 +332,5 @@ export const toursData = {
       endDistance: 0.9,
       zoneId: 'bruz-sud',
     },
-      ],
+  ],
 };

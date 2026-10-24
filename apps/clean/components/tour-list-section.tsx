@@ -104,7 +104,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
   return (
     <app-tour-list-section>
       <ul className="list bg-base-200 rounded-box border-2 border-secondary/20 shadow-lg">
-        <li className="flex items-center justify-between gap-3 border-b-2 border-base-300 p-4">
+        <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-base-300 p-4">
           <div className="flex items-center gap-3">
             <span className="bg-primary text-primary-content flex items-center justify-center rounded-full p-2 sm:p-2.5">
               <HugeiconsIcon className="sm:h-10 sm:w-10" icon={typeIcon} strokeWidth={1.5} />
@@ -121,7 +121,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
           </div>
 
           <Link
-            className="btn btn-primary btn-sm max-sm:hidden sm:btn-md shrink-0"
+            className="btn btn-primary btn-sm max-sm:w-full sm:btn-md shrink-0"
             href={`/tours/${zoneId}/${type}`}
           >
             Voir tous les parcours

@@ -1,6 +1,6 @@
 'use client';
 
-import { MapsLocationIcon, Pdf02Icon, Route02Icon, Tree06Icon } from '@hugeicons/core-free-icons';
+import { GoalIcon, MapsLocationIcon, Pdf02Icon, Route02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, useSyncExternalStore } from 'react';
@@ -26,7 +26,6 @@ import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
  * drawer did from `router.url`; the component is only mounted by the header
  * on `/tour/…` routes (see `headerFlags`).
  */
-
 export function TourDrawerLinks() {
   const pathname = usePathname();
   // The zone and tour id are parsed from the pathname exactly like the Angular
@@ -109,7 +108,7 @@ export function TourDrawerLinks() {
             rel="noopener noreferrer"
             target="_blank"
           >
-            <HugeiconsIcon icon={Tree06Icon} strokeWidth={1.5} />
+            <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
             Télécharger le GPX pour retourner au lieu de rendez-vous
           </a>
         </li>
@@ -131,7 +130,7 @@ export function TourDrawerLinks() {
           rel="noopener noreferrer"
           target="_blank"
         >
-          <HugeiconsIcon icon={Tree06Icon} strokeWidth={1.5} />
+          <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
           Retourner au lieu de rendez-vous depuis ma position
         </a>
       </li>
@@ -147,7 +146,7 @@ export function TourDrawerLinks() {
       {routeLinks?.fromEnd ? (
         <li>
           <a href={routeLinks.fromEnd} rel="noopener noreferrer" target="_blank">
-            <HugeiconsIcon icon={Tree06Icon} strokeWidth={1.5} />
+            <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
             Itinéraire pour retourner au lieu de rendez-vous
           </a>
         </li>

@@ -474,14 +474,14 @@ expect(JSON.parse(stored!)).toEqual({ tourId: 'V1', step: 1, zoneId: 'bruz-sud' 
 
 Uses `test.use({ viewport: { width: 390, height: 844 } })` (iPhone 12 dimensions).
 
-| Test name                                              | Steps                                             | Expected                            |
-| ------------------------------------------------------ | ------------------------------------------------- | ----------------------------------- |
-| `should hide "Voir tous les parcours" links on mobile` | `goto('/')`                                       | Links NOT visible (`max-sm:hidden`) |
-| `should still display all tour rows on mobile`         | `goto('/')`                                       | 47 play buttons present             |
-| `should render tour page with functional dock buttons` | `goto('/tour/bruz-sud/V1')`                       | "Précédent" and "Suivant" visible   |
-| `should allow step navigation on mobile`               | Full step flow → "Terminer"                       | Finish modal opens                  |
-| `should render map on mobile tours page`               | `goto('/tours/bruz-sud/V')`                       | `div#map` visible                   |
-| `should open and close drawer on mobile`               | `goto('/tour/bruz-sud/V1')` → "Menu" → open/close | Drawer toggles correctly            |
+| Test name                                              | Steps                                             | Expected                                           |
+| ------------------------------------------------------ | ------------------------------------------------- | -------------------------------------------------- |
+| `should show "Voir tous les parcours" links on mobile` | `goto('/')`                                       | Links visible (full-width button under the header) |
+| `should still display all tour rows on mobile`         | `goto('/')`                                       | 47 play buttons present                            |
+| `should render tour page with functional dock buttons` | `goto('/tour/bruz-sud/V1')`                       | "Précédent" and "Suivant" visible                  |
+| `should allow step navigation on mobile`               | Full step flow → "Terminer"                       | Finish modal opens                                 |
+| `should render map on mobile tours page`               | `goto('/tours/bruz-sud/V')`                       | `div#map` visible                                  |
+| `should open and close drawer on mobile`               | `goto('/tour/bruz-sud/V1')` → "Menu" → open/close | Drawer toggles correctly                           |
 
 ---
 
@@ -559,7 +559,7 @@ test('should have no a11y violations on home page', async ({ page }) => {
 | Covered Parcours badge        | `.badge-success` with text "Binôme inscrit" (in the row, where the register button stands) |
 | Registration modal            | `dialog#register_modal_V2` (`getByRole('dialog')`)                                         |
 | Anti-bot honeypot             | `input[name="website"]` (hidden)                                                           |
-| "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (hidden on `max-sm`)                                |
+| "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (full-width button under the header on `max-sm`)    |
 | Map                           | `div#map`                                                                                  |
 | Step items                    | `li.step`                                                                                  |
 | "Précédent" button            | `getByRole('button', { name: 'Précédent' })`                                               |
