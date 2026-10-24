@@ -4,7 +4,14 @@ import { cn } from '@/components/lib/utils';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '../components/ui/accordion';
 import { buttonVariants } from '../components/ui/button';
+import { Card, CardContent } from '../components/ui/card';
 import { ZoneList } from '../components/zone-list';
 
 /**
@@ -36,8 +43,8 @@ export default function HomePage() {
   return (
     <>
       <div className="mb-4 sm:mb-8">
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
-          <div className="card-body flex-row items-center justify-between gap-4 py-3 sm:py-4">
+        <Card className="shadow-sm border">
+          <CardContent className="py-3 sm:py-4 flex flex-row items-center justify-between gap-4">
             <p className="text-sm font-medium sm:text-base">
               Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
             </p>
@@ -47,8 +54,8 @@ export default function HomePage() {
             >
               Mode d&apos;emploi
             </Link>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
 
       <ResumeTourBanner />
@@ -66,29 +73,30 @@ export default function HomePage() {
       </InscriptionsStatusProvider>
 
       <div className="mb-4 sm:mb-8">
-        <details className="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm">
-          <summary className="collapse-title text-sm font-semibold sm:text-base flex items-center gap-4">
-            <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
-            Articles Ouest-France 2026
-          </summary>
-
-          <div className="collapse-content">
-            <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-base-200 pt-4">
-              {ARTICLES.map((article) => (
-                <li key={article.url}>
-                  <a
-                    className="link link-secondary font-medium"
-                    href={article.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {article.title}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </details>
+        <Accordion defaultValue={['presse']} aria-label="Articles Ouest-France 2026">
+          <AccordionItem value="presse">
+            <AccordionTrigger className="flex items-center gap-4">
+              <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
+              Articles Ouest-France 2026
+            </AccordionTrigger>
+            <AccordionContent className="pt-4">
+              <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-base-200">
+                {ARTICLES.map((article) => (
+                  <li key={article.url}>
+                    <a
+                      className="link link-secondary font-medium"
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {article.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </div>
 
       <footer className="pt-4 text-center text-sm opacity-70 sm:pt-8">©{currentYear} VRNB</footer>

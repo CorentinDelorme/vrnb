@@ -7,6 +7,7 @@ import { loadSavedTour } from '../src/app/tour-storage';
 import { findTour } from '../src/app/tours-queries';
 import { getZone } from '../src/app/zones';
 import { TourPlayButton } from './tour-play-button';
+import { Card, CardContent } from './ui/card';
 
 /**
  * Resume banner — port of the legacy Angular `tours-list` saved-tour block
@@ -28,16 +29,18 @@ export function ResumeTourBanner() {
   if (!saved) return null;
 
   return (
-    <ul className="list bg-base-100 rounded-box mb-4 shadow-md sm:mb-8">
-      <li className="list-row items-center">
-        <div className="text-base-content/60 text-base font-light sm:text-xl">
-          Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}
-          {saved.step + 1}/3)
+    <Card className="shadow-md border mb-4 sm:mb-8">
+      <CardContent className="p-4 sm:p-6">
+        <div className="flex items-center">
+          <div className="text-base-content/60 text-base font-light sm:text-xl">
+            Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}
+            {saved.step + 1}/3)
+          </div>
+          <div className="list-col-grow flex justify-end">
+            <TourPlayButton tour={saved} />
+          </div>
         </div>
-        <div className="list-col-grow flex justify-end">
-          <TourPlayButton tour={saved} />
-        </div>
-      </li>
-    </ul>
+      </CardContent>
+    </Card>
   );
 }

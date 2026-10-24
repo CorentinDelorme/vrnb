@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
+import { cn } from '@/components/lib/utils';
 import { pageTitle } from '../../lib/route-meta';
 import {
   CURRENT_EDITION,
@@ -12,6 +13,7 @@ import {
   formatActionDateLabel,
   registrationsCloseDate,
 } from '../../src/app/inscriptions/edition';
+import { buttonVariants } from '../../components/ui/button';
 
 /**
  * `/manual` — the illustrated mode d'emploi (spec #3, US 5 & 26; sommaire and
@@ -127,7 +129,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
       <figure className="flex flex-col">
         <img
           alt="Page d'accueil avec la liste des parcours à vélo et à pied"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/01-accueil.png"
         />
@@ -176,7 +178,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           <figure className="flex flex-col">
             <img
               alt="Ligne P2 800 mètres avec son bouton de lecture"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/02-choisir-p2.png"
             />
@@ -195,7 +197,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           <figure className="flex flex-col">
             <img
               alt="Carte de la première étape avec le bouton Suivant en bas"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/03-etape-debut.png"
             />
@@ -214,7 +216,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           <figure className="flex flex-col">
             <img
               alt="Carte de l'étape de nettoyage du parcours P2"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/04-etape-nettoyage.png"
             />
@@ -233,7 +235,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           <figure className="flex flex-col">
             <img
               alt="Carte de l'étape de retour avec le bouton Terminer en bas"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/05-etape-fin.png"
             />
@@ -255,7 +257,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
       <figure className="flex flex-col">
         <img
           alt="Message proposant de reprendre le parcours Bruz Sud P2 en haut de l'accueil"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/07-reprendre.png"
         />
@@ -295,7 +297,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
       <figure className="flex flex-col">
         <img
           alt="Contenu du menu ouvert sur le parcours P2"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/06-menu.png"
         />
@@ -351,7 +353,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
       <figure className="flex flex-col">
         <img
           alt="Fenêtre d'inscription d'un binôme avec les prénoms et noms des deux membres"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/08-inscription-binome.png"
         />
@@ -387,7 +389,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
       <figure className="flex flex-col">
         <img
           alt="Confirmation de l'inscription avec la note à prendre (zone et nom du parcours), les horaires de l'action et les liens pour l'agenda"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/09-confirmation-inscription.png"
         />
@@ -416,9 +418,9 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
 export default function ManualPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
-      <nav aria-label="Sommaire" className="card bg-base-100 shadow-md">
-        <div className="card-body">
-          <h2 className="card-title text-secondary text-xl sm:text-2xl">Sommaire</h2>
+      <nav aria-label="Sommaire" className="shadow-md border bg-card">
+        <div className="p-4 sm:p-6">
+          <h2 className="text-secondary text-xl sm:text-2xl font-medium">Sommaire</h2>
           <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base">
             {MANUAL_SECTIONS.map((section) => (
               <li key={section.id}>
@@ -432,10 +434,10 @@ export default function ManualPage() {
       </nav>
 
       {MANUAL_SECTIONS.map((section, index) => (
-        <section className="card bg-base-100 shadow-md" key={section.id}>
-          <div className="card-body">
+        <section className="shadow-md border bg-card" key={section.id}>
+          <div className="p-4 sm:p-6">
             <h2
-              className="card-title text-secondary scroll-mt-4 text-xl sm:text-2xl"
+              className="text-secondary scroll-mt-4 text-xl sm:text-2xl font-medium"
               id={section.id}
             >
               {index + 1}. {section.title}
@@ -446,7 +448,7 @@ export default function ManualPage() {
       ))}
 
       <div className="flex flex-wrap justify-center gap-3 pb-4">
-        <Link className="btn btn-primary" href="/">
+        <Link href="/" className={cn(buttonVariants({ variant: 'default' }))}>
           Retour à l&apos;accueil
         </Link>
       </div>
