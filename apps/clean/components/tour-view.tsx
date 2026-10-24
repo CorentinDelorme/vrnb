@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage';
 import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
+import { Button } from './ui/button';
 import { Dialog, DialogContent } from './ui/dialog';
 
 /**
@@ -21,12 +22,41 @@ import { Dialog, DialogContent } from './ui/dialog';
 /** Step labels, in state-machine order. */
 const STEP_LABELS = ['Début', 'Nettoyage', 'Fin'] as const;
 
-/** DaisyUI step classes: reached steps are secondary, the current one is too. */
-function stepClassName(step: TourStep, index: number): string {
-  const classes = ['step'];
-  if (step >= index) classes.push('step-secondary');
-  if (step === index) classes.push('text-secondary');
-  return classes.join(' ');
+/** Custom stepper stylisé shadcn : les étapes atteintes sont secondaires,
+ * l'étape courante en primaire, et un trait relie les étapes. */
+function Stepper({ step }: { readonly step: TourStep }) {
+  return (
+    <div className="flex items-center justify-between w-full max-w-md px-4 sm:px-6">
+      {STEP_LABELS.map((label, index) => {
+        const reached = step >= index;
+        const current = step === index;
+        const last = index === STEP_LABELS.length - 1;
+        return (
+          <div key={label} className="flex flex-col items-center gap-1.5 relative z-0">
+            <div className="flex items-center gap-2">
+              <div
+                className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
+                  current
+                    ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/20'
+                    : reached
+                      ? 'bg-secondary text-secondary-foreground border-secondary'
+                      : 'border-border text-muted-foreground'
+                }`}
+              >
+                {index + 1}
+              </div>
+              {!last && <div className={`h-px flex-1 ${reached ? 'bg-primary' : 'bg-border'}`} />}
+            </div>
+            <span
+              className={`text-xs font-medium transition-colors ${current ? 'text-primary font-bold' : reached ? 'text-secondary' : 'text-muted-foreground'}`}
+            >
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 interface TourViewProps {
@@ -75,30 +105,24 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-8">
-      <ul className="steps">
-        {STEP_LABELS.map((label, index) => (
-          <li className={stepClassName(step, index)} key={label}>
-            {label}
-          </li>
-        ))}
-      </ul>
+      <Stepper step={step} />
 
       <div className="flex w-full justify-center">
         <TourMap step={step} zoneId={zoneId} tourId={tourId} />
       </div>
 
-      <div className="dock max-sm:dock-xs">
-        <button className="btn btn-ghost max-sm:btn-sm" disabled={step === 0} onClick={prevStep}>
+      <div className="dock max-sm:dock-xs flex items-center gap-2">
+        <Button variant="ghost" size="sm" disabled={step === 0} onClick={prevStep}>
           Précédent
-        </button>
+        </Button>
         {step === STEP_LABELS.length - 1 ? (
-          <button className="btn btn-primary max-sm:btn-sm" onClick={finish}>
+          <Button variant="default" size="sm" onClick={finish}>
             Terminer
-          </button>
+          </Button>
         ) : (
-          <button className="btn btn-primary max-sm:btn-sm" onClick={nextStep}>
+          <Button variant="default" size="sm" onClick={nextStep}>
             Suivant
-          </button>
+          </Button>
         )}
       </div>
 

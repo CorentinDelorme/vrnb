@@ -14,6 +14,14 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 
 /** URL of the Parcours import API route (ticket #42 / #43). */
 const IMPORT_API_URL = '/api/import-parcours';
@@ -80,41 +88,45 @@ export function ImportParcoursForm() {
         <CardContent>
           <form onSubmit={handleImport} className="space-y-5">
             <div className="space-y-2">
-              <label htmlFor="import-zone-id" className="label">
-                <span className="label-text">Zone</span>
-              </label>
-              <select
+              <Select
                 id="import-zone-id"
                 name="zoneId"
-                className="select select-bordered w-full"
                 value={zoneId}
-                onChange={(event) => setZoneId(event.target.value)}
+                onValueChange={(value) => setZoneId(value as string)}
               >
-                {ZONES.map((zone) => (
-                  <option key={zone.id} value={zone.id}>
-                    {zone.name}
-                  </option>
-                ))}
-              </select>
+                <SelectLabel>Zone</SelectLabel>
+                <SelectTrigger>
+                  <SelectValue placeholder="Zone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ZONES.map((zone) => (
+                    <SelectItem key={zone.id} value={zone.id}>
+                      {zone.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="import-parcours-type" className="label">
-                <span className="label-text">Type de parcours</span>
-              </label>
-              <select
+              <Select
                 id="import-parcours-type"
                 name="practiceType"
-                className="select select-bordered w-full"
                 value={parcoursType}
-                onChange={(event) => setParcoursType(event.target.value as PracticeType)}
+                onValueChange={(value) => setParcoursType(value as PracticeType)}
               >
-                {PRACTICE_TYPES.map((practice) => (
-                  <option key={practice.value} value={practice.value}>
-                    {practice.label}
-                  </option>
-                ))}
-              </select>
+                <SelectLabel>Type de parcours</SelectLabel>
+                <SelectTrigger>
+                  <SelectValue placeholder="Type de parcours" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRACTICE_TYPES.map((practice) => (
+                    <SelectItem key={practice.value} value={practice.value}>
+                      {practice.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
@@ -127,7 +139,7 @@ export function ImportParcoursForm() {
                 type="file"
                 multiple
                 accept=".gpx"
-                className="file-input file-input-bordered w-full"
+                className="w-full border border-input bg-input px-2.5 py-1 text-base rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 onChange={(event) => {
                   const files = event.target.files ? Array.from(event.target.files) : [];
                   setSelectedFiles(files);
