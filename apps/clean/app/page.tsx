@@ -3,9 +3,7 @@ import Link from 'next/link';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
-import { TourListSection } from '../components/tour-list-section';
-import { findZoneTours } from '../src/app/tours-queries';
-import { ZONES } from '../src/app/zones';
+import { ZoneList } from '../components/zone-list';
 
 /**
  * Home page `/` — port of the legacy Angular `tours-list` component
@@ -56,56 +54,10 @@ export default function HomePage() {
         Like the statuses themselves (ticket #16), it resolves client-side
         after hydration — the prerendered HTML carries nothing. */}
         <InscriptionsOpeningAnnouncement />
-        {ZONES.map((zone) => {
-          const bikeTours = findZoneTours(zone.id, 'V');
-          const walkingTours = findZoneTours(zone.id, 'P');
-          const hasTours = bikeTours.length > 0 || walkingTours.length > 0;
-          const hasBothTypes = bikeTours.length > 0 && walkingTours.length > 0;
-
-          return (
-            <details
-              className="collapse collapse-arrow bg-base-100 border border-base-300 mb-4 shadow-md sm:mb-8"
-              aria-label={`Zone ${zone.name}`}
-              key={zone.id}
-              open
-            >
-              <summary className="collapse-title flex items-center gap-3 sm:gap-4">
-                <h2 className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
-                  {zone.name}
-                </h2>
-                <span className="badge badge-secondary badge-md sm:badge-lg">
-                  {bikeTours.length + walkingTours.length} parcours
-                </span>
-              </summary>
-              <div className="collapse-content">
-                {hasTours ? (
-                  <div
-                    className={`grid grid-cols-1 gap-4 pt-2 sm:gap-8${
-                      hasBothTypes ? ' lg:grid-cols-2' : ''
-                    }`}
-                  >
-                    {bikeTours.length > 0 ? (
-                      <TourListSection
-                        title="Parcours à vélo"
-                        tours={bikeTours}
-                        type="V"
-                        zoneId={zone.id}
-                      />
-                    ) : null}
-                    {walkingTours.length > 0 ? (
-                      <TourListSection
-                        title="Parcours à pied"
-                        tours={walkingTours}
-                        type="P"
-                        zoneId={zone.id}
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            </details>
-          );
-        })}
+        {/* Ticket #51: the zone list is rendered by the `ZoneList` client
+        component above, which carries the Type de parcours filter state and
+        passes the filtered tours to each `TourListSection`. */}
+        <ZoneList />
       </InscriptionsStatusProvider>
 
       <div className="mb-4 sm:mb-8">

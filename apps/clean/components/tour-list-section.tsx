@@ -59,6 +59,12 @@ function formatDistance(distance: number): string {
   return `${distance.toString().replace('.', ',')} km`;
 }
 
+/** Both distances of a Parcours row, French format:
+ *  "1,1 km nettoyage · 4,2 km total" ("800 m" sous 1 km for each distance). */
+function formatTourDistances(tour: Tour): string {
+  return `${formatDistance(tour.distance)} nettoyage · ${formatDistance(tour.totalDistance)} total`;
+}
+
 /** Whether the loaded inscriptions cover the given (zone, Parcours) pair. */
 function isCoveredInscriptions(
   status: InscriptionsStatus,
@@ -135,7 +141,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
           >
             <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
             <div className="text-base-content/70 text-base font-light sm:text-xl">
-              {formatDistance(tour.distance)}
+              {formatTourDistances(tour)}
             </div>
             <div className="list-col-grow flex items-center justify-end gap-2">
               {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (

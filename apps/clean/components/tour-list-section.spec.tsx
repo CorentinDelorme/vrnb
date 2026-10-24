@@ -94,6 +94,39 @@ describe('TourListSection inscriptions badge', () => {
 });
 
 /**
+ * Ticket #51: every Parcours row now shows both distances in French format —
+ * "X km nettoyage · Y km total" ("800 m" sous 1 km for each distance) — using
+ * the Distance totale emitted by the pipeline (ticket #50).
+ */
+describe('TourListSection two-distance rows', () => {
+  beforeEach(() => {
+    setStatus(SUCCESS);
+  });
+
+  it('should show the cleaning distance and the total distance on each row', () => {
+    const { container } = render(
+      <TourListSection title="Parcours à vélo" type="V" tours={TOURS} zoneId="bruz-sud" />,
+    );
+
+    // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
+    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+      row.textContent?.includes('V1'),
+    );
+    expect(v1Row?.textContent).toContain('1,1 km nettoyage · 4,2 km total');
+
+    // P2 of the walking list: distance 0.8 km → "800 m".
+    const walkingTours = findZoneTours('bruz-sud', 'P');
+    const { container: walkingContainer } = render(
+      <TourListSection title="Parcours à pied" type="P" tours={walkingTours} zoneId="bruz-sud" />,
+    );
+    const p2Row = Array.from(walkingContainer.querySelectorAll('li.list-row')).find((row) =>
+      row.textContent?.includes('P2'),
+    );
+    expect(p2Row?.textContent).toContain('800 m');
+  });
+});
+
+/**
  * The register buttons of ticket #17: one per uncovered Parcours next to the
  * play button, hidden on the covered rows. The action slot stays empty while
  * the statuses are loading, so the button never turns into a badge under the

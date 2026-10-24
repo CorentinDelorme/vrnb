@@ -4,7 +4,7 @@ import { ALL_TOURS, findParcours } from './tours-queries';
 
 describe('toursData', () => {
   it('should carry the Distance totale of the three Étapes for every Parcours', () => {
-    expect(ALL_TOURS.length).toBe(47);
+    expect(ALL_TOURS.length).toBe(49);
 
     for (const tour of ALL_TOURS) {
       const steps = tour.startDistance + tour.distance + tour.endDistance;
