@@ -29,17 +29,18 @@ function valueFromSteps(steps: number, { min, step }: { min: number; step: numbe
 }
 
 /**
- * Reusable dual-handle slider following the ARIA "slider" pattern.
+ * Dual-handle range slider following the ARIA "slider" pattern, styled with
+ * Tailwind utilities mapped to the shadcn/ui vrnb CSS variables.
  *
- * - Two handles `role="slider"`, tabable, `aria-valuemin/max/now`,
+ * - Two visible handles `role="slider"`, tabable, `aria-valuemin/max/now`,
  *   `aria-orientation="horizontal"`, `touch-action: none`.
  * - Arrow keys move the focused handle by one axis step; Home/End go to the
- *   axis extremes. Clamped mutually so min ≤ max at all times.
+ *   axis extremes. Handles are mutually clamped so `min ≤ max` at all times.
  * - Handles and track can be moved with the mouse or touch (click the track
  *   to jump the nearest handle, drag a handle to slide it).
- * - Three track segments: the middle segment between the handles is highlighted.
+ * - The middle segment between the handles is highlighted (`bg-primary`).
  * - Graduations (ticks) + a labels row under the track, and a live value
- *   label above ("1 km – 4 km", or "tout" when the interval covers the axis).
+ *   label above ("tout" when the interval covers the axis).
  * - The visible label is provided by the parent (`<legend>`); this component
  *   exposes the family name through `aria-label` on its root and on each
  *   handle, so screen readers stay informed without a duplicate visible label.
@@ -231,7 +232,7 @@ export function DistanceRangeSlider({
     return (
       <div
         key={which}
-        className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-primary border-2 border-base-100 shadow-sm"
+        className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-primary border-2 border-card shadow-sm"
         style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
         role="slider"
         aria-orientation="horizontal"
@@ -250,10 +251,10 @@ export function DistanceRangeSlider({
   return (
     <div className="space-y-2" aria-label={label}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-base-content/70 uppercase tracking-wider">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {label}
         </span>
-        <span className="text-xs font-medium text-base-content/70">{valueLabel}</span>
+        <span className="text-xs font-medium text-muted-foreground">{valueLabel}</span>
       </div>
 
       <div
@@ -262,7 +263,7 @@ export function DistanceRangeSlider({
         onPointerDown={onPointerDownTrack}
       >
         {/* Base track (full axis). */}
-        <div className="absolute top-1/2 -translate-y-1/2 h-1.5 w-full rounded-full bg-base-300" />
+        <div className="absolute top-1/2 -translate-y-1/2 h-1.5 w-full rounded-full bg-muted" />
         {/* Highlighted middle segment between the two handles. */}
         <div
           className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-primary"
@@ -282,7 +283,7 @@ export function DistanceRangeSlider({
               <div
                 key={tick}
                 data-testid="tick"
-                className="absolute w-0.5 h-1 bg-base-content/30"
+                className="absolute w-0.5 h-1 bg-muted-foreground/30"
                 style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
               />
             );
@@ -299,7 +300,7 @@ export function DistanceRangeSlider({
             return (
               <div
                 key={tick}
-                className="absolute text-[10px] text-base-content/60 leading-none"
+                className="absolute text-[10px] text-muted-foreground/60 leading-none"
                 style={{ left: `${pct}%`, transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}
               >
                 {formatDistance(tick)}

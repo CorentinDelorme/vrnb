@@ -1,7 +1,9 @@
 'use client';
 
+import { cn } from '@/components/lib/utils';
 import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
 import { DistanceRangeSlider } from './distance-range-slider';
+import { Button } from './ui/button';
 
 /** One option of the Type de parcours segmented control. */
 interface TypeChoice {
@@ -38,23 +40,24 @@ interface FilterBarProps {
 }
 
 /**
- * Filter bar card (DaisyUI `card bg-base-100`) sitting in the flow just above
- * the zone accordions. It is `position: sticky` (`top: 0`) so it sticks to the
- * top of the viewport only once the scroll reaches it, and releases at the
- * bottom of its list wrapper — plain CSS, no IntersectionObserver, no JS.
+ * Filter bar sitting in the flow just above the zone accordions. It is
+ * `position: sticky` (`top: 0`) so it sticks to the top of the viewport once
+ * the scroll reaches it, and releases at the bottom of its list wrapper —
+ * plain CSS, no IntersectionObserver, no JS.
  *
- * The segmented control is a DaisyUI `join` of radio-style buttons:
- * `[Tous | À pied | À vélo]`, "Tous" checked by default, one active option at
- * a time.
+ * The segmented control is a single-selection group of radio inputs styled as
+ * shadcn buttons: `[Tous | À pied | À vélo]`, "Tous" checked by default, one
+ * active option at a time. The `aria-label` on each input is the legacy anchor
+ * the unit specs scope on (`getByLabelText('Tous' | 'À pied' | 'À vélo')`).
  *
- * Ticket #52: the two distance slider families (Distance de nettoyage and
- * Distance totale) sit below the type control. Each is a reusable dual-handle
- * ARIA slider; an interval covering its whole axis means the family is off.
+ * The two distance slider families (Distance de nettoyage and Distance
+ * totale) sit below the type control. Each is a dual-handle range slider; an
+ * interval covering its whole axis means the family is off.
  *
- * Ticket #53: when at least one filter touches, a discreet counter ("X
- * parcours affichés", singular "1 parcours affiché") is shown; when zero
- * tours match, an empty-state message with a "Réinitialiser les filtres"
- * button is shown instead. No permanent reset button lives in the bar.
+ * When at least one filter touches, a discreet counter ("X parcours
+ * affichés", singular "1 parcours affiché") is shown; when zero tours match,
+ * an empty-state message with a "Réinitialiser les filtres" button is shown
+ * instead. No permanent reset button lives in the bar.
  */
 export function FilterBar({
   type,
@@ -69,22 +72,27 @@ export function FilterBar({
 }: FilterBarProps) {
   return (
     <section
-      className="card bg-base-100 shadow-sm sticky top-0 z-10 mb-4"
+      className="sticky top-0 z-10 mb-4 shadow-sm border border-border bg-card"
       aria-label="Filtres de parcours"
     >
-      <div className="card-body">
+      <div className="p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row gap-12">
           <div className="sm:flex-1">
-            <span className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full mb-2 block">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
               Type de parcours
             </span>
-            <div className="join mt-2">
+            <div role="group" aria-label="Type de parcours" className="inline-flex w-fit gap-1">
               {TYPE_CHOICES.map((choice) => {
                 const active = type === choice.value;
                 return (
                   <label
                     key={choice.value}
-                    className={`join-item btn btn-sm ${active ? 'btn-active' : ''}`}
+                    className={cn(
+                      'relative inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer select-none disabled:pointer-events-none disabled:opacity-50',
+                      active
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border text-foreground hover:bg-muted hover:text-foreground',
+                    )}
                     title={choice.label}
                   >
                     <input
@@ -93,7 +101,7 @@ export function FilterBar({
                       value={choice.value}
                       checked={active}
                       onChange={() => onTypeChange(choice.value)}
-                      className="appearance-none w-5 h-5 bg-transparent border-0 cursor-pointer"
+                      className="sr-only"
                       aria-label={choice.label}
                     />
                     {choice.label}
@@ -126,24 +134,24 @@ export function FilterBar({
           </fieldset>
         </div>
 
-        {/* Ticket #53: counter or empty-state message, plus a reset button
-             whenever at least one filter touches (permanent reset button). */}
+        {/* Counter or empty-state message, plus a reset button whenever at
+            least one filter touches (permanent reset button). */}
         {filterTouched ? (
           <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             {displayedCount === 0 ? (
-              <p className="text-sm font-medium text-base-content/70">
+              <p className="text-sm font-medium text-muted-foreground">
                 Aucun parcours ne correspond à ces filtres
               </p>
             ) : (
-              <p className="text-sm font-medium text-base-content/70">
+              <p className="text-sm font-medium text-muted-foreground">
                 {displayedCount === 1
                   ? '1 parcours affiché'
                   : `${displayedCount} parcours affichés`}
               </p>
             )}
-            <button type="button" className="btn btn-xs btn-secondary" onClick={onReset}>
+            <Button type="button" variant="secondary" size="xs" onClick={onReset}>
               Réinitialiser les filtres
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>
