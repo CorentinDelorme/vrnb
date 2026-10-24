@@ -9,7 +9,7 @@ import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage
 import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
 import { Button } from './ui/button';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Dialog, DialogClose, DialogContent } from './ui/dialog';
 
 /**
  * Step-by-step tour page — port of the legacy Angular `tour/tour.ts` +
@@ -128,14 +128,9 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
 
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
         <DialogContent id="finish_modal" className="modal-box">
-          <form method="dialog">
-            <button
-              aria-label="Fermer"
-              className="btn btn-sm btn-ghost btn-circle absolute top-2 right-2"
-            >
-              <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
-            </button>
-          </form>
+          <DialogClose aria-label="Fermer" className="absolute top-2 right-2 p-1">
+            <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
+          </DialogClose>
 
           <h3 className="text-lg font-bold">Merci pour votre participation !</h3>
           <p className="py-4">
