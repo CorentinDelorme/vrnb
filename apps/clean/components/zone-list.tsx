@@ -6,6 +6,7 @@ import {
   DEFAULT_TOUR_DISTANCE_FILTER,
   filterToursByDistance,
   filterToursByType,
+  isFilterTouched,
   type DistanceInterval,
   type TourFilterType,
 } from '../src/app/tours-filter';
@@ -32,8 +33,10 @@ export function ZoneList() {
   const [cleaning, setCleaning] = useState<DistanceInterval>(DEFAULT_TOUR_DISTANCE_FILTER.cleaning);
   const [total, setTotal] = useState<DistanceInterval>(DEFAULT_TOUR_DISTANCE_FILTER.total);
 
+  const filterTouched = isFilterTouched(filterType, cleaning, total);
   const distanceFilter = { cleaning, total };
 
+  let totalDisplayed = 0;
   const zoneSections = ZONES.map((zone) => {
     const bikeTours = filterToursByType(
       filterToursByDistance(findZoneTours(zone.id, 'V'), distanceFilter),
@@ -45,6 +48,7 @@ export function ZoneList() {
       'P',
       filterType,
     );
+    totalDisplayed += bikeTours.length + walkingTours.length;
     const hasBike = bikeTours.length > 0;
     const hasWalking = walkingTours.length > 0;
     const hasTours = hasBike || hasWalking;
@@ -98,6 +102,12 @@ export function ZoneList() {
     );
   });
 
+  const handleReset = () => {
+    setFilterType('all');
+    setCleaning(DEFAULT_TOUR_DISTANCE_FILTER.cleaning);
+    setTotal(DEFAULT_TOUR_DISTANCE_FILTER.total);
+  };
+
   return (
     <div>
       <FilterBar
@@ -107,6 +117,9 @@ export function ZoneList() {
         onCleaningChange={setCleaning}
         total={total}
         onTotalChange={setTotal}
+        displayedCount={totalDisplayed}
+        filterTouched={filterTouched}
+        onReset={handleReset}
       />
       {zoneSections}
     </div>

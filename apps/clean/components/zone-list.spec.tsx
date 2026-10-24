@@ -125,4 +125,71 @@ describe('ZoneList', () => {
     expect(zone('Bruz Ker Lann')).toBeDefined();
     expect(summaryText('Bruz Sud')).toContain('28 parcours');
   });
+
+  it('shows no counter when no filter is active', () => {
+    render(<ZoneList />);
+
+    expect(screen.queryByText(/parcours affich/)).toBeNull();
+    expect(screen.queryByText(/Aucun parcours/)).toBeNull();
+  });
+
+  it('shows a plural counter when filtering to "À vélo"', () => {
+    render(<ZoneList />);
+
+    fireEvent.click(inputFor('À vélo'));
+    expect(inputFor('À vélo').checked).toBe(true);
+    expect(screen.getByText('34 parcours affichés')).toBeDefined();
+  });
+
+  it('shows a singular counter when exactly one tour matches', () => {
+    render(<ZoneList />);
+
+    fireEvent.click(inputFor('À vélo'));
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    // Move the cleaning min from 0,5 to 4 km (7 steps of 0,5).
+    for (let i = 0; i < 7; i++) {
+      fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    }
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('4');
+    expect(screen.getByText('1 parcours affiché')).toBeDefined();
+  });
+
+  it('shows the empty state message and a reset button when zero tours match', () => {
+    render(<ZoneList />);
+
+    fireEvent.click(inputFor('À pied'));
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    // No walking tour has a cleaning distance of 4 km → zero results.
+    for (let i = 0; i < 7; i++) {
+      fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    }
+    expect(screen.getByText('Aucun parcours ne correspond à ces filtres')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Réinitialiser les filtres' })).toBeDefined();
+  });
+
+  it('resets every filter when clicking "Réinitialiser les filtres"', () => {
+    render(<ZoneList />);
+
+    fireEvent.click(inputFor('À pied'));
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    for (let i = 0; i < 7; i++) {
+      fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    }
+    expect(screen.getByText('Aucun parcours ne correspond à ces filtres')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
+
+    // Back to the unfiltered state: "Tous" checked, both sliders at "tout".
+    expect(inputFor('Tous').checked).toBe(true);
+    expect(inputFor('À pied').checked).toBe(false);
+    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
+    expect(screen.queryByText(/parcours affich/)).toBeNull();
+    // Every zone and all 49 play buttons are back.
+    expect(zone('Bruz Vau Gaillard')).toBeDefined();
+    expect(screen.getAllByRole('button', { name: /Lancer le parcours/ })).toHaveLength(49);
+  });
 });

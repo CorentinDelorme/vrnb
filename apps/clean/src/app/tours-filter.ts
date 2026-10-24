@@ -28,8 +28,24 @@ export const DEFAULT_TOUR_DISTANCE_FILTER: TourDistanceFilter = {
 };
 
 /** Whether an interval covers its axis entirely: the family is then inactive. */
-function isFullAxis(interval: DistanceInterval, axis: { min: number; max: number }): boolean {
+export function isFullAxis(
+  interval: DistanceInterval,
+  axis: { min: number; max: number },
+): boolean {
   return interval.min === axis.min && interval.max === axis.max;
+}
+
+/** Whether at least one filter family is active (touches the results). */
+export function isFilterTouched(
+  type: TourFilterType,
+  cleaning: DistanceInterval,
+  total: DistanceInterval,
+): boolean {
+  return (
+    type !== 'all' ||
+    !isFullAxis(cleaning, CLEANING_DISTANCE_AXIS) ||
+    !isFullAxis(total, TOTAL_DISTANCE_AXIS)
+  );
 }
 
 /** Inclusive membership test: value inside [min, max]. */
