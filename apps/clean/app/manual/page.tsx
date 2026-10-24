@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { cn } from '@/components/lib/utils';
+import { buttonVariants } from '../../components/ui/button';
 import { pageTitle } from '../../lib/route-meta';
 import {
   CURRENT_EDITION,
@@ -13,7 +14,6 @@ import {
   formatActionDateLabel,
   registrationsCloseDate,
 } from '../../src/app/inscriptions/edition';
-import { buttonVariants } from '../../components/ui/button';
 
 /**
  * `/manual` — the illustrated mode d'emploi (spec #3, US 5 & 26; sommaire and

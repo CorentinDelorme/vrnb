@@ -3,11 +3,12 @@
 import { CancelIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import confetti from 'canvas-confetti';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage';
 import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
+import { Dialog, DialogContent } from './ui/dialog';
 
 /**
  * Step-by-step tour page — port of the legacy Angular `tour/tour.ts` +
@@ -35,7 +36,7 @@ interface TourViewProps {
 
 export function TourView({ zoneId, tourId }: TourViewProps) {
   const [step, setStepState] = useState<TourStep>(0);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [finishOpen, setFinishOpen] = useState(false);
 
   // Restore the saved step when it matches this tour, otherwise record the
   // freshly started tour (parity with the Angular constructor).
@@ -63,7 +64,7 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
   };
 
   const finish = (): void => {
-    dialogRef.current?.showModal();
+    setFinishOpen(true);
     clearSavedTour();
     void confetti({
       particleCount: 100,
@@ -101,8 +102,8 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
         )}
       </div>
 
-      <dialog className="modal" id="finish_modal" ref={dialogRef}>
-        <div className="modal-box">
+      <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
+        <DialogContent id="finish_modal" className="modal-box">
           <form method="dialog">
             <button
               aria-label="Fermer"
@@ -116,8 +117,8 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
           <p className="py-4">
             Allez voir les organisateurs pour faire peser les déchets ramassés.
           </p>
-        </div>
-      </dialog>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

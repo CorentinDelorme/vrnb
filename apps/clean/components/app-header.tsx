@@ -4,7 +4,7 @@ import { ArrowLeftIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 
 import { cn } from '@/components/lib/utils';
 import { headerFlags, pageTitle } from '../lib/route-meta';
@@ -23,6 +23,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const flags = headerFlags(pathname);
   const title = pageTitle(pathname);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   // "Bruz Sud - Parcours P7" → ["Bruz Sud", "Parcours P7"]: the parts stack on
   // two lines on mobile and rejoin with the dash on wider screens.
   const titleParts = title.split(' - ');
@@ -75,7 +76,13 @@ export function AppHeader() {
       </h1>
 
       {flags.menu ? (
-        <MenuDrawer className="col-start-3" variant={flags.menu} title={title}>
+        <MenuDrawer
+          className="col-start-3"
+          variant={flags.menu}
+          title={title}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+        >
           {flags.menu === 'tours' ? <MenuLinks pathname={pathname} /> : null}
           {flags.menu === 'tour' ? <TourDrawerLinks /> : null}
         </MenuDrawer>

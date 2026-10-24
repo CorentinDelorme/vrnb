@@ -5,6 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 
 import { CURRENT_EDITION, formatActionDateLabel } from '../src/app/inscriptions/edition';
 import { registrationWindowPhaseOf, useInscriptionsStatus } from './inscriptions-status-provider';
+import { Alert, AlertDescription } from './ui/alert';
 
 /**
  * The home announcement of the inscriptions opening date (ticket #34) — one
@@ -67,9 +68,11 @@ export function InscriptionsOpeningAnnouncement({
   // (present, spec-fixed), the modal's « ouvriront » — and both take the
   // date from the ONE `formatActionDateLabel` derivation of `edition.ts`.
   return (
-    <div className="alert alert-info mb-4 sm:mb-8 text-sm sm:text-base" role="alert">
+    <Alert className="mb-4 sm:mb-8 text-sm sm:text-base" variant="default">
       <HugeiconsIcon aria-hidden="true" icon={InformationCircleIcon} strokeWidth={1.5} />
-      {`Les inscriptions ouvrent le ${formatActionDateLabel(edition.inscriptionsOpenDate)}.`}
-    </div>
+      <AlertDescription>
+        {`Les inscriptions ouvrent le ${formatActionDateLabel(edition.inscriptionsOpenDate)}.`}
+      </AlertDescription>
+    </Alert>
   );
 }

@@ -1,18 +1,12 @@
+'use client';
+
 import { CancelIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { ReactNode } from 'react';
 
 import type { MenuVariant } from '../lib/route-meta';
 
-/**
- * Menu drawer shell shown in the header on `/tour/…` and `/tours/…` routes.
- * Markup and ids match the legacy Angular tour and zone drawers so the E2E
- * selectors keep working (spec #3).
- *
- * The route-specific download links (PDF/GPX/GeoVelo) are passed as `children`
- * by the tour page (ticket #10) and the zone map page (ticket #9); the
- * foundation ships the shell only.
- */
+import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from './ui/drawer';
 
 /** Legacy drawer input ids, kept for DOM parity with the Angular templates. */
 const DRAWER_IDS: Record<MenuVariant, string> = {
@@ -30,37 +24,42 @@ interface MenuDrawerProps {
   readonly title: string;
   readonly className?: string;
   readonly children?: ReactNode;
+  /** Whether the drawer is open. */
+  readonly open: boolean;
+  /** Called when the drawer opens or closes (trigger, overlay, Escape). */
+  readonly onOpenChange: (open: boolean) => void;
 }
 
-export function MenuDrawer({ variant, title, className, children }: MenuDrawerProps) {
+export function MenuDrawer({
+  variant,
+  title,
+  className,
+  children,
+  open,
+  onOpenChange,
+}: MenuDrawerProps) {
   const drawerId = DRAWER_IDS[variant];
 
   return (
-    <div className={className ? `drawer ${className}` : 'drawer'}>
-      <input className="drawer-toggle" id={drawerId} type="checkbox" />
-      <div className="drawer-content">
-        <label className="btn btn-primary btn-sm drawer-button" htmlFor={drawerId}>
-          Menu
-        </label>
-      </div>
-      <div className="drawer-side">
-        <label className="drawer-overlay" htmlFor={drawerId} aria-label="close sidebar" />
+    <Drawer open={open} onOpenChange={onOpenChange} className={className}>
+      <DrawerTrigger
+        id={drawerId}
+        className="btn btn-primary btn-sm drawer-button"
+        aria-label="Menu"
+      >
+        Menu
+      </DrawerTrigger>
+      <DrawerContent className={MENU_CLASSES[variant]}>
+        <DrawerClose aria-label="close sidebar" className="absolute top-4 right-4">
+          <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
+        </DrawerClose>
 
-        <ul className={MENU_CLASSES[variant]}>
-          <div className="mb-3 flex items-center justify-between">
-            <h1 className="text-secondary text-2xl font-bold sm:text-4xl">{title}</h1>
-            <label
-              className="btn btn-sm btn-circle btn-ghost mt-1"
-              htmlFor={drawerId}
-              aria-label="close sidebar"
-            >
-              <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
-            </label>
-          </div>
+        <div className="mb-3 flex items-center justify-between">
+          <h1 className="text-secondary text-2xl font-bold sm:text-4xl">{title}</h1>
+        </div>
 
-          {children}
-        </ul>
-      </div>
-    </div>
+        {children}
+      </DrawerContent>
+    </Drawer>
   );
 }
