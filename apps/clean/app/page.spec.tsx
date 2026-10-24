@@ -108,6 +108,41 @@ describe('Home page', () => {
     expect(tous?.matches(':checked')).toBe(true);
   });
 
+  it('renders the two distance slider families with "tout" by default and all rows', async () => {
+    await renderHomePage();
+
+    expect(screen.getAllByRole('slider')).toHaveLength(4);
+    // Both families span their whole axis by default: "tout" label on each.
+    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(49);
+  });
+
+  it('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async () => {
+    await renderHomePage();
+
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
+
+    // Invariant without filter: every section and all 49 play buttons.
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(49);
+
+    // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
+    cleaningMin.focus();
+    fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('1');
+    expect(screen.getAllByText('tout')).toHaveLength(1); // cleaning is no longer "tout"
+    const after = screen.getAllByRole('button', { name: 'Lancer le parcours' });
+    expect(after.length).toBeLessThan(49);
+    expect(after.length).toBeGreaterThan(0);
+
+    // Return to the axis extreme: everything comes back.
+    fireEvent.keyDown(cleaningMin, { key: 'ArrowLeft' });
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
+    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(49);
+  });
+
   it('links each section to its zone map and labels every play button', async () => {
     await renderHomePage();
     const mapLinks = screen.getAllByRole('link', { name: 'Voir tous les parcours' });

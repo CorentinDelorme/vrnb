@@ -1,6 +1,7 @@
 'use client';
 
-import type { TourFilterType } from '../src/app/tours-filter';
+import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
+import { DistanceRangeSlider } from './distance-range-slider';
 
 /** One option of the Type de parcours segmented control. */
 interface TypeChoice {
@@ -20,6 +21,14 @@ interface FilterBarProps {
   readonly type: TourFilterType;
   /** Called when the user picks another type. */
   readonly onTypeChange: (type: TourFilterType) => void;
+  /** Distance de nettoyage interval (inactive when it spans the whole axis). */
+  readonly cleaning: DistanceInterval;
+  /** Called when the user moves a cleaning-distance handle. */
+  readonly onCleaningChange: (value: DistanceInterval) => void;
+  /** Distance totale interval (inactive when it spans the whole axis). */
+  readonly total: DistanceInterval;
+  /** Called when the user moves a total-distance handle. */
+  readonly onTotalChange: (value: DistanceInterval) => void;
 }
 
 /**
@@ -31,8 +40,19 @@ interface FilterBarProps {
  * The segmented control is a DaisyUI `join` of radio-style buttons:
  * `[Tous | À pied | À vélo]`, "Tous" checked by default, one active option at
  * a time.
+ *
+ * Ticket #52: the two distance slider families (Distance de nettoyage and
+ * Distance totale) sit below the type control. Each is a reusable dual-handle
+ * ARIA slider; an interval covering its whole axis means the family is off.
  */
-export function FilterBar({ type, onTypeChange }: FilterBarProps) {
+export function FilterBar({
+  type,
+  onTypeChange,
+  cleaning,
+  onCleaningChange,
+  total,
+  onTotalChange,
+}: FilterBarProps) {
   return (
     <section
       className="card bg-base-100 shadow-sm sticky top-0 z-10 mb-4"
@@ -66,6 +86,34 @@ export function FilterBar({ type, onTypeChange }: FilterBarProps) {
               );
             })}
           </div>
+        </fieldset>
+
+        <fieldset className="border-0 p-0 mb-3">
+          <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
+            Distance de nettoyage
+          </legend>
+          <DistanceRangeSlider
+            label="Distance de nettoyage"
+            min={0.5}
+            max={4}
+            step={0.5}
+            value={cleaning}
+            onChange={onCleaningChange}
+          />
+        </fieldset>
+
+        <fieldset className="border-0 p-0 mb-3">
+          <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
+            Distance totale
+          </legend>
+          <DistanceRangeSlider
+            label="Distance totale"
+            min={2}
+            max={11}
+            step={1}
+            value={total}
+            onChange={onTotalChange}
+          />
         </fieldset>
       </div>
     </section>

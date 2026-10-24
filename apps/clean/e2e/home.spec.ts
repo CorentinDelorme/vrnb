@@ -217,6 +217,52 @@ test.describe('Home page', () => {
     });
   });
 
+  test.describe('Distance filters (ticket #52)', () => {
+    test('the two distance sliders sit in the bar, "tout" by default, all rows visible', async ({
+      page,
+    }) => {
+      await page.goto('/');
+
+      await expect(page.locator('section[aria-label="Filtres de parcours"]')).toBeVisible();
+      // Both distance sliders render (two handles each) with their "tout" label.
+      await expect(page.locator('[role="slider"]')).toHaveCount(4);
+      await expect(page.getByText('tout')).toHaveCount(2);
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        49,
+      );
+    });
+
+    test('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async ({
+      page,
+    }) => {
+      await page.goto('/');
+
+      const sliders = page.locator('[role="slider"]');
+      const cleaningMin = sliders.nth(0);
+      await expect(cleaningMin).toHaveAttribute('aria-valuenow', '0.5');
+
+      // Invariant without filter: all 49 play buttons.
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        49,
+      );
+
+      // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
+      await cleaningMin.press('ArrowRight');
+      await expect(cleaningMin).toHaveAttribute('aria-valuenow', '1');
+      await expect(page.getByText('tout')).toHaveCount(1); // cleaning is no longer "tout"
+      const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
+      const remaining = await playButtons.count();
+      expect(remaining).toBeLessThan(49);
+      expect(remaining).toBeGreaterThan(0);
+
+      // Return to the axis extreme: everything comes back.
+      await cleaningMin.press('ArrowLeft');
+      await expect(cleaningMin).toHaveAttribute('aria-valuenow', '0.5');
+      await expect(page.getByText('tout')).toHaveCount(2);
+      await expect(playButtons).toHaveCount(49);
+    });
+  });
+
   test.describe('Saved tour banner', () => {
     test('should NOT show saved tour banner by default', async ({ page }) => {
       await page.goto('/');
