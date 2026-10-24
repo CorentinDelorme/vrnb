@@ -6,6 +6,12 @@ export interface Tour {
   readonly distance: number;
   readonly startDistance: number;
   readonly endDistance: number;
+  /**
+   * Distance totale (GLOSSARY): the sum of the three Étapes (Début +
+   * Nettoyage + Fin), emitted by the generation pipeline (`totalDistance` field of
+   * `tours-data.ts`, never recomputed at runtime).
+   */
+  readonly totalDistance: number;
   readonly zoneId: string;
 }
 

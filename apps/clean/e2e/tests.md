@@ -115,7 +115,7 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    « Calendar file route » intro). No parity impact: no new route of the legacy DOM contract,
    the links exist only on the confirmation panel of the modal.
 
-Totals: **113 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36) × chromium + firefox = **226**.
+Totals: **122 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36, + 2 for the filter bar and type filtering — ticket #51, + 2 for the two distance sliders and filtering — ticket #52, + 5 for the counter, empty state and reset — ticket #53) × chromium + firefox = **244**.
 
 ---
 
@@ -149,20 +149,45 @@ Route: `/`
 
 #### Tour sections
 
-| Test name                                                     | Steps                       | Expected                                                       |
-| ------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
-| `should display Bruz Sud zone heading`                        | `goto('/')`                 | `details[aria-label="Zone Bruz Sud"]` visible                  |
-| `should display zone heading with tour count`                 | `goto('/')`                 | Zone summary shows "Bruz Sud" and "28 parcours"                |
-| `should collapse and expand the zone block on summary click`  | `goto('/')` → click summary | `open` attribute toggles off then on                           |
-| `should display bike tours section`                           | `goto('/')`                 | Heading "Parcours à vélo" visible                              |
-| `should display walking tours section`                        | `goto('/')`                 | Heading "Parcours à pied" visible                              |
-| `should list all 15 Bruz Sud bike tours (V1–V15)`             | `goto('/')`                 | 15 tour rows under Bruz Sud bike section, names V1 through V15 |
-| `should list all 13 walking tours (P1–P13)`                   | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13      |
-| `should display distance in km for V1 (1,1 km)`               | `goto('/')`                 | V1 row contains text "1,1 km"                                  |
-| `should display distance in meters for tours under 1km`       | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m"                             |
-| `should have play button on each tour row`                    | `goto('/')`                 | 47 buttons with `aria-label="Lancer le parcours"`              |
-| `should show "Voir tous les parcours" link for bike tours`    | `goto('/')` (desktop)       | Link visible in V section, href `/tours/bruz-sud/V`            |
-| `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop)       | Link visible in P section, href `/tours/bruz-sud/P`            |
+| Test name                                                    | Steps                       | Expected                                                                                                        |
+| ------------------------------------------------------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `should display Bruz Sud zone heading`                       | `goto('/')`                 | `details[aria-label="Zone Bruz Sud"]` visible                                                                   |
+| `should display zone heading with tour count`                | `goto('/')`                 | Zone summary shows "Bruz Sud" and "28 parcours"                                                                 |
+| `should collapse and expand the zone block on summary click` | `goto('/')` → click summary | `open` attribute toggles off then on                                                                            |
+| `should display bike tours section`                          | `goto('/')`                 | Heading "Parcours à vélo" visible                                                                               |
+| `should display walking tours section`                       | `goto('/')`                 | Heading "Parcours à pied" visible                                                                               |
+| `should list all 15 Bruz Sud bike tours (V1–V15)`            | `goto('/')`                 | 15 tour rows under Bruz Sud bike section, names V1 through V15                                                  |
+| `should list all 13 walking tours (P1–P13)`                  | `goto('/')`                 | 13 tour rows under Bruz Sud walking section, names P1 through P13 (Bruz Ker Lann adds a second walking section) |
+| `should display distance in km for V1 (1,1 km)`              | `goto('/')`                 | V1 row contains text "1,1 km nettoyage · 4,2 km total" (both distances, French format)                          |
+| `should display distance in meters for tours under 1km`      | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m nettoyage · 2,5 km total"                                                     |
+| `should have play button on each tour row`                   | `goto('/')`                 | 47 buttons with `aria-label="Lancer le parcours"`                                                               |
+
+#### Filtering by type (ticket #51)
+
+| Test name                                                        | Steps                        | Expected                                                                                           |
+| ---------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `the filter bar sits above the zones with "Tous" checked`        | `goto('/')`                  | `section[aria-label="Filtres de parcours"]` visible; "Tous" checked, "À pied" / "À vélo" unchecked |
+| `filtering to "À vélo" hides walking rows, then "Tous" restores` | `goto('/')` → click "À vélo" | Walking heading gone, 34 play buttons, Bruz Sud badge "15 parcours"; click "Tous" → 47 buttons     |
+
+| `should show "Voir tous les parcours" link for bike tours` | `goto('/')` (desktop) | Link visible in V section, href `/tours/bruz-sud/V` |
+| `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop) | Link visible in P section, href `/tours/bruz-sud/P` |
+
+#### Distance filters (ticket #52)
+
+| Test name                                                                      | Steps                           | Expected                                                                                                                                 |
+| ------------------------------------------------------------------------------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `the two distance sliders sit in the bar, "tout" by default, all rows visible` | `goto('/')`                     | 4 slider handles (`role="slider"`), "Distance de nettoyage" / "Distance totale" present, two "tout" labels, 47 play buttons              |
+| `moving the cleaning-distance min bound filters rows; returning restores them` | `goto('/')` → ArrowRight on min | Min bound 0,5 → 1 km, one "tout" left, play buttons drop below 47 but stay above 0; ArrowLeft → 0,5 km, two "tout", 47 play buttons back |
+
+#### Counter and empty state (ticket #53)
+
+| Test name                                                                | Steps                                                                             | Expected                                                                                                         |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `shows no counter when no filter is active`                              | `goto('/')`                                                                       | No "X parcours affichés" text, no empty-state message                                                            |
+| `shows a plural counter when filtering to "À vélo"`                      | `goto('/')` → click "À vélo"                                                      | "34 parcours affichés" visible; click "Tous" → counter gone                                                      |
+| `shows a singular counter when exactly one tour matches`                 | `goto('/')` → click "À vélo" → 7× ArrowRight on cleaning min                      | "1 parcours affiché" visible                                                                                     |
+| `shows the empty state message and a reset button when zero tours match` | `goto('/')` → click "À pied" → 7× ArrowRight on cleaning min                      | "Aucun parcours ne correspond à ces filtres" visible, "Réinitialiser les filtres" button visible, 0 play buttons |
+| `resets every filter when clicking "Réinitialiser les filtres"`          | `goto('/')` → click "À pied" → 7× ArrowRight on cleaning min → click reset button | Back to "Tous" checked, two "tout" labels, 47 play buttons, no counter, no empty message                         |
 
 #### Saved tour banner
 
@@ -561,6 +586,9 @@ test('should have no a11y violations on home page', async ({ page }) => {
 | Anti-bot honeypot             | `input[name="website"]` (hidden)                                                           |
 | "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (full-width button under the header on `max-sm`)    |
 | Map                           | `div#map`                                                                                  |
+| Counter text                  | text "X parcours affichés" / "1 parcours affiché" (only when a filter touches)             |
+| Empty state message           | text "Aucun parcours ne correspond à ces filtres"                                          |
+| Reset button                  | `button` with name "Réinitialiser les filtres" (only in the empty state)                   |
 | Step items                    | `li.step`                                                                                  |
 | "Précédent" button            | `getByRole('button', { name: 'Précédent' })`                                               |
 | "Suivant" button              | `getByRole('button', { name: 'Suivant' })`                                                 |

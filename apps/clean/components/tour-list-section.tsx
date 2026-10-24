@@ -5,6 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import type * as React from 'react';
 
+import { formatDistance } from '../src/app/tours-format';
 import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
@@ -51,12 +52,10 @@ declare module 'react' {
   }
 }
 
-/** French distance label, parity with the Angular template: "800 m" or "1,1 km". */
-function formatDistance(distance: number): string {
-  if (distance < 1) {
-    return `${(distance * 1000).toFixed(0)} m`;
-  }
-  return `${distance.toString().replace('.', ',')} km`;
+/** Both distances of a Parcours row, French format:
+ *  "1,1 km nettoyage · 4,2 km total" ("800 m" sous 1 km for each distance). */
+function formatTourDistances(tour: Tour): string {
+  return `${formatDistance(tour.distance)} nettoyage · ${formatDistance(tour.totalDistance)} total`;
 }
 
 /** Whether the loaded inscriptions cover the given (zone, Parcours) pair. */
@@ -135,7 +134,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
           >
             <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
             <div className="text-base-content/70 text-base font-light sm:text-xl">
-              {formatDistance(tour.distance)}
+              {formatTourDistances(tour)}
             </div>
             <div className="list-col-grow flex items-center justify-end gap-2">
               {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (

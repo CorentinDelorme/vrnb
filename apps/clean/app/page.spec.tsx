@@ -83,6 +83,140 @@ describe('Home page', () => {
     expect(walkingSection?.querySelectorAll('li.list-row')[1]?.textContent).toContain('800 m');
   });
 
+  it('shows both distances on each row in French format', async () => {
+    const { container } = await renderHomePage();
+    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
+    const bikeSection = zone?.querySelectorAll('app-tour-list-section')[0];
+
+    // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
+    expect(bikeSection?.querySelectorAll('li.list-row')[0]?.textContent).toContain(
+      '1,1 km nettoyage · 4,2 km total',
+    );
+  });
+
+  it('renders the filter bar above the zones with "Tous" selected by default', async () => {
+    const { container } = await renderHomePage();
+
+    const filterBar = container.querySelector('section[aria-label="Filtres de parcours"]');
+    expect(filterBar).not.toBeNull();
+
+    const typeLabel = filterBar?.querySelector('span')?.textContent;
+    expect(typeLabel).toBe('Type de parcours');
+
+    const tous = container.querySelector('input[name="tour-type"][value="all"]');
+    expect(tous).not.toBeNull();
+    expect(tous?.matches(':checked')).toBe(true);
+  });
+
+  it('renders the two distance slider families with "tout" by default and all rows', async () => {
+    await renderHomePage();
+
+    expect(screen.getAllByRole('slider')).toHaveLength(4);
+    // Both families span their whole axis by default: "tout" label on each.
+    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+  });
+
+  it('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async () => {
+    await renderHomePage();
+
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
+
+    // Invariant without filter: every section and all 47 play buttons.
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+
+    // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
+    cleaningMin.focus();
+    fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('1');
+    expect(screen.getAllByText('tout')).toHaveLength(1); // cleaning is no longer "tout"
+    const after = screen.getAllByRole('button', { name: 'Lancer le parcours' });
+    expect(after.length).toBeLessThan(47);
+    expect(after.length).toBeGreaterThan(0);
+
+    // Return to the axis extreme: everything comes back.
+    fireEvent.keyDown(cleaningMin, { key: 'ArrowLeft' });
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
+    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+  });
+
+  it('shows no counter when no filter is active', async () => {
+    await renderHomePage();
+
+    expect(screen.queryByText(/parcours affich/)).toBeNull();
+    expect(screen.queryByText(/Aucun parcours/)).toBeNull();
+  });
+
+  it('shows a plural counter when filtering to "À vélo"', async () => {
+    await renderHomePage();
+
+    const velo = screen.getByLabelText('À vélo') as HTMLInputElement;
+    fireEvent.click(velo);
+    expect(velo.checked).toBe(true);
+    expect(screen.getByText('34 parcours affichés')).toBeDefined();
+  });
+
+  it('shows a singular counter when exactly one tour matches', async () => {
+    await renderHomePage();
+
+    const velo = screen.getByLabelText('À vélo');
+    fireEvent.click(velo);
+
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    cleaningMin.focus();
+    // Move the cleaning min from 0,5 to 4 km (7 steps of 0,5).
+    for (let i = 0; i < 7; i++) {
+      fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    }
+    expect(cleaningMin.getAttribute('aria-valuenow')).toBe('4');
+    expect(screen.getByText('1 parcours affiché')).toBeDefined();
+  });
+
+  it('shows the empty state message and a reset button when zero tours match', async () => {
+    await renderHomePage();
+
+    const pied = screen.getByLabelText('À pied');
+    fireEvent.click(pied);
+
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    cleaningMin.focus();
+    // No walking tour has a cleaning distance of 4 km → zero results.
+    for (let i = 0; i < 7; i++) {
+      fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    }
+    expect(screen.getByText('Aucun parcours ne correspond à ces filtres')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Réinitialiser les filtres' })).toBeDefined();
+  });
+
+  it('resets every filter when clicking "Réinitialiser les filtres"', async () => {
+    await renderHomePage();
+
+    const pied = screen.getByLabelText('À pied');
+    fireEvent.click(pied);
+
+    const sliders = screen.getAllByRole('slider');
+    const cleaningMin = sliders[0];
+    cleaningMin.focus();
+    for (let i = 0; i < 7; i++) {
+      fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
+    }
+    expect(screen.getByText('Aucun parcours ne correspond à ces filtres')).toBeDefined();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
+
+    // Back to the unfiltered state.
+    expect((screen.getByLabelText('Tous') as HTMLInputElement).checked).toBe(true);
+    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
+    expect(screen.queryByText(/parcours affich/)).toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+  });
+
   it('links each section to its zone map and labels every play button', async () => {
     await renderHomePage();
     const mapLinks = screen.getAllByRole('link', { name: 'Voir tous les parcours' });

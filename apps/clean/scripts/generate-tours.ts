@@ -94,16 +94,32 @@ interface GeneratedTour {
   distance: number;
   startDistance: number;
   endDistance: number;
+  totalDistance: number;
   zoneId: string;
+}
+
+/**
+ * Distance totale of a Parcours (GLOSSARY): the sum of its three Étapes
+ * (Début + Nettoyage + Fin), rounded to the tenth of a kilometre like each
+ * step — the same value the Fiche display computes (`formatTotal` of
+ * `generate-pdfs.ts`). The rounding keeps the emitted number safe from the
+ * float drift of the sum (`0.1 + 1.1 + 1.1` reads `2.3000000000000003`).
+ */
+function tourTotal(startDistance: number, distance: number, endDistance: number): number {
+  return Math.round((startDistance + distance + endDistance) * 10) / 10;
 }
 
 /** Distances of a Parcours, read from its GPX traces. */
 function readTourDistances(entry: ParcoursEntry): GeneratedTour {
+  const distance = parseGpxDistance(entry.tracePath);
+  const startDistance = parseGpxDistance(entry.startSegmentPath);
+  const endDistance = parseGpxDistance(entry.endSegmentPath);
   return {
     name: entry.tourId,
-    distance: parseGpxDistance(entry.tracePath),
-    startDistance: parseGpxDistance(entry.startSegmentPath),
-    endDistance: parseGpxDistance(entry.endSegmentPath),
+    distance,
+    startDistance,
+    endDistance,
+    totalDistance: tourTotal(startDistance, distance, endDistance),
     zoneId: entry.zoneId,
   };
 }
@@ -309,7 +325,8 @@ function reportRun(
 
 /**
  * Whether the distances of a Parcours changed since the catalogue on the
- * disk.
+ * disk — the last check covers the Distance totale too, the derived field
+ * the emitter adds next to the three Étapes.
  */
 function distancesChanged(existing: GeneratedTour | undefined, fresh: GeneratedTour): boolean {
   if (!existing) {
@@ -318,7 +335,8 @@ function distancesChanged(existing: GeneratedTour | undefined, fresh: GeneratedT
   return (
     existing.distance !== fresh.distance ||
     existing.startDistance !== fresh.startDistance ||
-    existing.endDistance !== fresh.endDistance
+    existing.endDistance !== fresh.endDistance ||
+    existing.totalDistance !== fresh.totalDistance
   );
 }
 

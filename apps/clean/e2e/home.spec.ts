@@ -90,11 +90,14 @@ test.describe('Home page', () => {
       }
     });
 
-    test('should list all 13 walking tours (P1–P13)', async ({ page }) => {
+    test('should list all 13 walking tours (P1–P13) of Bruz Sud', async ({ page }) => {
       await page.goto('/');
-      const walkingSection = page.locator('app-tour-list-section', {
-        hasText: 'Parcours à pied',
-      });
+      // Two zones now have a walking section (Bruz Sud 13 + Bruz Ker Lann 2): scope to Bruz Sud.
+      const walkingSection = page
+        .locator('details[aria-label="Zone Bruz Sud"]')
+        .locator('app-tour-list-section', {
+          hasText: 'Parcours à pied',
+        });
       const tourRows = walkingSection.locator('li.list-row');
       await expect(tourRows).toHaveCount(13);
 
@@ -147,6 +150,200 @@ test.describe('Home page', () => {
       const link = walkingSection.getByRole('link', { name: 'Voir tous les parcours' });
       await expect(link).toBeVisible();
       await expect(link).toHaveAttribute('href', '/tours/bruz-sud/P');
+    });
+  });
+
+  test.describe('Filtering by type', () => {
+    test('the filter bar sits above the zones with "Tous" checked by default', async ({ page }) => {
+      await page.goto('/');
+
+      await expect(page.locator('section[aria-label="Filtres de parcours"]')).toBeVisible();
+      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
+      await expect(page.getByRole('radio', { name: 'À pied' })).not.toBeChecked();
+      await expect(page.getByRole('radio', { name: 'À vélo' })).not.toBeChecked();
+    });
+
+    test('filtering to "À vélo" hides walking sections and rows, then restoring "Tous" brings them back', async ({
+      page,
+    }) => {
+      await page.goto('/');
+
+      // Invariant without filter: every section and all 47 play buttons.
+      await expect(page.locator('details[aria-label="Zone Bruz Sud"]')).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Vau Gaillard"]')).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Ker Lann"]')).toBeVisible();
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        47,
+      );
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
+      ).toContainText('28 parcours');
+
+      // Switch to bike only.
+      await page.getByRole('radio', { name: 'À vélo' }).click();
+      await expect(page.getByRole('radio', { name: 'À vélo' })).toBeChecked();
+
+      // The Bruz Sud walking block disappears; bike blocks remain everywhere.
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('h2', {
+          hasText: 'Parcours à pied',
+        }),
+      ).not.toBeVisible();
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('h2', {
+          hasText: 'Parcours à vélo',
+        }),
+      ).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Vau Gaillard"]')).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Ker Lann"]')).toBeVisible();
+
+      // Only the bike tours remain: 15 + 6 + 13 = 34 play buttons.
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        34,
+      );
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
+      ).toContainText('15 parcours');
+
+      // Restore everything.
+      await page.getByRole('radio', { name: 'Tous' }).click();
+      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        47,
+      );
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
+      ).toContainText('28 parcours');
+    });
+  });
+
+  test.describe('Distance filters (ticket #52)', () => {
+    test('the two distance sliders sit in the bar, "tout" by default, all rows visible', async ({
+      page,
+    }) => {
+      await page.goto('/');
+
+      await expect(page.locator('section[aria-label="Filtres de parcours"]')).toBeVisible();
+      // Both distance sliders render (two handles each) with their "tout" label.
+      await expect(page.locator('[role="slider"]')).toHaveCount(4);
+      await expect(page.getByText('tout')).toHaveCount(2);
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        47,
+      );
+    });
+
+    test('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async ({
+      page,
+    }) => {
+      await page.goto('/');
+
+      const sliders = page.locator('[role="slider"]');
+      const cleaningMin = sliders.nth(0);
+      await expect(cleaningMin).toHaveAttribute('aria-valuenow', '0.5');
+
+      // Invariant without filter: all 47 play buttons.
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        47,
+      );
+
+      // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
+      await cleaningMin.press('ArrowRight');
+      await expect(cleaningMin).toHaveAttribute('aria-valuenow', '1');
+      await expect(page.getByText('tout')).toHaveCount(1); // cleaning is no longer "tout"
+      const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
+      const remaining = await playButtons.count();
+      expect(remaining).toBeLessThan(47);
+      expect(remaining).toBeGreaterThan(0);
+
+      // Return to the axis extreme: everything comes back.
+      await cleaningMin.press('ArrowLeft');
+      await expect(cleaningMin).toHaveAttribute('aria-valuenow', '0.5');
+      await expect(page.getByText('tout')).toHaveCount(2);
+      await expect(playButtons).toHaveCount(47);
+    });
+  });
+
+  test.describe('Counter and empty state (ticket #53)', () => {
+    test('shows no counter when no filter is active', async ({ page }) => {
+      await page.goto('/');
+
+      await expect(page.getByText(/parcours affich/)).not.toBeVisible();
+      await expect(page.getByText(/Aucun parcours/)).not.toBeVisible();
+    });
+
+    test('shows a plural counter when filtering to "À vélo"', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByRole('radio', { name: 'À vélo' }).click();
+      await expect(page.getByRole('radio', { name: 'À vélo' })).toBeChecked();
+      await expect(page.getByText('34 parcours affichés')).toBeVisible();
+
+      // Restoring "Tous" removes the counter.
+      await page.getByRole('radio', { name: 'Tous' }).click();
+      await expect(page.getByText(/parcours affich/)).not.toBeVisible();
+    });
+
+    test('shows a singular counter when exactly one tour matches', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByRole('radio', { name: 'À vélo' }).click();
+
+      // Move the cleaning min from 0,5 to 4 km (7 steps of 0,5).
+      const sliders = page.locator('[role="slider"]');
+      const cleaningMin = sliders.nth(0);
+      for (let i = 0; i < 7; i++) {
+        await cleaningMin.press('ArrowRight');
+      }
+      await expect(cleaningMin).toHaveAttribute('aria-valuenow', '4');
+      await expect(page.getByText('1 parcours affiché')).toBeVisible();
+    });
+
+    test('shows the empty state message and a reset button when zero tours match', async ({
+      page,
+    }) => {
+      await page.goto('/');
+
+      await page.getByRole('radio', { name: 'À pied' }).click();
+
+      // No walking tour has a cleaning distance of 4 km → zero results.
+      const sliders = page.locator('[role="slider"]');
+      const cleaningMin = sliders.nth(0);
+      for (let i = 0; i < 7; i++) {
+        await cleaningMin.press('ArrowRight');
+      }
+
+      await expect(page.getByText('Aucun parcours ne correspond à ces filtres')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Réinitialiser les filtres' })).toBeVisible();
+
+      // No play buttons while the result is empty.
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        0,
+      );
+    });
+
+    test('resets every filter when clicking "Réinitialiser les filtres"', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByRole('radio', { name: 'À pied' }).click();
+
+      const sliders = page.locator('[role="slider"]');
+      const cleaningMin = sliders.nth(0);
+      for (let i = 0; i < 7; i++) {
+        await cleaningMin.press('ArrowRight');
+      }
+
+      await expect(page.getByText('Aucun parcours ne correspond à ces filtres')).toBeVisible();
+
+      await page.getByRole('button', { name: 'Réinitialiser les filtres' }).click();
+
+      // Back to the unfiltered state.
+      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
+      await expect(page.getByText('tout')).toHaveCount(2);
+      await expect(page.getByText(/Aucun parcours/)).not.toBeVisible();
+      await expect(page.getByText(/parcours affich/)).not.toBeVisible();
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        47,
+      );
     });
   });
 
