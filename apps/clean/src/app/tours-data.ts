@@ -6,7 +6,7 @@ export const toursData = {
       distance: 1.4,
       startDistance: 2.7,
       endDistance: 3.5,
-      total: 7.6,
+      totalDistance: 7.6,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -14,7 +14,7 @@ export const toursData = {
       distance: 1.2,
       startDistance: 2.9,
       endDistance: 3.8,
-      total: 7.9,
+      totalDistance: 7.9,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -22,7 +22,7 @@ export const toursData = {
       distance: 1.9,
       startDistance: 3,
       endDistance: 3.3,
-      total: 8.2,
+      totalDistance: 8.2,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -30,7 +30,7 @@ export const toursData = {
       distance: 0.9,
       startDistance: 3.2,
       endDistance: 3.7,
-      total: 7.8,
+      totalDistance: 7.8,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -38,7 +38,7 @@ export const toursData = {
       distance: 0.9,
       startDistance: 3.4,
       endDistance: 3.7,
-      total: 8,
+      totalDistance: 8,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -46,7 +46,7 @@ export const toursData = {
       distance: 1.2,
       startDistance: 3.4,
       endDistance: 3.8,
-      total: 8.4,
+      totalDistance: 8.4,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -54,7 +54,7 @@ export const toursData = {
       distance: 1,
       startDistance: 2.9,
       endDistance: 3,
-      total: 6.9,
+      totalDistance: 6.9,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -62,7 +62,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 2.7,
       endDistance: 2.3,
-      total: 6.1,
+      totalDistance: 6.1,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -70,7 +70,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 2.3,
       endDistance: 2.4,
-      total: 5.8,
+      totalDistance: 5.8,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -78,7 +78,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 3.1,
       endDistance: 3.1,
-      total: 7.3,
+      totalDistance: 7.3,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -86,7 +86,7 @@ export const toursData = {
       distance: 0.9,
       startDistance: 2.4,
       endDistance: 3.1,
-      total: 6.4,
+      totalDistance: 6.4,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -94,7 +94,7 @@ export const toursData = {
       distance: 1.3,
       startDistance: 3.1,
       endDistance: 4.3,
-      total: 8.7,
+      totalDistance: 8.7,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -102,7 +102,7 @@ export const toursData = {
       distance: 1,
       startDistance: 2.2,
       endDistance: 3.1,
-      total: 6.3,
+      totalDistance: 6.3,
       zoneId: 'bruz-ker-lann',
     },
     {
@@ -110,7 +110,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 1.3,
       endDistance: 1.8,
-      total: 4.2,
+      totalDistance: 4.2,
       zoneId: 'bruz-sud',
     },
     {
@@ -118,7 +118,7 @@ export const toursData = {
       distance: 1.3,
       startDistance: 1.5,
       endDistance: 2.8,
-      total: 5.6,
+      totalDistance: 5.6,
       zoneId: 'bruz-sud',
     },
     {
@@ -126,7 +126,7 @@ export const toursData = {
       distance: 1.2,
       startDistance: 2.4,
       endDistance: 2.3,
-      total: 5.9,
+      totalDistance: 5.9,
       zoneId: 'bruz-sud',
     },
     {
@@ -134,7 +134,7 @@ export const toursData = {
       distance: 1.2,
       startDistance: 2.5,
       endDistance: 3.9,
-      total: 7.6,
+      totalDistance: 7.6,
       zoneId: 'bruz-sud',
     },
     {
@@ -142,7 +142,7 @@ export const toursData = {
       distance: 1.9,
       startDistance: 2.5,
       endDistance: 3.9,
-      total: 8.3,
+      totalDistance: 8.3,
       zoneId: 'bruz-sud',
     },
     {
@@ -150,7 +150,7 @@ export const toursData = {
       distance: 1.2,
       startDistance: 3,
       endDistance: 4.1,
-      total: 8.3,
+      totalDistance: 8.3,
       zoneId: 'bruz-sud',
     },
     {
@@ -158,7 +158,7 @@ export const toursData = {
       distance: 1.4,
       startDistance: 2.3,
       endDistance: 3.7,
-      total: 7.4,
+      totalDistance: 7.4,
       zoneId: 'bruz-sud',
     },
     {
@@ -166,7 +166,7 @@ export const toursData = {
       distance: 4,
       startDistance: 1.3,
       endDistance: 3.4,
-      total: 8.7,
+      totalDistance: 8.7,
       zoneId: 'bruz-sud',
     },
     {
@@ -174,7 +174,7 @@ export const toursData = {
       distance: 1.2,
       startDistance: 3.9,
       endDistance: 5.1,
-      total: 10.2,
+      totalDistance: 10.2,
       zoneId: 'bruz-sud',
     },
     {
@@ -182,7 +182,7 @@ export const toursData = {
       distance: 2.6,
       startDistance: 4.1,
       endDistance: 4.3,
-      total: 11,
+      totalDistance: 11,
       zoneId: 'bruz-sud',
     },
     {
@@ -190,7 +190,7 @@ export const toursData = {
       distance: 1.8,
       startDistance: 1.1,
       endDistance: 2.3,
-      total: 5.2,
+      totalDistance: 5.2,
       zoneId: 'bruz-sud',
     },
     {
@@ -198,7 +198,7 @@ export const toursData = {
       distance: 3.2,
       startDistance: 2,
       endDistance: 4.1,
-      total: 9.3,
+      totalDistance: 9.3,
       zoneId: 'bruz-sud',
     },
     {
@@ -206,7 +206,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 2.5,
       endDistance: 4,
-      total: 7.6,
+      totalDistance: 7.6,
       zoneId: 'bruz-sud',
     },
     {
@@ -214,7 +214,7 @@ export const toursData = {
       distance: 2.4,
       startDistance: 4.1,
       endDistance: 3.6,
-      total: 10.1,
+      totalDistance: 10.1,
       zoneId: 'bruz-sud',
     },
     {
@@ -222,7 +222,7 @@ export const toursData = {
       distance: 2.1,
       startDistance: 4.1,
       endDistance: 4.6,
-      total: 10.8,
+      totalDistance: 10.8,
       zoneId: 'bruz-sud',
     },
     {
@@ -230,7 +230,7 @@ export const toursData = {
       distance: 0.9,
       startDistance: 1,
       endDistance: 2,
-      total: 3.9,
+      totalDistance: 3.9,
       zoneId: 'bruz-vau-gaillard',
     },
     {
@@ -238,7 +238,7 @@ export const toursData = {
       distance: 1.3,
       startDistance: 1,
       endDistance: 1,
-      total: 3.3,
+      totalDistance: 3.3,
       zoneId: 'bruz-vau-gaillard',
     },
     {
@@ -246,7 +246,7 @@ export const toursData = {
       distance: 1.5,
       startDistance: 0.7,
       endDistance: 1.5,
-      total: 3.7,
+      totalDistance: 3.7,
       zoneId: 'bruz-vau-gaillard',
     },
     {
@@ -254,7 +254,7 @@ export const toursData = {
       distance: 1,
       startDistance: 0.9,
       endDistance: 1.4,
-      total: 3.3,
+      totalDistance: 3.3,
       zoneId: 'bruz-vau-gaillard',
     },
     {
@@ -262,7 +262,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 1.1,
       endDistance: 2.2,
-      total: 4.4,
+      totalDistance: 4.4,
       zoneId: 'bruz-vau-gaillard',
     },
     {
@@ -270,17 +270,33 @@ export const toursData = {
       distance: 1.4,
       startDistance: 2.1,
       endDistance: 2,
-      total: 5.5,
+      totalDistance: 5.5,
       zoneId: 'bruz-vau-gaillard',
     },
   ],
   pTours: [
     {
+      name: 'P200',
+      distance: 0,
+      startDistance: 0,
+      endDistance: 0,
+      totalDistance: 0,
+      zoneId: 'bruz-ker-lann',
+    },
+    {
+      name: 'P201',
+      distance: 0,
+      startDistance: 0,
+      endDistance: 0,
+      totalDistance: 0,
+      zoneId: 'bruz-ker-lann',
+    },
+    {
       name: 'P1',
       distance: 1.1,
       startDistance: 0.1,
       endDistance: 1.1,
-      total: 2.3,
+      totalDistance: 2.3,
       zoneId: 'bruz-sud',
     },
     {
@@ -288,7 +304,7 @@ export const toursData = {
       distance: 0.8,
       startDistance: 0.7,
       endDistance: 1,
-      total: 2.5,
+      totalDistance: 2.5,
       zoneId: 'bruz-sud',
     },
     {
@@ -296,7 +312,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 0.3,
       endDistance: 0.9,
-      total: 2.3,
+      totalDistance: 2.3,
       zoneId: 'bruz-sud',
     },
     {
@@ -304,7 +320,7 @@ export const toursData = {
       distance: 1.5,
       startDistance: 0.6,
       endDistance: 1,
-      total: 3.1,
+      totalDistance: 3.1,
       zoneId: 'bruz-sud',
     },
     {
@@ -312,7 +328,7 @@ export const toursData = {
       distance: 1.6,
       startDistance: 1,
       endDistance: 0.9,
-      total: 3.5,
+      totalDistance: 3.5,
       zoneId: 'bruz-sud',
     },
     {
@@ -320,7 +336,7 @@ export const toursData = {
       distance: 1.5,
       startDistance: 1,
       endDistance: 1.3,
-      total: 3.8,
+      totalDistance: 3.8,
       zoneId: 'bruz-sud',
     },
     {
@@ -328,7 +344,7 @@ export const toursData = {
       distance: 1.6,
       startDistance: 0.6,
       endDistance: 1,
-      total: 3.2,
+      totalDistance: 3.2,
       zoneId: 'bruz-sud',
     },
     {
@@ -336,7 +352,7 @@ export const toursData = {
       distance: 0.8,
       startDistance: 1,
       endDistance: 1.2,
-      total: 3,
+      totalDistance: 3,
       zoneId: 'bruz-sud',
     },
     {
@@ -344,7 +360,7 @@ export const toursData = {
       distance: 0.9,
       startDistance: 1,
       endDistance: 1.1,
-      total: 3,
+      totalDistance: 3,
       zoneId: 'bruz-sud',
     },
     {
@@ -352,7 +368,7 @@ export const toursData = {
       distance: 0.5,
       startDistance: 1,
       endDistance: 1.1,
-      total: 2.6,
+      totalDistance: 2.6,
       zoneId: 'bruz-sud',
     },
     {
@@ -360,7 +376,7 @@ export const toursData = {
       distance: 1.1,
       startDistance: 1,
       endDistance: 1,
-      total: 3.1,
+      totalDistance: 3.1,
       zoneId: 'bruz-sud',
     },
     {
@@ -368,7 +384,7 @@ export const toursData = {
       distance: 0.7,
       startDistance: 1.3,
       endDistance: 1,
-      total: 3,
+      totalDistance: 3,
       zoneId: 'bruz-sud',
     },
     {
@@ -376,7 +392,7 @@ export const toursData = {
       distance: 1.4,
       startDistance: 0.1,
       endDistance: 0.9,
-      total: 2.4,
+      totalDistance: 2.4,
       zoneId: 'bruz-sud',
     },
   ],
