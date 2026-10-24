@@ -90,11 +90,14 @@ test.describe('Home page', () => {
       }
     });
 
-    test('should list all 13 walking tours (P1–P13)', async ({ page }) => {
+    test('should list all 13 walking tours (P1–P13) of Bruz Sud', async ({ page }) => {
       await page.goto('/');
-      const walkingSection = page.locator('app-tour-list-section', {
-        hasText: 'Parcours à pied',
-      });
+      // Two zones now have a walking section (Bruz Sud 13 + Bruz Ker Lann 2): scope to Bruz Sud.
+      const walkingSection = page
+        .locator('details[aria-label="Zone Bruz Sud"]')
+        .locator('app-tour-list-section', {
+          hasText: 'Parcours à pied',
+        });
       const tourRows = walkingSection.locator('li.list-row');
       await expect(tourRows).toHaveCount(13);
 
@@ -121,8 +124,8 @@ test.describe('Home page', () => {
     test('should have play button on each tour row', async ({ page }) => {
       await page.goto('/');
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-      // 15 bike + 13 walking (Bruz Sud) + 6 bike (Vau Gaillard) + 13 bike (Ker Lann) = 47 total
-      await expect(playButtons).toHaveCount(47);
+      // 15 bike + 13 walking (Bruz Sud) + 6 bike (Vau Gaillard) + 13 bike + 2 walking (Ker Lann) = 49 total
+      await expect(playButtons).toHaveCount(49);
     });
 
     test('should show "Voir tous les parcours" link for bike tours', async ({ page }) => {
@@ -165,12 +168,12 @@ test.describe('Home page', () => {
     }) => {
       await page.goto('/');
 
-      // Invariant without filter: every section and all 47 play buttons.
+      // Invariant without filter: every section and all 49 play buttons.
       await expect(page.locator('details[aria-label="Zone Bruz Sud"]')).toBeVisible();
       await expect(page.locator('details[aria-label="Zone Bruz Vau Gaillard"]')).toBeVisible();
       await expect(page.locator('details[aria-label="Zone Bruz Ker Lann"]')).toBeVisible();
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        47,
+        49,
       );
       await expect(
         page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
@@ -206,7 +209,7 @@ test.describe('Home page', () => {
       await page.getByRole('radio', { name: 'Tous' }).click();
       await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        47,
+        49,
       );
       await expect(
         page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),

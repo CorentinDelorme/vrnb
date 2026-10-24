@@ -62,7 +62,7 @@ function formatDistance(distance: number): string {
 /** Both distances of a Parcours row, French format:
  *  "1,1 km nettoyage · 4,2 km total" ("800 m" sous 1 km for each distance). */
 function formatTourDistances(tour: Tour): string {
-  return `${formatDistance(tour.distance)} nettoyage · ${formatDistance(tour.total)} total`;
+  return `${formatDistance(tour.distance)} nettoyage · ${formatDistance(tour.totalDistance)} total`;
 }
 
 /** Whether the loaded inscriptions cover the given (zone, Parcours) pair. */

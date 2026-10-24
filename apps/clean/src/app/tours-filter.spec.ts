@@ -15,7 +15,7 @@ function aTour(overrides: Partial<Tour>): Tour {
     distance: 1,
     startDistance: 1,
     endDistance: 1,
-    total: 3,
+    totalDistance: 3,
     zoneId: 'bruz-sud',
     ...overrides,
   };
