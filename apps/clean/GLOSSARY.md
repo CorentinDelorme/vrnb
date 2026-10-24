@@ -48,6 +48,14 @@ _Avoid_: état de génération, liste de tâches
 L'une des trois phases d'un Parcours : Début, Nettoyage, Fin.
 _Avoid_: étape du guide, phase
 
+**Distance de nettoyage**:
+La longueur de l'Étape Nettoyage d'un Parcours, celle où le ramassage a lieu.
+_Avoid_: distance (seule), longueur de tracé
+
+**Distance totale**:
+La longueur cumulée des trois Étapes d'un Parcours, du Point de rendez-vous jusqu'au retour.
+_Avoid_: kilométrage, total de mètres
+
 **Parcours en cours**:
 Le Parcours démarré par un participant et non encore terminé, mémorisé pour reprise.
 _Avoid_: parcours sauvegardé, progression
