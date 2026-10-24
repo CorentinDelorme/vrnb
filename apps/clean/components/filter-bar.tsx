@@ -73,7 +73,7 @@ export function FilterBar({
       aria-label="Filtres de parcours"
     >
       <div className="card-body">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-6">
           <fieldset className="border-0 p-0 mb-3 sm:flex-1">
             <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
               Type de parcours

@@ -250,7 +250,9 @@ export function DistanceRangeSlider({
   return (
     <div className="space-y-2" aria-label={label}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium">{label}</span>
+        <span className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
+          {label}
+        </span>
         <span className="text-xs font-medium text-base-content/70">{valueLabel}</span>
       </div>
 
