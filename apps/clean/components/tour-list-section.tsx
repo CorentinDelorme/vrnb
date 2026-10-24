@@ -5,6 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import type * as React from 'react';
 
+import { formatDistance } from '../src/app/tours-format';
 import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
@@ -49,14 +50,6 @@ declare module 'react' {
       'app-tour-list-section': React.HTMLAttributes<HTMLElement>;
     }
   }
-}
-
-/** French distance label, parity with the Angular template: "800 m" or "1,1 km". */
-function formatDistance(distance: number): string {
-  if (distance < 1) {
-    return `${(distance * 1000).toFixed(0)} m`;
-  }
-  return `${distance.toString().replace('.', ',')} km`;
 }
 
 /** Both distances of a Parcours row, French format:
