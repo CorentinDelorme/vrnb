@@ -105,8 +105,8 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
 
   return (
     <app-tour-list-section>
-      <ul className="list bg-base-200 rounded-box border-2 border-secondary/20 shadow-lg">
-        <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-base-300 p-4">
+      <ul className="border-2 border-secondary/20 shadow-lg">
+        <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-border p-4">
           <div className="flex items-center gap-3">
             <span className="bg-primary text-primary-content flex items-center justify-center rounded-full p-2 sm:p-2.5">
               <HugeiconsIcon className="sm:h-10 sm:w-10" icon={typeIcon} strokeWidth={1.5} />
@@ -132,17 +132,14 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
         </li>
 
         {tours.map((tour) => (
-          <li
-            className="list-row items-center bg-base-100 border-base-200 rounded-lg border"
-            key={tour.name}
-          >
-            <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
-            <div className="text-base-content/70 text-base font-light sm:text-xl">
+          <li className="items-center border-border rounded-lg border" key={tour.name}>
+            <div className="text-foreground text-xl font-medium sm:text-3xl">{tour.name}</div>
+            <div className="text-muted-foreground/70 text-base font-light sm:text-xl">
               {formatTourDistances(tour)}
             </div>
-            <div className="list-col-grow flex items-center justify-end gap-2">
+            <div className="flex items-center justify-end gap-2">
               {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
-                <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
+                <Badge variant="secondary">Binôme inscrit</Badge>
               ) : null}
               <TourRegisterButton
                 available={

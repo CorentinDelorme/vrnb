@@ -10,6 +10,7 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from 'react';
 
+import { cn } from '@/components/lib/utils';
 import { actionHoursLabel, tourGoogleCalendarUrl } from '../lib/tour-calendar';
 import type { Edition, RegistrationWindowPhase } from '../src/app/inscriptions/edition';
 import {
@@ -38,7 +39,7 @@ import {
   useInscriptionsStatus,
 } from './inscriptions-status-provider';
 import { Alert, AlertDescription } from './ui/alert';
-import { Button } from './ui/button';
+import { Button, buttonVariants } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogClose, DialogContent } from './ui/dialog';
 import { Input } from './ui/input';
@@ -297,9 +298,9 @@ export function RegisterBinomeModal({
         </DialogClose>
 
         <h3 className="text-xl font-bold">Inscription du binôme</h3>
-        <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
-          Zone <span className="text-base-content font-medium">{zone.name}</span> - Parcours{' '}
-          <span className="text-base-content font-medium">{tour.tourId}</span>
+        <p className="text-foreground/80 mt-1 text-sm font-light sm:text-base">
+          Zone <span className="text-foreground font-medium">{zone.name}</span> - Parcours{' '}
+          <span className="text-foreground font-medium">{tour.tourId}</span>
         </p>
 
         {outcome === 'created' ? (
@@ -339,7 +340,7 @@ export function RegisterBinomeModal({
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <a
-                  className="btn btn-primary max-sm:btn-sm sm:btn-md"
+                  className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
                   href={tourGoogleCalendarUrl({
                     address: zone.meetingPoint.address,
                     edition,
@@ -354,7 +355,7 @@ export function RegisterBinomeModal({
                   Google Agenda
                 </a>
                 <a
-                  className="btn btn-outline max-sm:btn-sm sm:btn-md"
+                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
                   href={`/api/calendrier/${tour.zoneId}/${tour.tourId}`}
                 >
                   Fichier calendrier (.ics)
@@ -462,7 +463,7 @@ export function RegisterBinomeModal({
                 value={honeypot}
               />
 
-              <p className="text-base-content/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
+              <p className="text-muted-foreground/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
 
               {outcomeAlert ? (
                 <Alert className="mt-4 text-sm sm:text-base" variant="destructive">

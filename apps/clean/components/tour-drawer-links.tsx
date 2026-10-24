@@ -15,6 +15,7 @@ import {
 import { loadTourRouteGeoJson } from '../src/app/shared/gpx/tour-geometry';
 import { getCurrentPosition, subscribeCurrentPosition } from '../src/app/shared/map/map-position';
 import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
+import { Separator } from './ui/separator';
 
 /**
  * Download links of the "Menu" drawer on `/tour/<zone>/<id>` — port of the
@@ -77,7 +78,7 @@ export function TourDrawerLinks() {
         </li>
       ) : null}
 
-      <div className="divider m-0" />
+      <Separator className="m-0" />
 
       {id ? (
         <li>
@@ -114,7 +115,7 @@ export function TourDrawerLinks() {
         </li>
       ) : null}
 
-      <div className="divider m-0" />
+      <Separator className="m-0" />
 
       <div className="flex justify-center">
         <img

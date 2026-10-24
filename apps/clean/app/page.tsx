@@ -80,7 +80,7 @@ export default function HomePage() {
               Articles Ouest-France 2026
             </AccordionTrigger>
             <AccordionContent className="pt-4">
-              <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-base-200">
+              <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-border">
                 {ARTICLES.map((article) => (
                   <li key={article.url}>
                     <a

@@ -164,7 +164,7 @@ export function ImportParcoursForm() {
                 {importResult.ids.length > 1 ? 's' : ''} — IDs attribués :{' '}
                 {importResult.ids.join(', ')}
               </p>
-              <ul className="list list-disc list-inside mt-3 space-y-1 text-sm">
+              <ul className="list-disc list-inside mt-3 space-y-1 text-sm">
                 {importResult.ids.map((id) => {
                   const allOk = Object.values(importResult.logs).every((log) => log.ok);
                   return (
