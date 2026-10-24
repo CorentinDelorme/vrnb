@@ -83,6 +83,31 @@ describe('Home page', () => {
     expect(walkingSection?.querySelectorAll('li.list-row')[1]?.textContent).toContain('800 m');
   });
 
+  it('shows both distances on each row in French format', async () => {
+    const { container } = await renderHomePage();
+    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
+    const bikeSection = zone?.querySelectorAll('app-tour-list-section')[0];
+
+    // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
+    expect(bikeSection?.querySelectorAll('li.list-row')[0]?.textContent).toContain(
+      '1,1 km nettoyage · 4,2 km total',
+    );
+  });
+
+  it('renders the filter bar above the zones with "Tous" selected by default', async () => {
+    const { container } = await renderHomePage();
+
+    const filterBar = container.querySelector('section[aria-label="Filtres de parcours"]');
+    expect(filterBar).not.toBeNull();
+
+    const fieldset = filterBar?.querySelector('fieldset');
+    expect(fieldset?.querySelector('legend')?.textContent).toBe('Type de parcours');
+
+    const tous = container.querySelector('input[name="tour-type"][value="all"]');
+    expect(tous).not.toBeNull();
+    expect(tous?.matches(':checked')).toBe(true);
+  });
+
   it('links each section to its zone map and labels every play button', async () => {
     await renderHomePage();
     const mapLinks = screen.getAllByRole('link', { name: 'Voir tous les parcours' });

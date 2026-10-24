@@ -150,6 +150,70 @@ test.describe('Home page', () => {
     });
   });
 
+  test.describe('Filtering by type', () => {
+    test('the filter bar sits above the zones with "Tous" checked by default', async ({ page }) => {
+      await page.goto('/');
+
+      await expect(page.locator('section[aria-label="Filtres de parcours"]')).toBeVisible();
+      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
+      await expect(page.getByRole('radio', { name: 'À pied' })).not.toBeChecked();
+      await expect(page.getByRole('radio', { name: 'À vélo' })).not.toBeChecked();
+    });
+
+    test('filtering to "À vélo" hides walking sections and rows, then restoring "Tous" brings them back', async ({
+      page,
+    }) => {
+      await page.goto('/');
+
+      // Invariant without filter: every section and all 47 play buttons.
+      await expect(page.locator('details[aria-label="Zone Bruz Sud"]')).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Vau Gaillard"]')).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Ker Lann"]')).toBeVisible();
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        47,
+      );
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
+      ).toContainText('28 parcours');
+
+      // Switch to bike only.
+      await page.getByRole('radio', { name: 'À vélo' }).click();
+      await expect(page.getByRole('radio', { name: 'À vélo' })).toBeChecked();
+
+      // The Bruz Sud walking block disappears; bike blocks remain everywhere.
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('h2', {
+          hasText: 'Parcours à pied',
+        }),
+      ).not.toBeVisible();
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('h2', {
+          hasText: 'Parcours à vélo',
+        }),
+      ).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Vau Gaillard"]')).toBeVisible();
+      await expect(page.locator('details[aria-label="Zone Bruz Ker Lann"]')).toBeVisible();
+
+      // Only the bike tours remain: 15 + 6 + 13 = 34 play buttons.
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        34,
+      );
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
+      ).toContainText('15 parcours');
+
+      // Restore everything.
+      await page.getByRole('radio', { name: 'Tous' }).click();
+      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
+      await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
+        47,
+      );
+      await expect(
+        page.locator('details[aria-label="Zone Bruz Sud"]').locator('summary'),
+      ).toContainText('28 parcours');
+    });
+  });
+
   test.describe('Saved tour banner', () => {
     test('should NOT show saved tour banner by default', async ({ page }) => {
       await page.goto('/');

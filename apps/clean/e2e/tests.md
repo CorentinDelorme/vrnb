@@ -115,7 +115,7 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    « Calendar file route » intro). No parity impact: no new route of the legacy DOM contract,
    the links exist only on the confirmation panel of the modal.
 
-Totals: **113 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36) × chromium + firefox = **226**.
+Totals: **115 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36, + 2 for the filter bar and type filtering — ticket #51) × chromium + firefox = **230**.
 
 ---
 
@@ -149,20 +149,28 @@ Route: `/`
 
 #### Tour sections
 
-| Test name                                                     | Steps                       | Expected                                                       |
-| ------------------------------------------------------------- | --------------------------- | -------------------------------------------------------------- |
-| `should display Bruz Sud zone heading`                        | `goto('/')`                 | `details[aria-label="Zone Bruz Sud"]` visible                  |
-| `should display zone heading with tour count`                 | `goto('/')`                 | Zone summary shows "Bruz Sud" and "28 parcours"                |
-| `should collapse and expand the zone block on summary click`  | `goto('/')` → click summary | `open` attribute toggles off then on                           |
-| `should display bike tours section`                           | `goto('/')`                 | Heading "Parcours à vélo" visible                              |
-| `should display walking tours section`                        | `goto('/')`                 | Heading "Parcours à pied" visible                              |
-| `should list all 15 Bruz Sud bike tours (V1–V15)`             | `goto('/')`                 | 15 tour rows under Bruz Sud bike section, names V1 through V15 |
-| `should list all 13 walking tours (P1–P13)`                   | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13      |
-| `should display distance in km for V1 (1,1 km)`               | `goto('/')`                 | V1 row contains text "1,1 km"                                  |
-| `should display distance in meters for tours under 1km`       | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m"                             |
-| `should have play button on each tour row`                    | `goto('/')`                 | 47 buttons with `aria-label="Lancer le parcours"`              |
-| `should show "Voir tous les parcours" link for bike tours`    | `goto('/')` (desktop)       | Link visible in V section, href `/tours/bruz-sud/V`            |
-| `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop)       | Link visible in P section, href `/tours/bruz-sud/P`            |
+| Test name                                                    | Steps                       | Expected                                                                               |
+| ------------------------------------------------------------ | --------------------------- | -------------------------------------------------------------------------------------- |
+| `should display Bruz Sud zone heading`                       | `goto('/')`                 | `details[aria-label="Zone Bruz Sud"]` visible                                          |
+| `should display zone heading with tour count`                | `goto('/')`                 | Zone summary shows "Bruz Sud" and "28 parcours"                                        |
+| `should collapse and expand the zone block on summary click` | `goto('/')` → click summary | `open` attribute toggles off then on                                                   |
+| `should display bike tours section`                          | `goto('/')`                 | Heading "Parcours à vélo" visible                                                      |
+| `should display walking tours section`                       | `goto('/')`                 | Heading "Parcours à pied" visible                                                      |
+| `should list all 15 Bruz Sud bike tours (V1–V15)`            | `goto('/')`                 | 15 tour rows under Bruz Sud bike section, names V1 through V15                         |
+| `should list all 13 walking tours (P1–P13)`                  | `goto('/')`                 | 13 tour rows under walking sections, names P1 through P13                              |
+| `should display distance in km for V1 (1,1 km)`              | `goto('/')`                 | V1 row contains text "1,1 km nettoyage · 4,2 km total" (both distances, French format) |
+| `should display distance in meters for tours under 1km`      | `goto('/')`                 | P2 Bruz Sud (0.8 km) shows "800 m nettoyage · 2,5 km total"                            |
+| `should have play button on each tour row`                   | `goto('/')`                 | 47 buttons with `aria-label="Lancer le parcours"`                                      |
+
+#### Filtering by type (ticket #51)
+
+| Test name                                                        | Steps                        | Expected                                                                                           |
+| ---------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `the filter bar sits above the zones with "Tous" checked`        | `goto('/')`                  | `section[aria-label="Filtres de parcours"]` visible; "Tous" checked, "À pied" / "À vélo" unchecked |
+| `filtering to "À vélo" hides walking rows, then "Tous" restores` | `goto('/')` → click "À vélo" | Walking heading gone, 34 play buttons, Bruz Sud badge "15 parcours"; click "Tous" → 47 buttons     |
+
+| `should show "Voir tous les parcours" link for bike tours` | `goto('/')` (desktop) | Link visible in V section, href `/tours/bruz-sud/V` |
+| `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop) | Link visible in P section, href `/tours/bruz-sud/P` |
 
 #### Saved tour banner
 
