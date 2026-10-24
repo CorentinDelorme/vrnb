@@ -10,6 +10,8 @@ import {
   SCRIPTS,
 } from '../lib/import-parcours';
 import { ZONES } from '../src/app/zones';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
 
 /** URL of the Parcours import API route (ticket #42 / #43). */
 const IMPORT_API_URL = '/api/import-parcours';
@@ -130,9 +132,9 @@ export function ImportParcoursForm() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary w-full" disabled={isDisabled}>
+          <Button type="submit" variant="default" className="w-full" disabled={isDisabled}>
             {importing ? 'Importation…' : 'Importer'}
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -150,9 +152,9 @@ export function ImportParcoursForm() {
                 const allOk = Object.values(importResult.logs).every((log) => log.ok);
                 return (
                   <li key={id} className="flex items-center gap-2">
-                    <span className={`badge badge-sm ${allOk ? 'badge-success' : 'badge-error'}`}>
+                    <Badge variant={allOk ? 'default' : 'destructive'}>
                       {allOk ? 'Succès' : 'Échec'}
-                    </span>
+                    </Badge>
                     {id}
                   </li>
                 );

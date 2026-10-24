@@ -1,8 +1,10 @@
 import Link from 'next/link';
 
+import { cn } from '@/components/lib/utils';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
+import { buttonVariants } from '../components/ui/button';
 import { ZoneList } from '../components/zone-list';
 
 /**
@@ -39,7 +41,10 @@ export default function HomePage() {
             <p className="text-sm font-medium sm:text-base">
               Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
             </p>
-            <Link className="btn btn-primary btn-sm shrink-0 sm:btn-md" href="/manual">
+            <Link
+              href="/manual"
+              className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'shrink-0')}
+            >
               Mode d&apos;emploi
             </Link>
           </div>

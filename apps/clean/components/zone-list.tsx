@@ -14,6 +14,7 @@ import { findZoneTours } from '../src/app/tours-queries';
 import { ZONES } from '../src/app/zones';
 import { FilterBar } from './filter-bar';
 import { TourListSection } from './tour-list-section';
+import { Badge } from './ui/badge';
 
 /**
  * Client wrapper above the zone list carrying the ephemeral filter state
@@ -70,9 +71,7 @@ export function ZoneList() {
           <h2 className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
             {zone.name}
           </h2>
-          <span className="badge badge-secondary badge-md sm:badge-lg">
-            {bikeTours.length + walkingTours.length} parcours
-          </span>
+          <Badge variant="secondary">{bikeTours.length + walkingTours.length} parcours</Badge>
         </summary>
         <div className="collapse-content">
           <div
