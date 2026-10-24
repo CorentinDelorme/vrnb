@@ -115,7 +115,7 @@ Inscriptions feature additions (tickets #16, #17 and #18 — no parity impact, t
    « Calendar file route » intro). No parity impact: no new route of the legacy DOM contract,
    the links exist only on the confirmation panel of the modal.
 
-Totals: **117 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36, + 2 for the filter bar and type filtering — ticket #51, + 2 for the two distance sliders and filtering — ticket #52) × chromium + firefox = **234**.
+Totals: **122 tests per browser** (102 after tickets #16 and #17, + 7 for ticket #18, + 1 for the mode d'emploi sommaire, + 1 for the inscriptions opening announcement — ticket #34, + 2 for the calendar file route — ticket #36, + 2 for the filter bar and type filtering — ticket #51, + 2 for the two distance sliders and filtering — ticket #52, + 5 for the counter, empty state and reset — ticket #53) × chromium + firefox = **244**.
 
 ---
 
@@ -178,6 +178,16 @@ Route: `/`
 | ------------------------------------------------------------------------------ | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `the two distance sliders sit in the bar, "tout" by default, all rows visible` | `goto('/')`                     | 4 slider handles (`role="slider"`), "Distance de nettoyage" / "Distance totale" present, two "tout" labels, 49 play buttons              |
 | `moving the cleaning-distance min bound filters rows; returning restores them` | `goto('/')` → ArrowRight on min | Min bound 0,5 → 1 km, one "tout" left, play buttons drop below 49 but stay above 0; ArrowLeft → 0,5 km, two "tout", 49 play buttons back |
+
+#### Counter and empty state (ticket #53)
+
+| Test name                                                                | Steps                                                                             | Expected                                                                                                         |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `shows no counter when no filter is active`                              | `goto('/')`                                                                       | No "X parcours affichés" text, no empty-state message                                                            |
+| `shows a plural counter when filtering to "À vélo"`                      | `goto('/')` → click "À vélo"                                                      | "34 parcours affichés" visible; click "Tous" → counter gone                                                      |
+| `shows a singular counter when exactly one tour matches`                 | `goto('/')` → click "À vélo" → 7× ArrowRight on cleaning min                      | "1 parcours affiché" visible                                                                                     |
+| `shows the empty state message and a reset button when zero tours match` | `goto('/')` → click "À pied" → 7× ArrowRight on cleaning min                      | "Aucun parcours ne correspond à ces filtres" visible, "Réinitialiser les filtres" button visible, 0 play buttons |
+| `resets every filter when clicking "Réinitialiser les filtres"`          | `goto('/')` → click "À pied" → 7× ArrowRight on cleaning min → click reset button | Back to "Tous" checked, two "tout" labels, 49 play buttons, no counter, no empty message                         |
 
 #### Saved tour banner
 
@@ -576,6 +586,9 @@ test('should have no a11y violations on home page', async ({ page }) => {
 | Anti-bot honeypot             | `input[name="website"]` (hidden)                                                           |
 | "Voir tous les parcours" link | `a` with text "Voir tous les parcours" (full-width button under the header on `max-sm`)    |
 | Map                           | `div#map`                                                                                  |
+| Counter text                  | text "X parcours affichés" / "1 parcours affiché" (only when a filter touches)             |
+| Empty state message           | text "Aucun parcours ne correspond à ces filtres"                                          |
+| Reset button                  | `button` with name "Réinitialiser les filtres" (only in the empty state)                   |
 | Step items                    | `li.step`                                                                                  |
 | "Précédent" button            | `getByRole('button', { name: 'Précédent' })`                                               |
 | "Suivant" button              | `getByRole('button', { name: 'Suivant' })`                                                 |

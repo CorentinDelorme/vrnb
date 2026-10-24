@@ -29,6 +29,12 @@ interface FilterBarProps {
   readonly total: DistanceInterval;
   /** Called when the user moves a total-distance handle. */
   readonly onTotalChange: (value: DistanceInterval) => void;
+  /** How many tours match the current filters. */
+  readonly displayedCount: number;
+  /** Whether at least one filter family is active (touches the results). */
+  readonly filterTouched: boolean;
+  /** Resets every filter to its inactive state (no permanent reset button). */
+  readonly onReset: () => void;
 }
 
 /**
@@ -44,6 +50,11 @@ interface FilterBarProps {
  * Ticket #52: the two distance slider families (Distance de nettoyage and
  * Distance totale) sit below the type control. Each is a reusable dual-handle
  * ARIA slider; an interval covering its whole axis means the family is off.
+ *
+ * Ticket #53: when at least one filter touches, a discreet counter ("X
+ * parcours affichés", singular "1 parcours affiché") is shown; when zero
+ * tours match, an empty-state message with a "Réinitialiser les filtres"
+ * button is shown instead. No permanent reset button lives in the bar.
  */
 export function FilterBar({
   type,
@@ -52,6 +63,9 @@ export function FilterBar({
   onCleaningChange,
   total,
   onTotalChange,
+  displayedCount,
+  filterTouched,
+  onReset,
 }: FilterBarProps) {
   return (
     <section
@@ -115,6 +129,28 @@ export function FilterBar({
             onChange={onTotalChange}
           />
         </fieldset>
+
+        {/* Ticket #53: counter or empty state, only when a filter touches. */}
+        {filterTouched ? (
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            {displayedCount === 0 ? (
+              <>
+                <p className="text-sm font-medium text-base-content/70">
+                  Aucun parcours ne correspond à ces filtres
+                </p>
+                <button type="button" className="btn btn-xs btn-secondary" onClick={onReset}>
+                  Réinitialiser les filtres
+                </button>
+              </>
+            ) : (
+              <p className="text-sm font-medium text-base-content/70">
+                {displayedCount === 1
+                  ? '1 parcours affiché'
+                  : `${displayedCount} parcours affichés`}
+              </p>
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );
