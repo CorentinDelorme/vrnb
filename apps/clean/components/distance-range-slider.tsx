@@ -111,7 +111,7 @@ export function DistanceRangeSlider({
     return (
       <div
         key={which}
-        className="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-primary border-2 border-base-100 shadow-sm"
+        className="absolute top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-primary border-2 border-base-100 shadow-sm"
         style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
         role="slider"
         aria-orientation="horizontal"
