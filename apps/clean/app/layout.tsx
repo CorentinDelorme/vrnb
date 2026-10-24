@@ -4,6 +4,7 @@ import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
 import { AppHeader } from '../components/app-header';
+import { ThemeInitializer } from '../components/theme-provider';
 import { HOME_TITLE } from '../lib/route-meta';
 import './globals.css';
 
@@ -11,7 +12,8 @@ import './globals.css';
  * Root layout — port of the legacy `src/index.html` + `app.html` shell (spec #3):
  * `<html lang="fr">`, the restrictive viewport (kept for map pinch-zoom and axe
  * parity), the favicon, the header, and the Vercel analytics/insights hooks.
- * The DaisyUI `vrnb`/`vrnb-dark` themes and Leaflet CSS load from `globals.css`.
+ * The shadcn/ui vrnb theme (CSS variables) loads from `globals.css`; dark mode
+ * is toggled via the `dark` class on `<html>` (see `ThemeInitializer`).
  *
  * Scroll restoration: the App Router scrolls back to the top on every
  * navigation (the spec #3 parity intent: scroll restored to the top when
@@ -46,6 +48,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </main>
         <Analytics />
         <SpeedInsights />
+        <ThemeInitializer />
       </body>
     </html>
   );
