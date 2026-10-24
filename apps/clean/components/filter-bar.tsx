@@ -73,18 +73,18 @@ export function FilterBar({
       aria-label="Filtres de parcours"
     >
       <div className="card-body">
-        <div className="flex flex-col sm:flex-row gap-6">
-          <fieldset className="border-0 p-0 mb-3 sm:flex-1">
-            <legend className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full">
+        <div className="flex flex-col sm:flex-row gap-8">
+          <div className="sm:flex-1">
+            <span className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full mb-2 block">
               Type de parcours
-            </legend>
+            </span>
             <div className="join mt-2">
               {TYPE_CHOICES.map((choice) => {
                 const active = type === choice.value;
                 return (
                   <label
                     key={choice.value}
-                    className={`btn btn-sm join-item ${active ? 'btn-active' : ''}`}
+                    className={`join-item btn btn-sm ${active ? 'btn-active' : ''}`}
                     title={choice.label}
                   >
                     <input
@@ -93,9 +93,6 @@ export function FilterBar({
                       value={choice.value}
                       checked={active}
                       onChange={() => onTypeChange(choice.value)}
-                      // No visible radio circle (design feedback), but keep a
-                      // real size so the input stays clickable (Playwright
-                      // cannot action an opacity:0 / 1x1px element).
                       className="appearance-none w-5 h-5 bg-transparent border-0 cursor-pointer"
                       aria-label={choice.label}
                     />
@@ -104,9 +101,9 @@ export function FilterBar({
                 );
               })}
             </div>
-          </fieldset>
+          </div>
 
-          <fieldset className="border-0 p-0 mb-3 sm:flex-1" aria-label="Distance de nettoyage">
+          <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance de nettoyage">
             <DistanceRangeSlider
               label="Distance de nettoyage"
               min={0.5}
@@ -117,7 +114,7 @@ export function FilterBar({
             />
           </fieldset>
 
-          <fieldset className="border-0 p-0 mb-3 sm:flex-1" aria-label="Distance totale">
+          <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance totale">
             <DistanceRangeSlider
               label="Distance totale"
               min={2}

@@ -53,9 +53,11 @@ describe('ZoneList', () => {
   it('renders the filter bar with "Tous" selected by default', () => {
     const { container } = render(<ZoneList />);
 
-    const fieldset = container.querySelector('fieldset');
-    expect(fieldset).not.toBeNull();
-    expect(fieldset?.querySelector('legend')?.textContent).toBe('Type de parcours');
+    const filterBar = container.querySelector('section[aria-label="Filtres de parcours"]');
+    expect(filterBar).not.toBeNull();
+
+    const typeLabel = filterBar?.querySelector('span')?.textContent;
+    expect(typeLabel).toBe('Type de parcours');
 
     expect(inputFor('Tous').checked).toBe(true);
     expect(inputFor('À pied').checked).toBe(false);

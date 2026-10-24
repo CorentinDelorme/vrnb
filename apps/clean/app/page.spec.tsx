@@ -100,8 +100,8 @@ describe('Home page', () => {
     const filterBar = container.querySelector('section[aria-label="Filtres de parcours"]');
     expect(filterBar).not.toBeNull();
 
-    const fieldset = filterBar?.querySelector('fieldset');
-    expect(fieldset?.querySelector('legend')?.textContent).toBe('Type de parcours');
+    const typeLabel = filterBar?.querySelector('span')?.textContent;
+    expect(typeLabel).toBe('Type de parcours');
 
     const tous = container.querySelector('input[name="tour-type"][value="all"]');
     expect(tous).not.toBeNull();
