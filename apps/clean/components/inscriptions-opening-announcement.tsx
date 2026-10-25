@@ -3,7 +3,6 @@
 import { InformationCircleIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 
-import { cn } from '@/components/lib/utils';
 import { CURRENT_EDITION, formatActionDateLabel } from '../src/app/inscriptions/edition';
 import { registrationWindowPhaseOf, useInscriptionsStatus } from './inscriptions-status-provider';
 import { Alert, AlertDescription } from './ui/alert';
@@ -68,13 +67,7 @@ export function InscriptionsOpeningAnnouncement({
   // (present, spec-fixed), the modal's « ouvriront » — and both take the
   // date from the ONE `formatActionDateLabel` derivation of `edition.ts`.
   return (
-    <Alert
-      className={cn(
-        'bg-blue-50 border-blue-200 text-blue-900',
-        'mb-4 sm:mb-8 text-sm sm:text-base',
-      )}
-      variant="default"
-    >
+    <Alert variant="info" className="mb-4 sm:mb-8 text-sm sm:text-base">
       <HugeiconsIcon aria-hidden="true" icon={InformationCircleIcon} strokeWidth={1.5} />
       <AlertDescription>
         {`Les inscriptions ouvrent le ${formatActionDateLabel(edition.inscriptionsOpenDate)}.`}

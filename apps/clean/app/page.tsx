@@ -42,21 +42,19 @@ export default function HomePage() {
 
   return (
     <>
-      <div className="mb-4 sm:mb-8">
-        <Card className="shadow-sm border">
-          <CardContent className="py-3 sm:py-4 flex flex-row items-center justify-between gap-4">
-            <p className="text-sm font-medium sm:text-base">
-              Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
-            </p>
-            <Link
-              href="/manual"
-              className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'shrink-0')}
-            >
-              Mode d&apos;emploi
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="shadow-sm border">
+        <CardContent className="flex flex-row items-center justify-between gap-4">
+          <p className="text-sm font-medium sm:text-base">
+            Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
+          </p>
+          <Link
+            href="/manual"
+            className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'shrink-0')}
+          >
+            Mode d&apos;emploi
+          </Link>
+        </CardContent>
+      </Card>
 
       <ResumeTourBanner />
 
@@ -72,32 +70,38 @@ export default function HomePage() {
         <ZoneList />
       </InscriptionsStatusProvider>
 
-      <div className="mb-4 sm:mb-8">
-        <Accordion defaultValue={['presse']} aria-label="Articles Ouest-France 2026">
-          <AccordionItem value="presse">
-            <AccordionTrigger className="flex items-center gap-4">
-              <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
-              Articles Ouest-France 2026
-            </AccordionTrigger>
-            <AccordionContent className="pt-4">
-              <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-border">
-                {ARTICLES.map((article) => (
-                  <li key={article.url}>
-                    <a
-                      className="link link-secondary font-medium"
-                      href={article.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {article.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      </div>
+      <Card>
+        <CardContent>
+          <Accordion defaultValue={['presse']} aria-label="Articles Ouest-France 2026">
+            <AccordionItem value="presse">
+              <AccordionTrigger className="flex items-center gap-4">
+                <img
+                  className="h-auto w-28"
+                  src="/icons/ouest-france.svg"
+                  alt="Logo Ouest-France"
+                />
+                Articles Ouest-France 2026
+              </AccordionTrigger>
+              <AccordionContent className="pt-4">
+                <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-border">
+                  {ARTICLES.map((article) => (
+                    <li key={article.url}>
+                      <a
+                        className="link link-secondary font-medium"
+                        href={article.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {article.title}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </CardContent>
+      </Card>
 
       <footer className="pt-4 text-center text-sm opacity-70 sm:pt-8">©{currentYear} VRNB</footer>
     </>

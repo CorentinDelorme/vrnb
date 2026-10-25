@@ -117,7 +117,7 @@ export function ZoneList() {
         filterTouched={filterTouched}
         onReset={handleReset}
       />
-      <Card className="mt-4 sm:mt-6">
+      <Card>
         <CardContent>
           <Accordion defaultValue={ZONES.map((zone) => zone.id)}>{zoneSections}</Accordion>
         </CardContent>
