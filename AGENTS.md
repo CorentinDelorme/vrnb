@@ -68,3 +68,13 @@
 - `apps/clean/GLOSSARY.md` — Domain vocabulary for the clean-up app
 - `packages/web-db/docker-compose.yml` — MongoDB service
 - `turbo.json` — Pipeline + env wiring
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in this repo's GitHub Issues, using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+multi-context: root `GLOSSARY-MAP.md` pointing at one `GLOSSARY.md` per context (currently only `apps/clean` has one), plus context-scoped `docs/adr/`. See `docs/agents/domain.md`.
