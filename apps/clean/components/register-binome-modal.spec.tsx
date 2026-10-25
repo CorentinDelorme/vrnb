@@ -8,13 +8,16 @@ import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { RegisterBinomeModal } from './register-binome-modal';
 
 /**
- * Behavior of the DaisyUI registration modal (tickets #17 + #18): the submit
- * stays gated on the four identity fields plus the engagement statement, a
- * created outcome posts the exact contract body, shows the confirmation and
- * reloads the statuses; a 409 shows the covered-meantime guard and reloads
- * too; each refusal (invalid saisie, closed window) and the network failures
- * show their own explicit message without reloading. No submit resets the
- * fields — a close without submitting keeps the values.
+ * Behavior of the registration modal (tickets #17 + #18): the submit stays
+ * gated on the four identity fields plus the engagement statement, a created
+ * outcome posts the exact contract body, shows the confirmation and reloads
+ * the statuses; a 409 shows the covered-meantime guard and reloads too; each
+ * refusal (invalid saisie, closed window) and the network failures show their
+ * own explicit message without reloading. No submit resets the fields — a
+ * close without submitting keeps the values.
+ *
+ * The modal is a shadcn `Dialog` controlled through the `visible`/`onOpenChange`
+ * props; the legacy `register_modal_<tourId>` id is kept on `DialogContent`.
  */
 
 const TOUR: TourRef = { tourId: 'V1', zoneId: 'bruz-sud' };
@@ -75,50 +78,42 @@ const CLOSED_STATUS: InscriptionsStatus = {
   status: 'success',
 };
 
-/**
- * A post-closure instant of the Édition (2027-02-12 = 2 days before the
- * action): a window the server answers closed then really is closed, both
- * for the server answer and for the local clock fallback.
- */
+/** A post-closure instant of the Édition (2027-02-12 = 2 days before the action). */
 const POST_CLOSURE_CLOCK = new Date('2027-02-12T09:00:00Z');
 
-/**
- * jsdom implements no dialog method: patch the two the modal lives on. The
- * native submit of the `<form method="dialog">` close button and `Escape` are
- * then simulated directly through the patched `close` (the jsdom event gives
- * the component its `close` listener).
- */
-function installDialogueStub(onClose: () => void): void {
-  const prototype = HTMLDialogElement.prototype as unknown as {
-    showModal?: () => void;
-    close?: () => void;
-  };
-  prototype.showModal = function showModalStub(this: HTMLDialogElement) {
-    this.setAttribute('open', '');
-  };
-  prototype.close = function closeStub(this: HTMLDialogElement) {
-    onClose();
-    this.removeAttribute('open');
-    this.dispatchEvent(new Event('close'));
-  };
-}
-
 /** Render the modal open and return helpers for one test. */
-function renderModal() {
+function renderModal({ now }: { now?: Date } = {}) {
   const onClose = vi.fn();
-  installDialogueStub(onClose);
-  const render_ = render(<RegisterBinomeModal onClose={onClose} tour={TOUR} visible />);
-  return { ...render_, onClose };
+  let visible = true;
+  function Harness() {
+    return (
+      <RegisterBinomeModal
+        now={now}
+        onClose={() => {
+          onClose();
+          visible = false;
+        }}
+        tour={TOUR}
+        visible={visible}
+      />
+    );
+  }
+  const utils = render(<Harness />);
+  return {
+    onClose,
+    setVisible: (v: boolean) => {
+      visible = v;
+      utils.rerender(<Harness />);
+    },
+  };
 }
 
 /** Render the modal open at a given instant (the local clock fallback). */
 function renderModalAt(now: Date) {
-  const onClose = vi.fn();
-  installDialogueStub(onClose);
-  const render_ = render(<RegisterBinomeModal now={now} onClose={onClose} tour={TOUR} visible />);
-  return { ...render_, onClose };
+  return renderModal({ now });
 }
 
+/** The register button (submit) of the form. */
 const submitButton = (): HTMLButtonElement =>
   screen.getByRole('button', { name: /Inscrire mon binôme/ }) as HTMLButtonElement;
 
@@ -223,15 +218,17 @@ describe('RegisterBinomeModal', () => {
   });
 
   it('should keep the typed values when the dialog closes without submitting', () => {
-    const { onClose } = renderModal();
+    const { onClose, setVisible } = renderModal();
     fireEvent.change(identityInputs()[0]!, { target: { value: 'Léa' } });
 
-    // The native close (X button, backdrop, Escape) fires the `close` event;
-    // the component must not reset anything, the host keeps it mounted.
-    (
-      screen.getByText('Inscription du binôme').closest('dialog') as HTMLDialogElement
-    ).dispatchEvent(new Event('close'));
+    // Closing via the Fermer button (DialogClose) tells the host it closed;
+    // the host keeps the component mounted and only toggles `visible`, so the
+    // typed values survive.
+    fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
     expect(onClose).toHaveBeenCalledOnce();
+
+    // Reopen: the typed value is preserved.
+    setVisible(true);
     expect((identityInputs()[0] as HTMLInputElement).value).toBe('Léa');
   });
 
@@ -387,9 +384,10 @@ describe('RegisterBinomeModal closed window', () => {
       expect(input.disabled).toBe(true);
     }
     expect(
-      (screen.getByRole('checkbox', { name: /confirmons notre participation/ }) as HTMLInputElement)
-        .disabled,
-    ).toBe(true);
+      screen
+        .getByRole('checkbox', { name: /confirmons notre participation/ })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
     expect(submitButton().disabled).toBe(true);
   });
 
@@ -431,9 +429,10 @@ describe('RegisterBinomeModal not-open-yet window', () => {
       expect(input.disabled).toBe(true);
     }
     expect(
-      (screen.getByRole('checkbox', { name: /confirmons notre participation/ }) as HTMLInputElement)
-        .disabled,
-    ).toBe(true);
+      screen
+        .getByRole('checkbox', { name: /confirmons notre participation/ })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
     expect(submitButton().disabled).toBe(true);
   });
 

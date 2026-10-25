@@ -62,7 +62,7 @@ export function ZoneList() {
     }
 
     return (
-      <AccordionItem key={zone.id} value={zone.id}>
+      <AccordionItem key={zone.id} value={zone.id} aria-label={`Zone ${zone.name}`}>
         <AccordionTrigger className="flex items-center gap-3 sm:gap-4">
           <h2 className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
             {zone.name}

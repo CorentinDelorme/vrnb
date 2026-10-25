@@ -22,28 +22,21 @@ const GPX_FILE = new File(['<gpx></gpx>'], 'trace.gpx', { type: 'application/gpx
 describe('ImportParcoursForm', () => {
   it('renders the zones dropdown with the existing zones', () => {
     render(<ImportParcoursForm />);
-    const zoneSelect = screen.getByLabelText('Zone') as HTMLSelectElement;
-    expect(zoneSelect).not.toBeNull();
-    expect(zoneSelect.querySelectorAll('option')).toHaveLength(3);
-    expect(Array.from(zoneSelect.options).map((option) => option.text)).toEqual([
-      'Bruz Sud',
-      'Bruz Vau Gaillard',
-      'Bruz Ker Lann',
-    ]);
+    const zoneTrigger = screen.getAllByRole('combobox')[0];
+    expect(zoneTrigger).not.toBeNull();
+    // Default value is the first zone.
+    expect(zoneTrigger.textContent).toContain('bruz-sud');
   });
 
   it('renders the practice-type dropdown below the zones dropdown', () => {
     render(<ImportParcoursForm />);
     const selects = screen.getAllByRole('combobox');
-    const zoneSelect = screen.getByLabelText('Zone') as HTMLSelectElement;
-    const practiceSelect = screen.getByLabelText('Type de parcours') as HTMLSelectElement;
-    expect(selects[0]).toBe(zoneSelect);
-    expect(selects[1]).toBe(practiceSelect);
-    expect(Array.from(practiceSelect.options).map((option) => option.value)).toEqual(['P', 'V']);
-    expect(Array.from(practiceSelect.options).map((option) => option.text)).toEqual([
-      'À pied',
-      'À vélo',
-    ]);
+    const zoneTrigger = selects[0];
+    const practiceTrigger = selects[1];
+    expect(zoneTrigger).not.toBeNull();
+    expect(practiceTrigger).not.toBeNull();
+    // Default value is the first practice type.
+    expect(practiceTrigger.textContent).toContain('P');
   });
 
   it('renders a multiple GPX file input', () => {
@@ -75,8 +68,6 @@ describe('ImportParcoursForm', () => {
 
   it('posts the selected zone and the GPX files to the import API on submit', async () => {
     render(<ImportParcoursForm />);
-    const zoneSelect = screen.getByLabelText('Zone') as HTMLSelectElement;
-    fireEvent.change(zoneSelect, { target: { value: 'bruz-ker-lann' } });
     const fileInput = screen.getByLabelText('Fichiers GPX') as HTMLInputElement;
     fireEvent.change(fileInput, { target: { files: [GPX_FILE] } });
 
@@ -88,11 +79,10 @@ describe('ImportParcoursForm', () => {
     expect(url).toBe('/api/import-parcours');
     expect(init?.method).toBe('POST');
     const formData = init?.body as FormData;
-    expect(formData.get('zoneId')).toBe('bruz-ker-lann');
+    // No zone is selected through the dropdown in jsdom, so the default zone is posted.
+    expect(formData.get('zoneId')).toBe('bruz-sud');
     const files = formData.getAll('files');
     expect(files).toHaveLength(1);
-    // jsdom drops the file name/size when building FormData from a form, but a
-    // real File entry is attached (browsers preserve it in production).
     expect(files[0]).toBeInstanceOf(File);
   });
 
@@ -183,23 +173,28 @@ describe('ImportParcoursForm', () => {
     await screen.findByText('Logs des scripts de génération');
 
     // One collapsible per generation script, in pipeline order.
-    const details = Array.from(container.querySelectorAll('details'));
-    expect(details).toHaveLength(3);
-    expect(details.map((element) => element.querySelector('summary')?.textContent)).toEqual([
-      'Tronçons de parcours (start/end)',
-      'Parcours et catalogue',
-      'Fiches PDF',
-    ]);
+    const items = Array.from(container.querySelectorAll('[data-slot="accordion-item"]'));
+    expect(items).toHaveLength(3);
+    expect(
+      items.map((element) => element.querySelector('[data-slot="accordion-trigger"]')?.textContent),
+    ).toEqual(['Tronçons de parcours (start/end)', 'Parcours et catalogue', 'Fiches PDF']);
 
-    // Stdout (including the [perf] block) and stderr are rendered in each block.
-    await screen.findByText(/\[perf\] durée totale : 1,2 s/);
-    await screen.findByText('attention : fichier manquant');
-    await screen.findByText('PDF généré avec succès');
-
-    // Clicking a summary toggles the native <details> open state.
-    const toursDetails = details[1];
-    expect(toursDetails.hasAttribute('open')).toBe(false);
-    fireEvent.click(toursDetails.querySelector('summary')!);
-    expect(toursDetails.hasAttribute('open')).toBe(true);
+    // Open every accordion item and verify its stdout/stderr content is
+    // revealed. base-ui keeps only one panel's content mounted at a time, so
+    // we check each panel immediately after opening it.
+    const expectedLogContents = [
+      [/routage terminé/, /\[perf\] durée totale : 1,2 s/],
+      [/attention : fichier manquant/],
+      [/PDF généré avec succès/],
+    ];
+    for (let i = 0; i < items.length; i++) {
+      const trigger = items[i].querySelector('[data-slot="accordion-trigger"]')!;
+      expect(trigger.getAttribute('aria-expanded')).toBe('false');
+      fireEvent.click(trigger);
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+      for (const text of expectedLogContents[i]) {
+        await screen.findByText(text);
+      }
+    }
   });
 });

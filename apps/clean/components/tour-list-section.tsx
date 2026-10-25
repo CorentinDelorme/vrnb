@@ -132,7 +132,11 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
         </li>
 
         {tours.map((tour) => (
-          <li className="items-center border-border rounded-lg border" key={tour.name}>
+          <li
+            className="items-center border-border rounded-lg border"
+            data-testid="tour-row"
+            key={tour.name}
+          >
             <div className="text-foreground text-xl font-medium sm:text-3xl">{tour.name}</div>
             <div className="text-muted-foreground/70 text-base font-light sm:text-xl">
               {formatTourDistances(tour)}

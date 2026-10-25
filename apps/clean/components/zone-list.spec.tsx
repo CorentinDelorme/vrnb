@@ -37,7 +37,7 @@ function zone(zoneName: string) {
 }
 
 function summaryText(zoneName: string): string | null {
-  return zone(zoneName).querySelector('summary')?.textContent ?? null;
+  return zone(zoneName).querySelector('[data-slot="accordion-trigger"]')?.textContent ?? null;
 }
 
 function inputFor(label: string): HTMLInputElement {
