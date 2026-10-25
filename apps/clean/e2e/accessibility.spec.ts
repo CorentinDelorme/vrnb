@@ -82,8 +82,7 @@ test.describe('Accessibility', () => {
       const suivantButton = page.getByRole('button', { name: 'Suivant' });
       await suivantButton.focus();
       await page.keyboard.press('Enter');
-      const secondStep = page.locator('[data-testid="step-1"]');
-      await expect(secondStep).toHaveClass(/bg-secondary/);
+      await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
     });
 
     test('should support keyboard navigation to close modal', async ({ page }) => {

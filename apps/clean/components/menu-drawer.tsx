@@ -16,8 +16,8 @@ const DRAWER_IDS: Record<MenuVariant, string> = {
 };
 
 const MENU_CLASSES: Record<MenuVariant, string> = {
-  tour: 'menu bg-base-200 min-h-full w-60 gap-3 p-4 sm:w-80',
-  tours: 'menu bg-base-200 min-h-full w-80 gap-3 p-4',
+  tour: 'min-h-full w-60 gap-3 p-4 sm:w-80',
+  tours: 'min-h-full w-80 gap-3 p-4',
 };
 
 interface MenuDrawerProps {
@@ -43,11 +43,7 @@ export function MenuDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerTrigger
-        id={drawerId}
-        className={cn('btn btn-primary btn-sm drawer-button', className)}
-        aria-label="Menu"
-      >
+      <DrawerTrigger id={drawerId} className={cn(className)} aria-label="Menu">
         Menu
       </DrawerTrigger>
       <DrawerContent className={MENU_CLASSES[variant]}>
