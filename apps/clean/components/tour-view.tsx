@@ -131,7 +131,7 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
       </div>
 
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
-        <DialogContent id="finish_modal" className="modal-box">
+        <DialogContent id="finish_modal">
           <DialogClose aria-label="Fermer" className="absolute top-2 right-2 p-1">
             <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
           </DialogClose>

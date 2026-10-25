@@ -30,9 +30,8 @@ test.describe('Tour page — V1 (bike)', () => {
   test.describe('Step navigation', () => {
     test('should start at step Début (step 0)', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
-      const firstStep = page.locator('[data-testid="step-0"]');
-      await expect(firstStep).toHaveClass(/bg-secondary/);
-      await expect(firstStep).toContainText('Début');
+      await expect(page.locator('[data-testid="step-0"]')).toContainText('Début');
+      await expect(page.locator('[data-testid="step-0-circle"]')).toHaveClass(/bg-secondary/);
     });
 
     test('should have Précédent button disabled at step 0', async ({ page }) => {
@@ -48,8 +47,7 @@ test.describe('Tour page — V1 (bike)', () => {
     test('should advance to Nettoyage on Suivant click', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByRole('button', { name: 'Suivant' }).click();
-      const secondStep = page.locator('[data-testid="step-1"]');
-      await expect(secondStep).toHaveClass(/bg-secondary/);
+      await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
       await expect(page.getByRole('button', { name: 'Précédent' })).toBeEnabled();
     });
 
@@ -57,8 +55,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
-      const thirdStep = page.locator('[data-testid="step-2"]');
-      await expect(thirdStep).toHaveClass(/bg-secondary/);
+      await expect(page.locator('[data-testid="step-2-circle"]')).toHaveClass(/bg-secondary/);
     });
 
     test('should show Terminer button at step 2', async ({ page }) => {
@@ -74,8 +71,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Précédent' }).click();
-      const secondStep = page.locator('[data-testid="step-1"]');
-      await expect(secondStep).toHaveClass(/bg-secondary/);
+      await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
       await expect(page.getByRole('button', { name: 'Suivant' })).toBeVisible();
     });
 
@@ -198,13 +194,11 @@ test.describe('Tour page — P3 (walking)', () => {
     await page.goto('/tour/bruz-sud/P3');
     // Step 0 → Step 1
     await page.getByRole('button', { name: 'Suivant' }).click();
-    const secondStep = page.locator('[data-testid="step-1"]');
-    await expect(secondStep).toHaveClass(/bg-secondary/);
+    await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
 
     // Step 1 → Step 2
     await page.getByRole('button', { name: 'Suivant' }).click();
-    const thirdStep = page.locator('[data-testid="step-2"]');
-    await expect(thirdStep).toHaveClass(/bg-secondary/);
+    await expect(page.locator('[data-testid="step-2-circle"]')).toHaveClass(/bg-secondary/);
 
     // Click Terminer
     await page.getByRole('button', { name: 'Terminer' }).click();
