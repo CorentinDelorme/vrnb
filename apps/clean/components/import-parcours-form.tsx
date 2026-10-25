@@ -135,8 +135,8 @@ export function ImportParcoursForm() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="import-gpx-files" className="label">
-                <span className="label-text">Fichiers GPX</span>
+              <label htmlFor="import-gpx-files">
+                <span>Fichiers GPX</span>
               </label>
               <input
                 id="import-gpx-files"

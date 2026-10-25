@@ -41,7 +41,7 @@ export function AppHeader() {
             className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
           >
             <HugeiconsIcon
-              className="text-primary-content"
+              className="text-primary-foreground"
               icon={ArrowLeftIcon}
               strokeWidth={1.5}
             />

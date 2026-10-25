@@ -3,12 +3,12 @@
 import { useEffect } from 'react';
 
 /**
- * Applique le thème (clair/sombre) sur l'élément `<html>` via la classe
- * `dark` (shadcn). Lecture de la préférence stockée dans `localStorage`,
- * puis fallback sur la préférence système (`prefers-color-scheme: dark`).
- * Le basculement manuel (bouton/theme-switcher) peut être ajouté plus tard
- * en écrivant `localStorage.setItem('theme', 'dark' | 'light')` et en
- * appelant à nouveau `applyTheme()`.
+ * Applies the theme (light/dark) on the `<html>` element via the `dark`
+ * class (shadcn). Reads the preference stored in `localStorage`, then falls
+ * back on the system preference (`prefers-color-scheme: dark`).
+ * Manual switching (button/theme-switcher) can be added later by writing
+ * `localStorage.setItem('theme', 'dark' | 'light')` and calling `applyTheme()`
+ * again.
  */
 export function ThemeInitializer() {
   useEffect(() => {

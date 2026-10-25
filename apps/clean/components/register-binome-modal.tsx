@@ -362,7 +362,7 @@ export function RegisterBinomeModal({
                 </a>
               </div>
             </div>
-            <div className="modal-action mt-6">
+            <div className="mt-6">
               <Button variant="default" onClick={onClose}>
                 Fermer
               </Button>
@@ -425,7 +425,7 @@ export function RegisterBinomeModal({
                         type="text"
                         value={values[field.key]}
                       />
-                      <span className="text-error min-h-4 text-xs" id={`${field.id}-error`}>
+                      <span className="text-destructive min-h-4 text-xs" id={`${field.id}-error`}>
                         {showError ? FIELD_ERROR_MESSAGES[error] : ''}
                       </span>
                     </label>
@@ -471,7 +471,7 @@ export function RegisterBinomeModal({
                 </Alert>
               ) : null}
 
-              <div className="modal-action">
+              <div>
                 <Button
                   variant="default"
                   disabled={!complete || outcome === 'submitting' || windowNotOpen}

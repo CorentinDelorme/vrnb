@@ -22,8 +22,8 @@ import { Dialog, DialogClose, DialogContent } from './ui/dialog';
 /** Step labels, in state-machine order. */
 const STEP_LABELS = ['Début', 'Nettoyage', 'Fin'] as const;
 
-/** Custom stepper stylisé shadcn : les étapes atteintes sont secondaires,
- * l'étape courante en primaire, et un trait relie les étapes. */
+/** Custom shadcn-styled stepper: reached steps are secondary, current step
+ * is primary, and a line connects the steps. */
 function Stepper({ step }: { readonly step: TourStep }) {
   return (
     <div className="flex items-center justify-between w-full max-w-md px-4 sm:px-6">
@@ -115,7 +115,7 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
         <TourMap step={step} zoneId={zoneId} tourId={tourId} />
       </div>
 
-      <div className="dock max-sm:dock-xs flex items-center gap-2">
+      <div className="max-sm:dock-xs flex items-center gap-2">
         <Button variant="ghost" size="sm" disabled={step === 0} onClick={prevStep}>
           Précédent
         </Button>

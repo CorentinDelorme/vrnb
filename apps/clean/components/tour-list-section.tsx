@@ -108,7 +108,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
       <ul className="border-2 border-secondary/20 shadow-lg">
         <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-border p-4">
           <div className="flex items-center gap-3">
-            <span className="bg-primary text-primary-content flex items-center justify-center rounded-full p-2 sm:p-2.5">
+            <span className="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-2 sm:p-2.5">
               <HugeiconsIcon className="sm:h-10 sm:w-10" icon={typeIcon} strokeWidth={1.5} />
             </span>
 
@@ -133,7 +133,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
 
         {tours.map((tour) => (
           <li
-            className="items-center border-border rounded-lg border"
+            className="items-center border-border rounded-lg border list-row"
             data-testid="tour-row"
             key={tour.name}
           >

@@ -1,6 +1,6 @@
 /* Global styles — Leaflet CSS (global), Tailwind CSS 4 + shadcn/ui
  * with the vrnb palette mapped to shadcn CSS variables, and the legacy
- * page background (spec #3). Dark mode bascule via class="dark" sur <html>. */
+ * page background (spec #3). Dark mode toggles via class="dark" on <html>. */
 @import 'leaflet/dist/leaflet.css';
 @import 'leaflet.fullscreen/dist/Control.FullScreen.css';
 
@@ -95,23 +95,23 @@ main {
 }
 
 .dark {
-  --background: oklch(14% 0.005 285.823);
-  --foreground: oklch(92% 0.004 286.32);
-  --card: oklch(14% 0.005 285.823);
-  --card-foreground: oklch(92% 0.004 286.32);
-  --popover: oklch(14% 0.005 285.823);
-  --popover-foreground: oklch(92% 0.004 286.32);
+  --background: #fbfff0;
+  --foreground: oklch(21% 0.006 285.885);
+  --card: #ffffff;
+  --card-foreground: oklch(21% 0.006 285.885);
+  --popover: #ffffff;
+  --popover-foreground: oklch(21% 0.006 285.885);
   --primary: #b5ea86;
   --primary-foreground: #212529;
   --secondary: #198754;
   --secondary-foreground: #ffffff;
-  --muted: oklch(20% 0.005 285.823);
-  --muted-foreground: oklch(60% 0 0);
+  --muted: oklch(98% 0 0);
+  --muted-foreground: oklch(55% 0 0);
   --accent: oklch(77% 0.152 181.912);
   --accent-foreground: oklch(38% 0.063 188.416);
   --destructive: oklch(71% 0.194 13.428);
-  --border: oklch(20% 0.005 285.823);
-  --input: oklch(20% 0.005 285.823);
+  --border: oklch(95% 0 0);
+  --input: oklch(95% 0 0);
   --ring: #b5ea86;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
@@ -119,13 +119,13 @@ main {
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.5rem;
-  --sidebar: oklch(14% 0.005 285.823);
-  --sidebar-foreground: oklch(92% 0.004 286.32);
+  --sidebar: oklch(98% 0 0);
+  --sidebar-foreground: oklch(21% 0.006 285.885);
   --sidebar-primary: #b5ea86;
   --sidebar-primary-foreground: #212529;
-  --sidebar-accent: oklch(20% 0.005 285.823);
-  --sidebar-accent-foreground: oklch(92% 0.004 286.32);
-  --sidebar-border: oklch(20% 0.005 285.823);
+  --sidebar-accent: oklch(98% 0 0);
+  --sidebar-accent-foreground: oklch(21% 0.006 285.885);
+  --sidebar-border: oklch(95% 0 0);
   --sidebar-ring: #b5ea86;
 }
 
