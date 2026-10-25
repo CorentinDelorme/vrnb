@@ -1,7 +1,7 @@
-import { cn } from '@/components/lib/utils';
 import { Accordion as AccordionPrimitive } from '@base-ui/react/accordion';
 import { ArrowDown01Icon, ArrowUp01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
+import { cn } from 'cn';
 
 function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   return (

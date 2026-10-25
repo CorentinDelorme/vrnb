@@ -1,9 +1,9 @@
 'use client';
 
-import { cn } from '@/components/lib/utils';
 import { Checkbox as CheckboxPrimitive } from '@base-ui/react/checkbox';
 import { Tick02Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
+import { cn } from 'cn';
 
 function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
   return (

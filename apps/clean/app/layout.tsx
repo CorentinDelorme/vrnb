@@ -3,10 +3,14 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
+import { cn } from '@/components/lib/utils';
+import { Outfit } from 'next/font/google';
 import { AppHeader } from '../components/app-header';
 import { ThemeInitializer } from '../components/theme-provider';
 import { HOME_TITLE } from '../lib/route-meta';
 import './globals.css';
+
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-sans' });
 
 /**
  * Root layout — port of the legacy `src/index.html` + `app.html` shell (spec #3):
@@ -40,7 +44,7 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="fr" className="h-screen w-screen">
+    <html lang="fr" className={cn('h-screen w-screen', 'font-sans', outfit.variable)}>
       <body className="h-screen w-screen">
         <main className="p-4 sm:p-8">
           <AppHeader />
