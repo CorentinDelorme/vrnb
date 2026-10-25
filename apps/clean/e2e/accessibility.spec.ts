@@ -73,7 +73,7 @@ test.describe('Accessibility', () => {
     test('should have accessible drawer close button', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
-      const closeLabel = page.locator('.drawer-side label.btn-circle[aria-label="close sidebar"]');
+      const closeLabel = page.locator('[data-slot="drawer-close"]');
       await expect(closeLabel).toBeVisible();
     });
 
@@ -82,8 +82,8 @@ test.describe('Accessibility', () => {
       const suivantButton = page.getByRole('button', { name: 'Suivant' });
       await suivantButton.focus();
       await page.keyboard.press('Enter');
-      const secondStep = page.locator('li.step').nth(1);
-      await expect(secondStep).toHaveClass(/step-secondary/);
+      const secondStep = page.locator('[data-testid="step-1"]');
+      await expect(secondStep).toHaveClass(/bg-secondary/);
     });
 
     test('should support keyboard navigation to close modal', async ({ page }) => {

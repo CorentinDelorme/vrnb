@@ -32,7 +32,11 @@ function Stepper({ step }: { readonly step: TourStep }) {
         const current = step === index;
         const last = index === STEP_LABELS.length - 1;
         return (
-          <div key={label} className="flex flex-col items-center gap-1.5 relative z-0">
+          <div
+            key={label}
+            data-testid={`step-${index}`}
+            className="flex flex-col items-center gap-1.5 relative z-0"
+          >
             <div className="flex items-center gap-2">
               <div
                 className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-semibold transition-all duration-300 ${

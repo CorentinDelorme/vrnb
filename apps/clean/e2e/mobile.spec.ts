@@ -51,9 +51,9 @@ test.describe('Mobile viewport', () => {
   test('should open and close drawer on mobile', async ({ page }) => {
     await page.goto('/tour/bruz-sud/V1');
     await page.getByText('Menu', { exact: true }).click();
-    const drawer = page.locator('.drawer-side ul.menu');
+    const drawer = page.locator('[data-slot="drawer-content"]');
     await expect(drawer).toBeVisible();
-    await page.locator('.drawer-side label.btn-circle[aria-label="close sidebar"]').click();
+    await page.locator('[data-slot="drawer-close"]').click();
     await expect(drawer).not.toBeVisible();
   });
 });
