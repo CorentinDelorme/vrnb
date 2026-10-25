@@ -74,7 +74,7 @@ const CONTRACT_BODY = {
 
 /** Every « Binôme inscrit » badge of the page (none while loading/error). */
 function badgeLocator(page: Page) {
-  return page.locator('.badge-success', { hasText: 'Binôme inscrit' });
+  return page.locator('[data-slot="badge"]', { hasText: 'Binôme inscrit' });
 }
 
 /** The row containing the tour name (row text glues name + badge + distance). */
@@ -170,8 +170,8 @@ test.describe('Public inscriptions statuses', () => {
       const v1Row = bikeSection.locator('li.list-row', { hasText: 'V1' }).first();
       const v2Row = bikeSection.locator('li.list-row', { hasText: 'V2' }).first();
 
-      await expect(v1Row.locator('.badge-success')).toHaveText(['Binôme inscrit']);
-      await expect(v2Row.locator('.badge-success')).toHaveCount(0);
+      await expect(v1Row.locator('[data-slot="badge"]')).toHaveText(['Binôme inscrit']);
+      await expect(v2Row.locator('[data-slot="badge"]')).toHaveCount(0);
       await expect(badgeLocator(page)).toHaveCount(1);
     });
 
@@ -325,7 +325,9 @@ test.describe('Binôme registration', () => {
     // One exact POST, then the statuses reload without a page reload:
     expect(postBodies).toHaveLength(1);
     expect(JSON.parse(postBodies[0] ?? '{}')).toEqual(CONTRACT_BODY);
-    await expect(rowLocator(page, 'V2').locator('.badge-success')).toHaveText('Binôme inscrit');
+    await expect(rowLocator(page, 'V2').locator('[data-slot="badge"]')).toHaveText(
+      'Binôme inscrit',
+    );
     await expect(v2Register).toHaveCount(0);
   });
 
@@ -356,7 +358,9 @@ test.describe('Binôme registration', () => {
     await page.route('**/api/inscriptions', (route) => route.fulfill({ json: COVERED_V1 }));
     await page.goto('/');
 
-    await expect(rowLocator(page, 'V1').locator('.badge-success')).toHaveText('Binôme inscrit');
+    await expect(rowLocator(page, 'V1').locator('[data-slot="badge"]')).toHaveText(
+      'Binôme inscrit',
+    );
     await expect(
       page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V1", exact: true }),
     ).toHaveCount(0);
@@ -404,7 +408,9 @@ test.describe('Binôme registration', () => {
     await expect(modal).toContainText(/couvert par un autre binôme/);
     expect(postBodies).toHaveLength(1);
     // The 409's statuses reload shows the covered state: badge + button gone.
-    await expect(rowLocator(page, 'P2').locator('.badge-success')).toHaveText('Binôme inscrit');
+    await expect(rowLocator(page, 'P2').locator('[data-slot="badge"]')).toHaveText(
+      'Binôme inscrit',
+    );
     await expect(
       page.getByRole('button', { name: "S'inscrire en binôme pour le parcours P2", exact: true }),
     ).toHaveCount(0);

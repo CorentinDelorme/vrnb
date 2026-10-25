@@ -20,9 +20,8 @@ test.describe('Tour progress persistence (localStorage)', () => {
     await page.goto('/tour/bruz-sud/V1');
 
     // Step 1 (Nettoyage) should be active
-    const secondStep = page.locator('li.step').nth(1);
-    await expect(secondStep).toHaveClass(/step-secondary/);
-    await expect(secondStep).toHaveClass(/text-secondary/);
+    const secondStep = page.locator('[data-testid="step-1"]');
+    await expect(secondStep).toHaveClass(/bg-secondary/);
   });
 
   test('should show resume banner on home page', async ({ page }) => {
@@ -73,8 +72,8 @@ test.describe('Tour progress persistence (localStorage)', () => {
     await page.goto('/tour/bruz-sud/V1');
 
     // Should start at step 0 (Début), not step 1
-    const firstStep = page.locator('li.step').nth(0);
-    await expect(firstStep).toHaveClass(/text-secondary/);
+    const firstStep = page.locator('[data-testid="step-0"]');
+    await expect(firstStep).toHaveClass(/bg-secondary/);
   });
 
   test('should show resume banner for P tour', async ({ page }) => {

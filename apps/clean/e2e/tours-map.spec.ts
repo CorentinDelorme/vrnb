@@ -24,7 +24,7 @@ test.describe('Tours map — Bike (V)', () => {
   test('should open drawer on Menu click', async ({ page }) => {
     await page.goto('/tours/bruz-sud/V');
     await page.getByText('Menu', { exact: true }).click();
-    const drawer = page.locator('.drawer-side ul.menu');
+    const drawer = page.locator('[data-slot="drawer-content"]');
     await expect(drawer).toBeVisible();
     await expect(drawer.locator('h1')).toContainText('Bruz Sud - Parcours à vélo');
   });
@@ -35,14 +35,16 @@ test.describe('Tours map — Bike (V)', () => {
     await page.goto('/tours/bruz-sud/V');
     await page.getByText('Menu', { exact: true }).click();
     await expect(
-      page.locator('.drawer-side').getByRole('link', { name: 'Télécharger le PDF de suivi' }),
+      page
+        .locator('[data-slot="drawer-content"]')
+        .getByRole('link', { name: 'Télécharger le PDF de suivi' }),
     ).toHaveCount(0);
   });
 
   test('should show map PDF download link in drawer', async ({ page }) => {
     await page.goto('/tours/bruz-sud/V');
     await page.getByText('Menu', { exact: true }).click();
-    const pdfLink = page.locator('.drawer-side').getByRole('link', {
+    const pdfLink = page.locator('[data-slot="drawer-content"]').getByRole('link', {
       name: 'Télécharger le PDF de la carte',
     });
     await expect(pdfLink).toBeVisible();
@@ -52,9 +54,9 @@ test.describe('Tours map — Bike (V)', () => {
   test('should close drawer on close button click', async ({ page }) => {
     await page.goto('/tours/bruz-sud/V');
     await page.getByText('Menu', { exact: true }).click();
-    const drawer = page.locator('.drawer-side ul.menu');
+    const drawer = page.locator('[data-slot="drawer-content"]');
     await expect(drawer).toBeVisible();
-    await page.locator('.drawer-side label.btn-circle[aria-label="close sidebar"]').click();
+    await page.locator('[data-slot="drawer-close"]').click();
     await expect(drawer).not.toBeVisible();
   });
 
@@ -80,14 +82,16 @@ test.describe('Tours map — Walking (P)', () => {
     await page.goto('/tours/bruz-sud/P');
     await page.getByText('Menu', { exact: true }).click();
     await expect(
-      page.locator('.drawer-side').getByRole('link', { name: 'Télécharger le PDF de suivi' }),
+      page
+        .locator('[data-slot="drawer-content"]')
+        .getByRole('link', { name: 'Télécharger le PDF de suivi' }),
     ).toHaveCount(0);
   });
 
   test('should show map PDF download link with correct href', async ({ page }) => {
     await page.goto('/tours/bruz-sud/P');
     await page.getByText('Menu', { exact: true }).click();
-    const pdfLink = page.locator('.drawer-side').getByRole('link', {
+    const pdfLink = page.locator('[data-slot="drawer-content"]').getByRole('link', {
       name: 'Télécharger le PDF de la carte',
     });
     await expect(pdfLink).toBeVisible();
