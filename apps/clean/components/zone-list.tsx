@@ -16,6 +16,7 @@ import { FilterBar } from './filter-bar';
 import { TourListSection } from './tour-list-section';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Badge } from './ui/badge';
+import { Card, CardContent } from './ui/card';
 
 /**
  * Client wrapper above the zone list carrying the ephemeral filter state
@@ -116,7 +117,11 @@ export function ZoneList() {
         filterTouched={filterTouched}
         onReset={handleReset}
       />
-      <Accordion defaultValue={ZONES.map((zone) => zone.id)}>{zoneSections}</Accordion>
+      <Card className="mt-4 sm:mt-6">
+        <CardContent>
+          <Accordion defaultValue={ZONES.map((zone) => zone.id)}>{zoneSections}</Accordion>
+        </CardContent>
+      </Card>
     </div>
   );
 }

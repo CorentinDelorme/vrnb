@@ -35,6 +35,14 @@ async function renderHomePage() {
   return result;
 }
 
+function typeButton(label: string): HTMLElement {
+  return screen.getByRole('button', { name: label }) as HTMLElement;
+}
+
+function isTypeActive(label: string): boolean {
+  return typeButton(label).classList.contains('bg-secondary');
+}
+
 /**
  * Home page (spec #3, ticket #6): the legacy Angular `tours-list` component.
  * These tests assert the public rendered output (DOM text, links, attributes)
@@ -111,9 +119,9 @@ describe('Home page', () => {
     const typeLabel = filterBar?.querySelector('span')?.textContent;
     expect(typeLabel).toBe('Type de parcours');
 
-    const tous = container.querySelector('input[name="tour-type"][value="all"]');
+    const tous = typeButton('Tous');
     expect(tous).not.toBeNull();
-    expect(tous?.matches(':checked')).toBe(true);
+    expect(isTypeActive('Tous')).toBe(true);
   });
 
   it('renders the two distance slider families with "tout" by default and all rows', async () => {
@@ -161,16 +169,16 @@ describe('Home page', () => {
   it('shows a plural counter when filtering to "À vélo"', async () => {
     await renderHomePage();
 
-    const velo = screen.getByLabelText('À vélo') as HTMLInputElement;
+    const velo = typeButton('À vélo');
     fireEvent.click(velo);
-    expect(velo.checked).toBe(true);
+    expect(isTypeActive('À vélo')).toBe(true);
     expect(screen.getByText('34 parcours affichés')).toBeDefined();
   });
 
   it('shows a singular counter when exactly one tour matches', async () => {
     await renderHomePage();
 
-    const velo = screen.getByLabelText('À vélo');
+    const velo = typeButton('À vélo');
     fireEvent.click(velo);
 
     const sliders = screen.getAllByRole('slider');
@@ -187,7 +195,7 @@ describe('Home page', () => {
   it('shows the empty state message and a reset button when zero tours match', async () => {
     await renderHomePage();
 
-    const pied = screen.getByLabelText('À pied');
+    const pied = typeButton('À pied');
     fireEvent.click(pied);
 
     const sliders = screen.getAllByRole('slider');
@@ -204,7 +212,7 @@ describe('Home page', () => {
   it('resets every filter when clicking "Réinitialiser les filtres"', async () => {
     await renderHomePage();
 
-    const pied = screen.getByLabelText('À pied');
+    const pied = typeButton('À pied');
     fireEvent.click(pied);
 
     const sliders = screen.getAllByRole('slider');
@@ -218,7 +226,7 @@ describe('Home page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
 
     // Back to the unfiltered state.
-    expect((screen.getByLabelText('Tous') as HTMLInputElement).checked).toBe(true);
+    expect(isTypeActive('Tous')).toBe(true);
     expect(screen.getAllByText('tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();

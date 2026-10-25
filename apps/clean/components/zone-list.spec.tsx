@@ -40,8 +40,12 @@ function summaryText(zoneName: string): string | null {
   return zone(zoneName).querySelector('[data-slot="accordion-trigger"]')?.textContent ?? null;
 }
 
-function inputFor(label: string): HTMLInputElement {
-  return screen.getByLabelText(label) as HTMLInputElement;
+function typeButton(label: string): HTMLElement {
+  return screen.getByRole('button', { name: label }) as HTMLElement;
+}
+
+function isTypeActive(label: string): boolean {
+  return typeButton(label).classList.contains('bg-secondary');
 }
 
 describe('ZoneList', () => {
@@ -59,9 +63,9 @@ describe('ZoneList', () => {
     const typeLabel = filterBar?.querySelector('span')?.textContent;
     expect(typeLabel).toBe('Type de parcours');
 
-    expect(inputFor('Tous').checked).toBe(true);
-    expect(inputFor('À pied').checked).toBe(false);
-    expect(inputFor('À vélo').checked).toBe(false);
+    expect(isTypeActive('Tous')).toBe(true);
+    expect(isTypeActive('À pied')).toBe(false);
+    expect(isTypeActive('À vélo')).toBe(false);
   });
 
   it('shows every zone and both sections without filter, with live badges', () => {
@@ -82,9 +86,9 @@ describe('ZoneList', () => {
   it('hides the walking sections and keeps the bike sections when filtering to "À vélo"', () => {
     render(<ZoneList />);
 
-    fireEvent.click(inputFor('À vélo'));
-    expect(inputFor('À vélo').checked).toBe(true);
-    expect(inputFor('Tous').checked).toBe(false);
+    fireEvent.click(typeButton('À vélo'));
+    expect(isTypeActive('À vélo')).toBe(true);
+    expect(isTypeActive('Tous')).toBe(false);
 
     // Bruz Sud keeps its bike section (15 tours) but loses the walking section.
     expect(zone('Bruz Sud')).toBeDefined();
@@ -101,8 +105,8 @@ describe('ZoneList', () => {
   it('keeps only zones with a walking section when filtering to "À pied"; bike-only zones disappear', () => {
     render(<ZoneList />);
 
-    fireEvent.click(inputFor('À pied'));
-    expect(inputFor('À pied').checked).toBe(true);
+    fireEvent.click(typeButton('À pied'));
+    expect(isTypeActive('À pied')).toBe(true);
 
     // Bruz Sud (13 walking) stays; Bruz Ker Lann now has no walking tour (P200/P201 removed) and vanishes, like Bruz Vau Gaillard.
     expect(zone('Bruz Sud')).toBeDefined();
@@ -117,11 +121,11 @@ describe('ZoneList', () => {
   it('comes back to every zone when switching back to "Tous"', () => {
     render(<ZoneList />);
 
-    fireEvent.click(inputFor('À pied'));
+    fireEvent.click(typeButton('À pied'));
     expect(screen.queryByLabelText('Zone Bruz Vau Gaillard')).toBeNull();
 
-    fireEvent.click(inputFor('Tous'));
-    expect(inputFor('Tous').checked).toBe(true);
+    fireEvent.click(typeButton('Tous'));
+    expect(isTypeActive('Tous')).toBe(true);
     expect(zone('Bruz Vau Gaillard')).toBeDefined();
     expect(zone('Bruz Ker Lann')).toBeDefined();
     expect(summaryText('Bruz Sud')).toContain('28 parcours');
@@ -137,15 +141,15 @@ describe('ZoneList', () => {
   it('shows a plural counter when filtering to "À vélo"', () => {
     render(<ZoneList />);
 
-    fireEvent.click(inputFor('À vélo'));
-    expect(inputFor('À vélo').checked).toBe(true);
+    fireEvent.click(typeButton('À vélo'));
+    expect(isTypeActive('À vélo')).toBe(true);
     expect(screen.getByText('34 parcours affichés')).toBeDefined();
   });
 
   it('shows a singular counter when exactly one tour matches', () => {
     render(<ZoneList />);
 
-    fireEvent.click(inputFor('À vélo'));
+    fireEvent.click(typeButton('À vélo'));
     const sliders = screen.getAllByRole('slider');
     const cleaningMin = sliders[0];
     // Move the cleaning min from 0,5 to 4 km (7 steps of 0,5).
@@ -159,7 +163,7 @@ describe('ZoneList', () => {
   it('shows the empty state message and a reset button when zero tours match', () => {
     render(<ZoneList />);
 
-    fireEvent.click(inputFor('À pied'));
+    fireEvent.click(typeButton('À pied'));
     const sliders = screen.getAllByRole('slider');
     const cleaningMin = sliders[0];
     // No walking tour has a cleaning distance of 4 km → zero results.
@@ -173,7 +177,7 @@ describe('ZoneList', () => {
   it('resets every filter when clicking "Réinitialiser les filtres"', () => {
     render(<ZoneList />);
 
-    fireEvent.click(inputFor('À pied'));
+    fireEvent.click(typeButton('À pied'));
     const sliders = screen.getAllByRole('slider');
     const cleaningMin = sliders[0];
     for (let i = 0; i < 7; i++) {
@@ -183,9 +187,9 @@ describe('ZoneList', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
 
-    // Back to the unfiltered state: "Tous" checked, both sliders at "tout".
-    expect(inputFor('Tous').checked).toBe(true);
-    expect(inputFor('À pied').checked).toBe(false);
+    // Back to the unfiltered state: "Tous" active, both sliders at "tout".
+    expect(isTypeActive('Tous')).toBe(true);
+    expect(isTypeActive('À pied')).toBe(false);
     expect(screen.getAllByText('tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
