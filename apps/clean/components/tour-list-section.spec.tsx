@@ -56,19 +56,21 @@ describe('TourListSection inscriptions badge', () => {
       <TourListSection title="Parcours à vélo" type="V" tours={TOURS} zoneId="bruz-sud" />,
     );
 
-    const badges = container.querySelectorAll('.badge-success');
-    expect(badges).toHaveLength(1);
-    expect(badges[0]?.textContent).toBe('Binôme inscrit');
+    const binomeBadges = Array.from(container.querySelectorAll('[data-slot="badge"]')).filter(
+      (b) => b.textContent === 'Binôme inscrit',
+    );
+    expect(binomeBadges).toHaveLength(1);
+    expect(binomeBadges[0].textContent).toBe('Binôme inscrit');
 
-    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v1Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V1'),
     );
-    expect(v1Row?.querySelector('.badge-success')?.textContent).toBe('Binôme inscrit');
+    expect(v1Row?.querySelector('[data-slot="badge"]')?.textContent).toBe('Binôme inscrit');
 
-    const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v2Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       /^(V2[\s\S]*km)/.test(row.textContent ?? ''),
     );
-    expect(v2Row?.querySelector('.badge-success')).toBeNull();
+    expect(v2Row?.querySelector('[data-slot="badge"]')).toBeNull();
   });
 
   it('should badge no row while the statuses are loading or on error', () => {
@@ -109,7 +111,7 @@ describe('TourListSection two-distance rows', () => {
     );
 
     // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
-    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v1Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V1'),
     );
     expect(v1Row?.textContent).toContain('1,1 km nettoyage · 4,2 km total');
@@ -119,8 +121,8 @@ describe('TourListSection two-distance rows', () => {
     const { container: walkingContainer } = render(
       <TourListSection title="Parcours à pied" type="P" tours={walkingTours} zoneId="bruz-sud" />,
     );
-    const p2Row = Array.from(walkingContainer.querySelectorAll('li.list-row')).find((row) =>
-      row.textContent?.includes('P2'),
+    const p2Row = Array.from(walkingContainer.querySelectorAll('[data-testid="tour-row"]')).find(
+      (row) => row.textContent?.includes('P2'),
     );
     expect(p2Row?.textContent).toContain('800 m');
   });
@@ -177,10 +179,10 @@ describe('TourListSection inscriptions register button', () => {
   it('should offer the register button on uncovered rows of an open window only', () => {
     const { container } = renderSection(SUCCESS);
     // V1 is covered (badge), every other bike tour is uncovered:
-    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v1Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V1'),
     );
-    const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v2Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V2'),
     );
     expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en binôme"]')).toBeNull();

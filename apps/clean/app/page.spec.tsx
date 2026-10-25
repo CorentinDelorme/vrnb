@@ -49,25 +49,29 @@ describe('Home page', () => {
 
   it('renders each zone as an open accordion labelled with its name and tour count', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
+    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
     expect(zone).not.toBeNull();
-    expect(zone?.hasAttribute('open')).toBe(true);
-    expect(zone?.querySelector('summary h2')?.textContent).toBe('Bruz Sud');
-    expect(zone?.querySelector('summary')?.textContent).toContain('28 parcours');
+    expect(
+      zone?.querySelector('[data-slot="accordion-trigger"]')?.getAttribute('aria-expanded'),
+    ).toBe('true');
+    expect(zone?.querySelector('[data-slot="accordion-trigger"] h2')?.textContent).toBe('Bruz Sud');
+    expect(zone?.querySelector('[data-slot="accordion-trigger"]')?.textContent).toContain(
+      '28 parcours',
+    );
   });
 
   it('lists all Bruz Sud bike and walking tours in their sections', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
+    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
     const sections = zone?.querySelectorAll('app-tour-list-section') ?? [];
     expect(sections).toHaveLength(2);
 
-    const bikeRows = sections[0]?.querySelectorAll('li.list-row') ?? [];
+    const bikeRows = sections[0]?.querySelectorAll('[data-testid="tour-row"]') ?? [];
     expect(bikeRows).toHaveLength(15);
     expect(sections[0]?.textContent).toContain('Parcours à vélo');
     expect(sections[0]?.textContent).toContain('V15');
 
-    const walkingRows = sections[1]?.querySelectorAll('li.list-row') ?? [];
+    const walkingRows = sections[1]?.querySelectorAll('[data-testid="tour-row"]') ?? [];
     expect(walkingRows).toHaveLength(13);
     expect(sections[1]?.textContent).toContain('Parcours à pied');
     expect(sections[1]?.textContent).toContain('P13');
@@ -75,21 +79,25 @@ describe('Home page', () => {
 
   it('formats distances with a French km comma and switches to meters below 1 km', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
+    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
     const [bikeSection, walkingSection] = zone?.querySelectorAll('app-tour-list-section') ?? [];
 
     // V1 (first bike row) has distance 1.1 → "1,1 km"; P2 (second walking row) 0.8 → "800 m".
-    expect(bikeSection?.querySelectorAll('li.list-row')[0]?.textContent).toContain('1,1 km');
-    expect(walkingSection?.querySelectorAll('li.list-row')[1]?.textContent).toContain('800 m');
+    expect(bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0]?.textContent).toContain(
+      '1,1 km',
+    );
+    expect(walkingSection?.querySelectorAll('[data-testid="tour-row"]')[1]?.textContent).toContain(
+      '800 m',
+    );
   });
 
   it('shows both distances on each row in French format', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
+    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
     const bikeSection = zone?.querySelectorAll('app-tour-list-section')[0];
 
     // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
-    expect(bikeSection?.querySelectorAll('li.list-row')[0]?.textContent).toContain(
+    expect(bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0]?.textContent).toContain(
       '1,1 km nettoyage · 4,2 km total',
     );
   });
@@ -226,9 +234,9 @@ describe('Home page', () => {
 
   it('navigates to the tour when a play button is clicked', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
+    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
     const firstPlayButton = zone?.querySelector(
-      'li.list-row button[aria-label="Lancer le parcours"]',
+      '[data-testid="tour-row"] button[aria-label="Lancer le parcours"]',
     );
     expect(firstPlayButton).not.toBeNull();
 

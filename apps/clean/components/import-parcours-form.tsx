@@ -17,6 +17,7 @@ import { Card, CardContent } from './ui/card';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectLabel,
   SelectTrigger,
@@ -94,7 +95,9 @@ export function ImportParcoursForm() {
                 value={zoneId}
                 onValueChange={(value) => setZoneId(value as string)}
               >
-                <SelectLabel>Zone</SelectLabel>
+                <SelectGroup>
+                  <SelectLabel>Zone</SelectLabel>
+                </SelectGroup>
                 <SelectTrigger>
                   <SelectValue placeholder="Zone" />
                 </SelectTrigger>
@@ -115,7 +118,9 @@ export function ImportParcoursForm() {
                 value={parcoursType}
                 onValueChange={(value) => setParcoursType(value as PracticeType)}
               >
-                <SelectLabel>Type de parcours</SelectLabel>
+                <SelectGroup>
+                  <SelectLabel>Type de parcours</SelectLabel>
+                </SelectGroup>
                 <SelectTrigger>
                   <SelectValue placeholder="Type de parcours" />
                 </SelectTrigger>
