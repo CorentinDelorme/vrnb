@@ -20,12 +20,15 @@ import { Dialog, DialogContent } from './ui/dialog';
 /** Step labels, in state-machine order. */
 const STEP_LABELS = ['Début', 'Nettoyage', 'Fin'] as const;
 
-/** Custom stepper: reached steps (including the current one) are secondary,
- * unreached steps are muted, and a line connects the steps — coloured only up
- * to the next reached step. Parity with the mode d'emploi screenshots. */
+/**
+ * Compact centered stepper, parity with the mode d'emploi screenshots: fixed
+ * 32px circles (reached = solid secondary green, upcoming = muted disc), a
+ * thick 4px connector drawn edge-to-edge between two neighbouring circles
+ * (green once the following step is reached) and the label right below.
+ */
 function Stepper({ step }: { readonly step: TourStep }) {
   return (
-    <div className="flex items-center justify-between w-full px-4 sm:px-6">
+    <div className="flex items-start mx-auto w-fit">
       {STEP_LABELS.map((label, index) => {
         const reached = step >= index;
         const last = index === STEP_LABELS.length - 1;
@@ -33,25 +36,26 @@ function Stepper({ step }: { readonly step: TourStep }) {
           <div
             key={label}
             data-testid={`step-${index}`}
-            className="flex flex-col items-center gap-1.5 relative z-0"
+            className="flex flex-col items-center gap-1 w-20 relative z-0"
           >
-            <div className="flex items-center gap-2">
+            {!last && (
               <div
-                data-testid={`step-${index}-circle`}
-                className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
-                  reached
-                    ? 'bg-secondary text-secondary-foreground border-secondary'
-                    : 'border-border text-muted-foreground'
-                }`}
-              >
-                {index + 1}
-              </div>
-              {!last && (
-                <div className={`h-px flex-1 ${step > index ? 'bg-secondary' : 'bg-border'}`} />
-              )}
+                aria-hidden="true"
+                className={`absolute top-3.5 left-[calc(50%+16px)] w-[calc(100%-32px)] h-1 transition-colors duration-300 ${step > index ? 'bg-secondary' : 'bg-border'}`}
+              />
+            )}
+            <div
+              data-testid={`step-${index}-circle`}
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                reached
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'bg-border text-muted-foreground'
+              }`}
+            >
+              {index + 1}
             </div>
             <span
-              className={`text-xs font-medium transition-colors ${reached ? 'text-secondary' : 'text-muted-foreground'}`}
+              className={`text-sm font-medium transition-colors ${reached ? 'text-secondary' : 'text-foreground'}`}
             >
               {label}
             </span>
@@ -114,19 +118,33 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
         <TourMap step={step} zoneId={zoneId} tourId={tourId} />
       </div>
 
-      <div className="max-sm:dock-xs flex items-center gap-2">
-        <Button variant="ghost" size="sm" disabled={step === 0} onClick={prevStep}>
-          Précédent
-        </Button>
-        {step === STEP_LABELS.length - 1 ? (
-          <Button variant="default" size="sm" onClick={finish}>
-            Terminer
+      {/* Bottom dock, parity with the mode d'emploi screenshots: the
+          Précédent action is a plain text button centred in the left half and
+          the Suivant / Terminer action a big primary button centred in the
+          right half. */}
+      <div className="max-sm:dock-xs flex w-full items-center px-4">
+        <div className="flex flex-1 items-center justify-center">
+          <Button
+            variant="ghost"
+            size="lg"
+            className="font-semibold"
+            disabled={step === 0}
+            onClick={prevStep}
+          >
+            Précédent
           </Button>
-        ) : (
-          <Button variant="default" size="sm" onClick={nextStep}>
-            Suivant
-          </Button>
-        )}
+        </div>
+        <div className="flex flex-1 items-center justify-center">
+          {step === STEP_LABELS.length - 1 ? (
+            <Button variant="default" size="lg" className="w-32 font-semibold" onClick={finish}>
+              Terminer
+            </Button>
+          ) : (
+            <Button variant="default" size="lg" className="w-32 font-semibold" onClick={nextStep}>
+              Suivant
+            </Button>
+          )}
+        </div>
       </div>
 
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>

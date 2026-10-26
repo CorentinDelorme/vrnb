@@ -2,17 +2,18 @@
 
 import { BicycleIcon, WalkingIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type * as React from 'react';
 
 import { formatDistance } from '../src/app/tours-format';
 import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
-import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
+import { useInscriptionsStatus } from './inscriptions-status-provider';
+import { isRegistrationWindowOpen } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
 import { TourRegisterButton } from './tour-register-button';
 import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import { buttonVariants } from './ui/button';
 import { Item } from './ui/item';
 
 /**
@@ -83,7 +84,6 @@ interface TourListSectionProps {
 }
 
 export function TourListSection({ title, tours, type, zoneId }: TourListSectionProps) {
-  const router = useRouter();
   const typeIcon = type === 'V' ? BicycleIcon : WalkingIcon;
   const status = useInscriptionsStatus();
   /**
@@ -121,14 +121,14 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             </div>
           </div>
 
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => router.push(`/tours/${zoneId}/${type}`)}
-            className="max-sm:w-full shrink-0"
+          {/* Legacy contract (tests.md): the map link is a link, styled with
+              the primary button look. */}
+          <Link
+            href={`/tours/${zoneId}/${type}`}
+            className={`${buttonVariants({ variant: 'default', size: 'sm' })} max-sm:w-full shrink-0`}
           >
             Voir tous les parcours
-          </Button>
+          </Link>
         </li>
 
         {tours.map((tour) => (
@@ -136,6 +136,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             render={(props) => <li {...props} />}
             variant="outline"
             size="sm"
+            className="list-row"
             data-testid="tour-row"
             key={tour.name}
           >

@@ -1,12 +1,11 @@
-'use client';
-
 import { FullScreenIcon, PlayIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { Metadata } from 'next';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-import { Button } from '../../components/ui/button';
+import { buttonVariants } from '../../components/ui/button';
+import { Kbd } from '../../components/ui/kbd';
 import { pageTitle } from '../../lib/route-meta';
 import {
   CURRENT_EDITION,
@@ -147,11 +146,13 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         <li>
           Pendant le parcours, une <strong>carte</strong> vous montre le chemin, avec les 3 étapes
           en haut et les boutons <strong>Précédent, Suivant et Terminer</strong> en bas. Vous pouvez{' '}
-          <strong>zoomer et dézoomer</strong> avec les boutons <kbd className="kbd kbd-sm">+</kbd>{' '}
-          et <kbd className="kbd kbd-sm">−</kbd>
+          <strong>zoomer et dézoomer</strong> avec les boutons <Kbd>+</Kbd> et <Kbd>−</Kbd>
           {" de la carte (ou en pinçant l'écran avec deux doigts), et passer la carte en "}
-          <strong>plein écran</strong> avec le bouton <InlineIcon icon={FullScreenIcon} /> en haut à
-          gauche de la carte.
+          <strong>plein écran</strong> avec le bouton{' '}
+          <Kbd>
+            <InlineIcon icon={FullScreenIcon} />
+          </Kbd>{' '}
+          en haut à gauche de la carte.
         </li>
         <li>
           Votre <strong>progression est enregistrée automatiquement</strong> sur votre téléphone :
@@ -417,7 +418,6 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
 };
 
 export default function ManualPage() {
-  const router = useRouter();
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
       <nav aria-label="Sommaire" className="shadow-md border bg-card">
@@ -426,7 +426,7 @@ export default function ManualPage() {
           <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base">
             {MANUAL_SECTIONS.map((section) => (
               <li key={section.id}>
-                <a className="link link-secondary" href={`#${section.id}`}>
+                <a className="text-secondary underline" href={`#${section.id}`}>
                   {section.title}
                 </a>
               </li>
@@ -450,9 +450,9 @@ export default function ManualPage() {
       ))}
 
       <div className="flex flex-wrap justify-center gap-3 pb-4">
-        <Button variant="default" onClick={() => router.push('/')}>
+        <Link href="/" className={buttonVariants()}>
           Retour à l&apos;accueil
-        </Button>
+        </Link>
       </div>
     </div>
   );

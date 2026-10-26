@@ -29,18 +29,23 @@ export function ResumeTourBanner() {
   if (!saved) return null;
 
   return (
-    <Card className="shadow-md border">
-      <CardContent>
-        <div className="flex items-center">
-          <div className="text-muted-foreground/60 text-base font-light sm:text-xl">
-            Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}
-            {saved.step + 1}/3)
-          </div>
-          <div className="flex justify-end">
-            <TourPlayButton tour={saved} />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    /* Legacy contract (tests.md): the banner is a `li.list-row` row. */
+    <ul>
+      <li className="list-row">
+        <Card className="shadow-md border w-full">
+          <CardContent>
+            <div className="flex items-center">
+              <div className="text-muted-foreground/60 text-base font-light sm:text-xl">
+                Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}
+                {saved.step + 1}/3)
+              </div>
+              <div className="flex justify-end">
+                <TourPlayButton tour={saved} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </li>
+    </ul>
   );
 }

@@ -2,11 +2,11 @@
 
 import { ArrowDown01Icon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
-import { Button } from '../components/ui/button';
+import { buttonVariants } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
 import { ZoneList } from '../components/zone-list';
@@ -36,7 +36,6 @@ const ARTICLES = [
 
 export default function HomePage() {
   const currentYear = new Date().getFullYear();
-  const router = useRouter();
 
   return (
     <>
@@ -45,14 +44,11 @@ export default function HomePage() {
           <p className="text-sm font-medium sm:text-base">
             Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
           </p>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => router.push('/manual')}
-            className="shrink-0"
-          >
+          {/* Navigation, not an action: a Link carrying the button styling
+          (the shadcn "As Link" pattern — never a `<Button>` inside a link). */}
+          <Link href="/manual" className={buttonVariants({ variant: 'default', size: 'sm' })}>
             Mode d&apos;emploi
-          </Button>
+          </Link>
         </CardContent>
       </Card>
 
@@ -83,11 +79,11 @@ export default function HomePage() {
               />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-4">
-              <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-border">
+              <ul className="list-disc space-y-2 border-t border-border pt-3 pl-5 text-sm sm:text-base">
                 {ARTICLES.map((article) => (
                   <li key={article.url}>
                     <a
-                      className="link link-secondary font-medium"
+                      className="font-medium text-secondary underline"
                       href={article.url}
                       target="_blank"
                       rel="noopener noreferrer"

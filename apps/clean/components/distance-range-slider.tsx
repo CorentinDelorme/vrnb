@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Slider as SliderPrimitive } from '@base-ui/react/slider';
+import { useMemo } from 'react';
 
 import { formatDistance } from '../src/app/tours-format';
 
@@ -19,31 +20,27 @@ export interface DistanceRangeSliderProps {
   readonly onChange: (value: { min: number; max: number }) => void;
 }
 
-/** Index of a value on the stepped axis (integer math avoids float drift). */
-function stepsBetween(value: number, { min, step }: { min: number; step: number }): number {
-  return Math.round((value - min) / step);
-}
-
-function valueFromSteps(steps: number, { min, step }: { min: number; step: number }): number {
-  return min + steps * step;
-}
+const THUMB_CLASS =
+  'relative block size-3 shrink-0 rounded-full border border-ring bg-white ring-ring/50 ' +
+  'transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 ' +
+  'focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none ' +
+  'disabled:opacity-50';
 
 /**
- * Dual-handle range slider following the ARIA "slider" pattern, styled with
- * Tailwind utilities mapped to the shadcn/ui vrnb CSS variables.
+ * Dual-handle range slider built on the shadcn/ui slider (Base UI
+ * `@base-ui/react/slider`), with the graduation marks, the tick labels and the
+ * header of the filter families layered on top.
  *
- * - Two visible handles `role="slider"`, tabable, `aria-valuemin/max/now`,
- *   `aria-orientation="horizontal"`, `touch-action: none`.
- * - Arrow keys move the focused handle by one axis step; Home/End go to the
- *   axis extremes. Handles are mutually clamped so `min ≤ max` at all times.
- * - Handles and track can be moved with the mouse or touch (click the track
- *   to jump the nearest handle, drag a handle to slide it).
- * - The middle segment between the handles is highlighted (`bg-primary`).
+ * - Two thumbs from a two-value controlled array (`[min, max]`); the pointer,
+ *   touch and keyboard behaviour (arrows, Home/End, PageUp/PageDown, mutual
+ *   clamping `min ≤ max`) is the Base UI slider's, not hand-rolled here.
+ * - Each thumb is named `aria-label` ("borne minimale" / "borne maximale") and
+ *   reads its value through `getAriaValueText` so screen readers hear the
+ *   French formatted distance; the visible family label lives above the track.
  * - Graduations (ticks) + a labels row under the track, and a live value
- *   label above ("tout" when the interval covers the axis).
- * - The visible label is provided by the parent (`<legend>`); this component
- *   exposes the family name through `aria-label` on its root and on each
- *   handle, so screen readers stay informed without a duplicate visible label.
+ *   label in the header ("tout" when the interval covers the axis). They are
+ *   decorative for screen readers (`aria-hidden`): each thumb already carries
+ *   its formatted value.
  */
 export function DistanceRangeSlider({
   label,
@@ -53,200 +50,24 @@ export function DistanceRangeSlider({
   value,
   onChange,
 }: DistanceRangeSliderProps) {
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
-  const valueRef = useRef(value);
-  valueRef.current = value;
-
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState<'min' | 'max' | null>(null);
-
   /** Number of steps spanning the whole axis. */
-  const totalSteps = useMemo(() => stepsBetween(max, { min, step }), [min, max, step]);
-  /** Steps for the current bounds (recomputed when value changes). */
-  const stepsForValue = useCallback(
-    (val: number): number => stepsBetween(val, { min, step }),
-    [min, step],
+  const totalSteps = useMemo(() => Math.round((max - min) / step), [max, min, step]);
+  /** One axis value per step, drift-free (integer step math). */
+  const ticks = useMemo(
+    () =>
+      Array.from({ length: totalSteps + 1 }, (_, index) => Number((min + index * step).toFixed(5))),
+    [min, step, totalSteps],
   );
 
-  /** Axis value at a given horizontal client position. */
-  const valueFromClientX = useCallback(
-    (clientX: number): number => {
-      const rect = trackRef.current?.getBoundingClientRect();
-      if (!rect) {
-        return value.min;
-      }
-      let percent = (clientX - rect.left) / rect.width;
-      percent = Math.max(0, Math.min(1, percent));
-      const steps = Math.round(percent * totalSteps);
-      return valueFromSteps(steps, { min, step });
-    },
-    [totalSteps, min, step, value.min],
-  );
+  const handleValueChange: SliderPrimitive.Root.Props['onValueChange'] = (next) => {
+    const [lo, hi] = Array.isArray(next) ? next : [next, next];
+    onChange({ min: lo, max: hi });
+  };
 
   const fullAxis = value.min === min && value.max === max;
   const valueLabel = fullAxis
     ? 'tout'
     : `${formatDistance(value.min)} – ${formatDistance(value.max)}`;
-
-  const onKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLElement>, handle: 'min' | 'max') => {
-      let delta = 0;
-      switch (event.key) {
-        case 'ArrowRight':
-        case 'ArrowUp':
-          delta = 1;
-          break;
-        case 'ArrowLeft':
-        case 'ArrowDown':
-          delta = -1;
-          break;
-        case 'Home':
-          delta = handle === 'min' ? -stepsForValue(value.min) : -stepsForValue(value.max);
-          break;
-        case 'End':
-          delta =
-            handle === 'min'
-              ? totalSteps - stepsForValue(value.min)
-              : totalSteps - stepsForValue(value.max);
-          break;
-        default:
-          return;
-      }
-      event.preventDefault();
-
-      const minSteps = stepsForValue(value.min);
-      const maxSteps = stepsForValue(value.max);
-      let lo = minSteps;
-      let hi = maxSteps;
-      if (handle === 'min') {
-        // The min handle cannot move past the max handle (mutual clamp min ≤ max).
-        lo = Math.min(Math.max(lo + delta, 0), hi);
-      } else {
-        // The max handle cannot move below the min handle.
-        hi = Math.min(Math.max(hi + delta, lo), totalSteps);
-      }
-      onChange({
-        min: valueFromSteps(lo, { min, step }),
-        max: valueFromSteps(hi, { min, step }),
-      });
-    },
-    [min, step, totalSteps, value.min, value.max, stepsForValue, onChange],
-  );
-
-  const minSteps = stepsForValue(value.min);
-  const maxSteps = stepsForValue(value.max);
-  const minPercent = (minSteps / totalSteps) * 100;
-  const maxPercent = (maxSteps / totalSteps) * 100;
-
-  /** Start dragging a handle: capture the pointer so moves are followed even outside the component. */
-  const onPointerDownHandle = useCallback((event: React.PointerEvent, which: 'min' | 'max') => {
-    event.preventDefault();
-    event.stopPropagation();
-    setDragging(which);
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }, []);
-
-  /** Click the track: jump the nearest handle to the clicked position. */
-  const onPointerDownTrack = useCallback(
-    (event: React.PointerEvent) => {
-      event.preventDefault();
-      const targetValue = valueFromClientX(event.clientX);
-      const currentMin = valueRef.current.min;
-      const currentMax = valueRef.current.max;
-      const minDist = Math.abs(targetValue - currentMin);
-      const maxDist = Math.abs(targetValue - currentMax);
-      if (minDist <= maxDist) {
-        const lo = Math.min(Math.max(stepsForValue(targetValue), 0), stepsForValue(currentMax));
-        onChangeRef.current({
-          min: valueFromSteps(lo, { min, step }),
-          max: currentMax,
-        });
-      } else {
-        const hi = Math.min(
-          Math.max(stepsForValue(targetValue), stepsForValue(currentMin)),
-          totalSteps,
-        );
-        onChangeRef.current({
-          min: currentMin,
-          max: valueFromSteps(hi, { min, step }),
-        });
-      }
-    },
-    [valueFromClientX, stepsForValue, totalSteps, min, step],
-  );
-
-  /** Drag a handle: clamp it mutually so min ≤ max at all times. */
-  const onPointerMove = useCallback(
-    (event: PointerEvent) => {
-      if (!dragging || !trackRef.current) {
-        return;
-      }
-      const targetValue = valueFromClientX(event.clientX);
-      const currentMin = valueRef.current.min;
-      const currentMax = valueRef.current.max;
-      const minS = stepsForValue(currentMin);
-      const maxS = stepsForValue(currentMax);
-      let lo = minS;
-      let hi = maxS;
-      if (dragging === 'min') {
-        lo = Math.min(Math.max(stepsForValue(targetValue), 0), hi);
-      } else {
-        hi = Math.min(Math.max(stepsForValue(targetValue), lo), totalSteps);
-      }
-      onChangeRef.current({
-        min: valueFromSteps(lo, { min, step }),
-        max: valueFromSteps(hi, { min, step }),
-      });
-    },
-    [dragging, stepsForValue, totalSteps, min, step, valueFromClientX],
-  );
-
-  const onPointerUp = useCallback((event: PointerEvent) => {
-    setDragging(null);
-    if (trackRef.current) {
-      try {
-        trackRef.current.releasePointerCapture(event.pointerId);
-      } catch {
-        // The capture may already have been released.
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (dragging === null) {
-      return;
-    }
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
-    window.addEventListener('pointercancel', onPointerUp);
-    return () => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
-    };
-  }, [dragging, onPointerMove, onPointerUp]);
-
-  const handle = (which: 'min' | 'max', steps: number, percent: number) => {
-    const isMin = which === 'min';
-    return (
-      <div
-        key={which}
-        className="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-primary border-2 border-card shadow-sm"
-        style={{ left: `${percent}%`, transform: 'translateX(-50%)' }}
-        role="slider"
-        aria-orientation="horizontal"
-        aria-valuemin={min}
-        aria-valuemax={max}
-        aria-valuenow={isMin ? value.min : value.max}
-        aria-valuetext={formatDistance(isMin ? value.min : value.max)}
-        aria-label={isMin ? `${label} (borne minimale)` : `${label} (borne maximale)`}
-        tabIndex={0}
-        onKeyDown={(event) => onKeyDown(event, which)}
-        onPointerDown={(event) => onPointerDownHandle(event, which)}
-      />
-    );
-  };
 
   return (
     <div className="space-y-2" aria-label={label}>
@@ -257,57 +78,57 @@ export function DistanceRangeSlider({
         <span className="text-xs font-medium text-muted-foreground">{valueLabel}</span>
       </div>
 
-      <div
-        className="relative h-10 w-full touch-none"
-        ref={trackRef}
-        onPointerDown={onPointerDownTrack}
+      <SliderPrimitive.Root
+        value={[value.min, value.max]}
+        min={min}
+        max={max}
+        step={step}
+        onValueChange={handleValueChange}
+        className="w-full"
       >
-        {/* Base track (full axis). */}
-        <div className="absolute top-1/2 -translate-y-1/2 h-1.5 w-full rounded-full bg-muted" />
-        {/* Highlighted middle segment between the two handles. */}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 h-1.5 rounded-full bg-primary"
-          style={{ left: `${minPercent}%`, width: `${maxPercent - minPercent}%` }}
-        />
-        {handle('min', minSteps, minPercent)}
-        {handle('max', maxSteps, maxPercent)}
+        <SliderPrimitive.Control className="relative mt-1 flex w-full touch-none items-center select-none">
+          <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-muted select-none">
+            <SliderPrimitive.Indicator className="h-full bg-primary select-none" />
+          </SliderPrimitive.Track>
+          <SliderPrimitive.Thumb
+            index={0}
+            getAriaLabel={() => `${label} (borne minimale)`}
+            getAriaValueText={(_formatted, thumbValue) => formatDistance(thumbValue)}
+            className={THUMB_CLASS}
+          />
+          <SliderPrimitive.Thumb
+            index={1}
+            getAriaLabel={() => `${label} (borne maximale)`}
+            getAriaValueText={(_formatted, thumbValue) => formatDistance(thumbValue)}
+            className={THUMB_CLASS}
+          />
+        </SliderPrimitive.Control>
+      </SliderPrimitive.Root>
 
-        {/* Graduations: one tick per axis step. */}
-        <div className="absolute bottom-1 left-0 right-0 h-2">
-          {useMemo(
-            () => [...Array.from({ length: totalSteps + 1 }, (_, i) => min + i * step)],
-            [totalSteps, min, step],
-          ).map((tick) => {
-            const pct = (stepsBetween(tick, { min, step }) / totalSteps) * 100;
-            return (
-              <div
-                key={tick}
+      {/* Graduations: one tick per axis step, labels row under the track. */}
+      <div className="relative h-5 pt-1" aria-hidden="true">
+        {ticks.map((tick, index) => {
+          const percent = (index * 100) / totalSteps;
+          return (
+            <span key={tick}>
+              <span
                 data-testid="tick"
-                className="absolute w-0.5 h-1 bg-muted-foreground/30"
-                style={{ left: `${pct}%`, transform: 'translateX(-50%)' }}
+                className="absolute top-0 h-1 w-0.5 bg-muted-foreground/30"
+                style={{ left: `${percent}%` }}
               />
-            );
-          })}
-        </div>
-
-        {/* Labels row under the graduations. */}
-        <div className="absolute bottom-4 left-0 right-0">
-          {useMemo(
-            () => [...Array.from({ length: totalSteps + 1 }, (_, i) => min + i * step)],
-            [totalSteps, min, step],
-          ).map((tick) => {
-            const pct = (stepsBetween(tick, { min, step }) / totalSteps) * 100;
-            return (
-              <div
-                key={tick}
-                className="absolute text-[10px] text-muted-foreground/60 leading-none"
-                style={{ left: `${pct}%`, transform: 'translateX(-50%)', whiteSpace: 'nowrap' }}
+              <span
+                className="absolute top-2 text-[10px] leading-none text-muted-foreground/60"
+                style={{
+                  left: `${percent}%`,
+                  transform: 'translateX(-50%)',
+                  whiteSpace: 'nowrap',
+                }}
               >
                 {formatDistance(tick)}
-              </div>
-            );
-          })}
-        </div>
+              </span>
+            </span>
+          );
+        })}
       </div>
     </div>
   );
