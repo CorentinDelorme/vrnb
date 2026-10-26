@@ -140,7 +140,9 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             key={tour.name}
           >
             <div className="flex-1 flex items-center gap-3 min-w-0">
-              <div className="text-foreground text-xl font-medium sm:text-3xl truncate">{tour.name}</div>
+              <div className="text-foreground text-xl font-medium sm:text-3xl truncate">
+                {tour.name}
+              </div>
               <div className="text-muted-foreground/70 text-base font-light sm:text-xl whitespace-nowrap">
                 {formatTourDistances(tour)}
               </div>
