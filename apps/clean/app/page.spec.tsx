@@ -124,12 +124,12 @@ describe('Home page', () => {
     expect(isTypeActive('Tous')).toBe(true);
   });
 
-  it('renders the two distance slider families with "tout" by default and all rows', async () => {
+  it('renders the two distance slider families with "Tout" by default and all rows', async () => {
     await renderHomePage();
 
     expect(screen.getAllByRole('slider')).toHaveLength(4);
-    // Both families span their whole axis by default: "tout" label on each.
-    expect(screen.getAllByText('tout')).toHaveLength(2);
+    // Both families span their whole axis by default: "Tout" label on each.
+    expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
   });
 
@@ -147,7 +147,7 @@ describe('Home page', () => {
     cleaningMin.focus();
     fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('1');
-    expect(screen.getAllByText('tout')).toHaveLength(1); // cleaning is no longer "tout"
+    expect(screen.getAllByText('Tout')).toHaveLength(1); // cleaning is no longer "Tout"
     const after = screen.getAllByRole('button', { name: 'Lancer le parcours' });
     expect(after.length).toBeLessThan(47);
     expect(after.length).toBeGreaterThan(0);
@@ -155,7 +155,7 @@ describe('Home page', () => {
     // Return to the axis extreme: everything comes back.
     fireEvent.keyDown(cleaningMin, { key: 'ArrowLeft' });
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
-    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
   });
 
@@ -227,7 +227,7 @@ describe('Home page', () => {
 
     // Back to the unfiltered state.
     expect(isTypeActive('Tous')).toBe(true);
-    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
     expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);

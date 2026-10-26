@@ -66,7 +66,7 @@ export function DistanceRangeSlider({
 
   const fullAxis = value.min === min && value.max === max;
   const valueLabel = fullAxis
-    ? 'tout'
+    ? 'Tout'
     : `${formatDistance(value.min)} – ${formatDistance(value.max)}`;
 
   return (

@@ -189,10 +189,10 @@ describe('ZoneList', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
 
-    // Back to the unfiltered state: "Tous" active, both sliders at "tout".
+    // Back to the unfiltered state: "Tous" active, both sliders at "Tout".
     expect(isTypeActive('Tous')).toBe(true);
     expect(isTypeActive('À pied')).toBe(false);
-    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
     // Every zone and all 47 play buttons are back.

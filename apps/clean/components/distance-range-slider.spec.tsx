@@ -81,7 +81,7 @@ describe('DistanceRangeSlider', () => {
     expect(maxHandle().getAttribute('aria-valuetext')).toBe('4 km');
   });
 
-  it('shows "tout" as the live value label when the interval covers the whole axis', () => {
+  it('shows "Tout" as the live value label when the interval covers the whole axis', () => {
     render(
       <Harness
         label="Distance de nettoyage"
@@ -91,7 +91,7 @@ describe('DistanceRangeSlider', () => {
         initial={{ min: 0.5, max: 4 }}
       />,
     );
-    expect(hasText('tout')).toBe(true);
+    expect(hasText('Tout')).toBe(true);
   });
 
   it('shows a formatted French interval label otherwise', () => {

@@ -82,17 +82,22 @@ export function FilterBar({
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
               Type de parcours
             </span>
-            <div role="group" aria-label="Type de parcours" className="inline-flex w-fit gap-1">
-              {TYPE_CHOICES.map((choice) => {
+            <div role="group" aria-label="Type de parcours" className="inline-flex w-fit">
+              {TYPE_CHOICES.map((choice, index) => {
                 const active = type === choice.value;
+                const isFirst = index === 0;
+                const isLast = index === TYPE_CHOICES.length - 1;
                 return (
                   <label
                     key={choice.value}
                     className={cn(
-                      'relative inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer select-none disabled:pointer-events-none disabled:opacity-50',
+                      'relative inline-flex items-center justify-center border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer select-none disabled:pointer-events-none disabled:opacity-50',
                       active
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'border-border text-foreground hover:bg-muted hover:text-foreground',
+                      isFirst && 'rounded-l-lg',
+                      isLast && 'rounded-r-lg',
+                      !isFirst && '-ml-px',
                     )}
                     role="radio"
                     aria-checked={active}
