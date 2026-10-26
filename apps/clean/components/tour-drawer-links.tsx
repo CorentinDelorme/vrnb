@@ -68,17 +68,23 @@ export function TourDrawerLinks() {
   }, [id, zoneId, meetingPoint.coordinates]);
 
   return (
-    <>
+    <div className="space-y-3">
       {id ? (
         <li>
-          <a download href={tourPdfUrl(zoneId, id)} rel="noopener noreferrer" target="_blank">
+          <a
+            download
+            href={tourPdfUrl(zoneId, id)}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={Pdf02Icon} strokeWidth={1.5} />
             Télécharger le PDF
           </a>
         </li>
       ) : null}
 
-      <Separator className="m-0" />
+      <Separator className="mx-0 my-4" />
 
       {id ? (
         <li>
@@ -87,6 +93,7 @@ export function TourDrawerLinks() {
             href={tourGpxUrl(zoneId, id, 'start')}
             rel="noopener noreferrer"
             target="_blank"
+            className="flex items-center gap-2"
           >
             <HugeiconsIcon icon={Route02Icon} strokeWidth={1.5} />
             Télécharger le GPX vers le point de départ
@@ -95,7 +102,13 @@ export function TourDrawerLinks() {
       ) : null}
       {id ? (
         <li>
-          <a download href={tourGpxUrl(zoneId, id)} rel="noopener noreferrer" target="_blank">
+          <a
+            download
+            href={tourGpxUrl(zoneId, id)}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={MapsLocationIcon} strokeWidth={1.5} />
             Télécharger le GPX du parcours
           </a>
@@ -108,6 +121,7 @@ export function TourDrawerLinks() {
             href={tourGpxUrl(zoneId, id, 'end')}
             rel="noopener noreferrer"
             target="_blank"
+            className="flex items-center gap-2"
           >
             <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
             Télécharger le GPX pour retourner au lieu de rendez-vous
@@ -115,9 +129,9 @@ export function TourDrawerLinks() {
         </li>
       ) : null}
 
-      <Separator className="m-0" />
+      <Separator className="mx-0 my-4" />
 
-      <div className="flex justify-center">
+      <div className="flex justify-center mb-3">
         <img
           alt="GeoVelo"
           className="h-8.5 w-45.5 sm:h-11.75 sm:w-63.75"
@@ -130,6 +144,7 @@ export function TourDrawerLinks() {
           href={buildGeoVeloToMeetingPointLink(meetingPoint.coordinates, currentPosition)}
           rel="noopener noreferrer"
           target="_blank"
+          className="flex items-center gap-2"
         >
           <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
           Retourner au lieu de rendez-vous depuis ma position
@@ -138,7 +153,12 @@ export function TourDrawerLinks() {
 
       {routeLinks?.toStart ? (
         <li>
-          <a href={routeLinks.toStart} rel="noopener noreferrer" target="_blank">
+          <a
+            href={routeLinks.toStart}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={Route02Icon} strokeWidth={1.5} />
             Itinéraire vers le point de départ
           </a>
@@ -146,12 +166,17 @@ export function TourDrawerLinks() {
       ) : null}
       {routeLinks?.fromEnd ? (
         <li>
-          <a href={routeLinks.fromEnd} rel="noopener noreferrer" target="_blank">
+          <a
+            href={routeLinks.fromEnd}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
             Itinéraire pour retourner au lieu de rendez-vous
           </a>
         </li>
       ) : null}
-    </>
+    </div>
   );
 }

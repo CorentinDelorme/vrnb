@@ -81,24 +81,22 @@ export function FilterBar({
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
               Type de parcours
             </span>
-            <div role="group" aria-label="Type de parcours" className="w-fit">
-              <ButtonGroup>
-                {TYPE_CHOICES.map((choice) => {
-                  const active = type === choice.value;
-                  return (
-                    <ButtonGroupItem
-                      key={choice.value}
-                      variant={active ? 'secondary' : 'outline'}
-                      onClick={() => onTypeChange(choice.value)}
-                      aria-label={choice.label}
-                      title={choice.label}
-                    >
-                      {choice.label}
-                    </ButtonGroupItem>
-                  );
-                })}
-              </ButtonGroup>
-            </div>
+            <ButtonGroup role="group" aria-label="Type de parcours" className="w-fit">
+              {TYPE_CHOICES.map((choice) => {
+                const active = type === choice.value;
+                return (
+                  <ButtonGroupItem
+                    key={choice.value}
+                    variant={active ? 'secondary' : 'outline'}
+                    onClick={() => onTypeChange(choice.value)}
+                    aria-label={choice.label}
+                    title={choice.label}
+                  >
+                    {choice.label}
+                  </ButtonGroupItem>
+                );
+              })}
+            </ButtonGroup>
           </div>
 
           <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance de nettoyage">

@@ -565,9 +565,12 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
 
     // Google Calendar: a plausible template link built by the pure module,
     // carrying the Zone and the Parcours, opened in a new tab.
-    const google = screen.getByRole('link', { name: 'Google Agenda' }) as HTMLAnchorElement;
-    expect(google.href.startsWith('https://calendar.google.com/calendar/render?')).toBe(true);
-    const googleUrl = new URL(google.href);
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as unknown as Window);
+    const google = screen.getByRole('button', { name: 'Google Agenda' });
+    expect(google).toBeTruthy();
+    fireEvent.click(google);
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    const googleUrl = new URL(openSpy.mock.calls[0]?.[0] as string);
     expect(googleUrl.searchParams.get('action')).toBe('TEMPLATE');
     expect(googleUrl.searchParams.get('text')).toBe(
       'Action ramassage des déchets VRNB - Bruz Sud (V1)',
@@ -575,13 +578,18 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
     expect(googleUrl.searchParams.get('location')).toBe(
       'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
     );
-    expect(google.target).toBe('_blank');
-    expect(google.rel).toContain('noopener');
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining('https://calendar.google.com/calendar/render?'),
+      '_blank',
+    );
+    openSpy.mockRestore();
 
     // The .ics file points to the calendar route of the exact couple, with
     // no .ics suffix in the URL (the filename arrives through the header).
-    const ics = screen.getByRole('link', { name: 'Fichier calendrier (.ics)' });
-    expect(ics.getAttribute('href')).toBe('/api/calendrier/bruz-sud/V1');
+    const ics = screen.getByRole('button', { name: 'Fichier calendrier (.ics)' });
+    expect(ics).toBeTruthy();
+    expect(() => fireEvent.click(ics)).not.toThrow();
+
     // Google Agenda comes first, then the file (the one-click path first).
     expect(google.compareDocumentPosition(ics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

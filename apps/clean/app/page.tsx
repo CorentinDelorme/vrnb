@@ -1,17 +1,14 @@
-import Link from 'next/link';
+'use client';
 
-import { cn } from '@/components/lib/utils';
+import { ArrowDown01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { useRouter } from 'next/navigation';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '../components/ui/accordion';
-import { buttonVariants } from '../components/ui/button';
+import { Button } from '../components/ui/button';
 import { Card, CardContent } from '../components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
 import { ZoneList } from '../components/zone-list';
 
 /**
@@ -39,6 +36,7 @@ const ARTICLES = [
 
 export default function HomePage() {
   const currentYear = new Date().getFullYear();
+  const router = useRouter();
 
   return (
     <>
@@ -47,12 +45,14 @@ export default function HomePage() {
           <p className="text-sm font-medium sm:text-base">
             Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
           </p>
-          <Link
-            href="/manual"
-            className={cn(buttonVariants({ variant: 'default', size: 'sm' }), 'shrink-0')}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => router.push('/manual')}
+            className="shrink-0"
           >
             Mode d&apos;emploi
-          </Link>
+          </Button>
         </CardContent>
       </Card>
 
@@ -72,34 +72,33 @@ export default function HomePage() {
 
       <Card>
         <CardContent>
-          <Accordion defaultValue={['presse']} aria-label="Articles Ouest-France 2026">
-            <AccordionItem value="presse">
-              <AccordionTrigger className="flex items-center gap-4">
-                <img
-                  className="h-auto w-28"
-                  src="/icons/ouest-france.svg"
-                  alt="Logo Ouest-France"
-                />
-                Articles Ouest-France 2026
-              </AccordionTrigger>
-              <AccordionContent className="pt-4">
-                <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-border">
-                  {ARTICLES.map((article) => (
-                    <li key={article.url}>
-                      <a
-                        className="link link-secondary font-medium"
-                        href={article.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {article.title}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+          <Collapsible defaultOpen={true} className="rounded-md data-[state=open]:bg-muted">
+            <CollapsibleTrigger className="group flex items-center gap-4">
+              <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
+              Articles Ouest-France 2026
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                strokeWidth={2}
+                className="ml-auto shrink-0 group-[aria-expanded=true]:rotate-180 transition-transform duration-200"
+              />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+              <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-border">
+                {ARTICLES.map((article) => (
+                  <li key={article.url}>
+                    <a
+                      className="link link-secondary font-medium"
+                      href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {article.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </CollapsibleContent>
+          </Collapsible>
         </CardContent>
       </Card>
 

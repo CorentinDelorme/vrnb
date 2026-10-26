@@ -2,10 +2,9 @@
 
 import { BicycleIcon, WalkingIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type * as React from 'react';
 
-import { cn } from '@/components/lib/utils';
 import { formatDistance } from '../src/app/tours-format';
 import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
@@ -13,7 +12,8 @@ import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-
 import { TourPlayButton } from './tour-play-button';
 import { TourRegisterButton } from './tour-register-button';
 import { Badge } from './ui/badge';
-import { buttonVariants } from './ui/button';
+import { Button } from './ui/button';
+import { Item } from './ui/item';
 
 /**
  * Tour list section — port of the legacy Angular `tour-list-section` component
@@ -83,6 +83,7 @@ interface TourListSectionProps {
 }
 
 export function TourListSection({ title, tours, type, zoneId }: TourListSectionProps) {
+  const router = useRouter();
   const typeIcon = type === 'V' ? BicycleIcon : WalkingIcon;
   const status = useInscriptionsStatus();
   /**
@@ -106,7 +107,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
   return (
     <app-tour-list-section>
       <ul className="border-2 border-secondary/20 shadow-lg">
-        <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-border p-4">
+        <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-border p-4 bg-muted/50">
           <div className="flex items-center gap-3">
             <span className="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-2 sm:p-2.5">
               <HugeiconsIcon className="sm:h-10 sm:w-10" icon={typeIcon} strokeWidth={1.5} />
@@ -120,20 +121,21 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             </div>
           </div>
 
-          <Link
-            href={`/tours/${zoneId}/${type}`}
-            className={cn(
-              buttonVariants({ variant: 'default', size: 'sm' }),
-              'max-sm:w-full shrink-0',
-            )}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => router.push(`/tours/${zoneId}/${type}`)}
+            className="max-sm:w-full shrink-0"
           >
             Voir tous les parcours
-          </Link>
+          </Button>
         </li>
 
         {tours.map((tour) => (
-          <li
-            className="items-center border-border rounded-lg border list-row"
+          <Item
+            render={(props) => <li {...props} />}
+            variant="outline"
+            size="sm"
             data-testid="tour-row"
             key={tour.name}
           >
@@ -153,7 +155,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               />
               <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
             </div>
-          </li>
+          </Item>
         ))}
       </ul>
     </app-tour-list-section>

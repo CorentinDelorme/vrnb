@@ -2,16 +2,14 @@
 
 import { ArrowLeftIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Fragment, useState } from 'react';
 
-import { cn } from '@/components/lib/utils';
 import { headerFlags, pageTitle } from '../lib/route-meta';
 import { MenuDrawer } from './menu-drawer';
 import { MenuLinks } from './menu-links';
 import { TourDrawerLinks } from './tour-drawer-links';
-import { buttonVariants } from './ui/button';
+import { Button } from './ui/button';
 
 /**
  * App header — port of the legacy Angular root template (`app.html`): back
@@ -21,6 +19,7 @@ import { buttonVariants } from './ui/button';
  */
 export function AppHeader() {
   const pathname = usePathname();
+  const router = useRouter();
   const flags = headerFlags(pathname);
   const title = pageTitle(pathname);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -35,17 +34,18 @@ export function AppHeader() {
           them — and drag the title along — on /manual). */}
       <div className="col-start-1 flex items-center gap-4">
         {flags.showBack ? (
-          <Link
-            href="/"
+          <Button
+            variant="default"
+            size="sm"
             aria-label="Retour à l'accueil"
-            className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
+            onClick={() => router.push('/')}
           >
             <HugeiconsIcon
               className="text-primary-foreground"
               icon={ArrowLeftIcon}
               strokeWidth={1.5}
             />
-          </Link>
+          </Button>
         ) : null}
 
         {/* /manual shows the logo next to the back button on wide screens and

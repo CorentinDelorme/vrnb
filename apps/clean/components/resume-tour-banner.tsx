@@ -29,8 +29,8 @@ export function ResumeTourBanner() {
   if (!saved) return null;
 
   return (
-    <Card className="shadow-md border mb-4 sm:mb-8">
-      <CardContent className="p-4 sm:p-6">
+    <Card className="shadow-md border">
+      <CardContent>
         <div className="flex items-center">
           <div className="text-muted-foreground/60 text-base font-light sm:text-xl">
             Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}

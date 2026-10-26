@@ -1,5 +1,8 @@
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 import NotFound from './not-found';
 
@@ -20,7 +23,9 @@ describe('NotFound page', () => {
 
   it('links back to the home page', () => {
     render(<NotFound />);
-    const link = screen.getByRole('link', { name: "Retour à l'accueil" });
-    expect(link.getAttribute('href')).toBe('/');
+    const button = screen.getByRole('button', { name: "Retour à l'accueil" });
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+    expect(push).toHaveBeenCalledWith('/');
   });
 });

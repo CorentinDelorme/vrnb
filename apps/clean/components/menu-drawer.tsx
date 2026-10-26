@@ -7,6 +7,7 @@ import type { ReactNode } from 'react';
 import type { MenuVariant } from '../lib/route-meta';
 
 import { cn } from '@/components/lib/utils';
+import { Button } from './ui/button';
 import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from './ui/drawer';
 
 /** Legacy drawer input ids, kept for DOM parity with the Angular templates. */
@@ -42,9 +43,11 @@ export function MenuDrawer({
   const drawerId = DRAWER_IDS[variant];
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
+    <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="left">
       <DrawerTrigger id={drawerId} className={cn(className)} aria-label="Menu">
-        Menu
+        <Button variant="default" size="sm">
+          Menu
+        </Button>
       </DrawerTrigger>
       <DrawerContent className={MENU_CLASSES[variant]}>
         <DrawerClose aria-label="close sidebar" className="absolute top-4 right-4">

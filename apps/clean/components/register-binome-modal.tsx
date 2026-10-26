@@ -10,7 +10,6 @@ import {
 import { HugeiconsIcon } from '@hugeicons/react';
 import { useState } from 'react';
 
-import { cn } from '@/components/lib/utils';
 import { actionHoursLabel, tourGoogleCalendarUrl } from '../lib/tour-calendar';
 import type { Edition, RegistrationWindowPhase } from '../src/app/inscriptions/edition';
 import {
@@ -39,7 +38,7 @@ import {
   useInscriptionsStatus,
 } from './inscriptions-status-provider';
 import { Alert, AlertDescription } from './ui/alert';
-import { Button, buttonVariants } from './ui/button';
+import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogClose, DialogContent } from './ui/dialog';
 import { Input } from './ui/input';
@@ -339,27 +338,34 @@ export function RegisterBinomeModal({
                 <span>L&apos;ajouter à mon agenda&nbsp;:</span>
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                <a
-                  className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
-                  href={tourGoogleCalendarUrl({
-                    address: zone.meetingPoint.address,
-                    edition,
-                    pointDeRendezVous: zone.meetingPoint.name,
-                    tourId: tour.tourId,
-                    zoneId: tour.zoneId,
-                    zoneName: zone.name,
-                  })}
-                  rel="noopener noreferrer"
-                  target="_blank"
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() =>
+                    window.open(
+                      tourGoogleCalendarUrl({
+                        address: zone.meetingPoint.address,
+                        edition,
+                        pointDeRendezVous: zone.meetingPoint.name,
+                        tourId: tour.tourId,
+                        zoneId: tour.zoneId,
+                        zoneName: zone.name,
+                      }),
+                      '_blank',
+                    )
+                  }
                 >
                   Google Agenda
-                </a>
-                <a
-                  className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
-                  href={`/api/calendrier/${tour.zoneId}/${tour.tourId}`}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    (window.location.href = `/api/calendrier/${tour.zoneId}/${tour.tourId}`)
+                  }
                 >
                   Fichier calendrier (.ics)
-                </a>
+                </Button>
               </div>
             </div>
             <div className="mt-6">

@@ -55,17 +55,15 @@ describe('Home page', () => {
     mockedOutcome.current = { status: 'error' };
   });
 
-  it('renders each zone as an open accordion labelled with its name and tour count', async () => {
+  it('renders each zone as an open collapsible labelled with its name and tour count', async () => {
     const { container } = await renderHomePage();
     const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
     expect(zone).not.toBeNull();
-    expect(
-      zone?.querySelector('[data-slot="accordion-trigger"]')?.getAttribute('aria-expanded'),
-    ).toBe('true');
-    expect(zone?.querySelector('[data-slot="accordion-trigger"] h2')?.textContent).toBe('Bruz Sud');
-    expect(zone?.querySelector('[data-slot="accordion-trigger"]')?.textContent).toContain(
-      '28 parcours',
-    );
+    const trigger = zone?.querySelector('[data-slot="collapsible-trigger"]');
+    expect(trigger).not.toBeNull();
+    expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+    expect(trigger?.querySelector('h2')?.textContent).toBe('Bruz Sud');
+    expect(trigger?.textContent).toContain('28 parcours');
   });
 
   it('lists all Bruz Sud bike and walking tours in their sections', async () => {
@@ -235,9 +233,13 @@ describe('Home page', () => {
 
   it('links each section to its zone map and labels every play button', async () => {
     await renderHomePage();
-    const mapLinks = screen.getAllByRole('link', { name: 'Voir tous les parcours' });
-    expect(mapLinks.map((link) => link.getAttribute('href'))).toContain('/tours/bruz-sud/V');
-    expect(mapLinks.map((link) => link.getAttribute('href'))).toContain('/tours/bruz-sud/P');
+    const mapButtons = screen.getAllByRole('button', { name: 'Voir tous les parcours' });
+    expect(mapButtons.length).toBeGreaterThanOrEqual(2);
+    for (const b of mapButtons) {
+      fireEvent.click(b);
+    }
+    expect(push).toHaveBeenCalledWith('/tours/bruz-sud/V');
+    expect(push).toHaveBeenCalledWith('/tours/bruz-sud/P');
   });
 
   it('navigates to the tour when a play button is clicked', async () => {
@@ -277,9 +279,10 @@ describe('Home page', () => {
 
   it('offers the mode d\u2019emploi CTA and the Ouest-France articles', async () => {
     await renderHomePage();
-    expect(screen.getByRole('link', { name: /Mode d'emploi/ }).getAttribute('href')).toBe(
-      '/manual',
-    );
+    const cta = screen.getByRole('button', { name: /Mode d'emploi/ });
+    expect(cta).toBeTruthy();
+    fireEvent.click(cta);
+    expect(push).toHaveBeenCalledWith('/manual');
 
     const pressLinks = screen
       .getAllByRole('link')

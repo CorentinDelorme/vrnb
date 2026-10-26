@@ -1,7 +1,5 @@
 'use client';
 
-import { CancelIcon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
 import confetti from 'canvas-confetti';
 import { useEffect, useState } from 'react';
 
@@ -9,7 +7,7 @@ import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage
 import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
 import { Button } from './ui/button';
-import { Dialog, DialogClose, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent } from './ui/dialog';
 
 /**
  * Step-by-step tour page — port of the legacy Angular `tour/tour.ts` +
@@ -22,14 +20,14 @@ import { Dialog, DialogClose, DialogContent } from './ui/dialog';
 /** Step labels, in state-machine order. */
 const STEP_LABELS = ['Début', 'Nettoyage', 'Fin'] as const;
 
-/** Custom shadcn-styled stepper: reached steps are secondary, current step
- * is primary, and a line connects the steps. */
+/** Custom stepper: reached steps (including the current one) are secondary,
+ * unreached steps are muted, and a line connects the steps — coloured only up
+ * to the next reached step. Parity with the mode d'emploi screenshots. */
 function Stepper({ step }: { readonly step: TourStep }) {
   return (
-    <div className="flex items-center justify-between w-full max-w-md px-4 sm:px-6">
+    <div className="flex items-center justify-between w-full px-4 sm:px-6">
       {STEP_LABELS.map((label, index) => {
         const reached = step >= index;
-        const current = step === index;
         const last = index === STEP_LABELS.length - 1;
         return (
           <div
@@ -39,20 +37,21 @@ function Stepper({ step }: { readonly step: TourStep }) {
           >
             <div className="flex items-center gap-2">
               <div
+                data-testid={`step-${index}-circle`}
                 className={`w-7 h-7 rounded-full border flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
-                  current
-                    ? 'bg-primary text-primary-foreground border-primary ring-2 ring-primary/20'
-                    : reached
-                      ? 'bg-secondary text-secondary-foreground border-secondary'
-                      : 'border-border text-muted-foreground'
+                  reached
+                    ? 'bg-secondary text-secondary-foreground border-secondary'
+                    : 'border-border text-muted-foreground'
                 }`}
               >
                 {index + 1}
               </div>
-              {!last && <div className={`h-px flex-1 ${reached ? 'bg-primary' : 'bg-border'}`} />}
+              {!last && (
+                <div className={`h-px flex-1 ${step > index ? 'bg-secondary' : 'bg-border'}`} />
+              )}
             </div>
             <span
-              className={`text-xs font-medium transition-colors ${current ? 'text-primary font-bold' : reached ? 'text-secondary' : 'text-muted-foreground'}`}
+              className={`text-xs font-medium transition-colors ${reached ? 'text-secondary' : 'text-muted-foreground'}`}
             >
               {label}
             </span>
@@ -132,10 +131,6 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
 
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
         <DialogContent id="finish_modal">
-          <DialogClose aria-label="Fermer" className="absolute top-2 right-2 p-1">
-            <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
-          </DialogClose>
-
           <h3 className="text-lg font-bold">Merci pour votre participation !</h3>
           <p className="py-4">
             Allez voir les organisateurs pour faire peser les déchets ramassés.

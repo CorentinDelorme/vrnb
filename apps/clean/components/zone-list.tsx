@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 
+import { ArrowDown01Icon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 import {
   DEFAULT_TOUR_DISTANCE_FILTER,
   filterToursByDistance,
@@ -10,13 +12,14 @@ import {
   type DistanceInterval,
   type TourFilterType,
 } from '../src/app/tours-filter';
+
 import { findZoneTours } from '../src/app/tours-queries';
 import { ZONES } from '../src/app/zones';
 import { FilterBar } from './filter-bar';
 import { TourListSection } from './tour-list-section';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 
 /**
  * Client wrapper above the zone list carrying the ephemeral filter state
@@ -63,14 +66,24 @@ export function ZoneList() {
     }
 
     return (
-      <AccordionItem key={zone.id} value={zone.id} aria-label={`Zone ${zone.name}`}>
-        <AccordionTrigger className="flex items-center gap-3 sm:gap-4">
+      <Collapsible
+        key={zone.id}
+        defaultOpen={true}
+        aria-label={`Zone ${zone.name}`}
+        className="rounded-md data-[state=open]:bg-muted"
+      >
+        <CollapsibleTrigger className="group flex items-center gap-3 sm:gap-4">
           <h2 className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
             {zone.name}
           </h2>
           <Badge variant="secondary">{bikeTours.length + walkingTours.length} parcours</Badge>
-        </AccordionTrigger>
-        <AccordionContent className="pt-2 sm:pt-4">
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            strokeWidth={2}
+            className="ml-auto shrink-0 group-[aria-expanded=true]:rotate-180 transition-transform duration-200"
+          />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-2 sm:pt-4">
           <div
             className={`grid grid-cols-1 gap-4 pt-2 sm:gap-8${
               hasBothTypes ? ' lg:grid-cols-2' : ''
@@ -93,8 +106,8 @@ export function ZoneList() {
               />
             ) : null}
           </div>
-        </AccordionContent>
-      </AccordionItem>
+        </CollapsibleContent>
+      </Collapsible>
     );
   });
 
@@ -118,9 +131,7 @@ export function ZoneList() {
         onReset={handleReset}
       />
       <Card>
-        <CardContent>
-          <Accordion defaultValue={ZONES.map((zone) => zone.id)}>{zoneSections}</Accordion>
-        </CardContent>
+        <CardContent>{zoneSections}</CardContent>
       </Card>
     </div>
   );

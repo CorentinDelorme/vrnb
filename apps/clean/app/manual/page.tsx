@@ -1,11 +1,12 @@
+'use client';
+
 import { FullScreenIcon, PlayIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { cn } from '@/components/lib/utils';
-import { buttonVariants } from '../../components/ui/button';
+import { Button } from '../../components/ui/button';
 import { pageTitle } from '../../lib/route-meta';
 import {
   CURRENT_EDITION,
@@ -126,10 +127,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         lieu de rendez-vous, <strong>nettoyer</strong> le parcours en ramassant les déchets, puis{' '}
         <strong>revenir</strong> au lieu de rendez-vous.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Page d'accueil avec la liste des parcours à vélo et à pied"
-          className="rounded-lg border border-border shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/01-accueil.png"
         />
@@ -175,10 +176,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             sur le bouton de lecture <InlineIcon icon={PlayIcon} /> de la ligne <strong>P2</strong>{' '}
             ci-dessous.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Ligne P2 800 mètres avec son bouton de lecture"
-              className="rounded-lg border border-border shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/02-choisir-p2.png"
             />
@@ -194,10 +195,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             <strong>lieu de rendez-vous </strong>jusqu&apos;au départ du parcours. Marchez
             jusque-là, puis appuyez sur <strong>Suivant </strong>en bas de l&apos;écran.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Carte de la première étape avec le bouton Suivant en bas"
-              className="rounded-lg border border-border shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/03-etape-debut.png"
             />
@@ -213,10 +214,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             <strong>800 mètres</strong> : ramassez les déchets tout le long, puis appuyez sur{' '}
             <strong>Suivant </strong>en bas de l&apos;écran.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Carte de l'étape de nettoyage du parcours P2"
-              className="rounded-lg border border-border shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/04-etape-nettoyage.png"
             />
@@ -232,10 +233,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             revenir au <strong>lieu de rendez-vous</strong> : une fois arrivé, appuyez sur{' '}
             <strong>Terminer </strong>en bas de l&apos;écran pour valider.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Carte de l'étape de retour avec le bouton Terminer en bas"
-              className="rounded-lg border border-border shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/05-etape-fin.png"
             />
@@ -254,10 +255,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         mémoire l&apos;endroit où vous vous êtes arrêté, même si vous fermez la page ou si votre
         téléphone s&apos;éteint. Rien n&apos;est perdu.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Message proposant de reprendre le parcours Bruz Sud P2 en haut de l'accueil"
-          className="rounded-lg border border-border shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/07-reprendre.png"
         />
@@ -294,10 +295,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         En haut à droite de la carte, le bouton <strong>Menu</strong> donne accès à des documents et
         des itinéraires utiles pour votre parcours.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Contenu du menu ouvert sur le parcours P2"
-          className="rounded-lg border border-border shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/06-menu.png"
         />
@@ -350,10 +351,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         ceux qui ne se sont pas inscrits sur le site peuvent compléter la fiche de suivi sur place,
         avant le début de l&apos;action.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Fenêtre d'inscription d'un binôme avec les prénoms et noms des deux membres"
-          className="rounded-lg border border-border shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/08-inscription-binome.png"
         />
@@ -386,10 +387,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           </p>
         </li>
       </ol>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Confirmation de l'inscription avec la note à prendre (zone et nom du parcours), les horaires de l'action et les liens pour l'agenda"
-          className="rounded-lg border border-border shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/09-confirmation-inscription.png"
         />
@@ -416,6 +417,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
 };
 
 export default function ManualPage() {
+  const router = useRouter();
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
       <nav aria-label="Sommaire" className="shadow-md border bg-card">
@@ -448,9 +450,9 @@ export default function ManualPage() {
       ))}
 
       <div className="flex flex-wrap justify-center gap-3 pb-4">
-        <Link href="/" className={cn(buttonVariants({ variant: 'default' }))}>
+        <Button variant="default" onClick={() => router.push('/')}>
           Retour à l&apos;accueil
-        </Link>
+        </Button>
       </div>
     </div>
   );
