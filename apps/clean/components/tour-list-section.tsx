@@ -8,8 +8,7 @@ import type * as React from 'react';
 import { formatDistance } from '../src/app/tours-format';
 import type { Tour, TourType } from '../src/app/tours-queries';
 import type { InscriptionsStatus } from './inscriptions-status-provider';
-import { useInscriptionsStatus } from './inscriptions-status-provider';
-import { isRegistrationWindowOpen } from './inscriptions-status-provider';
+import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
 import { TourRegisterButton } from './tour-register-button';
 import { Badge } from './ui/badge';
@@ -140,9 +139,11 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             data-testid="tour-row"
             key={tour.name}
           >
-            <div className="text-foreground text-xl font-medium sm:text-3xl">{tour.name}</div>
-            <div className="text-muted-foreground/70 text-base font-light sm:text-xl">
-              {formatTourDistances(tour)}
+            <div className="flex-1 flex items-center gap-3 min-w-0">
+              <div className="text-foreground text-xl font-medium sm:text-3xl truncate">{tour.name}</div>
+              <div className="text-muted-foreground/70 text-base font-light sm:text-xl whitespace-nowrap">
+                {formatTourDistances(tour)}
+              </div>
             </div>
             <div className="flex items-center justify-end gap-2">
               {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (

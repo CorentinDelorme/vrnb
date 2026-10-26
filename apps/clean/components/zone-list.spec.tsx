@@ -41,11 +41,13 @@ function summaryText(zoneName: string): string | null {
 }
 
 function typeButton(label: string): HTMLElement {
-  return screen.getByRole('button', { name: label }) as HTMLElement;
+  // The Type de parcours filter uses <label> + radio input (sr-only).
+  // getByLabelText returns the input; we need the label wrapper which has the active class.
+  return screen.getByText(label).closest('label')!;
 }
 
 function isTypeActive(label: string): boolean {
-  return typeButton(label).classList.contains('bg-secondary');
+  return typeButton(label).classList.contains('bg-primary');
 }
 
 describe('ZoneList', () => {

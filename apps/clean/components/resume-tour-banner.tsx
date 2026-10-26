@@ -34,14 +34,12 @@ export function ResumeTourBanner() {
       <li className="list-row">
         <Card className="shadow-md border w-full">
           <CardContent>
-            <div className="flex items-center">
-              <div className="text-muted-foreground/60 text-base font-light sm:text-xl">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 text-muted-foreground/60 text-base font-light sm:text-xl truncate">
                 Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}
                 {saved.step + 1}/3)
               </div>
-              <div className="flex justify-end">
-                <TourPlayButton tour={saved} />
-              </div>
+              <TourPlayButton tour={saved} />
             </div>
           </CardContent>
         </Card>

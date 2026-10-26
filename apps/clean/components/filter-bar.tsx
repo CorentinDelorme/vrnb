@@ -1,9 +1,9 @@
 'use client';
 
+import { cn } from '@/components/lib/utils';
 import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
 import { DistanceRangeSlider } from './distance-range-slider';
 import { Button } from './ui/button';
-import { ButtonGroup, ButtonGroupItem } from './ui/button-group';
 
 /** One option of the Type de parcours segmented control. */
 interface TypeChoice {
@@ -81,22 +81,39 @@ export function FilterBar({
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
               Type de parcours
             </span>
-            <ButtonGroup role="group" aria-label="Type de parcours" className="w-fit">
+            <div role="group" aria-label="Type de parcours" className="inline-flex w-fit gap-1">
               {TYPE_CHOICES.map((choice) => {
                 const active = type === choice.value;
                 return (
-                  <ButtonGroupItem
+                  <label
                     key={choice.value}
-                    variant={active ? 'secondary' : 'outline'}
-                    onClick={() => onTypeChange(choice.value)}
+                    className={cn(
+                      'relative inline-flex items-center justify-center rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer select-none disabled:pointer-events-none disabled:opacity-50',
+                      active
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border text-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                    role="radio"
+                    aria-checked={active}
                     aria-label={choice.label}
                     title={choice.label}
+                    onClick={() => onTypeChange(choice.value)}
                   >
+                    <input
+                      type="radio"
+                      name="tour-type"
+                      value={choice.value}
+                      checked={active}
+                      onChange={() => {}}
+                      className="absolute -left-9999"
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    />
                     {choice.label}
-                  </ButtonGroupItem>
+                  </label>
                 );
               })}
-            </ButtonGroup>
+            </div>
           </div>
 
           <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance de nettoyage">

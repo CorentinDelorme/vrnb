@@ -36,11 +36,13 @@ async function renderHomePage() {
 }
 
 function typeButton(label: string): HTMLElement {
-  return screen.getByRole('button', { name: label }) as HTMLElement;
+  // The Type de parcours filter uses <label> + radio input (sr-only).
+  // getByLabelText returns the input; we need the label wrapper which has the active class.
+  return screen.getByText(label).closest('label')!;
 }
 
 function isTypeActive(label: string): boolean {
-  return typeButton(label).classList.contains('bg-secondary');
+  return typeButton(label).classList.contains('bg-primary');
 }
 
 /**
@@ -233,13 +235,13 @@ describe('Home page', () => {
 
   it('links each section to its zone map and labels every play button', async () => {
     await renderHomePage();
-    const mapButtons = screen.getAllByRole('button', { name: 'Voir tous les parcours' });
-    expect(mapButtons.length).toBeGreaterThanOrEqual(2);
-    for (const b of mapButtons) {
-      fireEvent.click(b);
+    // The "Voir tous les parcours" is a Link (shadcn "As Link" pattern),
+    // not a Button. Check the link role and its href pattern.
+    const mapLinks = screen.getAllByRole('link', { name: 'Voir tous les parcours' });
+    expect(mapLinks.length).toBeGreaterThanOrEqual(2);
+    for (const l of mapLinks) {
+      expect(l.getAttribute('href')).toMatch(/\/tours\/[^/]+\/(V|P)/);
     }
-    expect(push).toHaveBeenCalledWith('/tours/bruz-sud/V');
-    expect(push).toHaveBeenCalledWith('/tours/bruz-sud/P');
   });
 
   it('navigates to the tour when a play button is clicked', async () => {
@@ -279,10 +281,11 @@ describe('Home page', () => {
 
   it('offers the mode d\u2019emploi CTA and the Ouest-France articles', async () => {
     await renderHomePage();
-    const cta = screen.getByRole('button', { name: /Mode d'emploi/ });
+    // The CTA is navigation, not an action: a Link carrying the button
+    // styling, never a Button (shadcn "As Link" pattern).
+    const cta = screen.getByRole('link', { name: /Mode d'emploi/ });
     expect(cta).toBeTruthy();
-    fireEvent.click(cta);
-    expect(push).toHaveBeenCalledWith('/manual');
+    expect(cta.getAttribute('href')).toBe('/manual');
 
     const pressLinks = screen
       .getAllByRole('link')

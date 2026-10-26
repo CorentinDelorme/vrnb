@@ -39,7 +39,7 @@ function hasText(text: string): boolean {
 }
 
 describe('DistanceRangeSlider', () => {
-  it('renders two tabable ARIA slider handles with min/max/now attributes', () => {
+  it('renders two ARIA slider handles built on the slider primitive', () => {
     render(
       <Harness
         label="Distance de nettoyage"
@@ -53,13 +53,32 @@ describe('DistanceRangeSlider', () => {
     const handles = screen.getAllByRole('slider');
     expect(handles).toHaveLength(2);
     for (const handle of handles) {
+      // Base UI carries the range bounds in the native attributes.
       expect(handle.getAttribute('aria-orientation')).toBe('horizontal');
-      expect(handle.getAttribute('aria-valuemin')).toBe('0.5');
-      expect(handle.getAttribute('aria-valuemax')).toBe('4');
-      expect(handle.getAttribute('tabindex')).toBe('0');
+      expect(handle.getAttribute('min')).toBe('0.5');
+      expect(handle.getAttribute('max')).toBe('4');
     }
     expect(minHandle().getAttribute('aria-valuenow')).toBe('0.5');
     expect(maxHandle().getAttribute('aria-valuenow')).toBe('4');
+  });
+
+  it('exposes tabable handles with a French formatted aria-valuetext', () => {
+    render(
+      <Harness
+        label="Distance de nettoyage"
+        min={0.5}
+        max={4}
+        step={0.5}
+        initial={{ min: 0.5, max: 4 }}
+      />,
+    );
+
+    for (const handle of [minHandle(), maxHandle()]) {
+      handle.focus();
+      expect(handle.ownerDocument.activeElement).toBe(handle);
+    }
+    expect(minHandle().getAttribute('aria-valuetext')).toBe('500 m');
+    expect(maxHandle().getAttribute('aria-valuetext')).toBe('4 km');
   });
 
   it('shows "tout" as the live value label when the interval covers the whole axis', () => {
