@@ -23,11 +23,11 @@ export function TourPlayButton({ tour }: TourPlayButtonProps) {
   return (
     <Button
       variant="ghost"
-      size="icon-xl"
+      size="icon-lg"
       aria-label="Lancer le parcours"
       onClick={() => router.push(`/tour/${tour.zoneId}/${tour.tourId}`)}
     >
-      <HugeiconsIcon className="text-primary-foreground" icon={PlayIcon} strokeWidth={1.5} />
+      <HugeiconsIcon className="text-primary-foreground size-8" icon={PlayIcon} strokeWidth={1.5} />
     </Button>
   );
 }
