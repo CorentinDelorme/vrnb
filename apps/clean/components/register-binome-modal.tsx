@@ -340,7 +340,6 @@ export function RegisterBinomeModal({
               <div className="mt-2 flex flex-wrap gap-2">
                 <Button
                   variant="default"
-                  size="sm"
                   onClick={() =>
                     window.open(
                       tourGoogleCalendarUrl({
@@ -359,7 +358,6 @@ export function RegisterBinomeModal({
                 </Button>
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() =>
                     (window.location.href = `/api/calendrier/${tour.zoneId}/${tour.tourId}`)
                   }

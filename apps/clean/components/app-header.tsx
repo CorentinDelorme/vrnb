@@ -40,7 +40,7 @@ export function AppHeader() {
           <Link
             href="/"
             aria-label="Retour à l'accueil"
-            className={buttonVariants({ variant: 'default', size: 'sm' })}
+            className={buttonVariants({ variant: 'default' })}
           >
             <HugeiconsIcon
               className="text-primary-foreground"

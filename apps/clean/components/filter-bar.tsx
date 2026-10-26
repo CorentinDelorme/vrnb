@@ -73,7 +73,7 @@ export function FilterBar({
 }: FilterBarProps) {
   return (
     <Card
-      className={cn('sticky top-0 z-10 mb-4', 'has-data-[slot=card-footer]:pb-0')}
+      className={cn('sticky top-0 z-10', 'has-data-[slot=card-footer]:pb-0')}
       aria-label="Filtres de parcours"
     >
       <CardContent>

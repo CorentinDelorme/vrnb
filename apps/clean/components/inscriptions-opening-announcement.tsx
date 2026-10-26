@@ -67,7 +67,7 @@ export function InscriptionsOpeningAnnouncement({
   // (present, spec-fixed), the modal's « ouvriront » — and both take the
   // date from the ONE `formatActionDateLabel` derivation of `edition.ts`.
   return (
-    <Alert variant="info" className="mb-4 sm:mb-8 text-sm sm:text-base">
+    <Alert variant="info" className="text-sm sm:text-base">
       <HugeiconsIcon aria-hidden="true" icon={InformationCircleIcon} strokeWidth={1.5} />
       <AlertDescription>
         {`Les inscriptions ouvrent le ${formatActionDateLabel(edition.inscriptionsOpenDate)}.`}

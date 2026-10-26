@@ -45,9 +45,7 @@ export function MenuDrawer({
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="left">
       <DrawerTrigger id={drawerId} className={cn(className)} aria-label="Menu">
-        <Button variant="default" size="sm">
-          Menu
-        </Button>
+        <Button variant="default">Menu</Button>
       </DrawerTrigger>
       <DrawerContent className={MENU_CLASSES[variant]}>
         <DrawerClose aria-label="close sidebar" className="absolute top-4 right-4">

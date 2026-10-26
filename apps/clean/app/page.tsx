@@ -38,7 +38,7 @@ export default function HomePage() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <>
+    <div className="flex flex-col gap-4 sm:gap-6">
       <Card>
         <CardContent className="flex flex-row items-center justify-between gap-4">
           <p className="text-sm font-medium sm:text-base">
@@ -46,7 +46,7 @@ export default function HomePage() {
           </p>
           {/* Navigation, not an action: a Link carrying the button styling
           (the shadcn "As Link" pattern — never a `<Button>` inside a link). */}
-          <Link href="/manual" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+          <Link href="/manual" className={buttonVariants({ variant: 'default' })}>
             Mode d&apos;emploi
           </Link>
         </CardContent>
@@ -98,7 +98,7 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <footer className="pt-4 text-center text-sm opacity-70 sm:pt-8">©{currentYear} VRNB</footer>
-    </>
+      <footer className="text-center text-sm opacity-70">©{currentYear} VRNB</footer>
+    </div>
   );
 }

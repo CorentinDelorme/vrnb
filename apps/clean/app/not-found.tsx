@@ -13,7 +13,7 @@ export default function NotFound() {
       <p>La page que vous cherchez n&apos;existe pas ou a été déplacée.</p>
       {/* Navigation, not an action: a Link carrying the button styling (the
       shadcn "As Link" pattern — never a `<Button>` inside or around a link). */}
-      <Link href="/" className={buttonVariants({ variant: 'default', size: 'sm' })}>
+      <Link href="/" className={buttonVariants({ variant: 'default' })}>
         Retour &agrave; l&apos;accueil
       </Link>
     </section>
