@@ -23,7 +23,7 @@ export function TourPlayButton({ tour }: TourPlayButtonProps) {
   return (
     <Button
       variant="ghost"
-      size="icon-lg"
+      size="icon-xl"
       aria-label="Lancer le parcours"
       onClick={() => router.push(`/tour/${tour.zoneId}/${tour.tourId}`)}
     >
