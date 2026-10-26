@@ -39,7 +39,7 @@ export default function HomePage() {
 
   return (
     <>
-      <Card className="shadow-sm border">
+      <Card>
         <CardContent className="flex flex-row items-center justify-between gap-4">
           <p className="text-sm font-medium sm:text-base">
             Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.

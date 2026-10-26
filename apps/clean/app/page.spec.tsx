@@ -113,7 +113,7 @@ describe('Home page', () => {
   it('renders the filter bar above the zones with "Tous" selected by default', async () => {
     const { container } = await renderHomePage();
 
-    const filterBar = container.querySelector('section[aria-label="Filtres de parcours"]');
+    const filterBar = container.querySelector('[aria-label="Filtres de parcours"]');
     expect(filterBar).not.toBeNull();
 
     const typeLabel = filterBar?.querySelector('span')?.textContent;

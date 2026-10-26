@@ -164,10 +164,10 @@ Route: `/`
 
 #### Filtering by type (ticket #51)
 
-| Test name                                                        | Steps                        | Expected                                                                                           |
-| ---------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| `the filter bar sits above the zones with "Tous" checked`        | `goto('/')`                  | `section[aria-label="Filtres de parcours"]` visible; "Tous" checked, "À pied" / "À vélo" unchecked |
-| `filtering to "À vélo" hides walking rows, then "Tous" restores` | `goto('/')` → click "À vélo" | Walking heading gone, 34 play buttons, Bruz Sud badge "15 parcours"; click "Tous" → 47 buttons     |
+| Test name                                                        | Steps                        | Expected                                                                                       |
+| ---------------------------------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| `the filter bar sits above the zones with "Tous" checked`        | `goto('/')`                  | `[aria-label="Filtres de parcours"]` visible; "Tous" checked, "À pied" / "À vélo" unchecked    |
+| `filtering to "À vélo" hides walking rows, then "Tous" restores` | `goto('/')` → click "À vélo" | Walking heading gone, 34 play buttons, Bruz Sud badge "15 parcours"; click "Tous" → 47 buttons |
 
 | `should show "Voir tous les parcours" link for bike tours` | `goto('/')` (desktop) | Link visible in V section, href `/tours/bruz-sud/V` |
 | `should show "Voir tous les parcours" link for walking tours` | `goto('/')` (desktop) | Link visible in P section, href `/tours/bruz-sud/P` |

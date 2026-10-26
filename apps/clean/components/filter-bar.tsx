@@ -4,6 +4,7 @@ import { cn } from '@/components/lib/utils';
 import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
 import { DistanceRangeSlider } from './distance-range-slider';
 import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
 
 /** One option of the Type de parcours segmented control. */
 interface TypeChoice {
@@ -71,11 +72,11 @@ export function FilterBar({
   onReset,
 }: FilterBarProps) {
   return (
-    <section
-      className="sticky top-0 z-10 mb-4 shadow-sm border border-border bg-card"
+    <Card
+      className={cn('sticky top-0 z-10 mb-4', 'has-data-[slot=card-footer]:pb-0')}
       aria-label="Filtres de parcours"
     >
-      <div className="p-4 sm:p-6">
+      <CardContent>
         <div className="flex flex-col sm:flex-row gap-12">
           <div className="sm:flex-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
@@ -159,7 +160,7 @@ export function FilterBar({
             </Button>
           </div>
         ) : null}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   );
 }

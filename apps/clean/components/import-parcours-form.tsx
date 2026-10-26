@@ -85,7 +85,7 @@ export function ImportParcoursForm() {
 
   return (
     <>
-      <Card className="shadow-sm max-w-xl border">
+      <Card>
         <CardContent>
           <form onSubmit={handleImport} className="space-y-5">
             <div className="space-y-2">
@@ -161,7 +161,7 @@ export function ImportParcoursForm() {
 
       {importResult !== null && (
         <>
-          <Card className="border border-border">
+          <Card>
             <CardContent>
               <h3 className="text-sm font-semibold">Résultat de l&apos;importation</h3>
               <p className="text-sm">
@@ -185,7 +185,7 @@ export function ImportParcoursForm() {
             </CardContent>
           </Card>
 
-          <Card className="border border-border">
+          <Card>
             <CardContent>
               <h3 className="text-sm font-semibold mb-3">Logs des scripts de génération</h3>
               <Accordion>
@@ -227,7 +227,7 @@ export function ImportParcoursForm() {
       )}
 
       {apiError !== null && (
-        <Card className="border border-border">
+        <Card>
           <CardContent>
             <h3 className="text-sm font-semibold">Erreur</h3>
             <pre className="text-xs break-all">{apiError}</pre>

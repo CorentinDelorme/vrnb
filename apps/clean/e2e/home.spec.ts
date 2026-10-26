@@ -157,7 +157,7 @@ test.describe('Home page', () => {
     test('the filter bar sits above the zones with "Tous" checked by default', async ({ page }) => {
       await page.goto('/');
 
-      await expect(page.locator('section[aria-label="Filtres de parcours"]')).toBeVisible();
+      await expect(page.locator('[aria-label="Filtres de parcours"]')).toBeVisible();
       await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
       await expect(page.getByRole('radio', { name: 'À pied' })).not.toBeChecked();
       await expect(page.getByRole('radio', { name: 'À vélo' })).not.toBeChecked();
@@ -223,7 +223,7 @@ test.describe('Home page', () => {
     }) => {
       await page.goto('/');
 
-      await expect(page.locator('section[aria-label="Filtres de parcours"]')).toBeVisible();
+      await expect(page.locator('[aria-label="Filtres de parcours"]')).toBeVisible();
       // Both distance sliders render (two handles each) with their "tout" label.
       await expect(page.locator('[role="slider"]')).toHaveCount(4);
       await expect(page.getByText('tout')).toHaveCount(2);

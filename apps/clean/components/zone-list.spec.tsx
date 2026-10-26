@@ -59,7 +59,7 @@ describe('ZoneList', () => {
   it('renders the filter bar with "Tous" selected by default', () => {
     const { container } = render(<ZoneList />);
 
-    const filterBar = container.querySelector('section[aria-label="Filtres de parcours"]');
+    const filterBar = container.querySelector('[aria-label="Filtres de parcours"]');
     expect(filterBar).not.toBeNull();
 
     const typeLabel = filterBar?.querySelector('span')?.textContent;

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { buttonVariants } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Kbd } from '../../components/ui/kbd';
 import { pageTitle } from '../../lib/route-meta';
 import {
@@ -420,33 +421,34 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
 export default function ManualPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
-      <nav aria-label="Sommaire" className="shadow-md border bg-card">
-        <div className="p-4 sm:p-6">
-          <h2 className="text-secondary text-xl sm:text-2xl font-medium">Sommaire</h2>
-          <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base">
-            {MANUAL_SECTIONS.map((section) => (
-              <li key={section.id}>
-                <a className="text-secondary underline" href={`#${section.id}`}>
-                  {section.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </nav>
+      <Card>
+        <CardHeader>
+          <CardTitle>Sommaire</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <nav aria-label="Sommaire">
+            <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base">
+              {MANUAL_SECTIONS.map((section) => (
+                <li key={section.id}>
+                  <a className="text-secondary underline" href={`#${section.id}`}>
+                    {section.title}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </CardContent>
+      </Card>
 
       {MANUAL_SECTIONS.map((section, index) => (
-        <section className="shadow-md border bg-card" key={section.id}>
-          <div className="p-4 sm:p-6">
-            <h2
-              className="text-secondary scroll-mt-4 text-xl sm:text-2xl font-medium"
-              id={section.id}
-            >
+        <Card key={section.id}>
+          <CardHeader>
+            <CardTitle id={section.id}>
               {index + 1}. {section.title}
-            </h2>
-            {SECTION_BODIES[section.id]}
-          </div>
-        </section>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>{SECTION_BODIES[section.id]}</CardContent>
+        </Card>
       ))}
 
       <div className="flex flex-wrap justify-center gap-3 pb-4">
