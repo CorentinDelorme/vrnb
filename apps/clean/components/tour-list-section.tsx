@@ -135,7 +135,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             render={(props) => <li {...props} />}
             variant="outline"
             size="sm"
-            className="list-row"
+            className="list-row rounded-none"
             data-testid="tour-row"
             key={tour.name}
           >

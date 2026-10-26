@@ -52,7 +52,7 @@ export function TourRegisterButton({ available, tour }: TourRegisterButtonProps)
             setVisible(true);
           }}
         >
-          <HugeiconsIcon className="size-4" icon={UserAdd01Icon} strokeWidth={1.5} />
+          <HugeiconsIcon className="size-5" icon={UserAdd01Icon} strokeWidth={1.5} />
           S&apos;inscrire
         </Button>
       ) : null}
