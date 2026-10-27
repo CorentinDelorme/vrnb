@@ -15,6 +15,7 @@ import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Field, FieldContent, FieldGroup, FieldLabel } from './ui/field';
+import { Input } from './ui/input';
 import {
   Select,
   SelectContent,
@@ -85,77 +86,80 @@ export function ImportParcoursForm() {
     }
   }
 
+  const CARD_CLASSES = 'w-full max-w-3xl mx-auto';
+
   return (
-    <>
-      <Card className="w-full max-w-md mx-auto">
+    <div className="flex flex-col gap-4 sm:gap-6 w-full items-center">
+      <Card className={CARD_CLASSES}>
         <CardHeader>
           <CardTitle>Import de parcours</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleImport} className="w-full">
             <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="import-zone-id">Zone</FieldLabel>
-                <FieldContent>
-                  <Select
-                    id="import-zone-id"
-                    name="zoneId"
-                    value={zoneId}
-                    onValueChange={(value) => setZoneId(value as string)}
-                    items={ZONE_ITEMS}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Zone" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {ZONE_ITEMS.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </FieldContent>
-              </Field>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Field>
+                  <FieldLabel htmlFor="import-zone-id">Zone</FieldLabel>
+                  <FieldContent>
+                    <Select
+                      id="import-zone-id"
+                      name="zoneId"
+                      value={zoneId}
+                      onValueChange={(value) => setZoneId(value as string)}
+                      items={ZONE_ITEMS}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Zone" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {ZONE_ITEMS.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </FieldContent>
+                </Field>
 
-              <Field>
-                <FieldLabel htmlFor="import-parcours-type">Type de parcours</FieldLabel>
-                <FieldContent>
-                  <Select
-                    id="import-parcours-type"
-                    name="practiceType"
-                    value={parcoursType}
-                    onValueChange={(value) => setParcoursType(value as PracticeType)}
-                    items={PRACTICE_TYPES}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Type de parcours" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        {PRACTICE_TYPES.map((item) => (
-                          <SelectItem key={item.value} value={item.value}>
-                            {item.label}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </FieldContent>
-              </Field>
+                <Field>
+                  <FieldLabel htmlFor="import-parcours-type">Type de parcours</FieldLabel>
+                  <FieldContent>
+                    <Select
+                      id="import-parcours-type"
+                      name="practiceType"
+                      value={parcoursType}
+                      onValueChange={(value) => setParcoursType(value as PracticeType)}
+                      items={PRACTICE_TYPES}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Type de parcours" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {PRACTICE_TYPES.map((item) => (
+                            <SelectItem key={item.value} value={item.value}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </FieldContent>
+                </Field>
+              </div>
 
               <Field>
                 <FieldLabel htmlFor="import-gpx-files">Fichiers GPX</FieldLabel>
                 <FieldContent>
-                  <input
+                  <Input
                     id="import-gpx-files"
                     name="files"
                     type="file"
                     multiple
                     accept=".gpx"
-                    className="w-full border border-input bg-input px-2.5 py-1 text-base rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     onChange={(event) => {
                       const files = event.target.files ? Array.from(event.target.files) : [];
                       setSelectedFiles(files);
@@ -176,7 +180,7 @@ export function ImportParcoursForm() {
 
       {importResult !== null && (
         <>
-          <Card>
+          <Card className={CARD_CLASSES}>
             <CardHeader>
               <CardTitle>Résultat de l&apos;importation</CardTitle>
             </CardHeader>
@@ -202,12 +206,12 @@ export function ImportParcoursForm() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={CARD_CLASSES}>
             <CardHeader>
               <CardTitle>Logs des scripts de génération</CardTitle>
             </CardHeader>
             <CardContent>
-              <Accordion>
+              <Accordion multiple>
                 {SCRIPTS.map((script) => {
                   const log = importResult.logs[script];
                   return (
@@ -246,7 +250,7 @@ export function ImportParcoursForm() {
       )}
 
       {apiError !== null && (
-        <Card>
+        <Card className={CARD_CLASSES}>
           <CardHeader>
             <CardTitle>Erreur</CardTitle>
           </CardHeader>
@@ -255,6 +259,6 @@ export function ImportParcoursForm() {
           </CardContent>
         </Card>
       )}
-    </>
+    </div>
   );
 }
