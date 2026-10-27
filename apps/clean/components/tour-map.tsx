@@ -45,9 +45,10 @@ import { LeafletMap } from './leaflet-map';
  * Container height of the legacy tour template (`tour.html`), on mobile: main
  * paddings + the two-line mobile header + steps row + gaps, clearing the fixed
  * dock (16 + 72 + 16 + 48 + 16 + 16 + 60 = 244). The desktop `sm:` offset is
- * the legacy one (single-line title) plus the new fixed dock (60).
+ * main padding + single-line header + larger gaps + stepper + dock + gap
+ * (32 + 56 + 32 + 48 + 32 + 60 + 32 = 292).
  */
-const TOUR_MAP_CLASS = 'z-0 h-[calc(100dvh-244px)] w-full overflow-hidden sm:h-[calc(100vh-356px)]';
+const TOUR_MAP_CLASS = 'z-0 h-[calc(100dvh-244px)] w-full overflow-hidden sm:h-[calc(100vh-292px)]';
 
 /** Max zoom of the automatic view-following on each located position. */
 const TRACKING_MAX_ZOOM = 16;
