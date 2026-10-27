@@ -13,6 +13,7 @@ import { TourPlayButton } from './tour-play-button';
 import { TourRegisterButton } from './tour-register-button';
 import { Badge } from './ui/badge';
 import { buttonVariants } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Item } from './ui/item';
 
 /**
@@ -105,17 +106,17 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
 
   return (
     <app-tour-list-section>
-      <ul className="border-2 border-secondary/20 shadow-lg">
-        <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-border p-4 bg-muted/50">
+      <Card className="pb-0">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-2 sm:p-2.5">
               <HugeiconsIcon className="sm:h-10 sm:w-10" icon={typeIcon} strokeWidth={1.5} />
             </span>
 
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-secondary text-xl font-bold tracking-wide sm:text-2xl">
+              <CardTitle className="text-secondary text-xl font-bold tracking-wide sm:text-2xl">
                 {title}
-              </h2>
+              </CardTitle>
               <Badge variant="secondary">{tours.length} parcours</Badge>
             </div>
           </div>
@@ -128,40 +129,43 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
           >
             Voir tous les parcours
           </Link>
-        </li>
-
-        {tours.map((tour) => (
-          <Item
-            render={(props) => <li {...props} />}
-            variant="outline"
-            size="sm"
-            className="list-row rounded-none"
-            data-testid="tour-row"
-            key={tour.name}
-          >
-            <div className="flex-1 flex items-center gap-3 min-w-0">
-              <div className="text-foreground text-xl font-medium sm:text-3xl truncate">
-                {tour.name}
-              </div>
-              <div className="text-muted-foreground/70 text-base font-light sm:text-xl whitespace-nowrap">
-                {formatTourDistances(tour)}
-              </div>
-            </div>
-            <div className="flex items-center justify-end gap-2">
-              {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
-                <Badge variant="secondary">Binôme inscrit</Badge>
-              ) : null}
-              <TourRegisterButton
-                available={
-                  statusKnown && windowOpen && !isCoveredInscriptions(status, zoneId, tour.name)
-                }
-                tour={{ tourId: tour.name, zoneId }}
-              />
-              <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
-            </div>
-          </Item>
-        ))}
-      </ul>
+        </CardHeader>
+        <CardContent className="-mx-(--card-spacing)">
+          <ul className="divide-y divide-border">
+            {tours.map((tour) => (
+              <Item
+                render={(props) => <li {...props} />}
+                variant="outline"
+                size="sm"
+                className="list-row rounded-none"
+                data-testid="tour-row"
+                key={tour.name}
+              >
+                <div className="flex-1 flex items-center gap-3 min-w-0">
+                  <div className="text-foreground text-xl font-medium sm:text-3xl truncate">
+                    {tour.name}
+                  </div>
+                  <div className="text-muted-foreground/70 text-base font-light sm:text-xl whitespace-nowrap">
+                    {formatTourDistances(tour)}
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2">
+                  {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
+                    <Badge variant="secondary">Binôme inscrit</Badge>
+                  ) : null}
+                  <TourRegisterButton
+                    available={
+                      statusKnown && windowOpen && !isCoveredInscriptions(status, zoneId, tour.name)
+                    }
+                    tour={{ tourId: tour.name, zoneId }}
+                  />
+                  <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
+                </div>
+              </Item>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </app-tour-list-section>
   );
 }

@@ -117,11 +117,16 @@ function renderModalAt(now: Date) {
 const submitButton = (): HTMLButtonElement =>
   screen.getByRole('button', { name: /Inscrire mon binôme/ }) as HTMLButtonElement;
 
-/** The four identity inputs, by label, in DOM order. */
+/** The four identity inputs, by id, in DOM order. */
 function identityInputs(): readonly HTMLInputElement[] {
   return (
-    ['Prénom du membre 1', 'Nom du membre 1', 'Prénom du membre 2', 'Nom du membre 2'] as const
-  ).map((label) => screen.getByLabelText(label) as HTMLInputElement);
+    [
+      'register-first-name-1',
+      'register-last-name-1',
+      'register-first-name-2',
+      'register-last-name-2',
+    ] as const
+  ).map((id) => screen.getByTestId(id) as HTMLInputElement);
 }
 
 /** Fill every identity field, tick the engagement statement. */
@@ -200,7 +205,7 @@ describe('RegisterBinomeModal', () => {
       zoneId: 'bruz-sud',
     });
     expect(mocks.reload).toHaveBeenCalledOnce();
-    expect(screen.getByRole('alert').textContent).toContain('Votre binôme est inscrit');
+    expect(screen.getByText(/Votre binôme est inscrit/)).toBeTruthy();
   });
 
   it('should trim the identity values sent to the API', async () => {
@@ -221,10 +226,10 @@ describe('RegisterBinomeModal', () => {
     const { onClose, setVisible } = renderModal();
     fireEvent.change(identityInputs()[0]!, { target: { value: 'Léa' } });
 
-    // Closing via the Fermer button (DialogClose) tells the host it closed;
+    // Closing via the Close button (native DialogClose) tells the host it closed;
     // the host keeps the component mounted and only toggles `visible`, so the
     // typed values survive.
-    fireEvent.click(screen.getByRole('button', { name: 'Fermer' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalledOnce();
 
     // Reopen: the typed value is preserved.
@@ -533,9 +538,7 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
     renderModal();
     fillBinome();
     fireEvent.click(submitButton());
-    await waitFor(() =>
-      expect(screen.getByRole('alert').textContent).toContain('Votre binôme est inscrit'),
-    );
+    await waitFor(() => expect(screen.getByText(/Votre binôme est inscrit/)).toBeTruthy());
   }
 
   beforeEach(() => {
@@ -549,9 +552,7 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
 
     // The hours come from the Édition config (09:00 → 9h, 12:00 → 12h) and
     // wrap the action date, exactly like the calendar description words it.
-    expect(screen.getByRole('alert').textContent).toContain(
-      'le dimanche 14 février 2027 de 9h à 12h',
-    );
+    expect(screen.getByText(/le dimanche 14 février 2027 de 9h à 12h/)).toBeTruthy();
     // The note-to-take sentence carries the data, never a literal.
     const note = screen.getByText(/Notez la zone et le nom du parcours/).textContent ?? '';
     expect(note).toContain("pour le jour de l'action");

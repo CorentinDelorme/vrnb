@@ -160,7 +160,7 @@ export function FilterBar({
                   : `${displayedCount} parcours affichés`}
               </p>
             )}
-            <Button type="button" variant="secondary" onClick={onReset}>
+            <Button type="button" variant="outline" onClick={onReset}>
               Réinitialiser les filtres
             </Button>
           </div>

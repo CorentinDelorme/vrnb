@@ -3,7 +3,6 @@
 import {
   CalendarAdd01Icon,
   CalendarDaysIcon,
-  CancelIcon,
   Location01Icon,
   StickyNote01Icon,
 } from '@hugeicons/core-free-icons';
@@ -25,7 +24,6 @@ import type {
   IdentityFieldError,
 } from '../src/app/inscriptions/validation';
 import {
-  IDENTITY_FIELD_LABELS,
   IDENTITY_FIELD_MAX_LENGTH,
   IDENTITY_FIELD_MIN_LENGTH,
   checkIdentityFields,
@@ -40,8 +38,10 @@ import {
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { Dialog, DialogClose, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent } from './ui/dialog';
+import { Field, FieldContent, FieldGroup, FieldLabel, FieldLegend, FieldSet } from './ui/field';
 import { Input } from './ui/input';
+import { Item, ItemContent, ItemMedia } from './ui/item';
 
 /**
  * Registration modal of one Parcours (tickets #17 + #18): it shows the
@@ -103,14 +103,6 @@ const EMPTY_BINOME: BinomeFormValues = {
   lastName1: '',
   lastName2: '',
 };
-
-/** The identity inputs of the modal: their id and their field key. */
-const IDENTITY_INPUTS = [
-  { id: 'register-first-name-1', key: 'firstName1' },
-  { id: 'register-last-name-1', key: 'lastName1' },
-  { id: 'register-first-name-2', key: 'firstName2' },
-  { id: 'register-last-name-2', key: 'lastName2' },
-] as const satisfies readonly { readonly id: string; readonly key: IdentityField }[];
 
 /**
  * The message of the not-open-yet registration window (also the `not-open`
@@ -290,12 +282,7 @@ export function RegisterBinomeModal({
       <DialogContent
         id={`register_modal_${tour.tourId}`}
         className="max-h-[90dvh] w-11/12 max-w-md overflow-y-auto sm:max-w-xl"
-        showCloseButton={false}
       >
-        <DialogClose aria-label="Fermer" className="absolute top-2 right-2 p-1">
-          <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
-        </DialogClose>
-
         <h3 className="text-xl font-bold">Inscription du binôme</h3>
         <p className="text-foreground/80 mt-1 text-sm font-light sm:text-base">
           Zone <span className="text-foreground font-medium">{zone.name}</span> - Parcours{' '}
@@ -304,13 +291,25 @@ export function RegisterBinomeModal({
 
         {outcome === 'created' ? (
           <>
-            <Alert className="mt-4 text-sm sm:text-base" variant="default">
-              <AlertDescription>
-                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
-                {actionDateLabel} {actionHours} au point de rendez-vous ci-dessous.
-              </AlertDescription>
-            </Alert>
-            <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
+            <Item variant="muted" className="mt-3">
+              <ItemMedia variant="icon" className="text-secondary">
+                <HugeiconsIcon
+                  icon={StickyNote01Icon}
+                  strokeWidth={1.5}
+                  className="size-5 shrink-0"
+                />
+              </ItemMedia>
+              <ItemContent>
+                <div className="font-medium text-sm">
+                  Votre binôme est inscrit pour ce parcours.
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  Vous serez attendus le {actionDateLabel} {actionHours} au point de rendez-vous
+                  ci-dessous.
+                </div>
+              </ItemContent>
+            </Item>
+            <div className="mt-2 flex items-start gap-2 text-sm sm:text-base">
               <HugeiconsIcon
                 icon={StickyNote01Icon}
                 strokeWidth={1.5}
@@ -318,7 +317,7 @@ export function RegisterBinomeModal({
               />
               <span>{noteSentence}</span>
             </div>
-            <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
+            <div className="mt-2 flex items-start gap-2 text-sm sm:text-base">
               <HugeiconsIcon
                 icon={Location01Icon}
                 strokeWidth={1.5}
@@ -328,7 +327,7 @@ export function RegisterBinomeModal({
                 Point de rendez-vous&nbsp;: <strong>{zone.meetingPoint.name}</strong>
               </span>
             </div>
-            <div className="mt-4 text-sm sm:text-base">
+            <div className="mt-2 text-sm sm:text-base">
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
                   icon={CalendarAdd01Icon}
@@ -366,7 +365,7 @@ export function RegisterBinomeModal({
                 </Button>
               </div>
             </div>
-            <div className="mt-6">
+            <div className="mt-4 flex justify-end">
               <Button variant="default" onClick={onClose}>
                 Fermer
               </Button>
@@ -374,7 +373,7 @@ export function RegisterBinomeModal({
           </>
         ) : (
           <>
-            <div className="mt-3 space-y-1.5 text-sm sm:text-base">
+            <div className="mt-2 space-y-1 text-sm sm:text-base">
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
                   icon={CalendarDaysIcon}
@@ -404,86 +403,158 @@ export function RegisterBinomeModal({
               </Alert>
             ) : null}
 
-            <form className="mt-4 grid gap-3" onSubmit={(event) => void submit(event)}>
-              <div className="mt-4 grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
-                {IDENTITY_INPUTS.map((field) => {
-                  const error = errors[field.key];
-                  // A missing name is only pointed out once the field has been
-                  // left; a length overrun is shown as soon as it happens.
-                  const showError =
-                    error !== undefined && (error !== 'required' || touched[field.key] === true);
-                  return (
-                    <label className="grid min-w-0 gap-1" htmlFor={field.id} key={field.id}>
-                      <span className="text-sm">{IDENTITY_FIELD_LABELS[field.key]}</span>
-                      <Input
-                        aria-describedby={showError ? `${field.id}-error` : undefined}
-                        aria-invalid={showError ? true : undefined}
-                        className="w-full min-w-0"
-                        disabled={windowNotOpen}
-                        id={field.id}
-                        onBlur={() => setTouched((current) => ({ ...current, [field.key]: true }))}
-                        onChange={(event) =>
-                          setValues((current) => ({ ...current, [field.key]: event.target.value }))
-                        }
-                        required
-                        type="text"
-                        value={values[field.key]}
-                      />
-                      <span className="text-destructive min-h-4 text-xs" id={`${field.id}-error`}>
-                        {showError ? FIELD_ERROR_MESSAGES[error] : ''}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
+            <form className="mt-3 grid gap-2" onSubmit={(event) => void submit(event)}>
+              <FieldGroup>
+                <FieldSet className="gap-2">
+                  <FieldLegend>Membre 1</FieldLegend>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { key: 'firstName1' as const, label: 'Prénom', id: 'register-first-name-1' },
+                      { key: 'lastName1' as const, label: 'Nom', id: 'register-last-name-1' },
+                    ].map((field) => {
+                      const error = errors[field.key];
+                      const showError =
+                        error !== undefined &&
+                        (error !== 'required' || touched[field.key] === true);
+                      return (
+                        <Field key={field.id}>
+                          <FieldLabel htmlFor={field.id} className="text-sm">
+                            {field.label}
+                          </FieldLabel>
+                          <FieldContent>
+                            <Input
+                              aria-describedby={showError ? `${field.id}-error` : undefined}
+                              aria-invalid={showError ? true : undefined}
+                              className="w-full min-w-0"
+                              data-testid={field.id}
+                              disabled={windowNotOpen}
+                              id={field.id}
+                              onBlur={() =>
+                                setTouched((current) => ({ ...current, [field.key]: true }))
+                              }
+                              onChange={(event) =>
+                                setValues((current) => ({
+                                  ...current,
+                                  [field.key]: event.target.value,
+                                }))
+                              }
+                              required
+                              type="text"
+                              value={values[field.key]}
+                            />
+                            <span
+                              className="text-destructive min-h-4 text-xs"
+                              id={`${field.id}-error`}
+                            >
+                              {showError ? FIELD_ERROR_MESSAGES[error] : ''}
+                            </span>
+                          </FieldContent>
+                        </Field>
+                      );
+                    })}
+                  </div>
+                </FieldSet>
 
-              <label className="label mt-4 w-full min-w-0 items-center gap-2 whitespace-normal">
-                <Checkbox
-                  checked={engaged}
-                  disabled={windowNotOpen}
-                  id="register-engaged"
-                  onCheckedChange={(checked) => setEngaged(checked)}
-                  required
+                <FieldSet className="gap-2">
+                  <FieldLegend>Membre 2</FieldLegend>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {[
+                      { key: 'firstName2' as const, label: 'Prénom', id: 'register-first-name-2' },
+                      { key: 'lastName2' as const, label: 'Nom', id: 'register-last-name-2' },
+                    ].map((field) => {
+                      const error = errors[field.key];
+                      const showError =
+                        error !== undefined &&
+                        (error !== 'required' || touched[field.key] === true);
+                      return (
+                        <Field key={field.id}>
+                          <FieldLabel htmlFor={field.id} className="text-sm">
+                            {field.label}
+                          </FieldLabel>
+                          <FieldContent>
+                            <Input
+                              aria-describedby={showError ? `${field.id}-error` : undefined}
+                              aria-invalid={showError ? true : undefined}
+                              className="w-full min-w-0"
+                              data-testid={field.id}
+                              disabled={windowNotOpen}
+                              id={field.id}
+                              onBlur={() =>
+                                setTouched((current) => ({ ...current, [field.key]: true }))
+                              }
+                              onChange={(event) =>
+                                setValues((current) => ({
+                                  ...current,
+                                  [field.key]: event.target.value,
+                                }))
+                              }
+                              required
+                              type="text"
+                              value={values[field.key]}
+                            />
+                            <span
+                              className="text-destructive min-h-4 text-xs"
+                              id={`${field.id}-error`}
+                            >
+                              {showError ? FIELD_ERROR_MESSAGES[error] : ''}
+                            </span>
+                          </FieldContent>
+                        </Field>
+                      );
+                    })}
+                  </div>
+                </FieldSet>
+
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="register-engaged" className="text-sm whitespace-normal">
+                    <Checkbox
+                      checked={engaged}
+                      disabled={windowNotOpen}
+                      id="register-engaged"
+                      onCheckedChange={(checked) => setEngaged(checked)}
+                      required
+                    />
+                    Nous confirmons notre participation à ce parcours de nettoyage.
+                  </FieldLabel>
+                </Field>
+
+                {/* Anti-bot honeypot (ticket #18): the field is in the DOM — a bot
+                    filling every input of the form fills it — but a human never
+                    sees it (hidden) and never reaches it (out of the tab order and
+                    of the accessibility tree). A filled honeypot is refused by the
+                    server with a 400 and nothing is stored. */}
+                <input
+                  aria-hidden="true"
+                  autoComplete="off"
+                  hidden
+                  id="register-website"
+                  name="website"
+                  onChange={(event) => setHoneypot(event.target.value)}
+                  tabIndex={-1}
+                  type="text"
+                  value={honeypot}
                 />
-                <span className="text-sm">
-                  Nous confirmons notre participation à ce parcours de nettoyage.
-                </span>
-              </label>
 
-              {/* Anti-bot honeypot (ticket #18): the field is in the DOM — a bot
-                  filling every input of the form fills it — but a human never
-                  sees it (hidden) and never reaches it (out of the tab order and
-                  of the accessibility tree). A filled honeypot is refused by the
-                  server with a 400 and nothing is stored. */}
-              <input
-                aria-hidden="true"
-                autoComplete="off"
-                hidden
-                id="register-website"
-                name="website"
-                onChange={(event) => setHoneypot(event.target.value)}
-                tabIndex={-1}
-                type="text"
-                value={honeypot}
-              />
+                <p className="text-muted-foreground/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
 
-              <p className="text-muted-foreground/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
+                {outcomeAlert ? (
+                  <Alert className="mt-4 text-sm sm:text-base" variant="destructive">
+                    <AlertDescription>{outcomeAlert}</AlertDescription>
+                  </Alert>
+                ) : null}
 
-              {outcomeAlert ? (
-                <Alert className="mt-4 text-sm sm:text-base" variant="destructive">
-                  <AlertDescription>{outcomeAlert}</AlertDescription>
-                </Alert>
-              ) : null}
-
-              <div>
-                <Button
-                  variant="default"
-                  disabled={!complete || outcome === 'submitting' || windowNotOpen}
-                  type="submit"
-                >
-                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
-                </Button>
-              </div>
+                <Field orientation="horizontal">
+                  <FieldContent className="w-full flex justify-end">
+                    <Button
+                      variant="default"
+                      disabled={!complete || outcome === 'submitting' || windowNotOpen}
+                      type="submit"
+                    >
+                      {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
+                    </Button>
+                  </FieldContent>
+                </Field>
+              </FieldGroup>
             </form>
           </>
         )}
