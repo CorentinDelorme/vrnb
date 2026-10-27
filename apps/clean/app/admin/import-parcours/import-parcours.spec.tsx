@@ -24,8 +24,8 @@ describe('ImportParcoursForm', () => {
     render(<ImportParcoursForm />);
     const zoneTrigger = screen.getAllByRole('combobox')[0];
     expect(zoneTrigger).not.toBeNull();
-    // Default value is the first zone.
-    expect(zoneTrigger.textContent).toContain('bruz-sud');
+    // Default value is the first zone, label is displayed.
+    expect(zoneTrigger.textContent).toContain('Bruz Sud');
   });
 
   it('renders the practice-type dropdown below the zones dropdown', () => {
@@ -35,8 +35,8 @@ describe('ImportParcoursForm', () => {
     const practiceTrigger = selects[1];
     expect(zoneTrigger).not.toBeNull();
     expect(practiceTrigger).not.toBeNull();
-    // Default value is the first practice type.
-    expect(practiceTrigger.textContent).toContain('P');
+    // Default value is the first practice type, label is displayed.
+    expect(practiceTrigger.textContent).toContain('À pied');
   });
 
   it('renders a multiple GPX file input', () => {
