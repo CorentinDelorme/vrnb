@@ -57,21 +57,22 @@ describe('Home page', () => {
     mockedOutcome.current = { status: 'error' };
   });
 
-  it('renders each zone as an open collapsible labelled with its name and tour count', async () => {
+  it('renders each zone as a card labelled with its name and tour count', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
-    expect(zone).not.toBeNull();
-    const trigger = zone?.querySelector('[data-slot="collapsible-trigger"]');
-    expect(trigger).not.toBeNull();
-    expect(trigger?.getAttribute('aria-expanded')).toBe('true');
-    expect(trigger?.querySelector('h2')?.textContent).toBe('Bruz Sud');
-    expect(trigger?.textContent).toContain('28 parcours');
+    // Find the zone Card by its CardTitle
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    expect(zoneTitle).not.toBeNull();
+    expect(zoneTitle?.textContent).toBe('Bruz Sud');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    expect(zoneCard).not.toBeNull();
+    expect(zoneCard?.textContent).toContain('28 parcours');
   });
 
   it('lists all Bruz Sud bike and walking tours in their sections', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
-    const sections = zone?.querySelectorAll('app-tour-list-section') ?? [];
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const sections = zoneCard?.querySelectorAll('app-tour-list-section') ?? [];
     expect(sections).toHaveLength(2);
 
     const bikeRows = sections[0]?.querySelectorAll('[data-testid="tour-row"]') ?? [];
@@ -87,8 +88,9 @@ describe('Home page', () => {
 
   it('formats distances with a French km comma and switches to meters below 1 km', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
-    const [bikeSection, walkingSection] = zone?.querySelectorAll('app-tour-list-section') ?? [];
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const [bikeSection, walkingSection] = zoneCard?.querySelectorAll('app-tour-list-section') ?? [];
 
     // V1 (first bike row) has distance 1.1 → "1,1 km"; P2 (second walking row) 0.8 → "800 m".
     expect(bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0]?.textContent).toContain(
@@ -101,8 +103,9 @@ describe('Home page', () => {
 
   it('shows both distances on each row in French format', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
-    const bikeSection = zone?.querySelectorAll('app-tour-list-section')[0];
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const bikeSection = zoneCard?.querySelectorAll('app-tour-list-section')[0];
 
     // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
     expect(bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0]?.textContent).toContain(
@@ -246,8 +249,9 @@ describe('Home page', () => {
 
   it('navigates to the tour when a play button is clicked', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('[aria-label="Zone Bruz Sud"]');
-    const firstPlayButton = zone?.querySelector(
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const firstPlayButton = zoneCard?.querySelector(
       '[data-testid="tour-row"] button[aria-label="Lancer le parcours"]',
     );
     expect(firstPlayButton).not.toBeNull();
@@ -297,7 +301,9 @@ describe('Home page', () => {
   it('renders the footer with the current year', async () => {
     const { container } = await renderHomePage();
     const year = new Date().getFullYear().toString();
-    expect(container.querySelector('footer')?.textContent).toContain(`©${year} VRNB`);
+    expect(container.querySelector('footer')?.textContent).toContain(
+      `©${year} Vélo Rando Nature Bruz (VRNB)`,
+    );
   });
 });
 

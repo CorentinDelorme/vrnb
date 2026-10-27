@@ -1,14 +1,11 @@
 'use client';
 
-import { ArrowDown01Icon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
 import { buttonVariants } from '../components/ui/button';
-import { Card, CardContent } from '../components/ui/card';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/ui/collapsible';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { ZoneList } from '../components/zone-list';
 
 /**
@@ -67,38 +64,33 @@ export default function HomePage() {
       </InscriptionsStatusProvider>
 
       <Card>
-        <CardContent>
-          <Collapsible defaultOpen={true} className="rounded-md data-[state=open]:bg-muted">
-            <CollapsibleTrigger className="group flex items-center gap-4">
-              <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
-              Articles Ouest-France 2026
-              <HugeiconsIcon
-                icon={ArrowDown01Icon}
-                strokeWidth={2}
-                className="ml-auto shrink-0 group-[aria-expanded=true]:rotate-180 transition-transform duration-200"
-              />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-4">
-              <ul className="list-disc space-y-2 border-t border-border pt-3 pl-5 text-sm sm:text-base">
-                {ARTICLES.map((article) => (
-                  <li key={article.url}>
-                    <a
-                      className="font-medium text-secondary underline"
-                      href={article.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {article.title}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </CollapsibleContent>
-          </Collapsible>
+        <CardHeader className="flex flex-row items-center gap-4">
+          <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
+          <CardTitle className="text-secondary text-xl font-bold tracking-wide sm:text-2xl">
+            Articles Ouest-France 2026
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-2">
+          <ul className="list-disc space-y-2 border-t border-border pt-3 pl-5 text-sm sm:text-base">
+            {ARTICLES.map((article) => (
+              <li key={article.url}>
+                <a
+                  className="font-medium text-secondary underline"
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {article.title}
+                </a>
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
 
-      <footer className="text-center text-sm opacity-70">©{currentYear} VRNB</footer>
+      <footer className="text-center text-sm opacity-70">
+        ©{currentYear} Vélo Rando Nature Bruz (VRNB)
+      </footer>
     </div>
   );
 }

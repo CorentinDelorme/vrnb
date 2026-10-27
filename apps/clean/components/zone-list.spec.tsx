@@ -32,12 +32,15 @@ function setStatus(next: InscriptionsStatus): void {
   status.current = next;
 }
 
-function zone(zoneName: string) {
-  return screen.getByLabelText(`Zone ${zoneName}`);
+/** Find a zone Card by its CardTitle text content. */
+function zone(zoneName: string): HTMLElement | null {
+  const title = screen.queryByText(zoneName, { selector: '[data-slot="card-title"]' });
+  return title?.closest('[data-slot="card"]') ?? null;
 }
 
 function summaryText(zoneName: string): string | null {
-  return zone(zoneName)?.textContent ?? null;
+  const zoneEl = zone(zoneName);
+  return zoneEl?.textContent ?? null;
 }
 
 function typeButton(label: string): HTMLElement {
@@ -95,7 +98,8 @@ describe('ZoneList', () => {
     // Bruz Sud keeps its bike section (15 tours) but loses the walking section.
     expect(zone('Bruz Sud')).toBeDefined();
     expect(summaryText('Bruz Sud')).toContain('15 parcours');
-    expect(zone('Bruz Sud').querySelector('app-tour-list-section')?.textContent).toContain(
+    const bruzSudZone = zone('Bruz Sud');
+    expect(bruzSudZone?.querySelector('app-tour-list-section')?.textContent).toContain(
       'Parcours à vélo',
     );
 
@@ -113,8 +117,8 @@ describe('ZoneList', () => {
     // Bruz Sud (13 walking) stays; Bruz Ker Lann now has no walking tour (P200/P201 removed) and vanishes, like Bruz Vau Gaillard.
     expect(zone('Bruz Sud')).toBeDefined();
     expect(summaryText('Bruz Sud')).toContain('13 parcours');
-    expect(screen.queryByLabelText('Zone Bruz Vau Gaillard')).toBeNull();
-    expect(screen.queryByLabelText('Zone Bruz Ker Lann')).toBeNull();
+    expect(zone('Bruz Vau Gaillard')).toBeNull();
+    expect(zone('Bruz Ker Lann')).toBeNull();
 
     // A single walking heading remains (Bruz Sud).
     expect(screen.getAllByText('Parcours à pied')).toHaveLength(1);
@@ -124,7 +128,7 @@ describe('ZoneList', () => {
     render(<ZoneList />);
 
     fireEvent.click(typeButton('À pied'));
-    expect(screen.queryByLabelText('Zone Bruz Vau Gaillard')).toBeNull();
+    expect(zone('Bruz Vau Gaillard')).toBeNull();
 
     fireEvent.click(typeButton('Tous'));
     expect(isTypeActive('Tous')).toBe(true);
