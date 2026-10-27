@@ -7,7 +7,9 @@ test.describe('Mobile viewport', () => {
     await page.goto('/');
     // Bruz Sud is the only zone with both practice types, so per zone the
     // section locator is unique.
-    const sudZone = page.locator('details[aria-label="Zone Bruz Sud"]');
+    const sudZone = page
+      .locator('[data-slot="card"]')
+      .filter({ has: page.locator('[data-slot="card-title"]', { hasText: 'Bruz Sud' }) });
 
     const link = sudZone
       .locator('app-tour-list-section', { hasText: 'Parcours à vélo' })
@@ -23,8 +25,10 @@ test.describe('Mobile viewport', () => {
   test('should still display all tour rows on mobile', async ({ page }) => {
     await page.goto('/');
     const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-    // 15 bike + 13 walking (Bruz Sud) + 6 bike (Vau Gaillard) + 13 bike (Ker Lann) = 47 total
-    await expect(playButtons).toHaveCount(47);
+    // 15 bike + 13 walking (Bruz Sud) + 6 bike (Vau Gaillard) + 13 bike (Ker Lann) = 47 tours.
+    // Each row carries a mobile (sm:hidden) and a desktop play variant:
+    // toHaveCount counts attached nodes, so both are counted → 94.
+    await expect(playButtons).toHaveCount(94);
   });
 
   test('should render tour page with functional dock buttons', async ({ page }) => {
@@ -38,9 +42,12 @@ test.describe('Mobile viewport', () => {
     await page.getByRole('button', { name: 'Suivant' }).click();
     await page.getByRole('button', { name: 'Suivant' }).click();
     await page.getByRole('button', { name: 'Terminer' }).click();
-    const modal = page.locator('dialog#finish_modal');
+    // The finish modal is the shadcn Dialog of the tour page (DialogContent).
+    const modal = page.locator('#finish_modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
+    await expect(modal.locator('[data-slot="card-title"]')).toContainText(
+      'Merci pour votre participation !',
+    );
   });
 
   test('should render map on mobile tours page', async ({ page }) => {

@@ -56,10 +56,14 @@ declare module 'react' {
   }
 }
 
-/** Both distances of a Parcours row, French format:
- *  "1,1 km nettoyage · 4,2 km total" ("800 m" sous 1 km for each distance). */
-function formatTourDistances(tour: Tour): string {
-  return `${formatDistance(tour.distance)} nettoyage · ${formatDistance(tour.totalDistance)} total`;
+/** Both distances of a Parcours row, French format ("800 m" sous 1 km).
+ *  No separator dot anywhere: on desktop the two spans sit inline with a gap,
+ *  on mobile they stack on two lines. */
+function formatTourDistances(tour: Tour): { cleaning: string; total: string } {
+  return {
+    cleaning: `${formatDistance(tour.distance)} nettoyage`,
+    total: `${formatDistance(tour.totalDistance)} total`,
+  };
 }
 
 /** Whether the loaded inscriptions cover the given (zone, Parcours) pair. */
@@ -125,7 +129,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               the primary button look. */}
           <Link
             href={`/tours/${zoneId}/${type}`}
-            className={`${buttonVariants({ variant: 'default' })} shrink-0`}
+            className={`${buttonVariants({ variant: 'default' })} shrink-0 whitespace-normal`}
           >
             Voir tous les parcours
           </Link>
@@ -141,25 +145,67 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
                 data-testid="tour-row"
                 key={tour.name}
               >
-                <div className="flex-1 flex items-center gap-3 min-w-0">
-                  <div className="text-foreground text-xl font-medium sm:text-3xl truncate">
+                {/* Row layout.
+                    Mobile:  [name] [distances stacked on 2 lines + register/badge below] [play →]
+                    Desktop: 3 ALIGNED columns shared by every row
+                             [name 5rem] [cleaning 11rem] [total 1fr] [actions →]
+                             Fixed name & cleaning tracks keep each column left
+                             edge identical across rows regardless of badge /
+                             register presence (auto actions track). */}
+                <div className="flex-1 flex items-center gap-3 min-w-0 sm:grid sm:grid-cols-[5rem_11rem_minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+                  {/* Name — never truncated (fixed width track on desktop) */}
+                  <div className="shrink-0 text-foreground text-2xl font-medium sm:text-3xl whitespace-nowrap">
                     {tour.name}
                   </div>
-                  <div className="text-muted-foreground/70 text-base font-light sm:text-xl whitespace-nowrap">
-                    {formatTourDistances(tour)}
+
+                  {/* Distances wrapper: flex-1 block on mobile (spans stacked),
+                      display:contents on desktop so both spans become the
+                      column 2 and column 3 grid items. */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1 sm:contents">
+                    <span className="text-muted-foreground/70 text-base font-light sm:text-xl">
+                      {formatTourDistances(tour).cleaning}
+                    </span>
+                    <span className="text-muted-foreground/70 text-base font-light sm:text-xl">
+                      {formatTourDistances(tour).total}
+                    </span>
+                    {/* Mobile only: register/badge as 3rd line, under the distances */}
+                    <div className="flex sm:hidden items-center gap-2">
+                      {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
+                        <Badge variant="secondary">Binôme inscrit</Badge>
+                      ) : null}
+                      <TourRegisterButton
+                        available={
+                          statusKnown &&
+                          windowOpen &&
+                          !isCoveredInscriptions(status, zoneId, tour.name)
+                        }
+                        tour={{ tourId: tour.name, zoneId }}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center justify-end gap-2">
-                  {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
-                    <Badge variant="secondary">Binôme inscrit</Badge>
-                  ) : null}
-                  <TourRegisterButton
-                    available={
-                      statusKnown && windowOpen && !isCoveredInscriptions(status, zoneId, tour.name)
-                    }
-                    tour={{ tourId: tour.name, zoneId }}
-                  />
-                  <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
+
+                  {/* Mobile only: play button in the flex row */}
+                  <div className="sm:hidden shrink-0">
+                    <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
+                  </div>
+
+                  {/* Desktop only: register/badge left of the play button,
+                      together in the last (auto) grid column */}
+                  <div className="hidden sm:flex items-center justify-end gap-2">
+                    {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
+                      <Badge variant="secondary">Binôme inscrit</Badge>
+                    ) : null}
+                    <TourRegisterButton
+                      available={
+                        statusKnown &&
+                        windowOpen &&
+                        !isCoveredInscriptions(status, zoneId, tour.name)
+                      }
+                      tour={{ tourId: tour.name, zoneId }}
+                    />
+                    {/* Play button — always far right */}
+                    <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
+                  </div>
                 </div>
               </Item>
             ))}

@@ -64,9 +64,9 @@ test.describe('Accessibility', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
-      const closeButton = modal.locator('button[aria-label="Fermer"]');
+      const closeButton = modal.locator('[data-slot="dialog-close"]');
       await expect(closeButton).toBeVisible();
     });
 
@@ -90,10 +90,10 @@ test.describe('Accessibility', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
 
-      const closeButton = modal.locator('button[aria-label="Fermer"]');
+      const closeButton = modal.locator('[data-slot="dialog-close"]');
       await closeButton.focus();
       await page.keyboard.press('Enter');
       await expect(modal).not.toBeVisible();

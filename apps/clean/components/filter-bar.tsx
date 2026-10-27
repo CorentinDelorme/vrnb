@@ -77,8 +77,8 @@ export function FilterBar({
       aria-label="Filtres de parcours"
     >
       <CardContent>
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-16">
-          <div className="sm:flex-1">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-16">
+          <div className="md:flex-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
               Type de parcours
             </span>
@@ -91,7 +91,8 @@ export function FilterBar({
                   <label
                     key={choice.value}
                     className={cn(
-                      'relative inline-flex items-center justify-center border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer select-none disabled:pointer-events-none disabled:opacity-50',
+                      'relative inline-flex items-center justify-center border px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer select-none disabled:pointer-events-none disabled:opacity-50',
+                      'has-[input:focus-visible]:outline-none has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-ring has-[input:focus-visible]:ring-offset-2',
                       active
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'border-border text-foreground hover:bg-muted hover:text-foreground',
@@ -99,21 +100,19 @@ export function FilterBar({
                       isLast && 'rounded-r-lg',
                       !isFirst && '-ml-px',
                     )}
-                    role="radio"
-                    aria-checked={active}
-                    aria-label={choice.label}
                     title={choice.label}
                     onClick={() => onTypeChange(choice.value)}
                   >
+                    {/* The sr-only input carries the radio semantics and
+                        stays in the viewport (playwright able to click), the
+                        label forwards the click and lends it its name. */}
                     <input
                       type="radio"
                       name="tour-type"
                       value={choice.value}
                       checked={active}
                       onChange={() => {}}
-                      className="absolute -left-9999"
-                      tabIndex={-1}
-                      aria-hidden="true"
+                      className="sr-only"
                     />
                     {choice.label}
                   </label>
@@ -122,7 +121,7 @@ export function FilterBar({
             </div>
           </div>
 
-          <fieldset className="border-0 max-sm:px-2 sm:flex-1" aria-label="Distance de nettoyage">
+          <fieldset className="border-0 max-md:px-2 md:flex-1" aria-label="Distance de nettoyage">
             <DistanceRangeSlider
               label="Distance de nettoyage"
               min={0.5}
@@ -133,7 +132,7 @@ export function FilterBar({
             />
           </fieldset>
 
-          <fieldset className="border-0 max-sm:px-2 sm:flex-1" aria-label="Distance totale">
+          <fieldset className="border-0 max-md:px-2 md:flex-1" aria-label="Distance totale">
             <DistanceRangeSlider
               label="Distance totale"
               min={2}
@@ -148,7 +147,7 @@ export function FilterBar({
         {/* Counter or empty-state message, plus a reset button whenever at
             least one filter touches (permanent reset button). */}
         {filterTouched ? (
-          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
             {displayedCount === 0 ? (
               <p className="text-sm font-medium text-muted-foreground">
                 Aucun parcours ne correspond à ces filtres

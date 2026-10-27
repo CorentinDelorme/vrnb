@@ -199,8 +199,9 @@ describe('ZoneList', () => {
     expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
-    // Every zone and all 47 play buttons are back.
+    // Every zone and all play buttons are back (94: both the mobile and the
+    // desktop variants render in jsdom).
     expect(zone('Bruz Vau Gaillard')).toBeDefined();
-    expect(screen.getAllByRole('button', { name: /Lancer le parcours/ })).toHaveLength(47);
+    expect(screen.getAllByRole('button', { name: /Lancer le parcours/ })).toHaveLength(94);
   });
 });

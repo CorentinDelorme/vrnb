@@ -34,7 +34,7 @@ export function ResumeTourBanner() {
       <li className="list-row">
         <Card>
           <CardContent className="flex flex-row items-center justify-between gap-4">
-            <p className="truncate flex-1 text-sm font-medium sm:text-base">
+            <p className="flex-1 text-sm font-medium sm:text-base break-words">
               Reprendre le parcours {getZone(saved.zoneId).name} - {saved.tourId} (étape{' '}
               {saved.step + 1}/3)
             </p>

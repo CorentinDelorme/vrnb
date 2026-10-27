@@ -64,6 +64,9 @@ test.describe('Manual', () => {
 
     await sommaire.getByRole('link', { name: "S'inscrire en binôme" }).click();
     await expect(page).toHaveURL(/#inscription$/);
-    await expect(page.getByRole('heading', { name: "5. S'inscrire en binôme" })).toBeVisible();
+    // The section headings render as CardTitles (divs, not h# headings).
+    await expect(
+      page.locator('[data-slot="card-title"]', { hasText: "5. S'inscrire en binôme" }),
+    ).toBeVisible();
   });
 });

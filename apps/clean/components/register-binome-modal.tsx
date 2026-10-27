@@ -282,6 +282,9 @@ export function RegisterBinomeModal({
       <DialogContent
         id={`register_modal_${tour.tourId}`}
         className="max-h-[90dvh] w-11/12 max-w-md overflow-y-auto sm:max-w-xl"
+        // Accessible name of the dialog (axe `aria-dialog-name`): no
+        // aria-labelledby target before the heading, so the topic directly.
+        aria-label="Inscription du binôme"
       >
         <h3 className="text-xl font-bold">Inscription du binôme</h3>
         <p className="text-foreground/80 mt-1 text-sm font-light sm:text-base">

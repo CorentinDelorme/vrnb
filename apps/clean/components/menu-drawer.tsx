@@ -44,8 +44,14 @@ export function MenuDrawer({
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} swipeDirection="left">
-      <DrawerTrigger id={drawerId} className={cn(className)} aria-label="Menu">
-        <Button variant="default">Menu</Button>
+      {/* The trigger renders AS the Button (Base UI render prop): a Button
+          nested inside the trigger button would be a nested interactive
+          control (axe `nested-interactive`). */}
+      <DrawerTrigger
+        id={drawerId}
+        render={<Button variant="default" className={cn(className)} aria-label="Menu" />}
+      >
+        Menu
       </DrawerTrigger>
       <DrawerContent className={MENU_CLASSES[variant]}>
         <DrawerClose aria-label="close sidebar" className="absolute top-4 right-4">

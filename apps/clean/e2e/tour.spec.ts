@@ -14,11 +14,12 @@ test.describe('Tour page — V1 (bike)', () => {
 
     test('should display steps indicator with 3 steps', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
-      const steps = page.locator('[data-testid^="step-"]');
-      await expect(steps).toHaveCount(3);
-      await expect(steps.nth(0)).toContainText('Début');
-      await expect(steps.nth(1)).toContainText('Nettoyage');
-      await expect(steps.nth(2)).toContainText('Fin');
+      // The stepper renders one outer container (step-N, carrying the label)
+      // and one circle (step-N-circle) per step: two testids per step.
+      await expect(page.locator('[data-testid$="-circle"]')).toHaveCount(3);
+      await expect(page.locator('[data-testid="step-0"]')).toContainText('Début');
+      await expect(page.locator('[data-testid="step-1"]')).toContainText('Nettoyage');
+      await expect(page.locator('[data-testid="step-2"]')).toContainText('Fin');
     });
 
     test('should render map', async ({ page }) => {
@@ -89,7 +90,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
     });
 
@@ -98,8 +99,10 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
-      await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
+      const modal = page.locator('#finish_modal');
+      await expect(modal.locator('[data-slot="card-title"]')).toContainText(
+        'Merci pour votre participation !',
+      );
       await expect(modal).toContainText(
         'Allez voir les organisateurs pour faire peser les déchets ramassés.',
       );
@@ -110,9 +113,9 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
-      await modal.locator('button[aria-label="Fermer"]').click();
+      await modal.locator('[data-slot="dialog-close"]').click();
       await expect(modal).not.toBeVisible();
     });
   });
@@ -128,7 +131,11 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByText('Menu', { exact: true }).click();
       const drawer = page.locator('[data-slot="drawer-content"]');
       await expect(drawer).toBeVisible();
-      await expect(drawer.locator('h1')).toContainText('Bruz Sud - Parcours V1');
+      // The title splits on " - " into two DrawerTitle lines.
+      await expect(drawer.locator('[data-slot="drawer-title"]')).toHaveText([
+        'Bruz Sud',
+        'Parcours V1',
+      ]);
     });
 
     test('should show PDF download link', async ({ page }) => {
@@ -202,9 +209,11 @@ test.describe('Tour page — P3 (walking)', () => {
 
     // Click Terminer
     await page.getByRole('button', { name: 'Terminer' }).click();
-    const modal = page.locator('dialog#finish_modal');
+    const modal = page.locator('#finish_modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
+    await expect(modal.locator('[data-slot="card-title"]')).toContainText(
+      'Merci pour votre participation !',
+    );
   });
 
   test('should show correct PDF link in drawer', async ({ page }) => {

@@ -118,26 +118,46 @@ async function mockInscriptionsApi(page: Page, exchange: MockedExchange): Promis
   });
 }
 
-/** Fill the identity fields and the engagement statement of the open modal. */
+/** Fill the identity fields and the engagement statement of the open modal.
+ *  The redesigned modal groups the fields into « Membre 1 » and « Membre 2 »
+ *  fieldsets sharing the visible labels « Prénom » / « Nom », so the stable
+ *  ids are the reliable handles. */
 async function fillRegistration(
   page: Page,
   body: { readonly [key in keyof typeof CONTRACT_BODY]: string | boolean },
 ): Promise<void> {
-  const modal = page.getByRole('dialog');
-  // `exact: true` everywhere: without it, « Nom du membre 1 » also matches the
-  // « Prénom du membre 1 » label (« Prénom » contains « nom » as a substring).
-  await modal.getByLabel('Prénom du membre 1', { exact: true }).fill(String(body.firstName1));
-  await modal.getByLabel('Nom du membre 1', { exact: true }).fill(String(body.lastName1));
-  await modal.getByLabel('Prénom du membre 2', { exact: true }).fill(String(body.firstName2));
-  await modal.getByLabel('Nom du membre 2', { exact: true }).fill(String(body.lastName2));
-  await modal.getByRole('checkbox').check();
+  await page.locator('#register-first-name-1').fill(String(body.firstName1));
+  await page.locator('#register-last-name-1').fill(String(body.lastName1));
+  await page.locator('#register-first-name-2').fill(String(body.firstName2));
+  await page.locator('#register-last-name-2').fill(String(body.lastName2));
+  await setEngagement(page, true);
 }
 
-/** Open the registration modal of a Parcours from its register button. */
+/** Tick or untick the engagement statement. It is a Base UI Checkbox (a
+ *  button[role="checkbox"] whose native input stays aria-hidden): read its
+ *  aria-checked state, then click only when the wanted state differs. */
+async function setEngagement(page: Page, checked: boolean): Promise<void> {
+  const checkbox = page.getByRole('checkbox');
+  const isTicked = (await checkbox.getAttribute('aria-checked')) === 'true';
+  if (isTicked !== checked) {
+    await checkbox.click();
+  }
+}
+
+/** Open the registration modal of a Parcours from its register button.
+ *  Each row carries a mobile and a desktop register variant (one hidden per
+ *  breakpoint, both attached to the DOM): click the visible one. */
+function registerButton(page: Page, tourId: string) {
+  return page
+    .getByRole('button', {
+      name: `S'inscrire en binôme pour le parcours ${tourId}`,
+      exact: true,
+    })
+    .filter({ visible: true });
+}
+
 async function openRegistrationModal(page: Page, tourId: string) {
-  await page
-    .getByRole('button', { name: `S'inscrire en binôme pour le parcours ${tourId}`, exact: true })
-    .click();
+  await registerButton(page, tourId).click();
   const modal = page.getByRole('dialog');
   await expect(modal).toBeVisible();
   return modal;
@@ -170,9 +190,12 @@ test.describe('Public inscriptions statuses', () => {
       const v1Row = bikeSection.locator('li.list-row', { hasText: 'V1' }).first();
       const v2Row = bikeSection.locator('li.list-row', { hasText: 'V2' }).first();
 
-      await expect(v1Row.locator('[data-slot="badge"]')).toHaveText(['Binôme inscrit']);
+      // Both the mobile and the desktop badge variants render (one hidden per
+      // breakpoint): the covered row carries 2 badges, and it is the only
+      // badged row of the page.
+      await expect(v1Row.locator('[data-slot="badge"]').first()).toHaveText('Binôme inscrit');
       await expect(v2Row.locator('[data-slot="badge"]')).toHaveCount(0);
-      await expect(badgeLocator(page)).toHaveCount(1);
+      await expect(badgeLocator(page)).toHaveCount(2);
     });
 
     test('should leave every row unbadged when the store covers nothing', async ({ page }) => {
@@ -198,12 +221,12 @@ test.describe('Public inscriptions statuses', () => {
       await expect(badgeLocator(page)).toHaveCount(0);
       // A failed fetch means an unknown state: the site offers neither the
       // badge nor the register button, and the play button DOM contract
-      // (47 rows × 1 button) stays untouched.
+      // (47 rows × the 2 breakpoint variants) stays untouched.
       await expect(
         page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
       ).toHaveCount(0);
       const playButtons = page.locator('li.list-row button[aria-label="Lancer le parcours"]');
-      await expect(playButtons).toHaveCount(47);
+      await expect(playButtons).toHaveCount(94);
     });
   });
 });
@@ -247,9 +270,7 @@ test.describe('Registration opening announcement', () => {
     open = true;
     await page.reload();
     await expect(announcement).toHaveCount(0);
-    await expect(
-      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
-    ).toBeVisible();
+    await expect(registerButton(page, 'V2')).toBeVisible();
   });
 });
 
@@ -272,13 +293,9 @@ test.describe('Binôme registration', () => {
     });
     await page.goto('/');
 
-    const v2Register = page.getByRole('button', {
-      name: "S'inscrire en binôme pour le parcours V2",
-      exact: true,
-    });
+    const v2Register = registerButton(page, 'V2');
     await expect(v2Register).toBeVisible();
     await v2Register.click();
-
     const modal = page.getByRole('dialog');
     await expect(modal).toBeVisible();
     // The modal shows the selected tour context before anything is typed: the
@@ -292,9 +309,9 @@ test.describe('Binôme registration', () => {
     // The engagement statement gates the submit: untick it → disabled, then
     // re-tick → enabled (the form is otherwise complete).
     const submit = modal.getByRole('button', { name: 'Inscrire mon binôme' });
-    await modal.getByRole('checkbox').uncheck();
+    await setEngagement(page, false);
     await expect(submit).toBeDisabled();
-    await modal.getByRole('checkbox').check();
+    await setEngagement(page, true);
     await expect(submit).toBeEnabled();
 
     await submit.click();
@@ -308,24 +325,21 @@ test.describe('Binôme registration', () => {
     await expect(modal).toContainText('Bruz Sud - V2.');
     await expect(modal).toContainText('le dimanche 14 février 2027 de 9h à 12h');
     await expect(modal).toContainText('Point de rendez-vous : Place du Dr Joly');
-    const googleLink = modal.getByRole('link', { name: 'Google Agenda' });
-    await expect(googleLink).toHaveAttribute(
-      'href',
-      /https:\/\/calendar\.google\.com\/calendar\/render\?action=TEMPLATE/,
-    );
-    await expect(googleLink).toHaveAttribute('target', '_blank');
-    await expect(googleLink).toHaveAttribute('rel', 'noopener noreferrer');
-    const icsLink = modal.getByRole('link', { name: 'Fichier calendrier (.ics)' });
-    await expect(icsLink).toHaveAttribute('href', '/api/calendrier/bruz-sud/V2');
-    // Google Agenda comes first, then the file (the one-click path first):
-    // the two anchors are the only links of the dialog.
-    await expect(
-      modal.getByRole('link').evaluateAll((links) => links.map((link) => link.textContent?.trim())),
-    ).resolves.toEqual(['Google Agenda', 'Fichier calendrier (.ics)']);
+    // The redesigned confirmation renders the two agenda paths as buttons:
+    // Google Agenda (one-click path) first, then the calendar file. The « Close »
+    // sr-only native dialog button and the confirmation's « Fermer » are not
+    // part of the ordered agenda buttons.
+    const buttons = modal
+      .getByRole('button')
+      .filter({ hasNotText: 'Fermer' })
+      .filter({ hasNotText: 'Close' })
+      .filter({ hasNotText: 'Inscrire mon binôme' });
+    await expect(buttons).toHaveText(['Google Agenda', 'Fichier calendrier (.ics)']);
+    await expect(buttons.first()).toBeVisible();
     // One exact POST, then the statuses reload without a page reload:
     expect(postBodies).toHaveLength(1);
     expect(JSON.parse(postBodies[0] ?? '{}')).toEqual(CONTRACT_BODY);
-    await expect(rowLocator(page, 'V2').locator('[data-slot="badge"]')).toHaveText(
+    await expect(rowLocator(page, 'V2').locator('[data-slot="badge"]').first()).toHaveText(
       'Binôme inscrit',
     );
     await expect(v2Register).toHaveCount(0);
@@ -340,34 +354,35 @@ test.describe('Binôme registration', () => {
     await page
       .getByRole('button', { name: "S'inscrire en binôme pour le parcours P3", exact: true })
       .click();
-    await page.getByLabel('Prénom du membre 1', { exact: true }).fill('Céline');
-    await page.getByLabel('Nom du membre 2', { exact: true }).fill('Roux');
+    await page.locator('#register-first-name-1').fill('Céline');
+    await page.locator('#register-last-name-2').fill('Roux');
 
-    await page.getByRole('button', { name: 'Fermer', exact: true }).click();
-    await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toBeHidden();
+    // The modal closes through its native dialog close button (the « Fermer »
+    // button lives only in the confirmation panel).
+    await page.locator('[data-slot="dialog-close"]').click();
+    await expect(page.locator('#register-first-name-1')).toBeHidden();
 
-    await page
-      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P3", exact: true })
-      .click();
-    await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toBeVisible();
-    await expect(page.getByLabel('Prénom du membre 1', { exact: true })).toHaveValue('Céline');
-    await expect(page.getByLabel('Nom du membre 2', { exact: true })).toHaveValue('Roux');
+    await registerButton(page, 'P3').click();
+    await expect(page.locator('#register-first-name-1')).toBeVisible();
+    await expect(page.locator('#register-first-name-1')).toHaveValue('Céline');
+    await expect(page.locator('#register-last-name-2')).toHaveValue('Roux');
   });
 
   test('should show no register button on a covered tour but keep its badge', async ({ page }) => {
     await page.route('**/api/inscriptions', (route) => route.fulfill({ json: COVERED_V1 }));
     await page.goto('/');
 
-    await expect(rowLocator(page, 'V1').locator('[data-slot="badge"]')).toHaveText(
+    await expect(rowLocator(page, 'V1').locator('[data-slot="badge"]').first()).toHaveText(
       'Binôme inscrit',
     );
     await expect(
       page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V1", exact: true }),
     ).toHaveCount(0);
-    // The covered row keeps its play button (legacy DOM contract).
+    // The covered row keeps its play buttons (both breakpoint variants are
+    // attached to the DOM, one visible per viewport).
     await expect(
-      rowLocator(page, 'V1').getByRole('button', { name: 'Lancer le parcours' }),
-    ).toHaveCount(1);
+      rowLocator(page, 'V1').locator('button[aria-label="Lancer le parcours"]'),
+    ).toHaveCount(2);
   });
 
   test('should guard a 409 race: message in the modal, then badge on the reload', async ({
@@ -408,7 +423,7 @@ test.describe('Binôme registration', () => {
     await expect(modal).toContainText(/couvert par un autre binôme/);
     expect(postBodies).toHaveLength(1);
     // The 409's statuses reload shows the covered state: badge + button gone.
-    await expect(rowLocator(page, 'P2').locator('[data-slot="badge"]')).toHaveText(
+    await expect(rowLocator(page, 'P2').locator('[data-slot="badge"]').first()).toHaveText(
       'Binôme inscrit',
     );
     await expect(
@@ -437,7 +452,7 @@ test.describe('Closed registration window', () => {
       page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
     ).toHaveCount(0);
     // The play buttons stay: the closed window never touches the legacy DOM.
-    await expect(page.locator('button[aria-label="Lancer le parcours"]')).toHaveCount(47);
+    await expect(page.locator('button[aria-label="Lancer le parcours"]')).toHaveCount(94);
   });
 
   test('should hide the register button when the public state cannot be loaded', async ({
@@ -456,7 +471,7 @@ test.describe('Closed registration window', () => {
     ).toHaveCount(0);
     await expect(badgeLocator(page)).toHaveCount(0);
     // The play buttons stay: the degraded state never touches the legacy DOM.
-    await expect(page.locator('button[aria-label="Lancer le parcours"]')).toHaveCount(47);
+    await expect(page.locator('button[aria-label="Lancer le parcours"]')).toHaveCount(94);
   });
 
   test('should offer the register button on the last registration day', async ({ page }) => {
@@ -466,9 +481,7 @@ test.describe('Closed registration window', () => {
     await page.route('**/api/inscriptions', (route) => route.fulfill({ json: OPEN_STATE }));
     await page.goto('/');
 
-    await expect(
-      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
-    ).toBeVisible();
+    await expect(registerButton(page, 'V2')).toBeVisible();
   });
 });
 
@@ -526,10 +539,16 @@ test.describe('Anti-bot honeypot and GDPR notice', () => {
       ...CONTRACT_BODY,
       honeypot: 'https://spam.example',
     });
-    // Nothing was stored: the Parcours stays uncovered and unbadged.
+    // Nothing was stored: the Parcours stays uncovered and unbadged. The
+    // refused registration keeps the modal open: the background is inert, so
+    // Firefox excludes the row buttons from the accessibility tree (the role
+    // locator finds none while the buttons stay attached and visible) —
+    // assert the offer through the aria-label attribute instead.
     await expect(badgeLocator(page)).toHaveCount(0);
     await expect(
-      page.getByRole('button', { name: "S'inscrire en binôme pour le parcours V2", exact: true }),
+      page
+        .locator(`button[aria-label="S'inscrire en binôme pour le parcours V2"]`)
+        .filter({ visible: true }),
     ).toHaveCount(1);
   });
 
@@ -576,8 +595,9 @@ test.describe('Calendar file route', () => {
     expect(response.headers()['content-type']).toContain('text/calendar');
     expect(response.headers()['content-disposition']).toContain('calendrier-bruz-sud-v1.ics');
     // The Édition event carries the stable (year, zone, parcours) id, and
-    // names the action, the Zone and the Parcours.
-    const content = await response.text();
+    // names the action, the Zone and the Parcours. Long lines are folded per
+    // RFC 5545: unfold them before matching.
+    const content = (await response.text()).replace(/\r?\n[ \t]/g, '');
     expect(content).toContain('BEGIN:VCALENDAR');
     expect(content).toContain('UID:vrnb-2027-bruz-sud-v1@vrnb-site');
     expect(content).toContain('SUMMARY:Action ramassage des déchets VRNB - Bruz Sud (V1)');

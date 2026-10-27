@@ -26,7 +26,11 @@ test.describe('Tours map — Bike (V)', () => {
     await page.getByText('Menu', { exact: true }).click();
     const drawer = page.locator('[data-slot="drawer-content"]');
     await expect(drawer).toBeVisible();
-    await expect(drawer.locator('h1')).toContainText('Bruz Sud - Parcours à vélo');
+    // The title splits on " - " into two DrawerTitle lines.
+    await expect(drawer.locator('[data-slot="drawer-title"]')).toHaveText([
+      'Bruz Sud',
+      'Parcours à vélo',
+    ]);
   });
 
   test('should not show the tracking PDF link in drawer', async ({ page }) => {

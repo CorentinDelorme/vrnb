@@ -41,6 +41,13 @@ function typeButton(label: string): HTMLElement {
   return screen.getByText(label).closest('label')!;
 }
 
+/**
+ * jsdom applies no CSS media queries: both the mobile and the desktop play
+ * variants of every Parcours row render, so the page's 47 tours carry 94
+ * play buttons.
+ */
+const PLAY_BUTTON_COUNT = 94;
+
 function isTypeActive(label: string): boolean {
   return typeButton(label).classList.contains('bg-primary');
 }
@@ -107,10 +114,12 @@ describe('Home page', () => {
     const zoneCard = zoneTitle?.closest('[data-slot="card"]');
     const bikeSection = zoneCard?.querySelectorAll('app-tour-list-section')[0];
 
-    // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
-    expect(bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0]?.textContent).toContain(
-      '1,1 km nettoyage · 4,2 km total',
-    );
+    // V1: distance 1.1 km, total 4.2 km. jsdom has no CSS: the two distance
+    // spans render once each, stacked (mobile) or inline (desktop), with no
+    // separator between them.
+    const v1Row = bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0];
+    expect(v1Row?.textContent).toContain('1,1 km nettoyage');
+    expect(v1Row?.textContent).toContain('4,2 km total');
   });
 
   it('renders the filter bar above the zones with "Tous" selected by default', async () => {
@@ -133,7 +142,9 @@ describe('Home page', () => {
     expect(screen.getAllByRole('slider')).toHaveLength(4);
     // Both families span their whole axis by default: "Tout" label on each.
     expect(screen.getAllByText('Tout')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
   });
 
   it('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async () => {
@@ -144,7 +155,9 @@ describe('Home page', () => {
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
 
     // Invariant without filter: every section and all 47 play buttons.
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
 
     // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
     cleaningMin.focus();
@@ -152,14 +165,16 @@ describe('Home page', () => {
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('1');
     expect(screen.getAllByText('Tout')).toHaveLength(1); // cleaning is no longer "Tout"
     const after = screen.getAllByRole('button', { name: 'Lancer le parcours' });
-    expect(after.length).toBeLessThan(47);
+    expect(after.length).toBeLessThan(PLAY_BUTTON_COUNT);
     expect(after.length).toBeGreaterThan(0);
 
     // Return to the axis extreme: everything comes back.
     fireEvent.keyDown(cleaningMin, { key: 'ArrowLeft' });
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
     expect(screen.getAllByText('Tout')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
   });
 
   it('shows no counter when no filter is active', async () => {
@@ -233,7 +248,9 @@ describe('Home page', () => {
     expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
   });
 
   it('links each section to its zone map and labels every play button', async () => {
