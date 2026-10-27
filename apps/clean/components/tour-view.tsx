@@ -7,6 +7,7 @@ import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage
 import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
 import { Button } from './ui/button';
+import { CardDescription, CardTitle } from './ui/card';
 import { Dialog, DialogContent } from './ui/dialog';
 
 /**
@@ -152,10 +153,10 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
 
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
         <DialogContent id="finish_modal">
-          <h3 className="text-lg font-bold">Merci pour votre participation !</h3>
-          <p className="py-4">
+          <CardTitle>Merci pour votre participation !</CardTitle>
+          <CardDescription>
             Allez voir les organisateurs pour faire peser les déchets ramassés.
-          </p>
+          </CardDescription>
         </DialogContent>
       </Dialog>
     </div>

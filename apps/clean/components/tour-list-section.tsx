@@ -125,7 +125,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
               the primary button look. */}
           <Link
             href={`/tours/${zoneId}/${type}`}
-            className={`${buttonVariants({ variant: 'default' })} max-sm:w-full shrink-0`}
+            className={`${buttonVariants({ variant: 'default' })} shrink-0`}
           >
             Voir tous les parcours
           </Link>

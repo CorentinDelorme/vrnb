@@ -77,7 +77,7 @@ export function FilterBar({
       aria-label="Filtres de parcours"
     >
       <CardContent>
-        <div className="flex flex-col sm:flex-row gap-16">
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-16">
           <div className="sm:flex-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
               Type de parcours
@@ -122,7 +122,7 @@ export function FilterBar({
             </div>
           </div>
 
-          <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance de nettoyage">
+          <fieldset className="border-0 max-sm:px-2 sm:flex-1" aria-label="Distance de nettoyage">
             <DistanceRangeSlider
               label="Distance de nettoyage"
               min={0.5}
@@ -133,7 +133,7 @@ export function FilterBar({
             />
           </fieldset>
 
-          <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance totale">
+          <fieldset className="border-0 max-sm:px-2 sm:flex-1" aria-label="Distance totale">
             <DistanceRangeSlider
               label="Distance totale"
               min={2}

@@ -8,7 +8,7 @@ import type { MenuVariant } from '../lib/route-meta';
 
 import { cn } from '@/components/lib/utils';
 import { Button } from './ui/button';
-import { Drawer, DrawerClose, DrawerContent, DrawerTrigger } from './ui/drawer';
+import { Drawer, DrawerClose, DrawerContent, DrawerTitle, DrawerTrigger } from './ui/drawer';
 
 /** Legacy drawer input ids, kept for DOM parity with the Angular templates. */
 const DRAWER_IDS: Record<MenuVariant, string> = {
@@ -52,8 +52,18 @@ export function MenuDrawer({
           <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
         </DrawerClose>
 
-        <div className="mb-3 flex items-center justify-between">
-          <h1 className="text-secondary text-2xl font-bold sm:text-4xl">{title}</h1>
+        <div className="mb-3 flex flex-col gap-1">
+          {(() => {
+            const parts = title.split(' - ');
+            return parts.map((part, index) => (
+              <DrawerTitle
+                key={part}
+                className={`text-secondary font-bold ${index === 0 ? 'text-2xl sm:text-4xl' : 'text-xl sm:text-2xl'}`}
+              >
+                {part}
+              </DrawerTitle>
+            ));
+          })()}
         </div>
 
         {children}
