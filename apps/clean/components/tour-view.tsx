@@ -118,33 +118,36 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
         <TourMap step={step} zoneId={zoneId} tourId={tourId} />
       </div>
 
-      {/* Bottom dock, parity with the mode d'emploi screenshots: the
-          Précédent action is a plain text button centred in the left half and
-          the Suivant / Terminer action a big primary button centred in the
-          right half. */}
-      <div className="max-sm:dock-xs flex w-full items-center px-4">
-        <div className="flex flex-1 items-center justify-center">
+      {/* Bottom dock — full-width muted container with centered actions, fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 w-full flex items-center justify-center gap-12 sm:gap-20 bg-muted px-4 py-3">
+        <Button
+          variant="ghost"
+          size="lg"
+          className="font-semibold"
+          disabled={step === 0}
+          onClick={prevStep}
+        >
+          Précédent
+        </Button>
+        {step === STEP_LABELS.length - 1 ? (
           <Button
-            variant="ghost"
+            variant="default"
             size="lg"
-            className="font-semibold"
-            disabled={step === 0}
-            onClick={prevStep}
+            className="min-w-[8rem] font-semibold"
+            onClick={finish}
           >
-            Précédent
+            Terminer
           </Button>
-        </div>
-        <div className="flex flex-1 items-center justify-center">
-          {step === STEP_LABELS.length - 1 ? (
-            <Button variant="default" size="lg" className="w-32 font-semibold" onClick={finish}>
-              Terminer
-            </Button>
-          ) : (
-            <Button variant="default" size="lg" className="w-32 font-semibold" onClick={nextStep}>
-              Suivant
-            </Button>
-          )}
-        </div>
+        ) : (
+          <Button
+            variant="default"
+            size="lg"
+            className="min-w-[8rem] font-semibold"
+            onClick={nextStep}
+          >
+            Suivant
+          </Button>
+        )}
       </div>
 
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
