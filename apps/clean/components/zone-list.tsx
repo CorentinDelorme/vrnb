@@ -64,13 +64,13 @@ export function ZoneList() {
 
     return (
       <Card key={zone.id} className="w-full">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
             {zone.name}
           </CardTitle>
           <Badge variant="secondary">{bikeTours.length + walkingTours.length} parcours</Badge>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent>
           <div
             className={`grid grid-cols-1 gap-4 sm:gap-8${hasBothTypes ? ' lg:grid-cols-2' : ''}`}
           >

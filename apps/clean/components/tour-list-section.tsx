@@ -134,7 +134,9 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
             Voir tous les parcours
           </Link>
         </CardHeader>
-        <CardContent className="-mx-(--card-spacing)">
+        {/* List rows are full-bleed: the CardContent horizontal padding is
+            dropped so the rows touch the card edges under the muted header. */}
+        <CardContent className="p-0">
           <ul className="divide-y divide-border">
             {tours.map((tour) => (
               <Item

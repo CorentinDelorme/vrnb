@@ -11,6 +11,7 @@ import {
 } from '../lib/import-parcours';
 import { ZONES } from '../src/app/zones';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Alert, AlertDescription } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -190,7 +191,7 @@ export function ImportParcoursForm() {
                 {importResult.ids.length > 1 ? 's' : ''} — IDs attribués :{' '}
                 {importResult.ids.join(', ')}
               </p>
-              <ul className="list-disc list-inside mt-3 space-y-1 text-sm">
+              <ul className="list-disc list-inside mt-3 flex flex-col gap-1 text-sm">
                 {importResult.ids.map((id) => {
                   const allOk = Object.values(importResult.logs).every((log) => log.ok);
                   return (
@@ -219,7 +220,7 @@ export function ImportParcoursForm() {
                       <AccordionTrigger className="text-sm font-semibold">
                         {SCRIPT_LABELS[script]}
                       </AccordionTrigger>
-                      <AccordionContent className="p-3 text-xs">
+                      <AccordionContent className="text-xs">
                         {log.stdout !== '' && (
                           <>
                             <div className="font-mono mb-1">stdout</div>
@@ -250,14 +251,13 @@ export function ImportParcoursForm() {
       )}
 
       {apiError !== null && (
-        <Card className={CARD_CLASSES}>
-          <CardHeader>
-            <CardTitle>Erreur</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="text-xs break-all">{apiError}</pre>
-          </CardContent>
-        </Card>
+        <div className="w-full max-w-3xl mx-auto">
+          <Alert variant="destructive">
+            <AlertDescription>
+              <pre className="text-xs break-all">{apiError}</pre>
+            </AlertDescription>
+          </Alert>
+        </div>
       )}
     </div>
   );

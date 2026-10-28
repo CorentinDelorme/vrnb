@@ -39,9 +39,17 @@ import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
 import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
-import { Field, FieldContent, FieldGroup, FieldLabel, FieldLegend, FieldSet } from './ui/field';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from './ui/field';
 import { Input } from './ui/input';
-import { Item, ItemContent, ItemMedia } from './ui/item';
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from './ui/item';
 
 /**
  * Registration modal of one Parcours (tickets #17 + #18): it shows the
@@ -150,8 +158,11 @@ function outcomeAlerts(edition: Edition): Readonly<Partial<Record<ModalOutcome, 
   };
 }
 
-/** The warning alert of the pre-submit window bound, above the form. */
-const WINDOW_BOUND_ALERT_CLASS = 'mt-4 text-sm sm:text-base';
+/**
+ * The typography of the window-bound / outcome alerts, kept in sync with the
+ * surrounding copy (`text-sm` on mobile, `text-base` from `sm:` on).
+ */
+const ALERT_LEVEL_CLASS = 'text-sm sm:text-base';
 
 /**
  * The window-bound warning shown above the form while the window forbids
@@ -288,14 +299,14 @@ export function RegisterBinomeModal({
             shared by the form and the created confirmation, so the ONE title
             covers both states. */}
         <DialogTitle className="text-xl font-bold">Inscription du binôme</DialogTitle>
-        <p className="text-foreground/80 mt-1 text-sm font-light sm:text-base">
+        <p className="text-foreground/80 text-sm font-light sm:text-base">
           Zone <span className="text-foreground font-medium">{zone.name}</span> - Parcours{' '}
           <span className="text-foreground font-medium">{tour.tourId}</span>
         </p>
 
         {outcome === 'created' ? (
           <>
-            <Item variant="muted" className="mt-3">
+            <Item variant="muted">
               <ItemMedia variant="icon" className="text-secondary">
                 <HugeiconsIcon
                   icon={StickyNote01Icon}
@@ -304,72 +315,75 @@ export function RegisterBinomeModal({
                 />
               </ItemMedia>
               <ItemContent>
-                <div className="font-medium text-sm">
-                  Votre binôme est inscrit pour ce parcours.
-                </div>
-                <div className="text-sm text-muted-foreground">
+                <ItemTitle>Votre binôme est inscrit pour ce parcours.</ItemTitle>
+                <ItemDescription>
                   Vous serez attendus le {actionDateLabel} {actionHours} au point de rendez-vous
                   ci-dessous.
-                </div>
+                </ItemDescription>
               </ItemContent>
             </Item>
-            <div className="mt-2 flex items-start gap-2 text-sm sm:text-base">
-              <HugeiconsIcon
-                icon={StickyNote01Icon}
-                strokeWidth={1.5}
-                className="text-secondary mt-0.5 size-5 shrink-0"
-              />
-              <span>{noteSentence}</span>
-            </div>
-            <div className="mt-2 flex items-start gap-2 text-sm sm:text-base">
-              <HugeiconsIcon
-                icon={Location01Icon}
-                strokeWidth={1.5}
-                className="text-secondary mt-0.5 size-5 shrink-0"
-              />
-              <span>
-                Point de rendez-vous&nbsp;: <strong>{zone.meetingPoint.name}</strong>
-              </span>
-            </div>
-            <div className="mt-2 text-sm sm:text-base">
+            {/* The think-about-it notes of the confirmation day, below the
+                Item above — one column gap-2 for the three detail rows, the
+                agenda block spacing on the parent Dialog grid gap. */}
+            <div className="flex flex-col gap-2 text-sm sm:text-base">
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
-                  icon={CalendarAdd01Icon}
+                  icon={StickyNote01Icon}
                   strokeWidth={1.5}
                   className="text-secondary mt-0.5 size-5 shrink-0"
                 />
-                <span>L&apos;ajouter à mon agenda&nbsp;:</span>
+                <span>{noteSentence}</span>
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button
-                  variant="default"
-                  onClick={() =>
-                    window.open(
-                      tourGoogleCalendarUrl({
-                        address: zone.meetingPoint.address,
-                        edition,
-                        pointDeRendezVous: zone.meetingPoint.name,
-                        tourId: tour.tourId,
-                        zoneId: tour.zoneId,
-                        zoneName: zone.name,
-                      }),
-                      '_blank',
-                    )
-                  }
-                >
-                  Google Agenda
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    (window.location.href = `/api/calendrier/${tour.zoneId}/${tour.tourId}`)
-                  }
-                >
-                  Fichier calendrier (.ics)
-                </Button>
+              <div className="flex items-start gap-2">
+                <HugeiconsIcon
+                  icon={Location01Icon}
+                  strokeWidth={1.5}
+                  className="text-secondary mt-0.5 size-5 shrink-0"
+                />
+                <span>
+                  Point de rendez-vous&nbsp;: <strong>{zone.meetingPoint.name}</strong>
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-start gap-2">
+                  <HugeiconsIcon
+                    icon={CalendarAdd01Icon}
+                    strokeWidth={1.5}
+                    className="text-secondary mt-0.5 size-5 shrink-0"
+                  />
+                  <span>L&apos;ajouter à mon agenda&nbsp;:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="default"
+                    onClick={() =>
+                      window.open(
+                        tourGoogleCalendarUrl({
+                          address: zone.meetingPoint.address,
+                          edition,
+                          pointDeRendezVous: zone.meetingPoint.name,
+                          tourId: tour.tourId,
+                          zoneId: tour.zoneId,
+                          zoneName: zone.name,
+                        }),
+                        '_blank',
+                      )
+                    }
+                  >
+                    Google Agenda
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      (window.location.href = `/api/calendrier/${tour.zoneId}/${tour.tourId}`)
+                    }
+                  >
+                    Fichier calendrier (.ics)
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="mt-4 flex justify-end">
+            <div className="flex justify-end">
               <Button variant="default" onClick={onClose}>
                 Fermer
               </Button>
@@ -377,7 +391,7 @@ export function RegisterBinomeModal({
           </>
         ) : (
           <>
-            <div className="mt-2 space-y-1 text-sm sm:text-base">
+            <div className="flex flex-col gap-1 text-sm sm:text-base">
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
                   icon={CalendarDaysIcon}
@@ -402,7 +416,7 @@ export function RegisterBinomeModal({
                 for both bounds; it stands down when the outcome of the same
                 bound already quotes the sentence inside the form. */}
             {boundAlert ? (
-              <Alert className={WINDOW_BOUND_ALERT_CLASS} variant="default">
+              <Alert className={ALERT_LEVEL_CLASS} variant="default">
                 <AlertDescription>{boundAlert}</AlertDescription>
               </Alert>
             ) : null}
@@ -421,7 +435,7 @@ export function RegisterBinomeModal({
                         error !== undefined &&
                         (error !== 'required' || touched[field.key] === true);
                       return (
-                        <Field key={field.id}>
+                        <Field key={field.id} data-invalid={showError || undefined}>
                           <FieldLabel htmlFor={field.id} className="text-sm">
                             {field.label}
                           </FieldLabel>
@@ -446,12 +460,9 @@ export function RegisterBinomeModal({
                               type="text"
                               value={values[field.key]}
                             />
-                            <span
-                              className="text-destructive min-h-4 text-xs"
-                              id={`${field.id}-error`}
-                            >
-                              {showError ? FIELD_ERROR_MESSAGES[error] : ''}
-                            </span>
+                            <FieldError className="text-xs" id={`${field.id}-error`}>
+                              {showError ? FIELD_ERROR_MESSAGES[error] : undefined}
+                            </FieldError>
                           </FieldContent>
                         </Field>
                       );
@@ -471,7 +482,7 @@ export function RegisterBinomeModal({
                         error !== undefined &&
                         (error !== 'required' || touched[field.key] === true);
                       return (
-                        <Field key={field.id}>
+                        <Field key={field.id} data-invalid={showError || undefined}>
                           <FieldLabel htmlFor={field.id} className="text-sm">
                             {field.label}
                           </FieldLabel>
@@ -496,12 +507,9 @@ export function RegisterBinomeModal({
                               type="text"
                               value={values[field.key]}
                             />
-                            <span
-                              className="text-destructive min-h-4 text-xs"
-                              id={`${field.id}-error`}
-                            >
-                              {showError ? FIELD_ERROR_MESSAGES[error] : ''}
-                            </span>
+                            <FieldError className="text-xs" id={`${field.id}-error`}>
+                              {showError ? FIELD_ERROR_MESSAGES[error] : undefined}
+                            </FieldError>
                           </FieldContent>
                         </Field>
                       );
@@ -539,10 +547,10 @@ export function RegisterBinomeModal({
                   value={honeypot}
                 />
 
-                <p className="text-muted-foreground/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
+                <p className="text-muted-foreground/70 text-xs sm:text-sm">{GDPR_NOTICE}</p>
 
                 {outcomeAlert ? (
-                  <Alert className="mt-4 text-sm sm:text-base" variant="destructive">
+                  <Alert className={ALERT_LEVEL_CLASS} variant="destructive">
                     <AlertDescription>{outcomeAlert}</AlertDescription>
                   </Alert>
                 ) : null}

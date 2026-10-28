@@ -10,7 +10,7 @@
 ## Architecture
 - Turborepo monorepo (`workspaces: apps/*, packages/*`) with Bun `bun@1.3.10`.
 - **`apps/web`**: Next.js 16 + Payload 3.80 + MongoDB adapter — association website CMS & frontend.
-- **`apps/clean`**: Next.js 16 (App Router) + Leaflet + DaisyUI 5 — waste clean-up actions app with GPX tracks and precomputed GeoJSON maps.
+- **`apps/clean`**: Next.js 16 (App Router) + Leaflet + shadcn/ui — waste clean-up actions app with GPX tracks and precomputed GeoJSON maps.
 - **`packages/web-db`**: MongoDB 8.2.6 Docker Compose service (persisted under `.data/`).
 - **`packages/ui`**: Shared React component library — DaisyUI 5, Storybook 10, Vitest.
 - **`packages/eslint-config`**: Shared ESLint configs (base + Next.js).

@@ -71,7 +71,7 @@ export default function HomePage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ul className="list-disc space-y-2 border-t border-border pt-3 pl-5 text-sm sm:text-base">
+          <ul className="list-disc flex flex-col gap-2 border-t border-border pt-3 pl-5 text-sm sm:text-base">
             {ARTICLES.map((article) => (
               <li key={article.url}>
                 <a

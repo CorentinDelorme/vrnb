@@ -1,10 +1,10 @@
 'use client';
 
-import { cn } from '@/components/lib/utils';
 import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
 import { DistanceRangeSlider } from './distance-range-slider';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 
 /** One option of the Type de parcours segmented control. */
 interface TypeChoice {
@@ -46,14 +46,15 @@ interface FilterBarProps {
  * the scroll reaches it, and releases at the bottom of its list wrapper —
  * plain CSS, no IntersectionObserver, no JS.
  *
- * The segmented control is a single-selection group of radio inputs styled as
- * shadcn buttons: `[Tous | À pied | À vélo]`, "Tous" checked by default, one
- * active option at a time. The `aria-label` on each input is the legacy anchor
- * the unit specs scope on (`getByLabelText('Tous' | 'À pied' | 'À vélo')`).
- *
- * The two distance slider families (Distance de nettoyage and Distance
- * totale) sit below the type control. Each is a dual-handle range slider; an
- * interval covering its whole axis means the family is off.
+ * The Type de parcours filter is a single-selection shadcn/ui `ToggleGroup`
+ * (`variant="outline"`, `spacing={0}` for the attached segmented look):
+ * `[Tous | À pied | À vélo]`, with "Tous" pressed by default and the
+ * `aria-pressed` state carried by the items. Pressing a pressed toggle
+ * unpresses it, which keeps the previous filter instead of allowing "no type"
+ * (the group always filters). The two distance slider families (Distance de
+ * nettoyage and Distance totale) sit below the type control. Each is a
+ * dual-handle range slider; an interval covering its whole axis means the
+ * family is off.
  *
  * When at least one filter touches, a discreet counter ("X parcours
  * affichés", singular "1 parcours affiché") is shown; when zero tours match,
@@ -72,53 +73,37 @@ export function FilterBar({
   onReset,
 }: FilterBarProps) {
   return (
-    <Card
-      className={cn('sticky top-0 z-10', 'has-data-[slot=card-footer]:pb-0')}
-      aria-label="Filtres de parcours"
-    >
+    <Card className="sticky top-0 z-10" aria-label="Filtres de parcours">
       <CardContent>
         <div className="flex flex-col md:flex-row gap-4 md:gap-16">
           <div className="md:flex-1">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
               Type de parcours
             </span>
-            <div role="group" aria-label="Type de parcours" className="inline-flex w-fit">
-              {TYPE_CHOICES.map((choice, index) => {
-                const active = type === choice.value;
-                const isFirst = index === 0;
-                const isLast = index === TYPE_CHOICES.length - 1;
-                return (
-                  <label
-                    key={choice.value}
-                    className={cn(
-                      'relative inline-flex items-center justify-center border px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer select-none disabled:pointer-events-none disabled:opacity-50',
-                      'has-[input:focus-visible]:outline-none has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-ring has-[input:focus-visible]:ring-offset-2',
-                      active
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border text-foreground hover:bg-muted hover:text-foreground',
-                      isFirst && 'rounded-l-lg',
-                      isLast && 'rounded-r-lg',
-                      !isFirst && '-ml-px',
-                    )}
-                    title={choice.label}
-                    onClick={() => onTypeChange(choice.value)}
-                  >
-                    {/* The sr-only input carries the radio semantics and
-                        stays in the viewport (playwright able to click), the
-                        label forwards the click and lends it its name. */}
-                    <input
-                      type="radio"
-                      name="tour-type"
-                      value={choice.value}
-                      checked={active}
-                      onChange={() => {}}
-                      className="sr-only"
-                    />
-                    {choice.label}
-                  </label>
-                );
-              })}
-            </div>
+            {/* Single-selection toggle group: one pressed item at a time;
+                unpressing the pressed one keeps the previous filter (the
+                fallback below ignores the empty array). */}
+            <ToggleGroup
+              variant="outline"
+              spacing={0}
+              value={[type]}
+              aria-label="Type de parcours"
+              onValueChange={(next) => {
+                if (next.length > 0) onTypeChange(next[0] as TourFilterType);
+              }}
+            >
+              {TYPE_CHOICES.map((choice) => (
+                <ToggleGroupItem
+                  key={choice.value}
+                  value={choice.value}
+                  // Pressed state in primary (override of the muted default,
+                  // tailwind-merge drops the variant's aria-pressed:bg-muted).
+                  className="aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:border-primary"
+                >
+                  {choice.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           </div>
 
           <fieldset className="border-0 max-md:px-2 md:flex-1" aria-label="Distance de nettoyage">

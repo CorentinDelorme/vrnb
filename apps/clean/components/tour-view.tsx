@@ -7,8 +7,7 @@ import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage
 import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
 import { Button } from './ui/button';
-import { CardDescription, CardTitle } from './ui/card';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog';
 
 /**
  * Step-by-step tour page — port of the legacy Angular `tour/tour.ts` +
@@ -153,10 +152,10 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
 
       <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
         <DialogContent id="finish_modal">
-          <CardTitle>Merci pour votre participation !</CardTitle>
-          <CardDescription>
+          <DialogTitle>Merci pour votre participation !</DialogTitle>
+          <DialogDescription>
             Allez voir les organisateurs pour faire peser les déchets ramassés.
-          </CardDescription>
+          </DialogDescription>
         </DialogContent>
       </Dialog>
     </div>

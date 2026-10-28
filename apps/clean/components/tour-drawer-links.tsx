@@ -68,7 +68,7 @@ export function TourDrawerLinks() {
   }, [id, zoneId, meetingPoint.coordinates]);
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col gap-3">
       {id ? (
         <li>
           <a
@@ -84,7 +84,7 @@ export function TourDrawerLinks() {
         </li>
       ) : null}
 
-      <Separator className="mx-0 my-4" />
+      <Separator />
 
       {id ? (
         <li>
@@ -129,9 +129,9 @@ export function TourDrawerLinks() {
         </li>
       ) : null}
 
-      <Separator className="mx-0 my-4" />
+      <Separator />
 
-      <div className="flex justify-center mb-3">
+      <div className="flex justify-center">
         <img
           alt="GeoVelo"
           className="h-8.5 w-45.5 sm:h-11.75 sm:w-63.75"

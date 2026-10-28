@@ -138,7 +138,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           Sur l&apos;accueil, choisissez un parcours à vélo ou à pied.
         </figcaption>
       </figure>
-      <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
+      <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
           Sur <strong>l&apos;accueil,</strong> trouvez votre zone puis la liste des parcours. Chaque
           parcours affiche sa distance et un bouton de lecture <InlineIcon icon={PlayIcon} /> pour
@@ -269,7 +269,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           l&apos;étape 2 sur 3.
         </figcaption>
       </figure>
-      <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
+      <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
           Quand vous revenez sur l&apos;accueil, un <strong>message apparaît tout en haut</strong> :
           il vous propose de reprendre votre parcours.
@@ -308,7 +308,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           Le bouton Menu donne accès aux documents et aux itinéraires du parcours.
         </figcaption>
       </figure>
-      <ul className="space-y-4 text-sm sm:text-base">
+      <ul className="flex flex-col gap-4 pl-5 text-sm sm:text-base">
         <li>
           <strong>Télécharger le PDF :</strong> une fiche du parcours à imprimer ou à garder sur
           votre téléphone.
@@ -401,7 +401,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           horaires et les liens pour l&apos;ajouter à votre agenda.
         </figcaption>
       </figure>
-      <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
+      <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
           <strong>Premier arrivé, premier servi : </strong>
           le premier binôme à inscrire couvre le parcours, les suivants en choisissent un autre.
@@ -427,7 +427,7 @@ export default function ManualPage() {
         </CardHeader>
         <CardContent>
           <nav aria-label="Sommaire">
-            <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base">
+            <ol className="list-decimal flex flex-col gap-2 pl-5 text-sm sm:text-base">
               {MANUAL_SECTIONS.map((section) => (
                 <li key={section.id}>
                   <a className="text-secondary underline" href={`#${section.id}`}>

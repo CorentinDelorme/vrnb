@@ -70,7 +70,7 @@ export function DistanceRangeSlider({
     : `${formatDistance(value.min)} – ${formatDistance(value.max)}`;
 
   return (
-    <div className="space-y-2" aria-label={label}>
+    <div className="flex flex-col gap-2" aria-label={label}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {label}
