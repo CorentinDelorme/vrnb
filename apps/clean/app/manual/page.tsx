@@ -140,12 +140,12 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
       </figure>
       <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
-          Sur <strong>l&apos;accueil,</strong> trouvez votre zone puis la liste des parcours. Chaque
+          Sur <strong>l&apos;accueil, </strong>trouvez votre zone puis la liste des parcours. Chaque
           parcours affiche sa distance de nettoyage et sa distance totale, ainsi qu&apos;un bouton
           de lecture <InlineIcon icon={PlayIcon} /> pour le commencer.
         </li>
         <li>
-          Utilisez les <strong>filtres</strong> en haut de la liste pour n&apos;afficher que les
+          Utilisez les <strong>filtres </strong>en haut de la liste pour n&apos;afficher que les
           parcours à vélo ou à pied, ou pour limiter par distance de nettoyage et distance totale.
         </li>
         <li>
