@@ -44,8 +44,11 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="fr" className={cn('h-screen w-screen', 'font-sans', outfit.variable)}>
-      <body className="h-screen w-screen">
+    <html lang="fr" className={cn('min-h-dvh', 'font-sans', outfit.variable)}>
+      {/* No `w-screen` here: 100vw includes the vertical scrollbar width and
+          would make the body wider than the viewport (horizontal scrollbar and
+          an asymmetric right gap). The default block width (auto) is correct. */}
+      <body className="min-h-dvh">
         <main className="p-4 sm:p-8">
           <AppHeader />
           {children}
