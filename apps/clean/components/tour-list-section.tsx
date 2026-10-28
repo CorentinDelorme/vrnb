@@ -111,8 +111,8 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
   return (
     <app-tour-list-section>
       <Card className="py-0 gap-0">
-        <CardHeader className="flex flex-row items-center justify-between gap-3 bg-muted py-4">
-          <div className="flex items-center gap-3">
+        <CardHeader className="bg-muted py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
             <span className="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-2 sm:p-2.5">
               <HugeiconsIcon className="sm:h-10 sm:w-10" icon={typeIcon} strokeWidth={1.5} />
             </span>
@@ -126,10 +126,11 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
           </div>
 
           {/* Legacy contract (tests.md): the map link is a link, styled with
-              the primary button look. */}
+              the primary button look. On mobile it stacks on a second line,
+              full width; on desktop it sits on the right of the header. */}
           <Link
             href={`/tours/${zoneId}/${type}`}
-            className={`${buttonVariants({ variant: 'default' })} shrink-0 whitespace-normal`}
+            className={`${buttonVariants({ variant: 'default' })} shrink-0 whitespace-normal w-full sm:w-auto sm:shrink-0`}
           >
             Voir tous les parcours
           </Link>
