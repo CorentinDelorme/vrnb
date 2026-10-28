@@ -122,7 +122,7 @@ function InlineIcon({ icon }: InlineIconProps) {
 const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   principe: (
     <>
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         Chaque parcours se fait en 3 temps : <strong>aller </strong>jusqu&apos;au départ depuis le
         lieu de rendez-vous, <strong>nettoyer</strong> le parcours en ramassant les déchets, puis{' '}
         <strong>revenir</strong> au lieu de rendez-vous.
@@ -252,7 +252,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   ),
   reprendre: (
     <>
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         Vous devez vous arrêter en plein milieu ? Pas d&apos;inquiétude : votre téléphone garde en
         mémoire l&apos;endroit où vous vous êtes arrêté, même si vous fermez la page ou si votre
         téléphone s&apos;éteint. Rien n&apos;est perdu.
@@ -293,7 +293,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   ),
   menu: (
     <>
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         En haut à droite de la carte, le bouton <strong>Menu</strong> donne accès à des documents et
         des itinéraires utiles pour votre parcours.
       </p>
@@ -345,7 +345,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   inscription: (
     <>
       {/* The arbitrated intro paragraph of spec #32 — quoted verbatim, in two sentences. */}
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         Un <strong>binôme</strong>, c&apos;est deux bénévoles qui couvrent ensemble le même parcours
         : une inscription vaut pour un seul parcours.{' '}
         <strong>Inscrire votre binôme est recommandé </strong>
@@ -382,7 +382,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           </p>
         </li>
         <li>
-          <p className="text-sm sm:text-base">
+          <p className="pb-2 text-sm sm:text-base">
             <strong>3. La confirmation s&apos;affiche. </strong>Un message vert confirme votre
             inscription et rappelle le jour de l&apos;action : la date, les horaires, le point de
             rendez-vous et les liens pour l&apos;ajouter à votre agenda.
@@ -423,7 +423,7 @@ export default function ManualPage() {
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
       <Card>
         <CardHeader>
-          <CardTitle>Sommaire</CardTitle>
+          <CardTitle className="text-xl sm:text-2xl">Sommaire</CardTitle>
         </CardHeader>
         <CardContent>
           <nav aria-label="Sommaire">
@@ -443,7 +443,7 @@ export default function ManualPage() {
       {MANUAL_SECTIONS.map((section, index) => (
         <Card key={section.id}>
           <CardHeader>
-            <CardTitle id={section.id}>
+            <CardTitle className="text-xl sm:text-2xl" id={section.id}>
               {index + 1}. {section.title}
             </CardTitle>
           </CardHeader>

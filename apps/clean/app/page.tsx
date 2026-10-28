@@ -70,7 +70,7 @@ export default function HomePage() {
             Articles Ouest-France 2026
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-2">
+        <CardContent>
           <ul className="list-disc space-y-2 border-t border-border pt-3 pl-5 text-sm sm:text-base">
             {ARTICLES.map((article) => (
               <li key={article.url}>
