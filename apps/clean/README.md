@@ -76,9 +76,11 @@ bun run e2e
 
 Les 9 screenshots du mode d'emploi (`/manual`) sont stockés dans `public/manual/` et référencés par `app/manual/page.tsx`. Ils sont capturés en mode **mobile (360×780)**, contre un serveur en **mode production** (`next build && next start`), avec Chromium uniquement.
 
-Script : [`scripts/capture-manual.sh`](./scripts/capture-manual.sh)
+Script : [`scripts/capture-manual.sh`](./scripts/capture-manual.sh), aussi disponible via `bun run capture:manual` :
 
 ```sh
+bun run capture:manual
+# ou
 ./scripts/capture-manual.sh
 ```
 

@@ -20,7 +20,8 @@
     "generate:one": "bun tsx scripts/generate-one.ts",
     "generate:zone-pdf": "bun tsx scripts/generate-zone-pdf.ts",
     "generate:all": "bun tsx scripts/generate-all.ts",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "capture:manual": "bash scripts/capture-manual.sh"
   },
   "prettier": {
     "printWidth": 100,

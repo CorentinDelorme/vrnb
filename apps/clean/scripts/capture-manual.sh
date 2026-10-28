@@ -46,6 +46,6 @@ for i in $(seq 1 60); do
 done
 
 echo "📸 Capture des screenshots (Chromium, mobile 360×780)…"
-bunx playwright test scripts/capture-manual.spec.ts --project=chromium
+bunx playwright test --config playwright.manual.config.ts
 
 echo "✅ Terminé. Les screenshots sont dans public/manual/."
