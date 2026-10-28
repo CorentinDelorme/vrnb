@@ -36,9 +36,9 @@ async function renderHomePage() {
 }
 
 function typeButton(label: string): HTMLElement {
-  // The Type de parcours filter uses <label> + radio input (sr-only).
-  // getByLabelText returns the input; we need the label wrapper which has the active class.
-  return screen.getByText(label).closest('label')!;
+  // The Type de parcours filter is a single-selection ToggleGroup: each
+  // option renders as a real button carrying its own pressed state.
+  return screen.getByRole('button', { name: label });
 }
 
 /**
@@ -49,7 +49,7 @@ function typeButton(label: string): HTMLElement {
 const PLAY_BUTTON_COUNT = 94;
 
 function isTypeActive(label: string): boolean {
-  return typeButton(label).classList.contains('bg-primary');
+  return typeButton(label).getAttribute('aria-pressed') === 'true';
 }
 
 /**
