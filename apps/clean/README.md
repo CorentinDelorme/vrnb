@@ -72,6 +72,24 @@ Les tests E2E utilisent Playwright. Ils démarrent automatiquement le serveur de
 bun run e2e
 ```
 
+#### Capturer les screenshots du mode d'emploi
+
+Les 9 screenshots du mode d'emploi (`/manual`) sont stockés dans `public/manual/` et référencés par `app/manual/page.tsx`. Ils sont capturés en mode **mobile (360×780)**, contre un serveur en **mode production** (`next build && next start`), avec Chromium uniquement.
+
+Script : [`scripts/capture-manual.sh`](./scripts/capture-manual.sh)
+
+```sh
+./scripts/capture-manual.sh
+```
+
+Ce script :
+1. Construit l'application en production (`next build`)
+2. Lance le serveur Next.js en production sur le port 4200
+3. Lance le spec Playwright `scripts/capture-manual.spec.ts` (Chromium uniquement — **ce spec n'est PAS dans `e2e/`, donc il n'est pas exécuté par `bun run e2e`**)
+4. Écrit les screenshots dans `public/manual/`
+
+Le spec mock l'API `/api/inscriptions` : `registrationOpen = false` pour les screens 1 à 7 (pas de bouton « S'inscrire »), puis `registrationOpen = true` pour les screens 8 et 9 (modal d'inscription et confirmation).
+
 ## Structure principale
 
 ```
