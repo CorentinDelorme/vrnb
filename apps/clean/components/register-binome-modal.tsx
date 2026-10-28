@@ -316,7 +316,7 @@ export function RegisterBinomeModal({
               </ItemMedia>
               <ItemContent>
                 <ItemTitle>Votre binôme est inscrit pour ce parcours.</ItemTitle>
-                <ItemDescription>
+                <ItemDescription className="line-clamp-none">
                   Vous serez attendus le {actionDateLabel} {actionHours} au point de rendez-vous
                   ci-dessous.
                 </ItemDescription>
