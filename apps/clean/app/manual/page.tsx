@@ -141,8 +141,12 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
       <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
           Sur <strong>l&apos;accueil,</strong> trouvez votre zone puis la liste des parcours. Chaque
-          parcours affiche sa distance et un bouton de lecture <InlineIcon icon={PlayIcon} /> pour
-          le commencer.
+          parcours affiche sa distance de nettoyage et sa distance totale, ainsi qu&apos;un bouton
+          de lecture <InlineIcon icon={PlayIcon} /> pour le commencer.
+        </li>
+        <li>
+          Utilisez les <strong>filtres</strong> en haut de la liste pour n&apos;afficher que les
+          parcours à vélo ou à pied, ou pour limiter par distance de nettoyage et distance totale.
         </li>
         <li>
           Pendant le parcours, une <strong>carte</strong> vous montre le chemin, avec les 3 étapes
@@ -383,9 +387,9 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         </li>
         <li>
           <p className="pb-2 text-sm sm:text-base">
-            <strong>3. La confirmation s&apos;affiche. </strong>Un message vert confirme votre
-            inscription et rappelle le jour de l&apos;action : la date, les horaires, le point de
-            rendez-vous et les liens pour l&apos;ajouter à votre agenda.
+            <strong>3. La confirmation s&apos;affiche. </strong>Elle rappelle le jour de
+            l&apos;action : la date, les horaires, le point de rendez-vous et les liens pour
+            l&apos;ajouter à votre agenda.
           </p>
         </li>
       </ol>

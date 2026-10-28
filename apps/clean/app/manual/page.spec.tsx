@@ -162,9 +162,6 @@ describe('Manual page', () => {
       "Saisissez le prénom et le nom des deux membres du binôme, cochez la case d'engagement",
     );
     expect(text).toContain("3. La confirmation s'affiche");
-    expect(text).toContain(
-      "Un message vert confirme votre inscription et rappelle le jour de l'action",
-    );
   });
 
   it('should show the registration window and the confirmation screenshots', () => {
@@ -251,7 +248,7 @@ describe('Manual page', () => {
       'Inscrire votre binôme est recommandé pour aider les organisateurs à préparer la journée',
       "1. Choisissez un parcours libre. Sur l'accueil, chaque parcours encore libre affiche un bouton S'inscrire",
       "2. Remplissez la fenêtre. Appuyez sur S'inscrire : la fenêtre rappelle la zone",
-      "3. La confirmation s'affiche. Un message vert confirme votre inscription",
+      "3. La confirmation s'affiche. Elle rappelle le jour de l'action",
       'Premier arrivé, premier servi : le premier binôme à inscrire couvre le parcours',
       "Les inscriptions ouvrent le lundi 4 janvier 2027 et sont possibles jusqu'au jeudi 11 février 2027 : la fenêtre se ferme 3 jours avant la date de l'action",
       "Les informations sont effacées 90 jours après l'action. Ils servent uniquement",
