@@ -38,7 +38,7 @@ import {
 import { Alert, AlertDescription } from './ui/alert';
 import { Button } from './ui/button';
 import { Checkbox } from './ui/checkbox';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
 import { Field, FieldContent, FieldGroup, FieldLabel, FieldLegend, FieldSet } from './ui/field';
 import { Input } from './ui/input';
 import { Item, ItemContent, ItemMedia } from './ui/item';
@@ -282,11 +282,12 @@ export function RegisterBinomeModal({
       <DialogContent
         id={`register_modal_${tour.tourId}`}
         className="max-h-[90dvh] w-11/12 max-w-md overflow-y-auto sm:max-w-xl"
-        // Accessible name of the dialog (axe `aria-dialog-name`): no
-        // aria-labelledby target before the heading, so the topic directly.
-        aria-label="Inscription du binôme"
       >
-        <h3 className="text-xl font-bold">Inscription du binôme</h3>
+        {/* Accessible name of the dialog: Base UI wires the popup's
+            aria-labelledby to this DialogTitle automatically. The header is
+            shared by the form and the created confirmation, so the ONE title
+            covers both states. */}
+        <DialogTitle className="text-xl font-bold">Inscription du binôme</DialogTitle>
         <p className="text-foreground/80 mt-1 text-sm font-light sm:text-base">
           Zone <span className="text-foreground font-medium">{zone.name}</span> - Parcours{' '}
           <span className="text-foreground font-medium">{tour.tourId}</span>
@@ -406,7 +407,7 @@ export function RegisterBinomeModal({
               </Alert>
             ) : null}
 
-            <form className="mt-3 grid gap-2" onSubmit={(event) => void submit(event)}>
+            <form onSubmit={(event) => void submit(event)}>
               <FieldGroup>
                 <FieldSet className="gap-2">
                   <FieldLegend>Membre 1</FieldLegend>
@@ -546,17 +547,15 @@ export function RegisterBinomeModal({
                   </Alert>
                 ) : null}
 
-                <Field orientation="horizontal">
-                  <FieldContent className="w-full flex justify-end">
-                    <Button
-                      variant="default"
-                      disabled={!complete || outcome === 'submitting' || windowNotOpen}
-                      type="submit"
-                    >
-                      {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
-                    </Button>
-                  </FieldContent>
-                </Field>
+                <div className="flex justify-end">
+                  <Button
+                    variant="default"
+                    disabled={!complete || outcome === 'submitting' || windowNotOpen}
+                    type="submit"
+                  >
+                    {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
+                  </Button>
+                </div>
               </FieldGroup>
             </form>
           </>

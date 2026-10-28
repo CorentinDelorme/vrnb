@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CURRENT_EDITION, formatActionDateLabel } from '../src/app/inscriptions/edition';
 import type { RegistrationOutcome } from '../src/app/inscriptions/inscriptions-client';
 import type { BinomeRegistration } from '../src/app/inscriptions/validation';
 import type { TourRef } from '../src/app/tours-queries';
@@ -80,6 +81,22 @@ const CLOSED_STATUS: InscriptionsStatus = {
 
 /** A post-closure instant of the Édition (2027-02-12 = 2 days before the action). */
 const POST_CLOSURE_CLOCK = new Date('2027-02-12T09:00:00Z');
+
+/**
+ * An instant one calendar day before the opening bound of the BUNDLED
+ * Édition (the loading/error fallback of the provider reads `CURRENT_EDITION`
+ * + the local clock). Derived from the config, so a yearly Édition bump —
+ * moving `inscriptionsOpenDate` — keeps these tests valid without edits. The
+ * 12:00Z instant lands safely inside the previous calendar day in
+ * `EDITION_TIME_ZONE` (UTC+1/+2), whatever the configured date.
+ */
+const BEFORE_OPENING_CLOCK = new Date(
+  new Date(`${CURRENT_EDITION.inscriptionsOpenDate}T12:00:00Z`).getTime() - 24 * 60 * 60 * 1000,
+);
+/** The opening announcement of the bundled Édition, quoted from its config. */
+const OPENING_ANNOUNCEMENT = `Les inscriptions ouvriront le ${formatActionDateLabel(
+  CURRENT_EDITION.inscriptionsOpenDate,
+)}`;
 
 /** Render the modal open and return helpers for one test. */
 function renderModal({ now }: { now?: Date } = {}) {
@@ -414,9 +431,6 @@ describe('RegisterBinomeModal closed window', () => {
  * publication) or falls back on the local clock.
  */
 describe('RegisterBinomeModal not-open-yet window', () => {
-  /** An instant before the opening day of the Édition (2027-01-04). */
-  const BEFORE_OPENING_CLOCK = new Date('2027-01-02T09:00:00Z');
-
   beforeEach(() => {
     mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
     mocks.reload.mockReset();
@@ -426,9 +440,7 @@ describe('RegisterBinomeModal not-open-yet window', () => {
   it('should announce the opening date in letters and disable the form', () => {
     renderModalAt(BEFORE_OPENING_CLOCK);
 
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Les inscriptions ouvriront le lundi 4 janvier 2027',
-    );
+    expect(screen.getByRole('alert').textContent).toContain(OPENING_ANNOUNCEMENT);
     expect(screen.queryByText(/Les inscriptions sont closes/)).toBeNull();
     for (const input of identityInputs()) {
       expect(input.disabled).toBe(true);
@@ -444,8 +456,10 @@ describe('RegisterBinomeModal not-open-yet window', () => {
   it('should announce the opening date on a public state the server answers closed before opening', () => {
     // The server answers registrationOpen=false (the site state at
     // publication): the local clock of the modal tells the two bounds apart.
+    // The clock is relative to the FIXTURE's Édition (open 2027-01-04), the
+    // announcement quotes the date the state itself carries.
     status.current = CLOSED_STATUS;
-    renderModalAt(BEFORE_OPENING_CLOCK);
+    renderModalAt(new Date('2027-01-02T09:00:00Z'));
 
     expect(screen.getByRole('alert').textContent).toContain(
       'Les inscriptions ouvriront le lundi 4 janvier 2027',
@@ -507,11 +521,9 @@ describe('RegisterBinomeModal local clock fallback', () => {
   });
 
   it('should announce the opening date on its own clock when it predates the opening', () => {
-    renderModalAt(new Date('2026-12-01T09:00:00Z'));
+    renderModalAt(BEFORE_OPENING_CLOCK);
 
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Les inscriptions ouvriront le lundi 4 janvier 2027',
-    );
+    expect(screen.getByRole('alert').textContent).toContain(OPENING_ANNOUNCEMENT);
     expect(submitButton().disabled).toBe(true);
   });
 
