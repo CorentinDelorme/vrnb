@@ -109,7 +109,7 @@ export function FilterBar({
             <AccordionContent keepMounted={true}>
               <div className="flex flex-col md:flex-row gap-4 md:gap-16">
                 <div className="md:flex-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
+                  <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
                     Type de parcours
                   </span>
                   {/* Single-selection toggle group: one pressed item at a time;
@@ -138,12 +138,9 @@ export function FilterBar({
                   </ToggleGroup>
                 </div>
 
-                <fieldset
-                  className="border-0 md:flex-1"
-                  aria-label="Distance de nettoyage"
-                >
+                <fieldset className="border-0 md:flex-1" aria-label="Distance de nettoyage (km)">
                   <DistanceRangeSlider
-                    label="Distance de nettoyage"
+                    label="Distance de nettoyage (km)"
                     min={0.5}
                     max={4}
                     step={0.5}
@@ -152,12 +149,9 @@ export function FilterBar({
                   />
                 </fieldset>
 
-                <fieldset
-                  className="border-0 md:flex-1"
-                  aria-label="Distance totale"
-                >
+                <fieldset className="border-0 md:flex-1" aria-label="Distance totale (km)">
                   <DistanceRangeSlider
-                    label="Distance totale"
+                    label="Distance totale (km)"
                     min={2}
                     max={11}
                     step={1}
@@ -172,11 +166,11 @@ export function FilterBar({
               {filterTouched ? (
                 <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                   {displayedCount === 0 ? (
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-sm font-medium text-muted-foreground mb-0!">
                       Aucun parcours ne correspond à ces filtres
                     </p>
                   ) : (
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-sm font-medium text-muted-foreground mb-0!">
                       {displayedCount === 1
                         ? '1 parcours affiché'
                         : `${displayedCount} parcours affichés`}

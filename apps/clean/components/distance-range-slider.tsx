@@ -72,10 +72,12 @@ export function DistanceRangeSlider({
   return (
     <div className="flex flex-col gap-2" aria-label={label}>
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {label}
         </span>
-        <span className="text-xs font-medium text-muted-foreground">{valueLabel}</span>
+        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+          {valueLabel}
+        </span>
       </div>
 
       <SliderPrimitive.Root
@@ -84,7 +86,7 @@ export function DistanceRangeSlider({
         max={max}
         step={step}
         onValueChange={handleValueChange}
-        className="w-full"
+        className="w-full px-2"
       >
         <SliderPrimitive.Control className="relative mt-1 flex w-full touch-none items-center select-none">
           <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-muted select-none">
@@ -105,26 +107,37 @@ export function DistanceRangeSlider({
         </SliderPrimitive.Control>
       </SliderPrimitive.Root>
 
-      {/* Graduations: one tick per axis step, labels row under the track. */}
-      <div className="relative h-5 pt-1" aria-hidden="true">
+      {/* Graduations: one tick per axis step, labels row under the track.
+          Le premier et dernier label sont alignés sur leurs bords respectifs
+          (bord gauche / bord droit du conteneur), les labels du milieu sont
+          centrés. Les ticks de bord sont centrés sur le bord (comme le slider). */}
+      <div className="relative h-5 pt-1 px-2" aria-hidden="true" style={{ overflow: 'visible' }}>
         {ticks.map((tick, index) => {
           const percent = (index * 100) / totalSteps;
+          const isFirst = index === 0;
+          const isLast = index === totalSteps;
           return (
             <span key={tick}>
               <span
                 data-testid="tick"
                 className="absolute top-0 h-1 w-0.5 bg-muted-foreground/30"
-                style={{ left: `${percent}%` }}
+                style={{
+                  left: isLast ? '100%' : `${percent}%`,
+                  transform: isLast ? 'translateX(-50%)' : undefined,
+                }}
               />
               <span
-                className="absolute top-2 text-[10px] leading-none text-muted-foreground/60"
+                className="absolute top-2 text-[10px] leading-none text-muted-foreground/60 whitespace-nowrap"
                 style={{
                   left: `${percent}%`,
-                  transform: 'translateX(-50%)',
-                  whiteSpace: 'nowrap',
+                  transform: isFirst
+                    ? 'translateX(0)'
+                    : isLast
+                      ? 'translateX(-100%)'
+                      : 'translateX(-50%)',
                 }}
               >
-                {formatDistance(tick)}
+                {tick.toString().replace('.', ',')}
               </span>
             </span>
           );

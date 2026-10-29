@@ -222,7 +222,7 @@ describe('DistanceRangeSlider', () => {
     // 2 → 11 km step 1: ten ticks (2, 3, …, 11).
     const ticks = screen.getAllByTestId('tick');
     expect(ticks).toHaveLength(10);
-    expect(hasText('2 km')).toBe(true);
-    expect(hasText('11 km')).toBe(true);
+    expect(hasText('2')).toBe(true);
+    expect(hasText('11')).toBe(true);
   });
 });
