@@ -80,68 +80,71 @@ export function DistanceRangeSlider({
         </span>
       </div>
 
-      <SliderPrimitive.Root
-        value={[value.min, value.max]}
-        min={min}
-        max={max}
-        step={step}
-        onValueChange={handleValueChange}
-        className="w-full px-2"
-      >
-        <SliderPrimitive.Control className="relative mt-1 flex w-full touch-none items-center select-none">
-          <SliderPrimitive.Track className="relative h-1 w-full grow overflow-hidden rounded-full bg-muted select-none">
-            <SliderPrimitive.Indicator className="h-full bg-primary select-none" />
-          </SliderPrimitive.Track>
-          <SliderPrimitive.Thumb
-            index={0}
-            getAriaLabel={() => `${label} (borne minimale)`}
-            getAriaValueText={(_formatted, thumbValue) => formatDistance(thumbValue)}
-            className={THUMB_CLASS}
-          />
-          <SliderPrimitive.Thumb
-            index={1}
-            getAriaLabel={() => `${label} (borne maximale)`}
-            getAriaValueText={(_formatted, thumbValue) => formatDistance(thumbValue)}
-            className={THUMB_CLASS}
-          />
-        </SliderPrimitive.Control>
-      </SliderPrimitive.Root>
+      {/* Repère horizontal commun au slider et aux graduations */}
+      <div className="relative px-2">
+        <SliderPrimitive.Root
+          value={[value.min, value.max]}
+          min={min}
+          max={max}
+          step={step}
+          onValueChange={handleValueChange}
+          className="w-full"
+        >
+          <SliderPrimitive.Control className="relative mt-1 flex w-full touch-none items-center select-none">
+            <SliderPrimitive.Track className="relative h-1 w-full grow rounded-full bg-muted select-none">
+              <SliderPrimitive.Indicator className="h-full rounded-full bg-primary select-none" />
+            </SliderPrimitive.Track>
 
-      {/* Graduations: one tick per axis step, labels row under the track.
-          Le premier et dernier label sont alignés sur leurs bords respectifs
-          (bord gauche / bord droit du conteneur), les labels du milieu sont
-          centrés. Les ticks de bord sont centrés sur le bord (comme le slider). */}
-      <div className="relative h-5 pt-1 px-2" aria-hidden="true" style={{ overflow: 'visible' }}>
-        {ticks.map((tick, index) => {
-          const percent = (index * 100) / totalSteps;
-          const isFirst = index === 0;
-          const isLast = index === totalSteps;
-          return (
-            <span key={tick}>
-              <span
-                data-testid="tick"
-                className="absolute top-0 h-1 w-0.5 bg-muted-foreground/30"
-                style={{
-                  left: isLast ? '100%' : `${percent}%`,
-                  transform: isLast ? 'translateX(-50%)' : undefined,
-                }}
-              />
-              <span
-                className="absolute top-2 text-[10px] leading-none text-muted-foreground/60 whitespace-nowrap"
-                style={{
-                  left: `${percent}%`,
-                  transform: isFirst
-                    ? 'translateX(0)'
-                    : isLast
-                      ? 'translateX(-100%)'
-                      : 'translateX(-50%)',
-                }}
-              >
-                {tick.toString().replace('.', ',')}
+            <SliderPrimitive.Thumb
+              index={0}
+              getAriaLabel={() => `${label} (borne minimale)`}
+              getAriaValueText={(_formatted, thumbValue) => formatDistance(thumbValue)}
+              className={THUMB_CLASS}
+            />
+
+            <SliderPrimitive.Thumb
+              index={1}
+              getAriaLabel={() => `${label} (borne maximale)`}
+              getAriaValueText={(_formatted, thumbValue) => formatDistance(thumbValue)}
+              className={THUMB_CLASS}
+            />
+          </SliderPrimitive.Control>
+        </SliderPrimitive.Root>
+
+        {/* Graduations calées sur la largeur du slider */}
+        <div className="relative mt-1 h-5" aria-hidden="true">
+          {ticks.map((tick, index) => {
+            const percent = (index * 100) / totalSteps;
+            const isFirst = index === 0;
+            const isLast = index === totalSteps;
+
+            return (
+              <span key={tick}>
+                <span
+                  data-testid="tick"
+                  className="absolute top-0 h-1 w-0.5 bg-muted-foreground/30"
+                  style={{
+                    left: `${percent}%`,
+                    transform: 'translateX(-50%)',
+                  }}
+                />
+                <span
+                  className="absolute top-2 whitespace-nowrap text-[10px] leading-none text-muted-foreground/60"
+                  style={{
+                    left: `${percent}%`,
+                    transform: isFirst
+                      ? 'translateX(0)'
+                      : isLast
+                        ? 'translateX(-100%)'
+                        : 'translateX(-50%)',
+                  }}
+                >
+                  {tick.toString().replace('.', ',')}
+                </span>
               </span>
-            </span>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -139,9 +139,7 @@ test.describe('Capture manual screenshots (mobile)', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await page.waitForTimeout(1500);
-    await page
-      .getByRole('button', { name: "S'inscrire en binôme pour le parcours P2" })
-      .click();
+    await page.getByRole('button', { name: "S'inscrire en binôme pour le parcours P2" }).click();
     await page.waitForTimeout(800);
     await page
       .locator('#register_modal_P2')
@@ -165,8 +163,8 @@ test.describe('Capture manual screenshots (mobile)', () => {
       }
       const checkbox = document.getElementById('register-engaged') as HTMLInputElement | null;
       if (checkbox) checkbox.disabled = false;
-      const btn = Array.from(document.querySelectorAll('button')).find(
-        (b) => b.textContent?.includes('Inscrire mon binôme')
+      const btn = Array.from(document.querySelectorAll('button')).find((b) =>
+        b.textContent?.includes('Inscrire mon binôme'),
       ) as HTMLButtonElement | null;
       if (btn) btn.disabled = false;
     });
@@ -197,7 +195,9 @@ test.describe('Capture manual screenshots (mobile)', () => {
     await page.waitForTimeout(500);
     await page.getByRole('button', { name: 'Inscrire mon binôme' }).click();
     // Attendre que le modal bascule sur l'état de confirmation.
-    await page.locator('text=Votre binôme est inscrit pour ce parcours.').waitFor({ timeout: 10000 });
+    await page
+      .locator('text=Votre binôme est inscrit pour ce parcours.')
+      .waitFor({ timeout: 10000 });
     await page.waitForTimeout(500);
     await page
       .locator('#register_modal_P2')

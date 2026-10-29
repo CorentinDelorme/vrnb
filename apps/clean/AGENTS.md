@@ -106,14 +106,14 @@ bun scripts/extract-inscriptions.ts  # Extract the Édition inscriptions (see sc
 
 ### Naming Conventions
 
-| Element        | Convention                           | Examples                                    |
-| -------------- | ------------------------------------ | ------------------------------------------- |
-| Components     | PascalCase export + kebab-case file  | `TourView`, `tour-view.tsx`                 |
-| Next.js routes | `page.tsx` / `layout.tsx` folders    | `app/tour/[zoneId]/[id]/page.tsx`           |
-| Helper modules | camelCase, pure functions            | `tour-downloads.ts`, `route-meta.ts`        |
-| Unit tests     | Colocated `*.spec.ts(x)`             | `lib/tour-map.spec.ts`, `app/page.spec.tsx` |
-| E2E tests      | `e2e/*.spec.ts`                      | `e2e/tour.spec.ts`                          |
-| CSS            | Tailwind utilities + shadcn/ui semantic tokens | `bg-background text-muted-foreground`      |
+| Element        | Convention                                     | Examples                                    |
+| -------------- | ---------------------------------------------- | ------------------------------------------- |
+| Components     | PascalCase export + kebab-case file            | `TourView`, `tour-view.tsx`                 |
+| Next.js routes | `page.tsx` / `layout.tsx` folders              | `app/tour/[zoneId]/[id]/page.tsx`           |
+| Helper modules | camelCase, pure functions                      | `tour-downloads.ts`, `route-meta.ts`        |
+| Unit tests     | Colocated `*.spec.ts(x)`                       | `lib/tour-map.spec.ts`, `app/page.spec.tsx` |
+| E2E tests      | `e2e/*.spec.ts`                                | `e2e/tour.spec.ts`                          |
+| CSS            | Tailwind utilities + shadcn/ui semantic tokens | `bg-background text-muted-foreground`       |
 
 ### Imports
 
@@ -198,9 +198,13 @@ const tours: any[] = [];
 <Card>
   <CardHeader>
     <CardTitle>{zone.name}</CardTitle>
-    <CardAction><Badge variant="secondary">{count} parcours</Badge></CardAction>
+    <CardAction>
+      <Badge variant="secondary">{count} parcours</Badge>
+    </CardAction>
   </CardHeader>
-  <CardContent><Button>Click me</Button></CardContent>
+  <CardContent>
+    <Button>Click me</Button>
+  </CardContent>
 </Card>
 ```
 
