@@ -4,12 +4,13 @@ import { ArrowLeftIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 
 import { headerFlags, pageTitle } from '../lib/route-meta';
 import { MenuDrawer } from './menu-drawer';
 import { MenuLinks } from './menu-links';
 import { TourDrawerLinks } from './tour-drawer-links';
+import { buttonVariants } from './ui/button';
 
 /**
  * App header — port of the legacy Angular root template (`app.html`): back
@@ -21,6 +22,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const flags = headerFlags(pathname);
   const title = pageTitle(pathname);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   // "Bruz Sud - Parcours P7" → ["Bruz Sud", "Parcours P7"]: the parts stack on
   // two lines on mobile and rejoin with the dash on wider screens.
   const titleParts = title.split(' - ');
@@ -32,9 +34,16 @@ export function AppHeader() {
           them — and drag the title along — on /manual). */}
       <div className="col-start-1 flex items-center gap-4">
         {flags.showBack ? (
-          <Link className="btn btn-primary btn-sm" href="/" aria-label="Retour à l'accueil">
+          /* Legacy contract (tests.md): the back control is an anchor
+             `a[aria-label="Retour à l'accueil"]`, rendered with the primary
+             button styling. */
+          <Link
+            href="/"
+            aria-label="Retour à l'accueil"
+            className={buttonVariants({ variant: 'default' })}
+          >
             <HugeiconsIcon
-              className="text-primary-content"
+              className="text-primary-foreground"
               icon={ArrowLeftIcon}
               strokeWidth={1.5}
             />
@@ -69,7 +78,13 @@ export function AppHeader() {
       </h1>
 
       {flags.menu ? (
-        <MenuDrawer className="col-start-3" variant={flags.menu} title={title}>
+        <MenuDrawer
+          className="col-start-3"
+          variant={flags.menu}
+          title={title}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+        >
           {flags.menu === 'tours' ? <MenuLinks pathname={pathname} /> : null}
           {flags.menu === 'tour' ? <TourDrawerLinks /> : null}
         </MenuDrawer>

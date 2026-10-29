@@ -1,9 +1,13 @@
-import Link from 'next/link';
+'use client';
 
+import Link from 'next/link';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
+import { buttonVariants } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { ZoneList } from '../components/zone-list';
+import { Footer } from '../components/footer';
 
 /**
  * Home page `/` — port of the legacy Angular `tours-list` component
@@ -29,22 +33,20 @@ const ARTICLES = [
 ] as const;
 
 export default function HomePage() {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <>
-      <div className="mb-4 sm:mb-8">
-        <div className="card bg-base-100 border border-base-300 shadow-sm">
-          <div className="card-body flex-row items-center justify-between gap-4 py-3 sm:py-4">
-            <p className="text-sm font-medium sm:text-base">
-              Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
-            </p>
-            <Link className="btn btn-primary btn-sm shrink-0 sm:btn-md" href="/manual">
-              Mode d&apos;emploi
-            </Link>
-          </div>
-        </div>
-      </div>
+    <div className="flex flex-col gap-4 sm:gap-6">
+      <Card>
+        <CardContent className="flex flex-row items-center justify-between gap-4">
+          <p className="text-sm font-medium sm:text-base">
+            Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
+          </p>
+          {/* Navigation, not an action: a Link carrying the button styling
+          (the shadcn "As Link" pattern — never a `<Button>` inside a link). */}
+          <Link href="/manual" className={buttonVariants({ variant: 'default' })}>
+            Mode d&apos;emploi
+          </Link>
+        </CardContent>
+      </Card>
 
       <ResumeTourBanner />
 
@@ -60,33 +62,32 @@ export default function HomePage() {
         <ZoneList />
       </InscriptionsStatusProvider>
 
-      <div className="mb-4 sm:mb-8">
-        <details className="collapse collapse-arrow bg-base-100 border border-base-300 shadow-sm">
-          <summary className="collapse-title text-sm font-semibold sm:text-base flex items-center gap-4">
-            <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
+      <Card>
+        <CardHeader className="flex flex-row items-center gap-4">
+          <img className="h-auto w-28" src="/icons/ouest-france.svg" alt="Logo Ouest-France" />
+          <CardTitle className="text-secondary text-xl font-bold tracking-wide sm:text-2xl">
             Articles Ouest-France 2026
-          </summary>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="list-disc flex flex-col gap-2 border-t border-border pt-3 pl-5 text-sm sm:text-base">
+            {ARTICLES.map((article) => (
+              <li key={article.url}>
+                <a
+                  className="font-medium text-secondary underline"
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {article.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
 
-          <div className="collapse-content">
-            <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base border-t border-base-200 pt-4">
-              {ARTICLES.map((article) => (
-                <li key={article.url}>
-                  <a
-                    className="link link-secondary font-medium"
-                    href={article.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {article.title}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </details>
-      </div>
-
-      <footer className="pt-4 text-center text-sm opacity-70 sm:pt-8">©{currentYear} VRNB</footer>
-    </>
+      <Footer />
+    </div>
   );
 }

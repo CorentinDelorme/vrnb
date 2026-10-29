@@ -15,6 +15,7 @@ import {
 import { loadTourRouteGeoJson } from '../src/app/shared/gpx/tour-geometry';
 import { getCurrentPosition, subscribeCurrentPosition } from '../src/app/shared/map/map-position';
 import { DEFAULT_ZONE_ID, getZone } from '../src/app/zones';
+import { Separator } from './ui/separator';
 
 /**
  * Download links of the "Menu" drawer on `/tour/<zone>/<id>` — port of the
@@ -67,17 +68,23 @@ export function TourDrawerLinks() {
   }, [id, zoneId, meetingPoint.coordinates]);
 
   return (
-    <>
+    <div className="flex flex-col gap-3">
       {id ? (
         <li>
-          <a download href={tourPdfUrl(zoneId, id)} rel="noopener noreferrer" target="_blank">
+          <a
+            download
+            href={tourPdfUrl(zoneId, id)}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={Pdf02Icon} strokeWidth={1.5} />
             Télécharger le PDF
           </a>
         </li>
       ) : null}
 
-      <div className="divider m-0" />
+      <Separator />
 
       {id ? (
         <li>
@@ -86,6 +93,7 @@ export function TourDrawerLinks() {
             href={tourGpxUrl(zoneId, id, 'start')}
             rel="noopener noreferrer"
             target="_blank"
+            className="flex items-center gap-2"
           >
             <HugeiconsIcon icon={Route02Icon} strokeWidth={1.5} />
             Télécharger le GPX vers le point de départ
@@ -94,7 +102,13 @@ export function TourDrawerLinks() {
       ) : null}
       {id ? (
         <li>
-          <a download href={tourGpxUrl(zoneId, id)} rel="noopener noreferrer" target="_blank">
+          <a
+            download
+            href={tourGpxUrl(zoneId, id)}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={MapsLocationIcon} strokeWidth={1.5} />
             Télécharger le GPX du parcours
           </a>
@@ -107,6 +121,7 @@ export function TourDrawerLinks() {
             href={tourGpxUrl(zoneId, id, 'end')}
             rel="noopener noreferrer"
             target="_blank"
+            className="flex items-center gap-2"
           >
             <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
             Télécharger le GPX pour retourner au lieu de rendez-vous
@@ -114,7 +129,7 @@ export function TourDrawerLinks() {
         </li>
       ) : null}
 
-      <div className="divider m-0" />
+      <Separator />
 
       <div className="flex justify-center">
         <img
@@ -129,6 +144,7 @@ export function TourDrawerLinks() {
           href={buildGeoVeloToMeetingPointLink(meetingPoint.coordinates, currentPosition)}
           rel="noopener noreferrer"
           target="_blank"
+          className="flex items-center gap-2"
         >
           <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
           Retourner au lieu de rendez-vous depuis ma position
@@ -137,7 +153,12 @@ export function TourDrawerLinks() {
 
       {routeLinks?.toStart ? (
         <li>
-          <a href={routeLinks.toStart} rel="noopener noreferrer" target="_blank">
+          <a
+            href={routeLinks.toStart}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={Route02Icon} strokeWidth={1.5} />
             Itinéraire vers le point de départ
           </a>
@@ -145,12 +166,17 @@ export function TourDrawerLinks() {
       ) : null}
       {routeLinks?.fromEnd ? (
         <li>
-          <a href={routeLinks.fromEnd} rel="noopener noreferrer" target="_blank">
+          <a
+            href={routeLinks.fromEnd}
+            rel="noopener noreferrer"
+            target="_blank"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={GoalIcon} strokeWidth={1.5} />
             Itinéraire pour retourner au lieu de rendez-vous
           </a>
         </li>
       ) : null}
-    </>
+    </div>
   );
 }

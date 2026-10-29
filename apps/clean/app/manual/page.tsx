@@ -4,6 +4,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
+import { buttonVariants } from '../../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { Kbd } from '../../components/ui/kbd';
 import { pageTitle } from '../../lib/route-meta';
 import {
   CURRENT_EDITION,
@@ -119,15 +122,15 @@ function InlineIcon({ icon }: InlineIconProps) {
 const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   principe: (
     <>
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         Chaque parcours se fait en 3 temps : <strong>aller </strong>jusqu&apos;au départ depuis le
         lieu de rendez-vous, <strong>nettoyer</strong> le parcours en ramassant les déchets, puis{' '}
         <strong>revenir</strong> au lieu de rendez-vous.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Page d'accueil avec la liste des parcours à vélo et à pied"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/01-accueil.png"
         />
@@ -135,20 +138,26 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           Sur l&apos;accueil, choisissez un parcours à vélo ou à pied.
         </figcaption>
       </figure>
-      <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
+      <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
-          Sur <strong>l&apos;accueil,</strong> trouvez votre zone puis la liste des parcours. Chaque
-          parcours affiche sa distance et un bouton de lecture <InlineIcon icon={PlayIcon} /> pour
-          le commencer.
+          Sur <strong>l&apos;accueil, </strong>trouvez votre zone puis la liste des parcours. Chaque
+          parcours affiche sa distance de nettoyage et sa distance totale, ainsi qu&apos;un bouton
+          de lecture <InlineIcon icon={PlayIcon} /> pour le commencer.
+        </li>
+        <li>
+          Utilisez les <strong>filtres </strong>en haut de la liste pour n&apos;afficher que les
+          parcours à vélo ou à pied, ou pour limiter par distance de nettoyage et distance totale.
         </li>
         <li>
           Pendant le parcours, une <strong>carte</strong> vous montre le chemin, avec les 3 étapes
           en haut et les boutons <strong>Précédent, Suivant et Terminer</strong> en bas. Vous pouvez{' '}
-          <strong>zoomer et dézoomer</strong> avec les boutons <kbd className="kbd kbd-sm">+</kbd>{' '}
-          et <kbd className="kbd kbd-sm">−</kbd>
+          <strong>zoomer et dézoomer</strong> avec les boutons <Kbd>+</Kbd> et <Kbd>−</Kbd>
           {" de la carte (ou en pinçant l'écran avec deux doigts), et passer la carte en "}
-          <strong>plein écran</strong> avec le bouton <InlineIcon icon={FullScreenIcon} /> en haut à
-          gauche de la carte.
+          <strong>plein écran</strong> avec le bouton{' '}
+          <Kbd>
+            <InlineIcon icon={FullScreenIcon} />
+          </Kbd>{' '}
+          en haut à gauche de la carte.
         </li>
         <li>
           Votre <strong>progression est enregistrée automatiquement</strong> sur votre téléphone :
@@ -173,10 +182,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             sur le bouton de lecture <InlineIcon icon={PlayIcon} /> de la ligne <strong>P2</strong>{' '}
             ci-dessous.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Ligne P2 800 mètres avec son bouton de lecture"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/02-choisir-p2.png"
             />
@@ -192,10 +201,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             <strong>lieu de rendez-vous </strong>jusqu&apos;au départ du parcours. Marchez
             jusque-là, puis appuyez sur <strong>Suivant </strong>en bas de l&apos;écran.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Carte de la première étape avec le bouton Suivant en bas"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/03-etape-debut.png"
             />
@@ -211,10 +220,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             <strong>800 mètres</strong> : ramassez les déchets tout le long, puis appuyez sur{' '}
             <strong>Suivant </strong>en bas de l&apos;écran.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Carte de l'étape de nettoyage du parcours P2"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/04-etape-nettoyage.png"
             />
@@ -230,10 +239,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
             revenir au <strong>lieu de rendez-vous</strong> : une fois arrivé, appuyez sur{' '}
             <strong>Terminer </strong>en bas de l&apos;écran pour valider.
           </p>
-          <figure className="flex flex-col">
+          <figure className="flex flex-col items-center">
             <img
               alt="Carte de l'étape de retour avec le bouton Terminer en bas"
-              className="rounded-lg border border-base-300 shadow-sm"
+              className="max-w-full rounded-lg border border-border shadow-sm"
               loading="lazy"
               src="/manual/05-etape-fin.png"
             />
@@ -247,15 +256,15 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   ),
   reprendre: (
     <>
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         Vous devez vous arrêter en plein milieu ? Pas d&apos;inquiétude : votre téléphone garde en
         mémoire l&apos;endroit où vous vous êtes arrêté, même si vous fermez la page ou si votre
         téléphone s&apos;éteint. Rien n&apos;est perdu.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Message proposant de reprendre le parcours Bruz Sud P2 en haut de l'accueil"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/07-reprendre.png"
         />
@@ -264,7 +273,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           l&apos;étape 2 sur 3.
         </figcaption>
       </figure>
-      <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
+      <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
           Quand vous revenez sur l&apos;accueil, un <strong>message apparaît tout en haut</strong> :
           il vous propose de reprendre votre parcours.
@@ -288,14 +297,14 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   ),
   menu: (
     <>
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         En haut à droite de la carte, le bouton <strong>Menu</strong> donne accès à des documents et
         des itinéraires utiles pour votre parcours.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Contenu du menu ouvert sur le parcours P2"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/06-menu.png"
         />
@@ -303,7 +312,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           Le bouton Menu donne accès aux documents et aux itinéraires du parcours.
         </figcaption>
       </figure>
-      <ul className="space-y-4 text-sm sm:text-base">
+      <ul className="flex flex-col gap-4 pl-5 text-sm sm:text-base">
         <li>
           <strong>Télécharger le PDF :</strong> une fiche du parcours à imprimer ou à garder sur
           votre téléphone.
@@ -340,7 +349,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
   inscription: (
     <>
       {/* The arbitrated intro paragraph of spec #32 — quoted verbatim, in two sentences. */}
-      <p className="text-sm sm:text-base">
+      <p className="pb-2 text-sm sm:text-base">
         Un <strong>binôme</strong>, c&apos;est deux bénévoles qui couvrent ensemble le même parcours
         : une inscription vaut pour un seul parcours.{' '}
         <strong>Inscrire votre binôme est recommandé </strong>
@@ -348,10 +357,10 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
         ceux qui ne se sont pas inscrits sur le site peuvent compléter la fiche de suivi sur place,
         avant le début de l&apos;action.
       </p>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Fenêtre d'inscription d'un binôme avec les prénoms et noms des deux membres"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/08-inscription-binome.png"
         />
@@ -377,17 +386,17 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           </p>
         </li>
         <li>
-          <p className="text-sm sm:text-base">
-            <strong>3. La confirmation s&apos;affiche. </strong>Un message vert confirme votre
-            inscription et rappelle le jour de l&apos;action : la date, les horaires, le point de
-            rendez-vous et les liens pour l&apos;ajouter à votre agenda.
+          <p className="pb-2 text-sm sm:text-base">
+            <strong>3. La confirmation s&apos;affiche. </strong>Elle rappelle le jour de
+            l&apos;action : la date, les horaires, le point de rendez-vous et les liens pour
+            l&apos;ajouter à votre agenda.
           </p>
         </li>
       </ol>
-      <figure className="flex flex-col">
+      <figure className="flex flex-col items-center">
         <img
           alt="Confirmation de l'inscription avec la note à prendre (zone et nom du parcours), les horaires de l'action et les liens pour l'agenda"
-          className="rounded-lg border border-base-300 shadow-sm"
+          className="max-w-full rounded-lg border border-border shadow-sm"
           loading="lazy"
           src="/manual/09-confirmation-inscription.png"
         />
@@ -396,7 +405,7 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
           horaires et les liens pour l&apos;ajouter à votre agenda.
         </figcaption>
       </figure>
-      <ul className="list-disc space-y-2 pl-5 text-sm sm:text-base">
+      <ul className="list-disc flex flex-col gap-2 pl-5 text-sm sm:text-base">
         <li>
           <strong>Premier arrivé, premier servi : </strong>
           le premier binôme à inscrire couvre le parcours, les suivants en choisissent un autre.
@@ -416,37 +425,38 @@ const SECTION_BODIES: Record<ManualSectionId, ReactNode> = {
 export default function ManualPage() {
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 sm:gap-8">
-      <nav aria-label="Sommaire" className="card bg-base-100 shadow-md">
-        <div className="card-body">
-          <h2 className="card-title text-secondary text-xl sm:text-2xl">Sommaire</h2>
-          <ol className="list-decimal space-y-2 pl-5 text-sm sm:text-base">
-            {MANUAL_SECTIONS.map((section) => (
-              <li key={section.id}>
-                <a className="link link-secondary" href={`#${section.id}`}>
-                  {section.title}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </div>
-      </nav>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl sm:text-2xl">Sommaire</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <nav aria-label="Sommaire">
+            <ol className="list-decimal flex flex-col gap-2 pl-5 text-sm sm:text-base">
+              {MANUAL_SECTIONS.map((section) => (
+                <li key={section.id}>
+                  <a className="text-secondary underline" href={`#${section.id}`}>
+                    {section.title}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          </nav>
+        </CardContent>
+      </Card>
 
       {MANUAL_SECTIONS.map((section, index) => (
-        <section className="card bg-base-100 shadow-md" key={section.id}>
-          <div className="card-body">
-            <h2
-              className="card-title text-secondary scroll-mt-4 text-xl sm:text-2xl"
-              id={section.id}
-            >
+        <Card key={section.id}>
+          <CardHeader>
+            <CardTitle className="text-xl sm:text-2xl" id={section.id}>
               {index + 1}. {section.title}
-            </h2>
-            {SECTION_BODIES[section.id]}
-          </div>
-        </section>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>{SECTION_BODIES[section.id]}</CardContent>
+        </Card>
       ))}
 
       <div className="flex flex-wrap justify-center gap-3 pb-4">
-        <Link className="btn btn-primary" href="/">
+        <Link href="/" className={buttonVariants()}>
           Retour à l&apos;accueil
         </Link>
       </div>

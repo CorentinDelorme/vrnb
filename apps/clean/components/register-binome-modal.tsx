@@ -3,12 +3,11 @@
 import {
   CalendarAdd01Icon,
   CalendarDaysIcon,
-  CancelIcon,
   Location01Icon,
   StickyNote01Icon,
 } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
 import { actionHoursLabel, tourGoogleCalendarUrl } from '../lib/tour-calendar';
 import type { Edition, RegistrationWindowPhase } from '../src/app/inscriptions/edition';
@@ -25,7 +24,6 @@ import type {
   IdentityFieldError,
 } from '../src/app/inscriptions/validation';
 import {
-  IDENTITY_FIELD_LABELS,
   IDENTITY_FIELD_MAX_LENGTH,
   IDENTITY_FIELD_MIN_LENGTH,
   checkIdentityFields,
@@ -37,14 +35,93 @@ import {
   useInscriptionsReload,
   useInscriptionsStatus,
 } from './inscriptions-status-provider';
+import { Alert, AlertDescription } from './ui/alert';
+import { Button } from './ui/button';
+import { Checkbox } from './ui/checkbox';
+import { Dialog, DialogContent, DialogTitle } from './ui/dialog';
+import {
+  Field,
+  FieldContent,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from './ui/field';
+import { Input } from './ui/input';
+import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from './ui/item';
+
+/** A FieldSet for one member of the Binôme (Prénom + Nom). */
+function MemberFieldSet({
+  keyPrefix,
+  errors,
+  touched,
+  onBlur,
+  onChange,
+  values,
+  windowNotOpen,
+}: {
+  readonly keyPrefix: '1' | '2';
+  readonly errors: Readonly<Partial<Record<IdentityField, IdentityFieldError>>>;
+  readonly touched: Readonly<Partial<Record<IdentityField, boolean>>>;
+  readonly onBlur: (key: IdentityField) => void;
+  readonly onChange: (key: IdentityField, value: string) => void;
+  readonly values: Readonly<Record<IdentityField, string>>;
+  readonly windowNotOpen: boolean;
+}) {
+  const firstNameKey = `firstName${keyPrefix}` as IdentityField;
+  const lastNameKey = `lastName${keyPrefix}` as IdentityField;
+
+  return (
+    <FieldSet className="gap-2">
+      <FieldLegend>Membre {keyPrefix}</FieldLegend>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {[
+          { key: firstNameKey, label: 'Prénom', id: `register-first-name-${keyPrefix}` },
+          { key: lastNameKey, label: 'Nom', id: `register-last-name-${keyPrefix}` },
+        ].map((field) => {
+          const error = errors[field.key];
+          const showError =
+            error !== undefined &&
+            (error !== 'required' || touched[field.key] === true);
+          return (
+            <Field key={field.id} data-invalid={showError || undefined}>
+              <FieldLabel htmlFor={field.id} className="text-sm">
+                {field.label}
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  aria-describedby={showError ? `${field.id}-error` : undefined}
+                  aria-invalid={showError ? true : undefined}
+                  className="w-full min-w-0"
+                  data-testid={field.id}
+                  disabled={windowNotOpen}
+                  id={field.id}
+                  onBlur={() => onBlur(field.key)}
+                  onChange={(event) => onChange(field.key, event.target.value)}
+                  required
+                  type="text"
+                  value={values[field.key]}
+                />
+                <FieldError className="text-xs" id={`${field.id}-error`}>
+                  {showError ? FIELD_ERROR_MESSAGES[error] : undefined}
+                </FieldError>
+              </FieldContent>
+            </Field>
+          );
+        })}
+      </div>
+    </FieldSet>
+  );
+}
 
 /**
- * DaisyUI registration modal of one Parcours (tickets #17 + #18): it shows the
+ * Registration modal of one Parcours (tickets #17 + #18): it shows the
  * selected tour context — Zone name, Parcours name, action date and the Zone
  * meeting point — and collects the two Binôme identities plus the required
- * engagement statement. `showModal()` is called by effect when the host makes
- * it visible, and the dialog answers its native `close` event (X button,
- * backdrop, Escape) by telling the host it closed.
+ * engagement statement. Rendered as a shadcn `Dialog` controlled through the
+ * `open`/`onOpenChange` props; the legacy `register_modal_<tourId>` id is kept
+ * on `DialogContent` for the E2E suite.
  *
  * Submitting posts the registration and degrades on every outcome: created →
  * confirmation + statuses reload, taken (covered meanwhile) → last-resort
@@ -99,14 +176,6 @@ const EMPTY_BINOME: BinomeFormValues = {
   lastName2: '',
 };
 
-/** The identity inputs of the modal: their id and their field key. */
-const IDENTITY_INPUTS = [
-  { id: 'register-first-name-1', key: 'firstName1' },
-  { id: 'register-last-name-1', key: 'lastName1' },
-  { id: 'register-first-name-2', key: 'firstName2' },
-  { id: 'register-last-name-2', key: 'lastName2' },
-] as const satisfies readonly { readonly id: string; readonly key: IdentityField }[];
-
 /**
  * The message of the not-open-yet registration window (also the `not-open`
  * 400 answer of the API): the opening date of the ÉDITION IN PLAY announced
@@ -124,24 +193,7 @@ function notOpenYetMessage(edition: Edition): string {
 /** The message of the closed registration window (also the 400 answer). */
 const CLOSED_WINDOW_MESSAGE = `Les inscriptions sont closes : la fenêtre se ferme ${REGISTRATION_CLOSURE_DAYS} jours avant la date de l'action.`;
 
-/**
- * The data retention notice of the modal (GDPR): the names only build the
- * « Fiches de suivi » of the action, and the data is erased 90 days after it.
- * Built as a single string: the JSX compiler would glue the number to the
- * following text when the text carries an HTML entity (spacing pitfall).
- */
 const GDPR_NOTICE = `Vos informations servent à établir les fiches de suivi de l'action. Les données sont effacées ${INSCRIPTIONS_RETENTION_DAYS} jours après l'action.`;
-
-/**
- * One alert the modal renders: its class and its (single) French sentence.
- * There is exactly ONE mapping per DOM spot — `windowBoundAlert` above the
- * form, `outcomeAlerts` inside it — and no date quoted here leaves the
- * `formatActionDateLabel` derivation of `edition.ts`.
- */
-interface ModalAlert {
-  readonly className: string;
-  readonly message: string;
-}
 
 /** The inline French feedback of each identity field error. */
 const FIELD_ERROR_MESSAGES: Readonly<Record<IdentityFieldError, string>> = {
@@ -159,35 +211,22 @@ const FIELD_ERROR_MESSAGES: Readonly<Record<IdentityFieldError, string>> = {
  * `notOpenYetMessage`), the other sentences never change. The created,
  * submitting and idle outcomes have no refusal alert of their own.
  */
-function outcomeAlerts(edition: Edition): Readonly<Partial<Record<ModalOutcome, ModalAlert>>> {
+function outcomeAlerts(edition: Edition): Readonly<Partial<Record<ModalOutcome, string>>> {
   return {
-    taken: {
-      className: 'alert alert-warning mt-4 text-sm',
-      message:
-        "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
-    },
-    invalid: {
-      className: 'alert alert-error mt-4 text-sm',
-      message:
-        "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
-    },
-    'not-open': {
-      className: 'alert alert-warning mt-4 text-sm',
-      message: notOpenYetMessage(edition),
-    },
-    closed: {
-      className: 'alert alert-warning mt-4 text-sm',
-      message: CLOSED_WINDOW_MESSAGE,
-    },
-    error: {
-      className: 'alert alert-error mt-4 text-sm',
-      message: 'Une erreur est survenue : réessayez dans quelques instants.',
-    },
+    taken:
+      "Ce parcours vient d'être couvert par un autre binôme : vous pouvez choisir un autre parcours libre.",
+    invalid: "Saisie invalide : vérifiez les noms saisis et la case d'engagement, puis réessayez.",
+    'not-open': notOpenYetMessage(edition),
+    closed: CLOSED_WINDOW_MESSAGE,
+    error: 'Une erreur est survenue : réessayez dans quelques instants.',
   };
 }
 
-/** The warning alert of the pre-submit window bound, above the form. */
-const WINDOW_BOUND_ALERT_CLASS = 'alert alert-warning mt-4 text-sm sm:text-base';
+/**
+ * The typography of the window-bound / outcome alerts, kept in sync with the
+ * surrounding copy (`text-sm` on mobile, `text-base` from `sm:` on).
+ */
+const ALERT_LEVEL_CLASS = 'text-sm sm:text-base';
 
 /**
  * The window-bound warning shown above the form while the window forbids
@@ -202,18 +241,14 @@ function windowBoundAlert(
   edition: Edition,
   outcome: ModalOutcome,
   windowPhase: RegistrationWindowPhase,
-): ModalAlert | null {
+): string | null {
   switch (windowPhase) {
     case 'not-open-yet':
-      return outcome === 'not-open'
-        ? null
-        : { className: WINDOW_BOUND_ALERT_CLASS, message: notOpenYetMessage(edition) };
+      return outcome === 'not-open' ? null : notOpenYetMessage(edition);
     case 'open':
       return null;
     case 'closed':
-      return outcome === 'closed'
-        ? null
-        : { className: WINDOW_BOUND_ALERT_CLASS, message: CLOSED_WINDOW_MESSAGE };
+      return outcome === 'closed' ? null : CLOSED_WINDOW_MESSAGE;
   }
 }
 
@@ -227,7 +262,7 @@ interface RegisterBinomeModalProps {
    */
   readonly now?: Date;
   readonly tour: TourRef;
-  /** When true, the dialog is displayed (native `showModal`). */
+  /** When true, the dialog is displayed. */
   readonly visible: boolean;
 }
 
@@ -237,7 +272,6 @@ export function RegisterBinomeModal({
   tour,
   visible,
 }: RegisterBinomeModalProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const [values, setValues] = useState<BinomeFormValues>(EMPTY_BINOME);
   const [touched, setTouched] = useState<Readonly<Partial<Record<IdentityField, boolean>>>>({});
   const [engaged, setEngaged] = useState(false);
@@ -245,20 +279,6 @@ export function RegisterBinomeModal({
   const [outcome, setOutcome] = useState<ModalOutcome>('idle');
   const reloadStatuses = useInscriptionsReload();
   const status = useInscriptionsStatus();
-
-  useEffect(() => {
-    if (visible) dialogRef.current?.showModal();
-  }, [visible]);
-
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    const handleDialogClose = (): void => onClose();
-    dialog.addEventListener('close', handleDialogClose);
-    return () => {
-      dialog.removeEventListener('close', handleDialogClose);
-    };
-  }, [onClose]);
 
   const zone = getZone(tour.zoneId);
   /**
@@ -304,8 +324,6 @@ export function RegisterBinomeModal({
     zoneId: tour.zoneId,
   };
 
-  const close = (): void => dialogRef.current?.close();
-
   const submit = async (event: React.FormEvent<HTMLFormElement>): Promise<void> => {
     event.preventDefault();
     if (!complete || outcome === 'submitting' || windowNotOpen) return;
@@ -330,106 +348,114 @@ export function RegisterBinomeModal({
   const boundAlert = windowBoundAlert(edition, outcome, windowPhase);
 
   return (
-    <dialog className="modal" id={`register_modal_${tour.tourId}`} ref={dialogRef}>
-      <div className="modal-box max-h-[90dvh] w-11/12 max-w-md overflow-y-auto sm:max-w-xl">
-        <form method="dialog">
-          <button
-            aria-label="Fermer"
-            className="btn btn-sm btn-ghost btn-circle absolute top-2 right-2"
-          >
-            <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
-          </button>
-        </form>
-
-        <h3 className="text-xl font-bold">Inscription du binôme</h3>
-        <p className="text-base-content/80 mt-1 text-sm font-light sm:text-base">
-          Zone <span className="text-base-content font-medium">{zone.name}</span> - Parcours{' '}
-          <span className="text-base-content font-medium">{tour.tourId}</span>
+    <Dialog
+      open={visible}
+      onOpenChange={(isOpen) => {
+        if (!isOpen) onClose();
+      }}
+    >
+      <DialogContent
+        id={`register_modal_${tour.tourId}`}
+        className="max-h-[90dvh] w-11/12 max-w-md overflow-y-auto sm:max-w-xl"
+      >
+        {/* Accessible name of the dialog: Base UI wires the popup's
+            aria-labelledby to this DialogTitle automatically. The header is
+            shared by the form and the created confirmation, so the ONE title
+            covers both states. */}
+        <DialogTitle className="text-xl font-bold">Inscription du binôme</DialogTitle>
+        <p className="text-foreground/80 text-sm font-light sm:text-base">
+          Zone <span className="text-foreground font-medium">{zone.name}</span> - Parcours{' '}
+          <span className="text-foreground font-medium">{tour.tourId}</span>
         </p>
 
         {outcome === 'created' ? (
           <>
-            <div className="alert alert-success mt-4 text-sm sm:text-base" role="alert">
-              <span>
-                <strong>Votre binôme est inscrit</strong> pour ce parcours. Vous serez attendus le{' '}
-                {actionDateLabel} {actionHours} au point de rendez-vous ci-dessous.
-              </span>
-            </div>
-            {/*
-              The note-to-take sentence (ticket #36): the zone and the Parcours
-              name come from the data (the selected tour), never a literal —
-              the sentence is built as one string so the values cannot be
-              glued by the JSX compiler (spacing pitfall).
-            */}
-            <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
-              <HugeiconsIcon
-                icon={StickyNote01Icon}
-                strokeWidth={1.5}
-                className="text-secondary mt-0.5 size-5 shrink-0"
-              />
-              <span>{noteSentence}</span>
-            </div>
-            <div className="mt-4 flex items-start gap-2 text-sm sm:text-base">
-              <HugeiconsIcon
-                icon={Location01Icon}
-                strokeWidth={1.5}
-                className="text-secondary mt-0.5 size-5 shrink-0"
-              />
-              <span>
-                Point de rendez-vous&nbsp;: <strong>{zone.meetingPoint.name}</strong>
-              </span>
-            </div>
-            {/*
-              The two agenda links (ticket #36): Google Agenda first — the
-              one-click path on a phone — then the .ics file; the user-facing
-              labels differ but the wording served in the artefact is the pure
-              module's — the Google link is built by `tourGoogleCalendarUrl`
-              (opens in a new tab) and the file link points to the route of
-              the exact (zone, parcours) couple, with no `.ics` suffix in the
-              URL (the filename arrives through the response header).
-            */}
-            <div className="mt-4 text-sm sm:text-base">
+            <Item variant="muted">
+              <ItemMedia variant="icon" className="text-secondary">
+                <HugeiconsIcon
+                  icon={StickyNote01Icon}
+                  strokeWidth={1.5}
+                  className="size-5 shrink-0"
+                />
+              </ItemMedia>
+              <ItemContent>
+                <ItemTitle>Votre binôme est inscrit pour ce parcours.</ItemTitle>
+                <ItemDescription className="line-clamp-none">
+                  Vous serez attendus le {actionDateLabel} {actionHours} au point de rendez-vous
+                  ci-dessous.
+                </ItemDescription>
+              </ItemContent>
+            </Item>
+            {/* The think-about-it notes of the confirmation day, below the
+                Item above — one column gap-2 for the three detail rows, the
+                agenda block spacing on the parent Dialog grid gap. */}
+            <div className="flex flex-col gap-2 text-sm sm:text-base">
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
-                  icon={CalendarAdd01Icon}
+                  icon={StickyNote01Icon}
                   strokeWidth={1.5}
                   className="text-secondary mt-0.5 size-5 shrink-0"
                 />
-                <span>L&apos;ajouter à mon agenda&nbsp;:</span>
+                <span>{noteSentence}</span>
               </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <a
-                  className="btn btn-primary max-sm:btn-sm sm:btn-md"
-                  href={tourGoogleCalendarUrl({
-                    address: zone.meetingPoint.address,
-                    edition,
-                    pointDeRendezVous: zone.meetingPoint.name,
-                    tourId: tour.tourId,
-                    zoneId: tour.zoneId,
-                    zoneName: zone.name,
-                  })}
-                  rel="noopener noreferrer"
-                  target="_blank"
-                >
-                  Google Agenda
-                </a>
-                <a
-                  className="btn btn-outline max-sm:btn-sm sm:btn-md"
-                  href={`/api/calendrier/${tour.zoneId}/${tour.tourId}`}
-                >
-                  Fichier calendrier (.ics)
-                </a>
+              <div className="flex items-start gap-2">
+                <HugeiconsIcon
+                  icon={Location01Icon}
+                  strokeWidth={1.5}
+                  className="text-secondary mt-0.5 size-5 shrink-0"
+                />
+                <span>
+                  Point de rendez-vous&nbsp;: <strong>{zone.meetingPoint.name}</strong>
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-start gap-2">
+                  <HugeiconsIcon
+                    icon={CalendarAdd01Icon}
+                    strokeWidth={1.5}
+                    className="text-secondary mt-0.5 size-5 shrink-0"
+                  />
+                  <span>L&apos;ajouter à mon agenda&nbsp;:</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="default"
+                    onClick={() =>
+                      window.open(
+                        tourGoogleCalendarUrl({
+                          address: zone.meetingPoint.address,
+                          edition,
+                          pointDeRendezVous: zone.meetingPoint.name,
+                          tourId: tour.tourId,
+                          zoneId: tour.zoneId,
+                          zoneName: zone.name,
+                        }),
+                        '_blank',
+                      )
+                    }
+                  >
+                    Google Agenda
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      (window.location.href = `/api/calendrier/${tour.zoneId}/${tour.tourId}`)
+                    }
+                  >
+                    Fichier calendrier (.ics)
+                  </Button>
+                </div>
               </div>
             </div>
-            <div className="modal-action">
-              <button className="btn btn-primary" onClick={close}>
+            <div className="flex justify-end">
+              <Button variant="default" onClick={onClose}>
                 Fermer
-              </button>
+              </Button>
             </div>
           </>
         ) : (
           <>
-            <div className="mt-3 space-y-1.5 text-sm sm:text-base">
+            <div className="flex flex-col gap-1 text-sm sm:text-base">
               <div className="flex items-start gap-2">
                 <HugeiconsIcon
                   icon={CalendarDaysIcon}
@@ -454,111 +480,93 @@ export function RegisterBinomeModal({
                 for both bounds; it stands down when the outcome of the same
                 bound already quotes the sentence inside the form. */}
             {boundAlert ? (
-              <div className={boundAlert.className} role="alert">
-                {boundAlert.message}
-              </div>
+              <Alert className={ALERT_LEVEL_CLASS} variant="default">
+                <AlertDescription>{boundAlert}</AlertDescription>
+              </Alert>
             ) : null}
 
-            <form className="mt-4 grid gap-3" onSubmit={(event) => void submit(event)}>
-              <div className="mt-4 grid gap-3 sm:grid-cols-[repeat(2,minmax(0,1fr))]">
-                {IDENTITY_INPUTS.map((field) => {
-                  const error = errors[field.key];
-                  // A missing name is only pointed out once the field has been
-                  // left; a length overrun is shown as soon as it happens.
-                  const showError =
-                    error !== undefined && (error !== 'required' || touched[field.key] === true);
-                  return (
-                    <label className="grid min-w-0 gap-1" htmlFor={field.id} key={field.id}>
-                      <span className="text-sm">{IDENTITY_FIELD_LABELS[field.key]}</span>
-                      <input
-                        aria-describedby={showError ? `${field.id}-error` : undefined}
-                        aria-invalid={showError ? true : undefined}
-                        className="input w-full min-w-0"
-                        disabled={windowNotOpen}
-                        id={field.id}
-                        onBlur={() => setTouched((current) => ({ ...current, [field.key]: true }))}
-                        onChange={(event) =>
-                          setValues((current) => ({ ...current, [field.key]: event.target.value }))
-                        }
-                        required
-                        type="text"
-                        value={values[field.key]}
-                      />
-                      {/*
-                        The error line is always rendered (empty when the
-                        field is valid) so every field keeps the same height:
-                        an error under one field must not push the next row's
-                        inputs down and break the alignment of the columns.
-                      */}
-                      <span className="text-error min-h-4 text-xs" id={`${field.id}-error`}>
-                        {showError ? FIELD_ERROR_MESSAGES[error] : ''}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-
-              {/*
-                `whitespace-normal` is mandatory: the DaisyUI `.label` class
-                sets `white-space: nowrap`, and the engagement statement would
-                then overflow the modal box on a narrow screen. `items-center`
-                keeps the checkbox and its label on the same line.
-              */}
-              <label className="label mt-4 w-full min-w-0 items-center gap-2 whitespace-normal">
-                <input
-                  checked={engaged}
-                  className="checkbox"
-                  disabled={windowNotOpen}
-                  id="register-engaged"
-                  onChange={(event) => setEngaged(event.target.checked)}
-                  required
-                  type="checkbox"
+            <form onSubmit={(event) => void submit(event)}>
+              <FieldGroup>
+                <MemberFieldSet
+                  keyPrefix="1"
+                  errors={errors}
+                  touched={touched}
+                  onBlur={(key) =>
+                    setTouched((current) => ({ ...current, [key]: true }))
+                  }
+                  onChange={(key, value) =>
+                    setValues((current) => ({ ...current, [key]: value }))
+                  }
+                  values={values}
+                  windowNotOpen={windowNotOpen}
                 />
-                <span className="text-sm">
-                  Nous confirmons notre participation à ce parcours de nettoyage.
-                </span>
-              </label>
 
-              {/*
-                Anti-bot honeypot (ticket #18): the field is in the DOM — a bot
-                filling every input of the form fills it — but a human never
-                sees it (hidden) and never reaches it (out of the tab order and
-                of the accessibility tree). A filled honeypot is refused by the
-                server with a 400 and nothing is stored.
-              */}
-              <input
-                aria-hidden="true"
-                autoComplete="off"
-                hidden
-                id="register-website"
-                name="website"
-                onChange={(event) => setHoneypot(event.target.value)}
-                tabIndex={-1}
-                type="text"
-                value={honeypot}
-              />
+                <MemberFieldSet
+                  keyPrefix="2"
+                  errors={errors}
+                  touched={touched}
+                  onBlur={(key) =>
+                    setTouched((current) => ({ ...current, [key]: true }))
+                  }
+                  onChange={(key, value) =>
+                    setValues((current) => ({ ...current, [key]: value }))
+                  }
+                  values={values}
+                  windowNotOpen={windowNotOpen}
+                />
 
-              <p className="text-base-content/70 mt-4 text-xs sm:text-sm">{GDPR_NOTICE}</p>
+                <Field orientation="horizontal">
+                  <FieldLabel htmlFor="register-engaged" className="text-sm whitespace-normal">
+                    <Checkbox
+                      checked={engaged}
+                      disabled={windowNotOpen}
+                      id="register-engaged"
+                      onCheckedChange={(checked) => setEngaged(checked)}
+                      required
+                    />
+                    Nous confirmons notre participation à ce parcours de nettoyage.
+                  </FieldLabel>
+                </Field>
 
-              {outcomeAlert ? (
-                <div className={outcomeAlert.className} role="alert">
-                  {outcomeAlert.message}
+                {/* Anti-bot honeypot (ticket #18): the field is in the DOM — a bot
+                    filling every input of the form fills it — but a human never
+                    sees it (hidden) and never reaches it (out of the tab order and
+                    of the accessibility tree). A filled honeypot is refused by the
+                    server with a 400 and nothing is stored. */}
+                <input
+                  aria-hidden="true"
+                  autoComplete="off"
+                  hidden
+                  id="register-website"
+                  name="website"
+                  onChange={(event) => setHoneypot(event.target.value)}
+                  tabIndex={-1}
+                  type="text"
+                  value={honeypot}
+                />
+
+                <p className="text-muted-foreground/70 text-xs sm:text-sm">{GDPR_NOTICE}</p>
+
+                {outcomeAlert ? (
+                  <Alert className={ALERT_LEVEL_CLASS} variant="destructive">
+                    <AlertDescription>{outcomeAlert}</AlertDescription>
+                  </Alert>
+                ) : null}
+
+                <div className="flex justify-end">
+                  <Button
+                    variant="default"
+                    disabled={!complete || outcome === 'submitting' || windowNotOpen}
+                    type="submit"
+                  >
+                    {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
+                  </Button>
                 </div>
-              ) : null}
-
-              <div className="modal-action">
-                <button
-                  className="btn btn-primary max-sm:btn-sm sm:btn-md"
-                  disabled={!complete || outcome === 'submitting' || windowNotOpen}
-                  type="submit"
-                >
-                  {outcome === 'submitting' ? 'Inscription en cours…' : 'Inscrire mon binôme'}
-                </button>
-              </div>
+              </FieldGroup>
             </form>
           </>
         )}
-      </div>
-    </dialog>
+      </DialogContent>
+    </Dialog>
   );
 }

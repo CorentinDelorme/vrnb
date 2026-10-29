@@ -11,6 +11,10 @@ import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { isRegistrationWindowOpen, useInscriptionsStatus } from './inscriptions-status-provider';
 import { TourPlayButton } from './tour-play-button';
 import { TourRegisterButton } from './tour-register-button';
+import { Badge } from './ui/badge';
+import { buttonVariants } from './ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Item } from './ui/item';
 
 /**
  * Tour list section — port of the legacy Angular `tour-list-section` component
@@ -52,10 +56,14 @@ declare module 'react' {
   }
 }
 
-/** Both distances of a Parcours row, French format:
- *  "1,1 km nettoyage · 4,2 km total" ("800 m" sous 1 km for each distance). */
-function formatTourDistances(tour: Tour): string {
-  return `${formatDistance(tour.distance)} nettoyage · ${formatDistance(tour.totalDistance)} total`;
+/** Both distances of a Parcours row, French format ("800 m" sous 1 km).
+ *  No separator dot anywhere: on desktop the two spans sit inline with a gap,
+ *  on mobile they stack on two lines. */
+function formatTourDistances(tour: Tour): { cleaning: string; total: string } {
+  return {
+    cleaning: `${formatDistance(tour.distance)} nettoyage`,
+    total: `${formatDistance(tour.totalDistance)} total`,
+  };
 }
 
 /** Whether the loaded inscriptions cover the given (zone, Parcours) pair. */
@@ -102,55 +110,111 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
 
   return (
     <app-tour-list-section>
-      <ul className="list bg-base-200 rounded-box border-2 border-secondary/20 shadow-lg">
-        <li className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-base-300 p-4">
-          <div className="flex items-center gap-3">
-            <span className="bg-primary text-primary-content flex items-center justify-center rounded-full p-2 sm:p-2.5">
+      <Card className="py-0 gap-0">
+        <CardHeader className="bg-muted py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <span className="bg-primary text-primary-foreground flex items-center justify-center rounded-full p-2 sm:p-2.5">
               <HugeiconsIcon className="sm:h-10 sm:w-10" icon={typeIcon} strokeWidth={1.5} />
             </span>
 
             <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-secondary text-xl font-bold tracking-wide sm:text-2xl">
+              <CardTitle className="text-secondary text-xl font-bold tracking-wide sm:text-2xl">
                 {title}
-              </h2>
-              <span className="badge badge-secondary badge-sm sm:badge-md">
-                {tours.length} parcours
-              </span>
+              </CardTitle>
+              <Badge variant="secondary">{tours.length} parcours</Badge>
             </div>
           </div>
 
+          {/* Legacy contract (tests.md): the map link is a link, styled with
+              the primary button look. On mobile it stacks on a second line,
+              full width; on desktop it sits on the right of the header. */}
           <Link
-            className="btn btn-primary btn-sm max-sm:w-full sm:btn-md shrink-0"
             href={`/tours/${zoneId}/${type}`}
+            className={`${buttonVariants({ variant: 'default' })} shrink-0 whitespace-normal w-full sm:w-auto sm:shrink-0`}
           >
             Voir tous les parcours
           </Link>
-        </li>
+        </CardHeader>
+        {/* List rows are full-bleed: the CardContent horizontal padding is
+            dropped so the rows touch the card edges under the muted header. */}
+        <CardContent className="p-0">
+          <ul className="divide-y divide-border">
+            {tours.map((tour) => (
+              <Item
+                render={(props) => <li {...props} />}
+                variant="outline"
+                size="sm"
+                className="list-row rounded-none"
+                data-testid="tour-row"
+                key={tour.name}
+              >
+                {/* Row layout.
+                    Mobile:  [name] [distances stacked on 2 lines + register/badge below] [play →]
+                    Desktop: 3 ALIGNED columns shared by every row
+                             [name 5rem] [cleaning 11rem] [total 1fr] [actions →]
+                             Fixed name & cleaning tracks keep each column left
+                             edge identical across rows regardless of badge /
+                             register presence (auto actions track). */}
+                <div className="flex-1 flex items-center gap-3 min-w-0 sm:grid sm:grid-cols-[5rem_11rem_minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+                  {/* Name — never truncated (fixed width track on desktop) */}
+                  <div className="shrink-0 text-foreground text-2xl font-medium sm:text-3xl whitespace-nowrap">
+                    {tour.name}
+                  </div>
 
-        {tours.map((tour) => (
-          <li
-            className="list-row items-center bg-base-100 border-base-200 rounded-lg border"
-            key={tour.name}
-          >
-            <div className="text-base-content text-xl font-medium sm:text-3xl">{tour.name}</div>
-            <div className="text-base-content/70 text-base font-light sm:text-xl">
-              {formatTourDistances(tour)}
-            </div>
-            <div className="list-col-grow flex items-center justify-end gap-2">
-              {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
-                <span className="badge badge-success badge-sm sm:badge-md">Binôme inscrit</span>
-              ) : null}
-              <TourRegisterButton
-                available={
-                  statusKnown && windowOpen && !isCoveredInscriptions(status, zoneId, tour.name)
-                }
-                tour={{ tourId: tour.name, zoneId }}
-              />
-              <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
-            </div>
-          </li>
-        ))}
-      </ul>
+                  {/* Distances wrapper: flex-1 block on mobile (spans stacked),
+                      display:contents on desktop so both spans become the
+                      column 2 and column 3 grid items. */}
+                  <div className="flex-1 min-w-0 flex flex-col gap-1 sm:contents">
+                    <span className="text-muted-foreground/70 text-base font-light sm:text-xl">
+                      {formatTourDistances(tour).cleaning}
+                    </span>
+                    <span className="text-muted-foreground/70 text-base font-light sm:text-xl">
+                      {formatTourDistances(tour).total}
+                    </span>
+                    {/* Mobile only: register/badge as 3rd line, under the distances */}
+                    <div className="flex sm:hidden items-center gap-2">
+                      {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
+                        <Badge variant="secondary">Binôme inscrit</Badge>
+                      ) : null}
+                      <TourRegisterButton
+                        available={
+                          statusKnown &&
+                          windowOpen &&
+                          !isCoveredInscriptions(status, zoneId, tour.name)
+                        }
+                        tour={{ tourId: tour.name, zoneId }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mobile only: play button in the flex row */}
+                  <div className="sm:hidden shrink-0">
+                    <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
+                  </div>
+
+                  {/* Desktop only: register/badge left of the play button,
+                      together in the last (auto) grid column */}
+                  <div className="hidden sm:flex items-center justify-end gap-2">
+                    {statusKnown && isCoveredInscriptions(status, zoneId, tour.name) ? (
+                      <Badge variant="secondary">Binôme inscrit</Badge>
+                    ) : null}
+                    <TourRegisterButton
+                      available={
+                        statusKnown &&
+                        windowOpen &&
+                        !isCoveredInscriptions(status, zoneId, tour.name)
+                      }
+                      tour={{ tourId: tour.name, zoneId }}
+                    />
+                    {/* Play button — always far right */}
+                    <TourPlayButton tour={{ tourId: tour.name, zoneId }} />
+                  </div>
+                </div>
+              </Item>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </app-tour-list-section>
   );
 }

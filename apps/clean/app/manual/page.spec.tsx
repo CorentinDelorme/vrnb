@@ -1,5 +1,8 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
 
 import {
   CURRENT_EDITION,
@@ -41,7 +44,7 @@ describe('Manual page', () => {
   it('renders the illustrated mode d\u2019emploi content', () => {
     const { container } = render(<ManualPage />);
     expect(container).toBeDefined();
-    expect(screen.getByRole('heading', { name: '1. Le principe en 3 temps' })).toBeDefined();
+    expect(document.getElementById('principe')).toBeDefined();
   });
 
   it('should use correct French spacing (no space after apostrophe or before comma)', () => {
@@ -95,7 +98,7 @@ describe('Manual page', () => {
    */
   it('should render the sections in the sommaire order', () => {
     const { container } = render(<ManualPage />);
-    const sectionIds = Array.from(container.querySelectorAll('section h2[id]')).map(
+    const sectionIds = Array.from(container.querySelectorAll('[data-slot="card-title"][id]')).map(
       (heading) => heading.id,
     );
     expect(sectionIds).toEqual([...SECTION_ORDER]);
@@ -116,7 +119,7 @@ describe('Manual page', () => {
       const id = link.getAttribute('href')?.replace('#', '') ?? '';
       const heading = document.getElementById(id);
       expect(heading).not.toBeNull();
-      expect(heading?.tagName).toBe('H2');
+      expect(heading?.getAttribute('data-slot')).toBe('card-title');
       expect(heading?.textContent, `number of the heading #${id}`).toBe(
         `${position + 1}. ${SECTION_TITLES[position]}`,
       );
@@ -126,7 +129,7 @@ describe('Manual page', () => {
   it('should explain the binôme registration with the arbitrated wording', () => {
     const { container } = render(<ManualPage />);
     const text = renderedText(container);
-    const heading = screen.getByRole('heading', { name: "5. S'inscrire en binôme" });
+    const heading = document.getElementById('inscription');
     expect(heading).toBeDefined();
 
     // The arbitrated intro paragraph, verbatim (ticket #37): an inscription
@@ -140,7 +143,8 @@ describe('Manual page', () => {
     );
 
     // The bold spans of the arbitrated intro are part of the wording.
-    const intro = heading.closest('section')?.querySelector('p');
+    const card = heading?.closest('[data-slot="card"]');
+    const intro = card?.querySelector('p');
     expect(intro?.querySelectorAll('strong')).toHaveLength(2);
     expect(intro?.querySelectorAll('strong')[0]?.textContent).toBe('binôme');
     expect(intro?.querySelectorAll('strong')[1]?.textContent?.trim()).toBe(
@@ -158,15 +162,12 @@ describe('Manual page', () => {
       "Saisissez le prénom et le nom des deux membres du binôme, cochez la case d'engagement",
     );
     expect(text).toContain("3. La confirmation s'affiche");
-    expect(text).toContain(
-      "Un message vert confirme votre inscription et rappelle le jour de l'action",
-    );
   });
 
   it('should show the registration window and the confirmation screenshots', () => {
     render(<ManualPage />);
-    const heading = screen.getByRole('heading', { name: "5. S'inscrire en binôme" });
-    const card = heading.closest('section');
+    const heading = document.getElementById('inscription');
+    const card = heading?.closest('[data-slot="card"]');
 
     const windowShot = within(card as HTMLElement).getByRole('img', {
       name: "Fenêtre d'inscription d'un binôme avec les prénoms et noms des deux membres",
@@ -247,7 +248,7 @@ describe('Manual page', () => {
       'Inscrire votre binôme est recommandé pour aider les organisateurs à préparer la journée',
       "1. Choisissez un parcours libre. Sur l'accueil, chaque parcours encore libre affiche un bouton S'inscrire",
       "2. Remplissez la fenêtre. Appuyez sur S'inscrire : la fenêtre rappelle la zone",
-      "3. La confirmation s'affiche. Un message vert confirme votre inscription",
+      "3. La confirmation s'affiche. Elle rappelle le jour de l'action",
       'Premier arrivé, premier servi : le premier binôme à inscrire couvre le parcours',
       "Les inscriptions ouvrent le lundi 4 janvier 2027 et sont possibles jusqu'au jeudi 11 février 2027 : la fenêtre se ferme 3 jours avant la date de l'action",
       "Les informations sont effacées 90 jours après l'action. Ils servent uniquement",

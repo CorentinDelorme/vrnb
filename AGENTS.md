@@ -10,7 +10,7 @@
 ## Architecture
 - Turborepo monorepo (`workspaces: apps/*, packages/*`) with Bun `bun@1.3.10`.
 - **`apps/web`**: Next.js 16 + Payload 3.80 + MongoDB adapter — association website CMS & frontend.
-- **`apps/clean`**: Next.js 16 (App Router) + Leaflet + DaisyUI 5 — waste clean-up actions app with GPX tracks and precomputed GeoJSON maps.
+- **`apps/clean`**: Next.js 16 (App Router) + Leaflet + shadcn/ui — waste clean-up actions app with GPX tracks and precomputed GeoJSON maps.
 - **`packages/web-db`**: MongoDB 8.2.6 Docker Compose service (persisted under `.data/`).
 - **`packages/ui`**: Shared React component library — DaisyUI 5, Storybook 10, Vitest.
 - **`packages/eslint-config`**: Shared ESLint configs (base + Next.js).
@@ -68,3 +68,13 @@
 - `apps/clean/GLOSSARY.md` — Domain vocabulary for the clean-up app
 - `packages/web-db/docker-compose.yml` — MongoDB service
 - `turbo.json` — Pipeline + env wiring
+
+## Agent skills
+
+### Issue tracker
+
+Issues live as GitHub issues in this repo's GitHub Issues, using the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Domain docs
+
+multi-context: root `GLOSSARY-MAP.md` pointing at one `GLOSSARY.md` per context (currently only `apps/clean` has one), plus context-scoped `docs/adr/`. See `docs/agents/domain.md`.

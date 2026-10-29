@@ -14,11 +14,12 @@ test.describe('Tour page — V1 (bike)', () => {
 
     test('should display steps indicator with 3 steps', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
-      const steps = page.locator('li.step');
-      await expect(steps).toHaveCount(3);
-      await expect(steps.nth(0)).toContainText('Début');
-      await expect(steps.nth(1)).toContainText('Nettoyage');
-      await expect(steps.nth(2)).toContainText('Fin');
+      // The stepper renders one outer container (step-N, carrying the label)
+      // and one circle (step-N-circle) per step: two testids per step.
+      await expect(page.locator('[data-testid$="-circle"]')).toHaveCount(3);
+      await expect(page.locator('[data-testid="step-0"]')).toContainText('Début');
+      await expect(page.locator('[data-testid="step-1"]')).toContainText('Nettoyage');
+      await expect(page.locator('[data-testid="step-2"]')).toContainText('Fin');
     });
 
     test('should render map', async ({ page }) => {
@@ -30,9 +31,8 @@ test.describe('Tour page — V1 (bike)', () => {
   test.describe('Step navigation', () => {
     test('should start at step Début (step 0)', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
-      const firstStep = page.locator('li.step').nth(0);
-      await expect(firstStep).toHaveClass(/step-secondary/);
-      await expect(firstStep).toContainText('Début');
+      await expect(page.locator('[data-testid="step-0"]')).toContainText('Début');
+      await expect(page.locator('[data-testid="step-0-circle"]')).toHaveClass(/bg-secondary/);
     });
 
     test('should have Précédent button disabled at step 0', async ({ page }) => {
@@ -48,8 +48,7 @@ test.describe('Tour page — V1 (bike)', () => {
     test('should advance to Nettoyage on Suivant click', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByRole('button', { name: 'Suivant' }).click();
-      const secondStep = page.locator('li.step').nth(1);
-      await expect(secondStep).toHaveClass(/step-secondary/);
+      await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
       await expect(page.getByRole('button', { name: 'Précédent' })).toBeEnabled();
     });
 
@@ -57,8 +56,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
-      const thirdStep = page.locator('li.step').nth(2);
-      await expect(thirdStep).toHaveClass(/step-secondary/);
+      await expect(page.locator('[data-testid="step-2-circle"]')).toHaveClass(/bg-secondary/);
     });
 
     test('should show Terminer button at step 2', async ({ page }) => {
@@ -74,8 +72,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Précédent' }).click();
-      const secondStep = page.locator('li.step').nth(1);
-      await expect(secondStep).toHaveClass(/step-secondary/);
+      await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
       await expect(page.getByRole('button', { name: 'Suivant' })).toBeVisible();
     });
 
@@ -93,7 +90,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
     });
 
@@ -102,8 +99,10 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
-      await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
+      const modal = page.locator('#finish_modal');
+      await expect(modal.locator('[data-slot="dialog-title"]')).toContainText(
+        'Merci pour votre participation !',
+      );
       await expect(modal).toContainText(
         'Allez voir les organisateurs pour faire peser les déchets ramassés.',
       );
@@ -114,9 +113,9 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
-      await modal.locator('button[aria-label="Fermer"]').click();
+      await modal.locator('[data-slot="dialog-close"]').click();
       await expect(modal).not.toBeVisible();
     });
   });
@@ -130,15 +129,19 @@ test.describe('Tour page — V1 (bike)', () => {
     test('should open drawer with tour title', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
-      const drawer = page.locator('.drawer-side ul.menu');
+      const drawer = page.locator('[data-slot="drawer-content"]');
       await expect(drawer).toBeVisible();
-      await expect(drawer.locator('h1')).toContainText('Bruz Sud - Parcours V1');
+      // The title splits on " - " into two DrawerTitle lines.
+      await expect(drawer.locator('[data-slot="drawer-title"]')).toHaveText([
+        'Bruz Sud',
+        'Parcours V1',
+      ]);
     });
 
     test('should show PDF download link', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
-      const pdfLink = page.locator('.drawer-side').getByRole('link', {
+      const pdfLink = page.locator('[data-slot="drawer-content"]').getByRole('link', {
         name: 'Télécharger le PDF',
       });
       await expect(pdfLink).toBeVisible();
@@ -148,7 +151,7 @@ test.describe('Tour page — V1 (bike)', () => {
     test('should show 3 GPX download links', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
-      const drawerSide = page.locator('.drawer-side');
+      const drawerSide = page.locator('[data-slot="drawer-content"]');
 
       const startGpx = drawerSide.getByRole('link', {
         name: 'Télécharger le GPX vers le point de départ',
@@ -172,7 +175,7 @@ test.describe('Tour page — V1 (bike)', () => {
     test('should show GeoVelo section', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
-      const drawerSide = page.locator('.drawer-side');
+      const drawerSide = page.locator('[data-slot="drawer-content"]');
       await expect(drawerSide.locator('img[alt="GeoVelo"]')).toBeVisible();
       await expect(drawerSide.locator('a', { hasText: 'depuis ma position' })).toBeVisible();
     });
@@ -180,9 +183,9 @@ test.describe('Tour page — V1 (bike)', () => {
     test('should close drawer on close button', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
-      const drawer = page.locator('.drawer-side ul.menu');
+      const drawer = page.locator('[data-slot="drawer-content"]');
       await expect(drawer).toBeVisible();
-      await page.locator('.drawer-side label.btn-circle[aria-label="close sidebar"]').click();
+      await page.locator('[data-slot="drawer-close"]').click();
       await expect(drawer).not.toBeVisible();
     });
   });
@@ -198,25 +201,25 @@ test.describe('Tour page — P3 (walking)', () => {
     await page.goto('/tour/bruz-sud/P3');
     // Step 0 → Step 1
     await page.getByRole('button', { name: 'Suivant' }).click();
-    const secondStep = page.locator('li.step').nth(1);
-    await expect(secondStep).toHaveClass(/step-secondary/);
+    await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
 
     // Step 1 → Step 2
     await page.getByRole('button', { name: 'Suivant' }).click();
-    const thirdStep = page.locator('li.step').nth(2);
-    await expect(thirdStep).toHaveClass(/step-secondary/);
+    await expect(page.locator('[data-testid="step-2-circle"]')).toHaveClass(/bg-secondary/);
 
     // Click Terminer
     await page.getByRole('button', { name: 'Terminer' }).click();
-    const modal = page.locator('dialog#finish_modal');
+    const modal = page.locator('#finish_modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('h3')).toContainText('Merci pour votre participation !');
+    await expect(modal.locator('[data-slot="dialog-title"]')).toContainText(
+      'Merci pour votre participation !',
+    );
   });
 
   test('should show correct PDF link in drawer', async ({ page }) => {
     await page.goto('/tour/bruz-sud/P3');
     await page.getByText('Menu', { exact: true }).click();
-    const pdfLink = page.locator('.drawer-side').getByRole('link', {
+    const pdfLink = page.locator('[data-slot="drawer-content"]').getByRole('link', {
       name: 'Télécharger le PDF',
     });
     await expect(pdfLink).toHaveAttribute('href', '/pdf/bruz-sud/P3.pdf');
@@ -225,7 +228,7 @@ test.describe('Tour page — P3 (walking)', () => {
   test('should show correct GPX links', async ({ page }) => {
     await page.goto('/tour/bruz-sud/P3');
     await page.getByText('Menu', { exact: true }).click();
-    const drawerSide = page.locator('.drawer-side');
+    const drawerSide = page.locator('[data-slot="drawer-content"]');
 
     // P3 has startDistance 0 — so the start GPX link may or may not show
     // Check tour GPX which always exists

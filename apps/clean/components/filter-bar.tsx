@@ -1,7 +1,13 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
 import { DistanceRangeSlider } from './distance-range-slider';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Button } from './ui/button';
+import { Card, CardContent } from './ui/card';
+import { ToggleGroup, ToggleGroupItem } from './ui/toggle-group';
 
 /** One option of the Type de parcours segmented control. */
 interface TypeChoice {
@@ -11,10 +17,16 @@ interface TypeChoice {
 
 /** The three options of the Type de parcours segmented control, "Tous" first. */
 const TYPE_CHOICES: readonly TypeChoice[] = [
-  { value: 'all', label: 'Tous' },
-  { value: 'P', label: 'À pied' },
-  { value: 'V', label: 'À vélo' },
+  { value: 'all' as TourFilterType, label: 'Tous' },
+  { value: 'P' as TourFilterType, label: 'À pied' },
+  { value: 'V' as TourFilterType, label: 'À vélo' },
 ];
+
+/** Value of the single accordion item holding the filters panel. */
+const FILTERS_ITEM_VALUE = 'filtres';
+
+/** Desktop breakpoint (Tailwind `md`) above which the filters stay expanded. */
+const DESKTOP_MIN_WIDTH = 768;
 
 interface FilterBarProps {
   /** The currently selected filter type ("Tous" by default). */
@@ -38,23 +50,28 @@ interface FilterBarProps {
 }
 
 /**
- * Filter bar card (DaisyUI `card bg-base-100`) sitting in the flow just above
- * the zone accordions. It is `position: sticky` (`top: 0`) so it sticks to the
- * top of the viewport only once the scroll reaches it, and releases at the
- * bottom of its list wrapper — plain CSS, no IntersectionObserver, no JS.
+ * Filter bar wrapped in an accordion whose trigger is "Filtres".
  *
- * The segmented control is a DaisyUI `join` of radio-style buttons:
- * `[Tous | À pied | À vélo]`, "Tous" checked by default, one active option at
- * a time.
+ * The panel is folded (closed) by default on mobile so the bar does not eat
+ * screen height, and expanded by default on desktop (PC). `keepMounted` keeps
+ * the panel's DOM mounted while folded so the toggles and sliders stay
+ * present in the document (and their controlled state is preserved) — only
+ * their height collapses to zero.
  *
- * Ticket #52: the two distance slider families (Distance de nettoyage and
- * Distance totale) sit below the type control. Each is a reusable dual-handle
- * ARIA slider; an interval covering its whole axis means the family is off.
+ * The Type de parcours filter is a single-selection shadcn/ui `ToggleGroup`
+ * (`variant="outline"`, `spacing={0}` for the attached segmented look):
+ * `[Tous | À pied | À vélo]`, with "Tous" pressed by default and the
+ * `aria-pressed` state carried by the items. Pressing a pressed toggle
+ * unpresses it, which keeps the previous filter instead of allowing "no type"
+ * (the group always filters). The two distance slider families (Distance de
+ * nettoyage and Distance totale) sit below the type control. Each is a
+ * dual-handle range slider; an interval covering its whole axis means the
+ * family is off.
  *
- * Ticket #53: when at least one filter touches, a discreet counter ("X
- * parcours affichés", singular "1 parcours affiché") is shown; when zero
- * tours match, an empty-state message with a "Réinitialiser les filtres"
- * button is shown instead. No permanent reset button lives in the bar.
+ * When at least one filter touches, a discreet counter ("X parcours
+ * affichés", singular "1 parcours affiché") is shown; when zero tours match,
+ * an empty-state message with a "Réinitialiser les filtres" button is shown
+ * instead. No permanent reset button lives in the bar.
  */
 export function FilterBar({
   type,
@@ -67,86 +84,119 @@ export function FilterBar({
   filterTouched,
   onReset,
 }: FilterBarProps) {
+  /** Whether the filters panel is expanded.
+      Closed by default on both server and client (no hydration mismatch, no
+      flash on mobile). After hydration, an effect opens it on desktop (PC). */
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia === 'undefined') {
+      return undefined;
+    }
+    const media = window.matchMedia(`(min-width: ${DESKTOP_MIN_WIDTH}px)`);
+    const update = () => setOpen(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
   return (
-    <section
-      className="card bg-base-100 shadow-sm sticky top-0 z-10 mb-4"
-      aria-label="Filtres de parcours"
-    >
-      <div className="card-body">
-        <div className="flex flex-col sm:flex-row gap-12">
-          <div className="sm:flex-1">
-            <span className="text-xs font-medium text-base-content/70 uppercase tracking-wider w-full mb-2 block">
-              Type de parcours
-            </span>
-            <div className="join mt-2">
-              {TYPE_CHOICES.map((choice) => {
-                const active = type === choice.value;
-                return (
-                  <label
-                    key={choice.value}
-                    className={`join-item btn btn-sm ${active ? 'btn-active' : ''}`}
-                    title={choice.label}
+    <Card className="sticky top-0 z-10" aria-label="Filtres de parcours">
+      <CardContent>
+        {/* Visually hidden heading to maintain proper heading hierarchy (h1 -> h2 -> h3).
+            The accordion trigger renders as h3, so we need an h2 in between. */}
+        <h2 className="sr-only">Filtres de parcours</h2>
+        <Accordion
+          // Controlled for the lifetime of the component: `value` is never
+          // `undefined` (empty array = closed), so React never sees it switch
+          // between controlled and uncontrolled.
+          value={open ? [FILTERS_ITEM_VALUE] : []}
+          onValueChange={(next) => setOpen(next.includes(FILTERS_ITEM_VALUE))}
+          keepMounted={true}
+        >
+          <AccordionItem value={FILTERS_ITEM_VALUE}>
+            <AccordionTrigger className="text-sm sm:text-base :data-[slot=accordion-trigger-icon]:size-6 p-0">
+              Filtres
+            </AccordionTrigger>
+            <AccordionContent keepMounted={true} className="pb-0">
+              <div className="flex flex-col md:flex-row gap-4 md:gap-16">
+                <div className="md:flex-1">
+                  <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
+                    Type de parcours
+                  </span>
+                  {/* Single-selection toggle group: one pressed item at a time;
+                      unpressing the pressed one keeps the previous filter (the
+                      fallback below ignores the empty array). */}
+                  <ToggleGroup
+                    variant="outline"
+                    spacing={0}
+                    value={[type]}
+                    aria-label="Type de parcours"
+                    onValueChange={(next) => {
+                      if (next.length > 0) onTypeChange(next[0] as TourFilterType);
+                    }}
                   >
-                    <input
-                      type="radio"
-                      name="tour-type"
-                      value={choice.value}
-                      checked={active}
-                      onChange={() => onTypeChange(choice.value)}
-                      className="appearance-none w-5 h-5 bg-transparent border-0 cursor-pointer"
-                      aria-label={choice.label}
-                    />
-                    {choice.label}
-                  </label>
-                );
-              })}
-            </div>
-          </div>
+                    {TYPE_CHOICES.map((choice) => (
+                      <ToggleGroupItem
+                        key={choice.value}
+                        value={choice.value}
+                        // Pressed state in primary (override of the muted default,
+                        // tailwind-merge drops the variant's aria-pressed:bg-muted).
+                        className="aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:border-primary"
+                      >
+                        {choice.label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
 
-          <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance de nettoyage">
-            <DistanceRangeSlider
-              label="Distance de nettoyage"
-              min={0.5}
-              max={4}
-              step={0.5}
-              value={cleaning}
-              onChange={onCleaningChange}
-            />
-          </fieldset>
+                <fieldset className="border-0 md:flex-1" aria-label="Distance de nettoyage (km)">
+                  <DistanceRangeSlider
+                    label="Distance de nettoyage (km)"
+                    min={0.5}
+                    max={4}
+                    step={0.5}
+                    value={cleaning}
+                    onChange={onCleaningChange}
+                  />
+                </fieldset>
 
-          <fieldset className="border-0 p-0 sm:flex-1" aria-label="Distance totale">
-            <DistanceRangeSlider
-              label="Distance totale"
-              min={2}
-              max={11}
-              step={1}
-              value={total}
-              onChange={onTotalChange}
-            />
-          </fieldset>
-        </div>
+                <fieldset className="border-0 md:flex-1" aria-label="Distance totale (km)">
+                  <DistanceRangeSlider
+                    label="Distance totale (km)"
+                    min={2}
+                    max={11}
+                    step={1}
+                    value={total}
+                    onChange={onTotalChange}
+                  />
+                </fieldset>
+              </div>
 
-        {/* Ticket #53: counter or empty-state message, plus a reset button
-             whenever at least one filter touches (permanent reset button). */}
-        {filterTouched ? (
-          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            {displayedCount === 0 ? (
-              <p className="text-sm font-medium text-base-content/70">
-                Aucun parcours ne correspond à ces filtres
-              </p>
-            ) : (
-              <p className="text-sm font-medium text-base-content/70">
-                {displayedCount === 1
-                  ? '1 parcours affiché'
-                  : `${displayedCount} parcours affichés`}
-              </p>
-            )}
-            <button type="button" className="btn btn-xs btn-secondary" onClick={onReset}>
-              Réinitialiser les filtres
-            </button>
-          </div>
-        ) : null}
-      </div>
-    </section>
+              {/* Counter or empty-state message, plus a reset button whenever at
+                  least one filter touches (permanent reset button). */}
+              {filterTouched ? (
+                <div className="mt-3 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  {displayedCount === 0 ? (
+                    <p className="text-sm font-medium text-muted-foreground mb-0!">
+                      Aucun parcours ne correspond à ces filtres
+                    </p>
+                  ) : (
+                    <p className="text-sm font-medium text-muted-foreground mb-0!">
+                      {displayedCount === 1
+                        ? '1 parcours affiché'
+                        : `${displayedCount} parcours affichés`}
+                    </p>
+                  )}
+                  <Button type="button" variant="outline" onClick={onReset}>
+                    Réinitialiser les filtres
+                  </Button>
+                </div>
+              ) : null}
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </CardContent>
+    </Card>
   );
 }

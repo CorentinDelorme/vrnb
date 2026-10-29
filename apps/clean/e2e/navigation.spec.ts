@@ -4,7 +4,12 @@ test.describe('Cross-route navigation', () => {
   test('should navigate from home to tour V1 via play button', async ({ page }) => {
     await page.goto('/');
     const v1Row = page.locator('li.list-row', { hasText: 'V1' }).first();
-    await v1Row.locator('button[aria-label="Lancer le parcours"]').click();
+    // Each row carries a mobile (hidden on desktop) and a desktop play
+    // variant: click the visible one.
+    await v1Row
+      .locator('button[aria-label="Lancer le parcours"]')
+      .filter({ visible: true })
+      .click();
     await expect(page).toHaveURL('/tour/bruz-sud/V1');
     await expect(page).toHaveTitle('Bruz Sud - Parcours V1');
   });
@@ -12,7 +17,10 @@ test.describe('Cross-route navigation', () => {
   test('should navigate from home to tour P3 via play button', async ({ page }) => {
     await page.goto('/');
     const p3Row = page.locator('li.list-row', { hasText: 'P3' }).first();
-    await p3Row.locator('button[aria-label="Lancer le parcours"]').click();
+    await p3Row
+      .locator('button[aria-label="Lancer le parcours"]')
+      .filter({ visible: true })
+      .click();
     await expect(page).toHaveURL('/tour/bruz-sud/P3');
     await expect(page).toHaveTitle('Bruz Sud - Parcours P3');
   });
@@ -60,7 +68,10 @@ test.describe('Cross-route navigation', () => {
     });
     await page.goto('/');
     const banner = page.locator('li.list-row', { hasText: 'Reprendre le parcours' });
-    await banner.locator('button[aria-label="Lancer le parcours"]').click();
+    await banner
+      .locator('button[aria-label="Lancer le parcours"]')
+      .filter({ visible: true })
+      .click();
     await expect(page).toHaveURL('/tour/bruz-sud/V1');
   });
 
@@ -74,7 +85,10 @@ test.describe('Cross-route navigation', () => {
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 
     const lastRow = page.locator('li.list-row').last();
-    await lastRow.locator('button[aria-label="Lancer le parcours"]').click();
+    await lastRow
+      .locator('button[aria-label="Lancer le parcours"]')
+      .filter({ visible: true })
+      .click();
     await expect(page).toHaveURL(/\/tour\/[\w-]+\/[\w-]+/);
 
     // App Router default (parity intent: scroll restored to the top on each

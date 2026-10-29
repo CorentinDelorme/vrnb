@@ -5,7 +5,7 @@
 
 ## Project Overview
 
-Next.js 16 (App Router) + React 19 application, prerendered statically on build (SSG), with Vitest for unit testing, Playwright for E2E, ESLint on the shared `@repo/eslint-config` Next.js preset, Tailwind CSS 4 with DaisyUI 5 for styling, and Leaflet for interactive maps with GPX track rendering.
+Next.js 16 (App Router) + React 19 application, prerendered statically on build (SSG), with Vitest for unit testing, Playwright for E2E, ESLint on the shared `@repo/eslint-config` Next.js preset, Tailwind CSS 4 with shadcn/ui (Base UI primitives + `hugeicons`, `components/ui/` installed by the shadcn CLI) for styling, and Leaflet for interactive maps with GPX track rendering.
 
 No business database: all data is embedded (generated `src/app/tours-data.ts` and static assets under `public/`). The only exception is the Édition inscriptions, which live in a remote KV store (Upstash REST) behind the Inscriptions API. The dev server listens on **port 4200** (`next dev -p 4200`, parity with the former Angular dev server and the production URLs).
 
@@ -106,14 +106,14 @@ bun scripts/extract-inscriptions.ts  # Extract the Édition inscriptions (see sc
 
 ### Naming Conventions
 
-| Element        | Convention                           | Examples                                    |
-| -------------- | ------------------------------------ | ------------------------------------------- |
-| Components     | PascalCase export + kebab-case file  | `TourView`, `tour-view.tsx`                 |
-| Next.js routes | `page.tsx` / `layout.tsx` folders    | `app/tour/[zoneId]/[id]/page.tsx`           |
-| Helper modules | camelCase, pure functions            | `tour-downloads.ts`, `route-meta.ts`        |
-| Unit tests     | Colocated `*.spec.ts(x)`             | `lib/tour-map.spec.ts`, `app/page.spec.tsx` |
-| E2E tests      | `e2e/*.spec.ts`                      | `e2e/tour.spec.ts`                          |
-| CSS            | Tailwind utilities + DaisyUI classes | `card bg-base-100 shadow-md`                |
+| Element        | Convention                                     | Examples                                    |
+| -------------- | ---------------------------------------------- | ------------------------------------------- |
+| Components     | PascalCase export + kebab-case file            | `TourView`, `tour-view.tsx`                 |
+| Next.js routes | `page.tsx` / `layout.tsx` folders              | `app/tour/[zoneId]/[id]/page.tsx`           |
+| Helper modules | camelCase, pure functions                      | `tour-downloads.ts`, `route-meta.ts`        |
+| Unit tests     | Colocated `*.spec.ts(x)`                       | `lib/tour-map.spec.ts`, `app/page.spec.tsx` |
+| E2E tests      | `e2e/*.spec.ts`                                | `e2e/tour.spec.ts`                          |
+| CSS            | Tailwind utilities + shadcn/ui semantic tokens | `bg-background text-muted-foreground`       |
 
 ### Imports
 
@@ -153,7 +153,7 @@ export function TourListSection({ title, tours, type, zoneId }: TourListSectionP
     router.push(`/tour/${zoneId}/${id}`);
   };
 
-  return <ul className="list bg-base-200 rounded-box">{/* … */}</ul>;
+  return <ul className="divide-y divide-border">{/* … */}</ul>;
 }
 ```
 
@@ -177,20 +177,47 @@ const tours: any[] = [];
 
 ### Styling
 
-- Tailwind CSS utility classes inline; DaisyUI components (`btn`, `card`, `list`, `drawer`, `modal`…).
-- DaisyUI themes only: `vrnb` (light) and `vrnb-dark` (dark) — no hard-coded colors (monorepo rule).
+- shadcn/ui components from `components/ui/` — always prefer the full composition
+  (`CardHeader`/`CardTitle`/`CardContent`…, `DialogTitle`/`DialogDescription` in every dialog,
+  `FieldGroup`/`Field`/`FieldError` for forms) before custom markup.
+- Tailwind utilities inline with **semantic tokens** (`bg-background`, `text-muted-foreground`,
+  `text-secondary`…) — never raw colors; light/dark variations come from the CSS variables mapped
+  in `app/globals.css`.
+- **Never add `margin`/`padding` on a shadcn component** to fight its built-in spacing — rely on
+  the composition (Card `gap-(--card-spacing)`, grid gaps, `flex gap-*`, not `space-y-*`) and only
+  keep an override when the layout genuinely requires it. `className` is for layout (widths,
+  sticky, grid), not typography/colors of the component.
 - Single exception, maps only: Leaflet options (the `TOUR_COLORS` palette, route stroke and GPS
   accuracy circle in `src/app/shared/map/` and `components/*-map.tsx`) embed hex constants inherited
   from the Angular app for exact visual parity (spec #3), each with an in-code parity comment. They
-  cannot be Tailwind/DaisyUI theme classes because Leaflet renders to SVG/canvas outside the DOM.
-- Global styles and theme imports live in `app/globals.css`.
+  cannot be Tailwind theme classes because Leaflet renders to SVG/canvas outside the DOM.
+- Global styles and theme tokens live in `app/globals.css`.
 - Responsive and accessible by default: the app is used outdoors on mobile and audited with axe in the E2E suite.
 
 ```tsx
-<div className="card bg-base-100 shadow-xl">
-  <button className="btn btn-primary">Click me</button>
-</div>
+<Card>
+  <CardHeader>
+    <CardTitle>{zone.name}</CardTitle>
+    <CardAction>
+      <Badge variant="secondary">{count} parcours</Badge>
+    </CardAction>
+  </CardHeader>
+  <CardContent>
+    <Button>Click me</Button>
+  </CardContent>
+</Card>
 ```
+
+- **`components/ui/` is installed by the shadcn CLI — never edit it.** If a shadcn primitive needs
+  a change, wrap it in a custom component in `components/` instead of editing the file under
+  `components/ui/`. The files there are regenerated by `shadcn add` and any manual edit is lost.
+- **Links styled as buttons follow the shadcn "As Link" pattern** (the `Button` here is built on
+  Base UI, not Radix Slot): `<Link href="…" className={buttonVariants({ … })}>` with `buttonVariants`
+  from `components/ui/button`. Never put a `<Button>` inside a `<Link>` (nor wrap a link in one):
+  the Base UI Button always applies `role="button"`, which overrides the semantic link role of the
+  `<a>`, and `<a><button>` is invalid HTML. Reserve `<Button onClick={…}>` for genuine actions
+  (submit, open a drawer, next Étape) — plain navigation is a `<Link>`, not a button that calls
+  `router.push`.
 
 ### Error Handling
 
@@ -233,7 +260,7 @@ describe('getSegmentForStep', () => {
 apps/clean/
 ├── app/                       # Next.js App Router routes (server components)
 │   ├── layout.tsx             # Root shell: header, menu drawer, analytics
-│   ├── globals.css            # Tailwind + DaisyUI themes
+│   ├── globals.css            # Tailwind 4 + shadcn/ui tokens (vrnb palette mapped to CSS variables)
 │   ├── page.tsx               # Home `/`
 │   ├── manual/page.tsx        # Mode d'emploi `/manual`
 │   ├── tour/[zoneId]/[id]/page.tsx    # Parcours page (3 Étapes)
@@ -266,7 +293,7 @@ apps/clean/
 - Next.js 16 (App Router) + React 19
 - Vitest + Testing Library (unit); Playwright + @axe-core/playwright (E2E)
 - ESLint (`@repo/eslint-config` Next.js preset) + Prettier (config in `package.json`)
-- Tailwind CSS 4 + DaisyUI 5 (`vrnb` / `vrnb-dark` themes only)
+- Tailwind CSS 4 + shadcn/ui (components in `components/ui/`, Base UI primitives, hugeicons)
 - Leaflet + leaflet-arrowheads + leaflet.fullscreen for maps
 - HugeIcons (React) for icons; canvas-confetti on Parcours completion
 - Script side: `@tmcw/togeojson`, `jspdf`/`pdf-lib`, `qrcode`, `sharp`, `tsx`

@@ -1,24 +1,21 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { TourRef } from '../src/app/tours-queries';
 import { TourRegisterButton } from './tour-register-button';
 
 /**
  * The register button of a tour row (ticket #17): it opens the registration
- * modal for its tour — exactly one `showModal` per open — and keeps the modal
- * mounted between close and reopen, so the identity values typed into the
- * dialog survive a close without submitting.
+ * modal for its tour and keeps the modal mounted between close and reopen, so
+ * the identity values typed into the dialog survive a close without
+ * submitting.
  */
 
 const TOUR: TourRef = { tourId: 'V1', zoneId: 'bruz-sud' };
 
-/** The `showModal` call log, filled by the patched prototype. */
-const showModal = vi.hoisted(() => vi.fn());
-
 /**
- * The modal reads the registration window from the provider (ticket #18): the
- * public state answers an open window, so the modal never depends on the
+ * The modal reads the registration window from the provider (ticket #18):
+ * the public state answers an open window, so the modal never depends on the
  * wall clock of the test runner. The real module is kept (only the hooks are
  * mocked): the modal reads the window through the shared rule of the provider.
  */
@@ -41,55 +38,34 @@ vi.mock('./inscriptions-status-provider', async (importOriginal) => ({
   }),
 }));
 
-/**
- * jsdom implements no dialog method at all: patch the two the components use,
- * mimicking the native behavior (the modal opening, and the `close` event of
- * the native dialog).
- */
-function installDialogueStub(): void {
-  const prototype = HTMLDialogElement.prototype as unknown as {
-    showModal?: () => void;
-    close?: () => void;
-  };
-  prototype.showModal = function showModalStub(this: HTMLDialogElement) {
-    showModal();
-  };
-  prototype.close = function closeStub(this: HTMLDialogElement) {
-    this.removeAttribute('open');
-    this.dispatchEvent(new Event('close', { bubbles: false }));
-  };
-}
-
 describe('TourRegisterButton', () => {
-  beforeEach(() => {
-    showModal.mockClear();
-    installDialogueStub();
-  });
-
   it('should render a named register button for its tour, with no modal yet', () => {
-    const { container } = render(<TourRegisterButton available tour={TOUR} />);
+    render(<TourRegisterButton available tour={TOUR} />);
 
     const button = screen.getByRole('button', {
       name: "S'inscrire en binôme pour le parcours V1",
     });
     expect(button.textContent).toContain("S'inscrire");
-    // The modal is not mounted before the first click.
-    expect(container.querySelector('dialog')).toBeNull();
+    // The modal content is portaled out of this container and is not mounted yet.
+    expect(document.getElementById('register_modal_V1')).toBeNull();
   });
 
-  it('should mount the modal and call showModal exactly once per opened modal', async () => {
+  it('should mount the modal in the document body once per opened modal', () => {
     const { container } = render(<TourRegisterButton available tour={TOUR} />);
 
     fireEvent.click(screen.getByRole('button', { name: /S'inscrire en binôme pour le parcours/ }));
 
-    expect(showModal).toHaveBeenCalledTimes(1);
-    expect(container.querySelector('dialog#register_modal_V1')).not.toBeNull();
+    // The shadcn Dialog content is portaled to document.body and keeps the
+    // legacy register_modal_<tourId> id on DialogContent.
+    expect(document.getElementById('register_modal_V1')).not.toBeNull();
+    // The register button of the row stays in place.
+    expect(container.querySelector('button')).not.toBeNull();
   });
 
   it('should hide the button of an unavailable row without opening any modal', () => {
     const { container } = render(<TourRegisterButton available={false} tour={TOUR} />);
 
     expect(container.querySelector('button')).toBeNull();
-    expect(container.querySelector('dialog')).toBeNull();
+    expect(document.getElementById('register_modal_V1')).toBeNull();
   });
 });

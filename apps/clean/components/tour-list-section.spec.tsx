@@ -43,6 +43,8 @@ const SUCCESS: InscriptionsStatus = {
 /**
  * The « Binôme inscrit » badge of a covered Parcours row (ticket #16): shown
  * after hydration for covered rows only, never while loading or on error.
+ * jsdom applies no CSS media queries: both the mobile and the desktop badge
+ * variants of the covered row render, so counts are doubled.
  */
 describe('TourListSection inscriptions badge', () => {
   beforeEach(() => {
@@ -56,19 +58,21 @@ describe('TourListSection inscriptions badge', () => {
       <TourListSection title="Parcours à vélo" type="V" tours={TOURS} zoneId="bruz-sud" />,
     );
 
-    const badges = container.querySelectorAll('.badge-success');
-    expect(badges).toHaveLength(1);
-    expect(badges[0]?.textContent).toBe('Binôme inscrit');
+    const binomeBadges = Array.from(container.querySelectorAll('[data-slot="badge"]')).filter(
+      (b) => b.textContent === 'Binôme inscrit',
+    );
+    expect(binomeBadges).toHaveLength(2);
+    expect(binomeBadges[0].textContent).toBe('Binôme inscrit');
 
-    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v1Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V1'),
     );
-    expect(v1Row?.querySelector('.badge-success')?.textContent).toBe('Binôme inscrit');
+    expect(v1Row?.querySelector('[data-slot="badge"]')?.textContent).toBe('Binôme inscrit');
 
-    const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v2Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       /^(V2[\s\S]*km)/.test(row.textContent ?? ''),
     );
-    expect(v2Row?.querySelector('.badge-success')).toBeNull();
+    expect(v2Row?.querySelector('[data-slot="badge"]')).toBeNull();
   });
 
   it('should badge no row while the statuses are loading or on error', () => {
@@ -82,21 +86,23 @@ describe('TourListSection inscriptions badge', () => {
     }
   });
 
-  it('should keep the play button of every row alongside the badge', () => {
+  it('should keep the play buttons of every row alongside the badge', () => {
     setStatus(SUCCESS);
     const { container } = render(
       <TourListSection title="Parcours à vélo" type="V" tours={TOURS} zoneId="bruz-sud" />,
     );
     expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(
-      TOURS.length,
+      TOURS.length * 2,
     );
   });
 });
 
 /**
  * Ticket #51: every Parcours row now shows both distances in French format —
- * "X km nettoyage · Y km total" ("800 m" sous 1 km for each distance) — using
- * the Distance totale emitted by the pipeline (ticket #50).
+ * "X km nettoyage" then "Y km total" ("800 m" below 1 km for each distance) —
+ * using the Distance totale emitted by the pipeline (ticket #50). There is no
+ * separator between the two spans: jsdom renders them as a plain concatenation
+ * ("1,1 km nettoyage4,2 km total").
  */
 describe('TourListSection two-distance rows', () => {
   beforeEach(() => {
@@ -108,19 +114,20 @@ describe('TourListSection two-distance rows', () => {
       <TourListSection title="Parcours à vélo" type="V" tours={TOURS} zoneId="bruz-sud" />,
     );
 
-    // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
-    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    // V1: distance 1.1 km, total 4.2 km.
+    const v1Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V1'),
     );
-    expect(v1Row?.textContent).toContain('1,1 km nettoyage · 4,2 km total');
+    expect(v1Row?.textContent).toContain('1,1 km nettoyage');
+    expect(v1Row?.textContent).toContain('4,2 km total');
 
     // P2 of the walking list: distance 0.8 km → "800 m".
     const walkingTours = findZoneTours('bruz-sud', 'P');
     const { container: walkingContainer } = render(
       <TourListSection title="Parcours à pied" type="P" tours={walkingTours} zoneId="bruz-sud" />,
     );
-    const p2Row = Array.from(walkingContainer.querySelectorAll('li.list-row')).find((row) =>
-      row.textContent?.includes('P2'),
+    const p2Row = Array.from(walkingContainer.querySelectorAll('[data-testid="tour-row"]')).find(
+      (row) => row.textContent?.includes('P2'),
     );
     expect(p2Row?.textContent).toContain('800 m');
   });
@@ -168,8 +175,10 @@ describe('TourListSection inscriptions register button', () => {
     );
     expect(container.querySelectorAll('.badge-success')).toHaveLength(0);
     // The play buttons stay: the degraded state never touches the legacy DOM.
+    // jsdom has no CSS: both the mobile and the desktop variants render,
+    // doubling the count (TOURS.length * 2).
     expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(
-      TOURS.length,
+      TOURS.length * 2,
     );
     unmount();
   });
@@ -177,10 +186,10 @@ describe('TourListSection inscriptions register button', () => {
   it('should offer the register button on uncovered rows of an open window only', () => {
     const { container } = renderSection(SUCCESS);
     // V1 is covered (badge), every other bike tour is uncovered:
-    const v1Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v1Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V1'),
     );
-    const v2Row = Array.from(container.querySelectorAll('li.list-row')).find((row) =>
+    const v2Row = Array.from(container.querySelectorAll('[data-testid="tour-row"]')).find((row) =>
       row.textContent?.includes('V2'),
     );
     expect(v1Row?.querySelector('button[aria-label^="S\'inscrire en binôme"]')).toBeNull();
@@ -188,7 +197,7 @@ describe('TourListSection inscriptions register button', () => {
       v2Row?.querySelector('button[aria-label="S\'inscrire en binôme pour le parcours V2"]'),
     ).not.toBeNull();
     expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
-      TOURS.length - 1,
+      (TOURS.length - 1) * 2,
     );
   });
 
@@ -212,9 +221,10 @@ describe('TourListSection inscriptions register button', () => {
     expect(container.querySelectorAll('button[aria-label^="S\'inscrire en binôme"]')).toHaveLength(
       0,
     );
-    // The play buttons stay: the closed window never touches the legacy DOM.
+    // The play buttons stay: the closed window never touches the legacy DOM
+    // (both variants render without CSS in jsdom, hence the doubling).
     expect(container.querySelectorAll('button[aria-label="Lancer le parcours"]')).toHaveLength(
-      TOURS.length,
+      TOURS.length * 2,
     );
   });
 });

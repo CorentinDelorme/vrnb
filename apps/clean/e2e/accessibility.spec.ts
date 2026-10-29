@@ -64,16 +64,16 @@ test.describe('Accessibility', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
-      const closeButton = modal.locator('button[aria-label="Fermer"]');
+      const closeButton = modal.locator('[data-slot="dialog-close"]');
       await expect(closeButton).toBeVisible();
     });
 
     test('should have accessible drawer close button', async ({ page }) => {
       await page.goto('/tour/bruz-sud/V1');
       await page.getByText('Menu', { exact: true }).click();
-      const closeLabel = page.locator('.drawer-side label.btn-circle[aria-label="close sidebar"]');
+      const closeLabel = page.locator('[data-slot="drawer-close"]');
       await expect(closeLabel).toBeVisible();
     });
 
@@ -82,8 +82,7 @@ test.describe('Accessibility', () => {
       const suivantButton = page.getByRole('button', { name: 'Suivant' });
       await suivantButton.focus();
       await page.keyboard.press('Enter');
-      const secondStep = page.locator('li.step').nth(1);
-      await expect(secondStep).toHaveClass(/step-secondary/);
+      await expect(page.locator('[data-testid="step-1-circle"]')).toHaveClass(/bg-secondary/);
     });
 
     test('should support keyboard navigation to close modal', async ({ page }) => {
@@ -91,10 +90,10 @@ test.describe('Accessibility', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
-      const modal = page.locator('dialog#finish_modal');
+      const modal = page.locator('#finish_modal');
       await expect(modal).toBeVisible();
 
-      const closeButton = modal.locator('button[aria-label="Fermer"]');
+      const closeButton = modal.locator('[data-slot="dialog-close"]');
       await closeButton.focus();
       await page.keyboard.press('Enter');
       await expect(modal).not.toBeVisible();

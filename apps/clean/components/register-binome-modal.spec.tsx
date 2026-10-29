@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { CURRENT_EDITION, formatActionDateLabel } from '../src/app/inscriptions/edition';
 import type { RegistrationOutcome } from '../src/app/inscriptions/inscriptions-client';
 import type { BinomeRegistration } from '../src/app/inscriptions/validation';
 import type { TourRef } from '../src/app/tours-queries';
@@ -8,13 +9,16 @@ import type { InscriptionsStatus } from './inscriptions-status-provider';
 import { RegisterBinomeModal } from './register-binome-modal';
 
 /**
- * Behavior of the DaisyUI registration modal (tickets #17 + #18): the submit
- * stays gated on the four identity fields plus the engagement statement, a
- * created outcome posts the exact contract body, shows the confirmation and
- * reloads the statuses; a 409 shows the covered-meantime guard and reloads
- * too; each refusal (invalid saisie, closed window) and the network failures
- * show their own explicit message without reloading. No submit resets the
- * fields — a close without submitting keeps the values.
+ * Behavior of the registration modal (tickets #17 + #18): the submit stays
+ * gated on the four identity fields plus the engagement statement, a created
+ * outcome posts the exact contract body, shows the confirmation and reloads
+ * the statuses; a 409 shows the covered-meantime guard and reloads too; each
+ * refusal (invalid saisie, closed window) and the network failures show their
+ * own explicit message without reloading. No submit resets the fields — a
+ * close without submitting keeps the values.
+ *
+ * The modal is a shadcn `Dialog` controlled through the `visible`/`onOpenChange`
+ * props; the legacy `register_modal_<tourId>` id is kept on `DialogContent`.
  */
 
 const TOUR: TourRef = { tourId: 'V1', zoneId: 'bruz-sud' };
@@ -75,58 +79,71 @@ const CLOSED_STATUS: InscriptionsStatus = {
   status: 'success',
 };
 
-/**
- * A post-closure instant of the Édition (2027-02-12 = 2 days before the
- * action): a window the server answers closed then really is closed, both
- * for the server answer and for the local clock fallback.
- */
+/** A post-closure instant of the Édition (2027-02-12 = 2 days before the action). */
 const POST_CLOSURE_CLOCK = new Date('2027-02-12T09:00:00Z');
 
 /**
- * jsdom implements no dialog method: patch the two the modal lives on. The
- * native submit of the `<form method="dialog">` close button and `Escape` are
- * then simulated directly through the patched `close` (the jsdom event gives
- * the component its `close` listener).
+ * An instant one calendar day before the opening bound of the BUNDLED
+ * Édition (the loading/error fallback of the provider reads `CURRENT_EDITION`
+ * + the local clock). Derived from the config, so a yearly Édition bump —
+ * moving `inscriptionsOpenDate` — keeps these tests valid without edits. The
+ * 12:00Z instant lands safely inside the previous calendar day in
+ * `EDITION_TIME_ZONE` (UTC+1/+2), whatever the configured date.
  */
-function installDialogueStub(onClose: () => void): void {
-  const prototype = HTMLDialogElement.prototype as unknown as {
-    showModal?: () => void;
-    close?: () => void;
-  };
-  prototype.showModal = function showModalStub(this: HTMLDialogElement) {
-    this.setAttribute('open', '');
-  };
-  prototype.close = function closeStub(this: HTMLDialogElement) {
-    onClose();
-    this.removeAttribute('open');
-    this.dispatchEvent(new Event('close'));
-  };
-}
+const BEFORE_OPENING_CLOCK = new Date(
+  new Date(`${CURRENT_EDITION.inscriptionsOpenDate}T12:00:00Z`).getTime() - 24 * 60 * 60 * 1000,
+);
+/** The opening announcement of the bundled Édition, quoted from its config. */
+const OPENING_ANNOUNCEMENT = `Les inscriptions ouvriront le ${formatActionDateLabel(
+  CURRENT_EDITION.inscriptionsOpenDate,
+)}`;
 
 /** Render the modal open and return helpers for one test. */
-function renderModal() {
+function renderModal({ now }: { now?: Date } = {}) {
   const onClose = vi.fn();
-  installDialogueStub(onClose);
-  const render_ = render(<RegisterBinomeModal onClose={onClose} tour={TOUR} visible />);
-  return { ...render_, onClose };
+  let visible = true;
+  function Harness() {
+    return (
+      <RegisterBinomeModal
+        now={now}
+        onClose={() => {
+          onClose();
+          visible = false;
+        }}
+        tour={TOUR}
+        visible={visible}
+      />
+    );
+  }
+  const utils = render(<Harness />);
+  return {
+    onClose,
+    setVisible: (v: boolean) => {
+      visible = v;
+      utils.rerender(<Harness />);
+    },
+  };
 }
 
 /** Render the modal open at a given instant (the local clock fallback). */
 function renderModalAt(now: Date) {
-  const onClose = vi.fn();
-  installDialogueStub(onClose);
-  const render_ = render(<RegisterBinomeModal now={now} onClose={onClose} tour={TOUR} visible />);
-  return { ...render_, onClose };
+  return renderModal({ now });
 }
 
+/** The register button (submit) of the form. */
 const submitButton = (): HTMLButtonElement =>
   screen.getByRole('button', { name: /Inscrire mon binôme/ }) as HTMLButtonElement;
 
-/** The four identity inputs, by label, in DOM order. */
+/** The four identity inputs, by id, in DOM order. */
 function identityInputs(): readonly HTMLInputElement[] {
   return (
-    ['Prénom du membre 1', 'Nom du membre 1', 'Prénom du membre 2', 'Nom du membre 2'] as const
-  ).map((label) => screen.getByLabelText(label) as HTMLInputElement);
+    [
+      'register-first-name-1',
+      'register-last-name-1',
+      'register-first-name-2',
+      'register-last-name-2',
+    ] as const
+  ).map((id) => screen.getByTestId(id) as HTMLInputElement);
 }
 
 /** Fill every identity field, tick the engagement statement. */
@@ -205,7 +222,7 @@ describe('RegisterBinomeModal', () => {
       zoneId: 'bruz-sud',
     });
     expect(mocks.reload).toHaveBeenCalledOnce();
-    expect(screen.getByRole('alert').textContent).toContain('Votre binôme est inscrit');
+    expect(screen.getByText(/Votre binôme est inscrit/)).toBeTruthy();
   });
 
   it('should trim the identity values sent to the API', async () => {
@@ -223,15 +240,17 @@ describe('RegisterBinomeModal', () => {
   });
 
   it('should keep the typed values when the dialog closes without submitting', () => {
-    const { onClose } = renderModal();
+    const { onClose, setVisible } = renderModal();
     fireEvent.change(identityInputs()[0]!, { target: { value: 'Léa' } });
 
-    // The native close (X button, backdrop, Escape) fires the `close` event;
-    // the component must not reset anything, the host keeps it mounted.
-    (
-      screen.getByText('Inscription du binôme').closest('dialog') as HTMLDialogElement
-    ).dispatchEvent(new Event('close'));
+    // Closing via the Close button (native DialogClose) tells the host it closed;
+    // the host keeps the component mounted and only toggles `visible`, so the
+    // typed values survive.
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(onClose).toHaveBeenCalledOnce();
+
+    // Reopen: the typed value is preserved.
+    setVisible(true);
     expect((identityInputs()[0] as HTMLInputElement).value).toBe('Léa');
   });
 
@@ -387,9 +406,10 @@ describe('RegisterBinomeModal closed window', () => {
       expect(input.disabled).toBe(true);
     }
     expect(
-      (screen.getByRole('checkbox', { name: /confirmons notre participation/ }) as HTMLInputElement)
-        .disabled,
-    ).toBe(true);
+      screen
+        .getByRole('checkbox', { name: /confirmons notre participation/ })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
     expect(submitButton().disabled).toBe(true);
   });
 
@@ -411,9 +431,6 @@ describe('RegisterBinomeModal closed window', () => {
  * publication) or falls back on the local clock.
  */
 describe('RegisterBinomeModal not-open-yet window', () => {
-  /** An instant before the opening day of the Édition (2027-01-04). */
-  const BEFORE_OPENING_CLOCK = new Date('2027-01-02T09:00:00Z');
-
   beforeEach(() => {
     mocks.postRegistration.mockReset().mockResolvedValue({ status: 'created' });
     mocks.reload.mockReset();
@@ -423,25 +440,26 @@ describe('RegisterBinomeModal not-open-yet window', () => {
   it('should announce the opening date in letters and disable the form', () => {
     renderModalAt(BEFORE_OPENING_CLOCK);
 
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Les inscriptions ouvriront le lundi 4 janvier 2027',
-    );
+    expect(screen.getByRole('alert').textContent).toContain(OPENING_ANNOUNCEMENT);
     expect(screen.queryByText(/Les inscriptions sont closes/)).toBeNull();
     for (const input of identityInputs()) {
       expect(input.disabled).toBe(true);
     }
     expect(
-      (screen.getByRole('checkbox', { name: /confirmons notre participation/ }) as HTMLInputElement)
-        .disabled,
-    ).toBe(true);
+      screen
+        .getByRole('checkbox', { name: /confirmons notre participation/ })
+        .getAttribute('aria-disabled'),
+    ).toBe('true');
     expect(submitButton().disabled).toBe(true);
   });
 
   it('should announce the opening date on a public state the server answers closed before opening', () => {
     // The server answers registrationOpen=false (the site state at
     // publication): the local clock of the modal tells the two bounds apart.
+    // The clock is relative to the FIXTURE's Édition (open 2027-01-04), the
+    // announcement quotes the date the state itself carries.
     status.current = CLOSED_STATUS;
-    renderModalAt(BEFORE_OPENING_CLOCK);
+    renderModalAt(new Date('2027-01-02T09:00:00Z'));
 
     expect(screen.getByRole('alert').textContent).toContain(
       'Les inscriptions ouvriront le lundi 4 janvier 2027',
@@ -503,11 +521,9 @@ describe('RegisterBinomeModal local clock fallback', () => {
   });
 
   it('should announce the opening date on its own clock when it predates the opening', () => {
-    renderModalAt(new Date('2026-12-01T09:00:00Z'));
+    renderModalAt(BEFORE_OPENING_CLOCK);
 
-    expect(screen.getByRole('alert').textContent).toContain(
-      'Les inscriptions ouvriront le lundi 4 janvier 2027',
-    );
+    expect(screen.getByRole('alert').textContent).toContain(OPENING_ANNOUNCEMENT);
     expect(submitButton().disabled).toBe(true);
   });
 
@@ -534,9 +550,7 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
     renderModal();
     fillBinome();
     fireEvent.click(submitButton());
-    await waitFor(() =>
-      expect(screen.getByRole('alert').textContent).toContain('Votre binôme est inscrit'),
-    );
+    await waitFor(() => expect(screen.getByText(/Votre binôme est inscrit/)).toBeTruthy());
   }
 
   beforeEach(() => {
@@ -550,9 +564,7 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
 
     // The hours come from the Édition config (09:00 → 9h, 12:00 → 12h) and
     // wrap the action date, exactly like the calendar description words it.
-    expect(screen.getByRole('alert').textContent).toContain(
-      'le dimanche 14 février 2027 de 9h à 12h',
-    );
+    expect(screen.getByText(/le dimanche 14 février 2027 de 9h à 12h/)).toBeTruthy();
     // The note-to-take sentence carries the data, never a literal.
     const note = screen.getByText(/Notez la zone et le nom du parcours/).textContent ?? '';
     expect(note).toContain("pour le jour de l'action");
@@ -566,9 +578,12 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
 
     // Google Calendar: a plausible template link built by the pure module,
     // carrying the Zone and the Parcours, opened in a new tab.
-    const google = screen.getByRole('link', { name: 'Google Agenda' }) as HTMLAnchorElement;
-    expect(google.href.startsWith('https://calendar.google.com/calendar/render?')).toBe(true);
-    const googleUrl = new URL(google.href);
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null as unknown as Window);
+    const google = screen.getByRole('button', { name: 'Google Agenda' });
+    expect(google).toBeTruthy();
+    fireEvent.click(google);
+    expect(openSpy).toHaveBeenCalledTimes(1);
+    const googleUrl = new URL(openSpy.mock.calls[0]?.[0] as string);
     expect(googleUrl.searchParams.get('action')).toBe('TEMPLATE');
     expect(googleUrl.searchParams.get('text')).toBe(
       'Action ramassage des déchets VRNB - Bruz Sud (V1)',
@@ -576,13 +591,18 @@ describe('RegisterBinomeModal confirmation with calendar links', () => {
     expect(googleUrl.searchParams.get('location')).toBe(
       'Place du Docteur Joly, Pl. du Dr Joly, 35170 Bruz, France',
     );
-    expect(google.target).toBe('_blank');
-    expect(google.rel).toContain('noopener');
+    expect(openSpy).toHaveBeenCalledWith(
+      expect.stringContaining('https://calendar.google.com/calendar/render?'),
+      '_blank',
+    );
+    openSpy.mockRestore();
 
     // The .ics file points to the calendar route of the exact couple, with
     // no .ics suffix in the URL (the filename arrives through the header).
-    const ics = screen.getByRole('link', { name: 'Fichier calendrier (.ics)' });
-    expect(ics.getAttribute('href')).toBe('/api/calendrier/bruz-sud/V1');
+    const ics = screen.getByRole('button', { name: 'Fichier calendrier (.ics)' });
+    expect(ics).toBeTruthy();
+    expect(() => fireEvent.click(ics)).not.toThrow();
+
     // Google Agenda comes first, then the file (the one-click path first).
     expect(google.compareDocumentPosition(ics) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

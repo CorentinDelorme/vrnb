@@ -3,15 +3,21 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 
+import { cn } from '@/components/lib/utils';
+import { Outfit } from 'next/font/google';
 import { AppHeader } from '../components/app-header';
+import { ThemeInitializer } from '../components/theme-provider';
 import { HOME_TITLE } from '../lib/route-meta';
 import './globals.css';
+
+const outfit = Outfit({ subsets: ['latin'], variable: '--font-sans' });
 
 /**
  * Root layout — port of the legacy `src/index.html` + `app.html` shell (spec #3):
  * `<html lang="fr">`, the restrictive viewport (kept for map pinch-zoom and axe
  * parity), the favicon, the header, and the Vercel analytics/insights hooks.
- * The DaisyUI `vrnb`/`vrnb-dark` themes and Leaflet CSS load from `globals.css`.
+ * The shadcn/ui vrnb theme (CSS variables) loads from `globals.css`; dark mode
+ * is toggled via the `dark` class on `<html>` (see `ThemeInitializer`).
  *
  * Scroll restoration: the App Router scrolls back to the top on every
  * navigation (the spec #3 parity intent: scroll restored to the top when
@@ -38,14 +44,18 @@ interface RootLayoutProps {
 
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
-    <html lang="fr" className="h-screen w-screen">
-      <body className="h-screen w-screen">
+    <html lang="fr" className={cn('min-h-dvh', 'font-sans', outfit.variable)}>
+      {/* No `w-screen` here: 100vw includes the vertical scrollbar width and
+          would make the body wider than the viewport (horizontal scrollbar and
+          an asymmetric right gap). The default block width (auto) is correct. */}
+      <body className="min-h-dvh">
         <main className="p-4 sm:p-8">
           <AppHeader />
           {children}
         </main>
         <Analytics />
         <SpeedInsights />
+        <ThemeInitializer />
       </body>
     </html>
   );

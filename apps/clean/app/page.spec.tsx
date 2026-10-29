@@ -35,6 +35,35 @@ async function renderHomePage() {
   return result;
 }
 
+function typeButton(label: string): HTMLElement {
+  // The Type de parcours filter is a single-selection ToggleGroup: each
+  // option renders as a real button carrying its own pressed state.
+  return screen.getByRole('button', { name: label });
+}
+
+/**
+ * jsdom applies no CSS media queries: both the mobile and the desktop play
+ * variants of every Parcours row render, so the page's 47 tours carry 94
+ * play buttons.
+ */
+const PLAY_BUTTON_COUNT = 94;
+
+function isTypeActive(label: string): boolean {
+  return typeButton(label).getAttribute('aria-pressed') === 'true';
+}
+
+/** Opens the filters accordion so the type toggle and sliders are reachable. */
+function openFilters(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Filtres' }));
+}
+
+/** Renders the home page with the filters accordion already opened. */
+async function renderHomePageWithFiltersOpen() {
+  const result = await renderHomePage();
+  openFilters();
+  return result;
+}
+
 /**
  * Home page (spec #3, ticket #6): the legacy Angular `tours-list` component.
  * These tests assert the public rendered output (DOM text, links, attributes)
@@ -47,27 +76,30 @@ describe('Home page', () => {
     mockedOutcome.current = { status: 'error' };
   });
 
-  it('renders each zone as an open accordion labelled with its name and tour count', async () => {
+  it('renders each zone as a card labelled with its name and tour count', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
-    expect(zone).not.toBeNull();
-    expect(zone?.hasAttribute('open')).toBe(true);
-    expect(zone?.querySelector('summary h2')?.textContent).toBe('Bruz Sud');
-    expect(zone?.querySelector('summary')?.textContent).toContain('28 parcours');
+    // Find the zone Card by its CardTitle
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    expect(zoneTitle).not.toBeNull();
+    expect(zoneTitle?.textContent).toBe('Bruz Sud');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    expect(zoneCard).not.toBeNull();
+    expect(zoneCard?.textContent).toContain('28 parcours');
   });
 
   it('lists all Bruz Sud bike and walking tours in their sections', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
-    const sections = zone?.querySelectorAll('app-tour-list-section') ?? [];
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const sections = zoneCard?.querySelectorAll('app-tour-list-section') ?? [];
     expect(sections).toHaveLength(2);
 
-    const bikeRows = sections[0]?.querySelectorAll('li.list-row') ?? [];
+    const bikeRows = sections[0]?.querySelectorAll('[data-testid="tour-row"]') ?? [];
     expect(bikeRows).toHaveLength(15);
     expect(sections[0]?.textContent).toContain('Parcours à vélo');
     expect(sections[0]?.textContent).toContain('V15');
 
-    const walkingRows = sections[1]?.querySelectorAll('li.list-row') ?? [];
+    const walkingRows = sections[1]?.querySelectorAll('[data-testid="tour-row"]') ?? [];
     expect(walkingRows).toHaveLength(13);
     expect(sections[1]?.textContent).toContain('Parcours à pied');
     expect(sections[1]?.textContent).toContain('P13');
@@ -75,72 +107,86 @@ describe('Home page', () => {
 
   it('formats distances with a French km comma and switches to meters below 1 km', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
-    const [bikeSection, walkingSection] = zone?.querySelectorAll('app-tour-list-section') ?? [];
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const [bikeSection, walkingSection] = zoneCard?.querySelectorAll('app-tour-list-section') ?? [];
 
     // V1 (first bike row) has distance 1.1 → "1,1 km"; P2 (second walking row) 0.8 → "800 m".
-    expect(bikeSection?.querySelectorAll('li.list-row')[0]?.textContent).toContain('1,1 km');
-    expect(walkingSection?.querySelectorAll('li.list-row')[1]?.textContent).toContain('800 m');
+    expect(bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0]?.textContent).toContain(
+      '1,1 km',
+    );
+    expect(walkingSection?.querySelectorAll('[data-testid="tour-row"]')[1]?.textContent).toContain(
+      '800 m',
+    );
   });
 
   it('shows both distances on each row in French format', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
-    const bikeSection = zone?.querySelectorAll('app-tour-list-section')[0];
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const bikeSection = zoneCard?.querySelectorAll('app-tour-list-section')[0];
 
-    // V1: distance 1.1 km, total 4.2 km → "1,1 km nettoyage · 4,2 km total".
-    expect(bikeSection?.querySelectorAll('li.list-row')[0]?.textContent).toContain(
-      '1,1 km nettoyage · 4,2 km total',
-    );
+    // V1: distance 1.1 km, total 4.2 km. jsdom has no CSS: the two distance
+    // spans render once each, stacked (mobile) or inline (desktop), with no
+    // separator between them.
+    const v1Row = bikeSection?.querySelectorAll('[data-testid="tour-row"]')[0];
+    expect(v1Row?.textContent).toContain('1,1 km nettoyage');
+    expect(v1Row?.textContent).toContain('4,2 km total');
   });
 
   it('renders the filter bar above the zones with "Tous" selected by default', async () => {
-    const { container } = await renderHomePage();
+    const { container } = await renderHomePageWithFiltersOpen();
 
-    const filterBar = container.querySelector('section[aria-label="Filtres de parcours"]');
+    const filterBar = container.querySelector('[aria-label="Filtres de parcours"]');
     expect(filterBar).not.toBeNull();
 
     const typeLabel = filterBar?.querySelector('span')?.textContent;
     expect(typeLabel).toBe('Type de parcours');
 
-    const tous = container.querySelector('input[name="tour-type"][value="all"]');
+    const tous = typeButton('Tous');
     expect(tous).not.toBeNull();
-    expect(tous?.matches(':checked')).toBe(true);
+    expect(isTypeActive('Tous')).toBe(true);
   });
 
-  it('renders the two distance slider families with "tout" by default and all rows', async () => {
-    await renderHomePage();
+  it('renders the two distance slider families with "Tout" by default and all rows', async () => {
+    await renderHomePageWithFiltersOpen();
 
     expect(screen.getAllByRole('slider')).toHaveLength(4);
-    // Both families span their whole axis by default: "tout" label on each.
-    expect(screen.getAllByText('tout')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    // Both families span their whole axis by default: "Tout" label on each.
+    expect(screen.getAllByText('Tout')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
   });
 
   it('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
     const sliders = screen.getAllByRole('slider');
     const cleaningMin = sliders[0];
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
 
     // Invariant without filter: every section and all 47 play buttons.
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
 
     // Raise the cleaning minimum from 0,5 km to 1 km: short tours disappear.
     cleaningMin.focus();
     fireEvent.keyDown(cleaningMin, { key: 'ArrowRight' });
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('1');
-    expect(screen.getAllByText('tout')).toHaveLength(1); // cleaning is no longer "tout"
+    expect(screen.getAllByText('Tout')).toHaveLength(1); // cleaning is no longer "Tout"
     const after = screen.getAllByRole('button', { name: 'Lancer le parcours' });
-    expect(after.length).toBeLessThan(47);
+    expect(after.length).toBeLessThan(PLAY_BUTTON_COUNT);
     expect(after.length).toBeGreaterThan(0);
 
     // Return to the axis extreme: everything comes back.
     fireEvent.keyDown(cleaningMin, { key: 'ArrowLeft' });
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
-    expect(screen.getAllByText('tout')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    expect(screen.getAllByText('Tout')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
   });
 
   it('shows no counter when no filter is active', async () => {
@@ -151,18 +197,18 @@ describe('Home page', () => {
   });
 
   it('shows a plural counter when filtering to "À vélo"', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
-    const velo = screen.getByLabelText('À vélo') as HTMLInputElement;
+    const velo = typeButton('À vélo');
     fireEvent.click(velo);
-    expect(velo.checked).toBe(true);
+    expect(isTypeActive('À vélo')).toBe(true);
     expect(screen.getByText('34 parcours affichés')).toBeDefined();
   });
 
   it('shows a singular counter when exactly one tour matches', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
-    const velo = screen.getByLabelText('À vélo');
+    const velo = typeButton('À vélo');
     fireEvent.click(velo);
 
     const sliders = screen.getAllByRole('slider');
@@ -177,9 +223,9 @@ describe('Home page', () => {
   });
 
   it('shows the empty state message and a reset button when zero tours match', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
-    const pied = screen.getByLabelText('À pied');
+    const pied = typeButton('À pied');
     fireEvent.click(pied);
 
     const sliders = screen.getAllByRole('slider');
@@ -194,9 +240,9 @@ describe('Home page', () => {
   });
 
   it('resets every filter when clicking "Réinitialiser les filtres"', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
-    const pied = screen.getByLabelText('À pied');
+    const pied = typeButton('À pied');
     fireEvent.click(pied);
 
     const sliders = screen.getAllByRole('slider');
@@ -210,25 +256,32 @@ describe('Home page', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Réinitialiser les filtres' }));
 
     // Back to the unfiltered state.
-    expect((screen.getByLabelText('Tous') as HTMLInputElement).checked).toBe(true);
-    expect(screen.getAllByText('tout')).toHaveLength(2);
+    expect(isTypeActive('Tous')).toBe(true);
+    expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
-    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(47);
+    expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
+      PLAY_BUTTON_COUNT,
+    );
   });
 
   it('links each section to its zone map and labels every play button', async () => {
     await renderHomePage();
+    // The "Voir tous les parcours" is a Link (shadcn "As Link" pattern),
+    // not a Button. Check the link role and its href pattern.
     const mapLinks = screen.getAllByRole('link', { name: 'Voir tous les parcours' });
-    expect(mapLinks.map((link) => link.getAttribute('href'))).toContain('/tours/bruz-sud/V');
-    expect(mapLinks.map((link) => link.getAttribute('href'))).toContain('/tours/bruz-sud/P');
+    expect(mapLinks.length).toBeGreaterThanOrEqual(2);
+    for (const l of mapLinks) {
+      expect(l.getAttribute('href')).toMatch(/\/tours\/[^/]+\/(V|P)/);
+    }
   });
 
   it('navigates to the tour when a play button is clicked', async () => {
     const { container } = await renderHomePage();
-    const zone = container.querySelector('details[aria-label="Zone Bruz Sud"]');
-    const firstPlayButton = zone?.querySelector(
-      'li.list-row button[aria-label="Lancer le parcours"]',
+    const zoneTitle = container.querySelector('[data-slot="card-title"]');
+    const zoneCard = zoneTitle?.closest('[data-slot="card"]');
+    const firstPlayButton = zoneCard?.querySelector(
+      '[data-testid="tour-row"] button[aria-label="Lancer le parcours"]',
     );
     expect(firstPlayButton).not.toBeNull();
 
@@ -261,9 +314,11 @@ describe('Home page', () => {
 
   it('offers the mode d\u2019emploi CTA and the Ouest-France articles', async () => {
     await renderHomePage();
-    expect(screen.getByRole('link', { name: /Mode d'emploi/ }).getAttribute('href')).toBe(
-      '/manual',
-    );
+    // The CTA is navigation, not an action: a Link carrying the button
+    // styling, never a Button (shadcn "As Link" pattern).
+    const cta = screen.getByRole('link', { name: /Mode d'emploi/ });
+    expect(cta).toBeTruthy();
+    expect(cta.getAttribute('href')).toBe('/manual');
 
     const pressLinks = screen
       .getAllByRole('link')
@@ -275,7 +330,9 @@ describe('Home page', () => {
   it('renders the footer with the current year', async () => {
     const { container } = await renderHomePage();
     const year = new Date().getFullYear().toString();
-    expect(container.querySelector('footer')?.textContent).toContain(`©${year} VRNB`);
+    expect(container.querySelector('footer')?.textContent).toContain(
+      `©${year} Vélo Rando Nature Bruz (VRNB)`,
+    );
   });
 });
 

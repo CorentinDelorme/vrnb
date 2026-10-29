@@ -76,7 +76,7 @@ describe('InscriptionsOpeningAnnouncement', () => {
     render(<InscriptionsOpeningAnnouncement now={BEFORE_OPENING_CLOCK} />);
 
     const alert = screen.getByRole('alert');
-    expect(alert.className).toContain('alert-info');
+    expect(alert.getAttribute('data-slot')).toBe('alert');
     expect(alert.textContent).toBe('Les inscriptions ouvrent le lundi 4 janvier 2027.');
     // The alert opens with a decorative information-circle icon: visible to
     // the eye, transparent to screen readers (the sentence is the message).

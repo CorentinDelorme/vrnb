@@ -1,13 +1,13 @@
 'use client';
 
-import { CancelIcon } from '@hugeicons/core-free-icons';
-import { HugeiconsIcon } from '@hugeicons/react';
 import confetti from 'canvas-confetti';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { clearSavedTour, loadSavedTour, saveTour } from '../src/app/tour-storage';
 import type { TourStep } from '../src/app/tours-queries';
 import { TourMap } from './tour-map';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from './ui/dialog';
 
 /**
  * Step-by-step tour page — port of the legacy Angular `tour/tour.ts` +
@@ -20,12 +20,50 @@ import { TourMap } from './tour-map';
 /** Step labels, in state-machine order. */
 const STEP_LABELS = ['Début', 'Nettoyage', 'Fin'] as const;
 
-/** DaisyUI step classes: reached steps are secondary, the current one is too. */
-function stepClassName(step: TourStep, index: number): string {
-  const classes = ['step'];
-  if (step >= index) classes.push('step-secondary');
-  if (step === index) classes.push('text-secondary');
-  return classes.join(' ');
+/**
+ * Compact centered stepper, parity with the mode d'emploi screenshots: fixed
+ * 32px circles (reached = solid secondary green, upcoming = muted disc), a
+ * thick 4px connector drawn edge-to-edge between two neighbouring circles
+ * (green once the following step is reached) and the label right below.
+ */
+function Stepper({ step }: { readonly step: TourStep }) {
+  return (
+    <div className="flex items-start mx-auto w-fit">
+      {STEP_LABELS.map((label, index) => {
+        const reached = step >= index;
+        const last = index === STEP_LABELS.length - 1;
+        return (
+          <div
+            key={label}
+            data-testid={`step-${index}`}
+            className="flex flex-col items-center gap-1 w-20 relative z-0"
+          >
+            {!last && (
+              <div
+                aria-hidden="true"
+                className={`absolute top-3.5 left-[calc(50%+16px)] w-[calc(100%-32px)] h-1 transition-colors duration-300 ${step > index ? 'bg-secondary' : 'bg-border'}`}
+              />
+            )}
+            <div
+              data-testid={`step-${index}-circle`}
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 ${
+                reached
+                  ? 'bg-secondary text-secondary-foreground'
+                  : 'bg-border text-muted-foreground'
+              }`}
+            >
+              {index + 1}
+            </div>
+            <span
+              className={`text-sm font-medium transition-colors ${reached ? 'text-secondary' : 'text-foreground'}`}
+            >
+              {label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 interface TourViewProps {
@@ -35,7 +73,7 @@ interface TourViewProps {
 
 export function TourView({ zoneId, tourId }: TourViewProps) {
   const [step, setStepState] = useState<TourStep>(0);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [finishOpen, setFinishOpen] = useState(false);
 
   // Restore the saved step when it matches this tour, otherwise record the
   // freshly started tour (parity with the Angular constructor).
@@ -63,7 +101,7 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
   };
 
   const finish = (): void => {
-    dialogRef.current?.showModal();
+    setFinishOpen(true);
     clearSavedTour();
     void confetti({
       particleCount: 100,
@@ -74,50 +112,52 @@ export function TourView({ zoneId, tourId }: TourViewProps) {
 
   return (
     <div className="flex flex-col items-center gap-4 sm:gap-8">
-      <ul className="steps">
-        {STEP_LABELS.map((label, index) => (
-          <li className={stepClassName(step, index)} key={label}>
-            {label}
-          </li>
-        ))}
-      </ul>
+      <Stepper step={step} />
 
       <div className="flex w-full justify-center">
         <TourMap step={step} zoneId={zoneId} tourId={tourId} />
       </div>
 
-      <div className="dock max-sm:dock-xs">
-        <button className="btn btn-ghost max-sm:btn-sm" disabled={step === 0} onClick={prevStep}>
+      {/* Bottom dock — full-width muted container with centered actions, fixed at bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 w-full flex items-center justify-center gap-12 sm:gap-20 bg-muted px-4 py-3">
+        <Button
+          variant="ghost"
+          size="lg"
+          className="font-semibold"
+          disabled={step === 0}
+          onClick={prevStep}
+        >
           Précédent
-        </button>
+        </Button>
         {step === STEP_LABELS.length - 1 ? (
-          <button className="btn btn-primary max-sm:btn-sm" onClick={finish}>
+          <Button
+            variant="default"
+            size="lg"
+            className="min-w-[8rem] font-semibold"
+            onClick={finish}
+          >
             Terminer
-          </button>
+          </Button>
         ) : (
-          <button className="btn btn-primary max-sm:btn-sm" onClick={nextStep}>
+          <Button
+            variant="default"
+            size="lg"
+            className="min-w-[8rem] font-semibold"
+            onClick={nextStep}
+          >
             Suivant
-          </button>
+          </Button>
         )}
       </div>
 
-      <dialog className="modal" id="finish_modal" ref={dialogRef}>
-        <div className="modal-box">
-          <form method="dialog">
-            <button
-              aria-label="Fermer"
-              className="btn btn-sm btn-ghost btn-circle absolute top-2 right-2"
-            >
-              <HugeiconsIcon icon={CancelIcon} strokeWidth={1.5} />
-            </button>
-          </form>
-
-          <h3 className="text-lg font-bold">Merci pour votre participation !</h3>
-          <p className="py-4">
+      <Dialog open={finishOpen} onOpenChange={setFinishOpen}>
+        <DialogContent id="finish_modal">
+          <DialogTitle>Merci pour votre participation !</DialogTitle>
+          <DialogDescription>
             Allez voir les organisateurs pour faire peser les déchets ramassés.
-          </p>
-        </div>
-      </dialog>
+          </DialogDescription>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

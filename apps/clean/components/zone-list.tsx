@@ -10,10 +10,13 @@ import {
   type DistanceInterval,
   type TourFilterType,
 } from '../src/app/tours-filter';
+
 import { findZoneTours } from '../src/app/tours-queries';
 import { ZONES } from '../src/app/zones';
 import { FilterBar } from './filter-bar';
 import { TourListSection } from './tour-list-section';
+import { Badge } from './ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 
 /**
  * Client wrapper above the zone list carrying the ephemeral filter state
@@ -60,25 +63,16 @@ export function ZoneList() {
     }
 
     return (
-      <details
-        className="collapse collapse-arrow bg-base-100 border border-base-300 mb-4 shadow-md sm:mb-8"
-        aria-label={`Zone ${zone.name}`}
-        key={zone.id}
-        open
-      >
-        <summary className="collapse-title flex items-center gap-3 sm:gap-4">
-          <h2 className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
+      <Card key={zone.id} className="w-full">
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <CardTitle className="text-secondary text-2xl font-bold tracking-wide sm:text-4xl">
             {zone.name}
-          </h2>
-          <span className="badge badge-secondary badge-md sm:badge-lg">
-            {bikeTours.length + walkingTours.length} parcours
-          </span>
-        </summary>
-        <div className="collapse-content">
+          </CardTitle>
+          <Badge variant="secondary">{bikeTours.length + walkingTours.length} parcours</Badge>
+        </CardHeader>
+        <CardContent>
           <div
-            className={`grid grid-cols-1 gap-4 pt-2 sm:gap-8${
-              hasBothTypes ? ' lg:grid-cols-2' : ''
-            }`}
+            className={`grid grid-cols-1 gap-4 sm:gap-8${hasBothTypes ? ' lg:grid-cols-2' : ''}`}
           >
             {hasBike ? (
               <TourListSection
@@ -97,8 +91,8 @@ export function ZoneList() {
               />
             ) : null}
           </div>
-        </div>
-      </details>
+        </CardContent>
+      </Card>
     );
   });
 
@@ -109,7 +103,7 @@ export function ZoneList() {
   };
 
   return (
-    <div>
+    <div className="flex flex-col gap-4 sm:gap-6">
       <FilterBar
         type={filterType}
         onTypeChange={setFilterType}
@@ -121,7 +115,7 @@ export function ZoneList() {
         filterTouched={filterTouched}
         onReset={handleReset}
       />
-      {zoneSections}
+      <div className="flex flex-col gap-4">{zoneSections}</div>
     </div>
   );
 }
