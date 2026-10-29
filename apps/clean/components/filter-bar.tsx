@@ -106,7 +106,7 @@ export function FilterBar({
             <AccordionTrigger className="text-sm sm:text-base :data-[slot=accordion-trigger-icon]:size-6 p-0">
               Filtres
             </AccordionTrigger>
-            <AccordionContent keepMounted={true}>
+            <AccordionContent keepMounted={true} className="pb-0">
               <div className="flex flex-col md:flex-row gap-4 md:gap-16">
                 <div className="md:flex-1">
                   <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider w-full mb-2 block">
