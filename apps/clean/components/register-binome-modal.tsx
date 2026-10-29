@@ -51,6 +51,70 @@ import {
 import { Input } from './ui/input';
 import { Item, ItemContent, ItemDescription, ItemMedia, ItemTitle } from './ui/item';
 
+/** A FieldSet for one member of the Binôme (Prénom + Nom). */
+function MemberFieldSet({
+  keyPrefix,
+  errors,
+  touched,
+  onBlur,
+  onChange,
+  values,
+  windowNotOpen,
+}: {
+  readonly keyPrefix: '1' | '2';
+  readonly errors: Readonly<Partial<Record<IdentityField, IdentityFieldError>>>;
+  readonly touched: Readonly<Partial<Record<IdentityField, boolean>>>;
+  readonly onBlur: (key: IdentityField) => void;
+  readonly onChange: (key: IdentityField, value: string) => void;
+  readonly values: Readonly<Record<IdentityField, string>>;
+  readonly windowNotOpen: boolean;
+}) {
+  const firstNameKey = `firstName${keyPrefix}` as IdentityField;
+  const lastNameKey = `lastName${keyPrefix}` as IdentityField;
+
+  return (
+    <FieldSet className="gap-2">
+      <FieldLegend>Membre {keyPrefix}</FieldLegend>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {[
+          { key: firstNameKey, label: 'Prénom', id: `register-first-name-${keyPrefix}` },
+          { key: lastNameKey, label: 'Nom', id: `register-last-name-${keyPrefix}` },
+        ].map((field) => {
+          const error = errors[field.key];
+          const showError =
+            error !== undefined &&
+            (error !== 'required' || touched[field.key] === true);
+          return (
+            <Field key={field.id} data-invalid={showError || undefined}>
+              <FieldLabel htmlFor={field.id} className="text-sm">
+                {field.label}
+              </FieldLabel>
+              <FieldContent>
+                <Input
+                  aria-describedby={showError ? `${field.id}-error` : undefined}
+                  aria-invalid={showError ? true : undefined}
+                  className="w-full min-w-0"
+                  data-testid={field.id}
+                  disabled={windowNotOpen}
+                  id={field.id}
+                  onBlur={() => onBlur(field.key)}
+                  onChange={(event) => onChange(field.key, event.target.value)}
+                  required
+                  type="text"
+                  value={values[field.key]}
+                />
+                <FieldError className="text-xs" id={`${field.id}-error`}>
+                  {showError ? FIELD_ERROR_MESSAGES[error] : undefined}
+                </FieldError>
+              </FieldContent>
+            </Field>
+          );
+        })}
+      </div>
+    </FieldSet>
+  );
+}
+
 /**
  * Registration modal of one Parcours (tickets #17 + #18): it shows the
  * selected tour context — Zone name, Parcours name, action date and the Zone
@@ -423,99 +487,33 @@ export function RegisterBinomeModal({
 
             <form onSubmit={(event) => void submit(event)}>
               <FieldGroup>
-                <FieldSet className="gap-2">
-                  <FieldLegend>Membre 1</FieldLegend>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {[
-                      { key: 'firstName1' as const, label: 'Prénom', id: 'register-first-name-1' },
-                      { key: 'lastName1' as const, label: 'Nom', id: 'register-last-name-1' },
-                    ].map((field) => {
-                      const error = errors[field.key];
-                      const showError =
-                        error !== undefined &&
-                        (error !== 'required' || touched[field.key] === true);
-                      return (
-                        <Field key={field.id} data-invalid={showError || undefined}>
-                          <FieldLabel htmlFor={field.id} className="text-sm">
-                            {field.label}
-                          </FieldLabel>
-                          <FieldContent>
-                            <Input
-                              aria-describedby={showError ? `${field.id}-error` : undefined}
-                              aria-invalid={showError ? true : undefined}
-                              className="w-full min-w-0"
-                              data-testid={field.id}
-                              disabled={windowNotOpen}
-                              id={field.id}
-                              onBlur={() =>
-                                setTouched((current) => ({ ...current, [field.key]: true }))
-                              }
-                              onChange={(event) =>
-                                setValues((current) => ({
-                                  ...current,
-                                  [field.key]: event.target.value,
-                                }))
-                              }
-                              required
-                              type="text"
-                              value={values[field.key]}
-                            />
-                            <FieldError className="text-xs" id={`${field.id}-error`}>
-                              {showError ? FIELD_ERROR_MESSAGES[error] : undefined}
-                            </FieldError>
-                          </FieldContent>
-                        </Field>
-                      );
-                    })}
-                  </div>
-                </FieldSet>
+                <MemberFieldSet
+                  keyPrefix="1"
+                  errors={errors}
+                  touched={touched}
+                  onBlur={(key) =>
+                    setTouched((current) => ({ ...current, [key]: true }))
+                  }
+                  onChange={(key, value) =>
+                    setValues((current) => ({ ...current, [key]: value }))
+                  }
+                  values={values}
+                  windowNotOpen={windowNotOpen}
+                />
 
-                <FieldSet className="gap-2">
-                  <FieldLegend>Membre 2</FieldLegend>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {[
-                      { key: 'firstName2' as const, label: 'Prénom', id: 'register-first-name-2' },
-                      { key: 'lastName2' as const, label: 'Nom', id: 'register-last-name-2' },
-                    ].map((field) => {
-                      const error = errors[field.key];
-                      const showError =
-                        error !== undefined &&
-                        (error !== 'required' || touched[field.key] === true);
-                      return (
-                        <Field key={field.id} data-invalid={showError || undefined}>
-                          <FieldLabel htmlFor={field.id} className="text-sm">
-                            {field.label}
-                          </FieldLabel>
-                          <FieldContent>
-                            <Input
-                              aria-describedby={showError ? `${field.id}-error` : undefined}
-                              aria-invalid={showError ? true : undefined}
-                              className="w-full min-w-0"
-                              data-testid={field.id}
-                              disabled={windowNotOpen}
-                              id={field.id}
-                              onBlur={() =>
-                                setTouched((current) => ({ ...current, [field.key]: true }))
-                              }
-                              onChange={(event) =>
-                                setValues((current) => ({
-                                  ...current,
-                                  [field.key]: event.target.value,
-                                }))
-                              }
-                              required
-                              type="text"
-                              value={values[field.key]}
-                            />
-                            <FieldError className="text-xs" id={`${field.id}-error`}>
-                              {showError ? FIELD_ERROR_MESSAGES[error] : undefined}
-                            </FieldError>
-                          </FieldContent>
-                        </Field>
-                      );
-                    })}
-                  </div>
-                </FieldSet>
+                <MemberFieldSet
+                  keyPrefix="2"
+                  errors={errors}
+                  touched={touched}
+                  onBlur={(key) =>
+                    setTouched((current) => ({ ...current, [key]: true }))
+                  }
+                  onChange={(key, value) =>
+                    setValues((current) => ({ ...current, [key]: value }))
+                  }
+                  values={values}
+                  windowNotOpen={windowNotOpen}
+                />
 
                 <Field orientation="horizontal">
                   <FieldLabel htmlFor="register-engaged" className="text-sm whitespace-normal">

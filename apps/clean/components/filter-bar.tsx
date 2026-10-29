@@ -17,9 +17,9 @@ interface TypeChoice {
 
 /** The three options of the Type de parcours segmented control, "Tous" first. */
 const TYPE_CHOICES: readonly TypeChoice[] = [
-  { value: 'all', label: 'Tous' },
-  { value: 'P', label: 'À pied' },
-  { value: 'V', label: 'À vélo' },
+  { value: 'all' as TourFilterType, label: 'Tous' },
+  { value: 'P' as TourFilterType, label: 'À pied' },
+  { value: 'V' as TourFilterType, label: 'À vélo' },
 ];
 
 /** Value of the single accordion item holding the filters panel. */
