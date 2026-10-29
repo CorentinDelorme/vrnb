@@ -24,7 +24,13 @@ export function MenuLinks({ pathname }: MenuLinksProps) {
     <>
       {menuLinks(pathname).map((link) => (
         <li key={link.kind}>
-          <a href={link.href} download target="_blank" rel="noopener noreferrer">
+          <a
+            href={link.href}
+            download
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2"
+          >
             <HugeiconsIcon icon={LINK_ICONS[link.kind]} strokeWidth={1.5} />
             {link.label}
           </a>
