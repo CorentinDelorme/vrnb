@@ -52,6 +52,18 @@ function isTypeActive(label: string): boolean {
   return typeButton(label).getAttribute('aria-pressed') === 'true';
 }
 
+/** Opens the filters accordion so the type toggle and sliders are reachable. */
+function openFilters(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Filtres' }));
+}
+
+/** Renders the home page with the filters accordion already opened. */
+async function renderHomePageWithFiltersOpen() {
+  const result = await renderHomePage();
+  openFilters();
+  return result;
+}
+
 /**
  * Home page (spec #3, ticket #6): the legacy Angular `tours-list` component.
  * These tests assert the public rendered output (DOM text, links, attributes)
@@ -123,7 +135,7 @@ describe('Home page', () => {
   });
 
   it('renders the filter bar above the zones with "Tous" selected by default', async () => {
-    const { container } = await renderHomePage();
+    const { container } = await renderHomePageWithFiltersOpen();
 
     const filterBar = container.querySelector('[aria-label="Filtres de parcours"]');
     expect(filterBar).not.toBeNull();
@@ -137,7 +149,7 @@ describe('Home page', () => {
   });
 
   it('renders the two distance slider families with "Tout" by default and all rows', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
     expect(screen.getAllByRole('slider')).toHaveLength(4);
     // Both families span their whole axis by default: "Tout" label on each.
@@ -148,7 +160,7 @@ describe('Home page', () => {
   });
 
   it('moving the cleaning-distance min bound filters rows; returning to the extreme restores them', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
     const sliders = screen.getAllByRole('slider');
     const cleaningMin = sliders[0];
@@ -185,7 +197,7 @@ describe('Home page', () => {
   });
 
   it('shows a plural counter when filtering to "À vélo"', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
     const velo = typeButton('À vélo');
     fireEvent.click(velo);
@@ -194,7 +206,7 @@ describe('Home page', () => {
   });
 
   it('shows a singular counter when exactly one tour matches', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
     const velo = typeButton('À vélo');
     fireEvent.click(velo);
@@ -211,7 +223,7 @@ describe('Home page', () => {
   });
 
   it('shows the empty state message and a reset button when zero tours match', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
     const pied = typeButton('À pied');
     fireEvent.click(pied);
@@ -228,7 +240,7 @@ describe('Home page', () => {
   });
 
   it('resets every filter when clicking "Réinitialiser les filtres"', async () => {
-    await renderHomePage();
+    await renderHomePageWithFiltersOpen();
 
     const pied = typeButton('À pied');
     fireEvent.click(pied);

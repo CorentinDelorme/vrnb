@@ -53,6 +53,18 @@ function isTypeActive(label: string): boolean {
   return typeButton(label).getAttribute('aria-pressed') === 'true';
 }
 
+/** Opens the filters accordion so the type toggle and sliders are reachable. */
+function openFilters(): void {
+  fireEvent.click(screen.getByRole('button', { name: 'Filtres' }));
+}
+
+/** Renders ZoneList with the filters accordion already opened. */
+function renderWithFiltersOpen() {
+  const result = render(<ZoneList />);
+  openFilters();
+  return result;
+}
+
 describe('ZoneList', () => {
   beforeEach(() => {
     push.mockClear();
@@ -60,7 +72,7 @@ describe('ZoneList', () => {
   });
 
   it('renders the filter bar with "Tous" selected by default', () => {
-    const { container } = render(<ZoneList />);
+    const { container } = renderWithFiltersOpen();
 
     const filterBar = container.querySelector('[aria-label="Filtres de parcours"]');
     expect(filterBar).not.toBeNull();
@@ -89,7 +101,7 @@ describe('ZoneList', () => {
   });
 
   it('hides the walking sections and keeps the bike sections when filtering to "À vélo"', () => {
-    render(<ZoneList />);
+    renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À vélo'));
     expect(isTypeActive('À vélo')).toBe(true);
@@ -109,7 +121,7 @@ describe('ZoneList', () => {
   });
 
   it('keeps only zones with a walking section when filtering to "À pied"; bike-only zones disappear', () => {
-    render(<ZoneList />);
+    renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À pied'));
     expect(isTypeActive('À pied')).toBe(true);
@@ -125,7 +137,7 @@ describe('ZoneList', () => {
   });
 
   it('comes back to every zone when switching back to "Tous"', () => {
-    render(<ZoneList />);
+    renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À pied'));
     expect(zone('Bruz Vau Gaillard')).toBeNull();
@@ -145,7 +157,7 @@ describe('ZoneList', () => {
   });
 
   it('shows a plural counter when filtering to "À vélo"', () => {
-    render(<ZoneList />);
+    renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À vélo'));
     expect(isTypeActive('À vélo')).toBe(true);
@@ -153,7 +165,7 @@ describe('ZoneList', () => {
   });
 
   it('shows a singular counter when exactly one tour matches', () => {
-    render(<ZoneList />);
+    renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À vélo'));
     const sliders = screen.getAllByRole('slider');
@@ -167,7 +179,7 @@ describe('ZoneList', () => {
   });
 
   it('shows the empty state message and a reset button when zero tours match', () => {
-    render(<ZoneList />);
+    renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À pied'));
     const sliders = screen.getAllByRole('slider');
@@ -181,7 +193,7 @@ describe('ZoneList', () => {
   });
 
   it('resets every filter when clicking "Réinitialiser les filtres"', () => {
-    render(<ZoneList />);
+    renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À pied'));
     const sliders = screen.getAllByRole('slider');

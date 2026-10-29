@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
 import { DistanceRangeSlider } from './distance-range-slider';
@@ -85,20 +85,29 @@ export function FilterBar({
   onReset,
 }: FilterBarProps) {
   /** Whether the filters panel is expanded.
-      Folded by default on mobile, expanded on desktop (PC). When `matchMedia`
-      is unavailable (SSR, jsdom) defaults to expanded so nothing is hidden. */
-  const [open, setOpen] = useState(() => {
+      Closed by default on both server and client (no hydration mismatch, no
+      flash on mobile). After hydration, an effect opens it on desktop (PC). */
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia === 'undefined') {
-      return true;
+      return undefined;
     }
-    return window.matchMedia(`(min-width: ${DESKTOP_MIN_WIDTH}px)`).matches;
-  });
+    const media = window.matchMedia(`(min-width: ${DESKTOP_MIN_WIDTH}px)`);
+    const update = () => setOpen(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   return (
     <Card className="sticky top-0 z-10" aria-label="Filtres de parcours">
       <CardContent>
         <Accordion
-          value={open ? [FILTERS_ITEM_VALUE] : undefined}
+          // Controlled for the lifetime of the component: `value` is never
+          // `undefined` (empty array = closed), so React never sees it switch
+          // between controlled and uncontrolled.
+          value={open ? [FILTERS_ITEM_VALUE] : []}
           onValueChange={(next) => setOpen(next.includes(FILTERS_ITEM_VALUE))}
           keepMounted={true}
         >
