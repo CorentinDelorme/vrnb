@@ -15,15 +15,47 @@ function zoneCard(page: Page, name: string) {
  *  `<input type="range">` nested in each thumb, named through
  *  `getAriaLabel`. */
 function cleaningMinSlider(page: Page) {
-  return page.getByRole('slider', { name: 'Distance de nettoyage (borne minimale)' });
+  return page.getByRole('slider', { name: 'Distance de nettoyage (km) (borne minimale)' });
 }
 
-/** Select a Type de parcours choice by clicking its segmented-control label.
- *  The radio semantics live on a sr-only input whose click target is
- *  intercepted by the wrapping label in Firefox: the label carries the
- *  onClick handler, so click it (assertions keep using getByRole('radio')). */
-function typeChoiceClick(page: Page, label: string) {
-  return page.locator('label[title="' + label + '"]').click();
+/** Select a Type de parcours choice by clicking its toggle button.
+ *  The filter uses a shadcn ToggleGroup (role="button" with aria-pressed),
+ *  not native radio inputs. Uses JavaScript click to bypass sticky card interception. */
+async function typeChoiceClick(page: Page, label: string) {
+  await clickFilterToggle(page, label);
+}
+
+/** Open the filters accordion if it's closed (required on mobile/small viewports). */
+async function openFiltersAccordion(page: Page) {
+  const accordionTrigger = page.getByRole('button', { name: 'Filtres' });
+  // First, wait for the accordion to open automatically on desktop (via useEffect).
+  // If it doesn't open within 5s, click the trigger to open it manually.
+  try {
+    await expect(page.getByRole('slider')).toHaveCount(4, { timeout: 5000 });
+  } catch {
+    const isExpanded = await accordionTrigger.getAttribute('aria-expanded');
+    if (isExpanded !== 'true') {
+      await accordionTrigger.click();
+    }
+  }
+  // Wait for accordion content to be fully rendered (animation completes)
+  // Wait for all 4 sliders to be present
+  await expect(page.getByRole('slider')).toHaveCount(4, { timeout: 15000 });
+  // Wait for filter state to be applied
+  await expect(page.getByRole('button', { name: 'Tous', exact: true })).toHaveAttribute('aria-pressed', 'true', { timeout: 15000 });
+  await expect(page.getByRole('button', { name: 'À pied', exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('button', { name: 'À vélo', exact: true })).toBeVisible({ timeout: 15000 });
+  // Small delay to let any sticky positioning settle
+  await page.waitForTimeout(300);
+}
+
+/** Click a filter toggle button using JavaScript to bypass sticky card interception. */
+async function clickFilterToggle(page: Page, label: string) {
+  await page.evaluate((btnLabel) => {
+    const btn = Array.from(document.querySelectorAll('button[data-slot="toggle-group-item"]'))
+      .find(b => b.textContent?.trim() === btnLabel);
+    if (btn) btn.click();
+  }, label);
 }
 
 test.describe('Home page', () => {
@@ -175,19 +207,30 @@ test.describe('Home page', () => {
   });
 
   test.describe('Filtering by type', () => {
-    test('the filter bar sits above the zones with "Tous" checked by default', async ({ page }) => {
+    test('the filter bar sits above the zones with "Tous" pressed by default', async ({ page }) => {
       await page.goto('/');
+      await openFiltersAccordion(page);
 
       await expect(page.locator('[aria-label="Filtres de parcours"]')).toBeVisible();
-      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
-      await expect(page.getByRole('radio', { name: 'À pied' })).not.toBeChecked();
-      await expect(page.getByRole('radio', { name: 'À vélo' })).not.toBeChecked();
+      await expect(page.getByRole('button', { name: 'Tous', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+      await expect(page.getByRole('button', { name: 'À pied', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
+      await expect(page.getByRole('button', { name: 'À vélo', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      );
     });
 
     test('filtering to "À vélo" hides walking sections and rows, then restoring "Tous" brings them back', async ({
       page,
     }) => {
       await page.goto('/');
+      await openFiltersAccordion(page);
 
       // Invariant without filter: every section and all 94 play buttons
       // (47 tours × the 2 breakpoint variants attached to the DOM).
@@ -201,7 +244,10 @@ test.describe('Home page', () => {
 
       // Switch to bike only.
       await typeChoiceClick(page, 'À vélo');
-      await expect(page.getByRole('radio', { name: 'À vélo' })).toBeChecked();
+      await expect(page.getByRole('button', { name: 'À vélo', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
 
       // The Bruz Sud walking block disappears; bike blocks remain everywhere.
       await expect(
@@ -226,7 +272,10 @@ test.describe('Home page', () => {
 
       // Restore everything.
       await typeChoiceClick(page, 'Tous');
-      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
+      await expect(page.getByRole('button', { name: 'Tous', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
         94,
       );
@@ -239,6 +288,7 @@ test.describe('Home page', () => {
       page,
     }) => {
       await page.goto('/');
+      await openFiltersAccordion(page);
 
       await expect(page.locator('[aria-label="Filtres de parcours"]')).toBeVisible();
       // Both distance sliders render (two handles each) with their "tout" label.
@@ -254,6 +304,7 @@ test.describe('Home page', () => {
       page,
     }) => {
       await page.goto('/');
+      await openFiltersAccordion(page);
 
       const cleaningMin = cleaningMinSlider(page);
       await expect(cleaningMin).toHaveAttribute('aria-valuenow', '0.5');
@@ -292,7 +343,10 @@ test.describe('Home page', () => {
       await page.goto('/');
 
       await typeChoiceClick(page, 'À vélo');
-      await expect(page.getByRole('radio', { name: 'À vélo' })).toBeChecked();
+      await expect(page.getByRole('button', { name: 'À vélo', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
       await expect(page.getByText('34 parcours affichés')).toBeVisible();
 
       // Restoring "Tous" removes the counter.
@@ -302,6 +356,7 @@ test.describe('Home page', () => {
 
     test('shows a singular counter when exactly one tour matches', async ({ page }) => {
       await page.goto('/');
+      await openFiltersAccordion(page);
 
       await typeChoiceClick(page, 'À vélo');
 
@@ -318,6 +373,7 @@ test.describe('Home page', () => {
       page,
     }) => {
       await page.goto('/');
+      await openFiltersAccordion(page);
 
       await typeChoiceClick(page, 'À pied');
 
@@ -338,6 +394,7 @@ test.describe('Home page', () => {
 
     test('resets every filter when clicking "Réinitialiser les filtres"', async ({ page }) => {
       await page.goto('/');
+      await openFiltersAccordion(page);
 
       await typeChoiceClick(page, 'À pied');
 
@@ -351,7 +408,10 @@ test.describe('Home page', () => {
       await page.getByRole('button', { name: 'Réinitialiser les filtres' }).click();
 
       // Back to the unfiltered state.
-      await expect(page.getByRole('radio', { name: 'Tous' })).toBeChecked();
+      await expect(page.getByRole('button', { name: 'Tous', exact: true })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
       await expect(page.getByText('tout')).toHaveCount(2);
       await expect(page.getByText(/Aucun parcours/)).not.toBeVisible();
       await expect(page.getByText(/parcours affich/)).not.toBeVisible();

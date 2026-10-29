@@ -100,7 +100,7 @@ test.describe('Tour page — V1 (bike)', () => {
       await page.getByRole('button', { name: 'Suivant' }).click();
       await page.getByRole('button', { name: 'Terminer' }).click();
       const modal = page.locator('#finish_modal');
-      await expect(modal.locator('[data-slot="card-title"]')).toContainText(
+      await expect(modal.locator('[data-slot="dialog-title"]')).toContainText(
         'Merci pour votre participation !',
       );
       await expect(modal).toContainText(
@@ -211,7 +211,7 @@ test.describe('Tour page — P3 (walking)', () => {
     await page.getByRole('button', { name: 'Terminer' }).click();
     const modal = page.locator('#finish_modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('[data-slot="card-title"]')).toContainText(
+    await expect(modal.locator('[data-slot="dialog-title"]')).toContainText(
       'Merci pour votre participation !',
     );
   });

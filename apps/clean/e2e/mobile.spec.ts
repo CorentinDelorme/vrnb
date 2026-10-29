@@ -45,7 +45,7 @@ test.describe('Mobile viewport', () => {
     // The finish modal is the shadcn Dialog of the tour page (DialogContent).
     const modal = page.locator('#finish_modal');
     await expect(modal).toBeVisible();
-    await expect(modal.locator('[data-slot="card-title"]')).toContainText(
+    await expect(modal.locator('[data-slot="dialog-title"]')).toContainText(
       'Merci pour votre participation !',
     );
   });

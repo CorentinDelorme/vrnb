@@ -103,6 +103,9 @@ export function FilterBar({
   return (
     <Card className="sticky top-0 z-10" aria-label="Filtres de parcours">
       <CardContent>
+        {/* Visually hidden heading to maintain proper heading hierarchy (h1 -> h2 -> h3).
+            The accordion trigger renders as h3, so we need an h2 in between. */}
+        <h2 className="sr-only">Filtres de parcours</h2>
         <Accordion
           // Controlled for the lifetime of the component: `value` is never
           // `undefined` (empty array = closed), so React never sees it switch

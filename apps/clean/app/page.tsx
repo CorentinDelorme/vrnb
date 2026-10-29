@@ -7,6 +7,7 @@ import { ResumeTourBanner } from '../components/resume-tour-banner';
 import { buttonVariants } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { ZoneList } from '../components/zone-list';
+import { Footer } from '../components/footer';
 
 /**
  * Home page `/` — port of the legacy Angular `tours-list` component
@@ -32,8 +33,6 @@ const ARTICLES = [
 ] as const;
 
 export default function HomePage() {
-  const currentYear = new Date().getFullYear();
-
   return (
     <div className="flex flex-col gap-4 sm:gap-6">
       <Card>
@@ -88,9 +87,7 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <footer className="text-center text-sm opacity-70">
-        ©{currentYear} Vélo Rando Nature Bruz (VRNB)
-      </footer>
+      <Footer />
     </div>
   );
 }
