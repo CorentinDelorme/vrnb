@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { test, Page } from '@playwright/test';
 
 /**
  * Régénère tous les screenshots du mode d'emploi (/manual) en mode mobile
@@ -40,7 +40,7 @@ function inscriptionsMock(registrationOpen: boolean): unknown {
 }
 
 /** Attendre que les cartes Leaflet aient le temps de se dessiner (tuiles async). */
-async function waitForMaps(page: any, ms = 1500): Promise<void> {
+async function waitForMaps(page: Page, ms = 1500): Promise<void> {
   await page.waitForTimeout(ms);
 }
 
