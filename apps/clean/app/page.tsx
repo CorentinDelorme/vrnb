@@ -38,7 +38,7 @@ export default function HomePage() {
       <Card>
         <CardContent className="flex flex-row items-center justify-between gap-4">
           <p className="text-sm font-medium sm:text-base">
-            Première visite ? Suivez l&apos;exemple du parcours Bruz Sud P2.
+            Première visite ? Consultez le mode d&apos;emploi
           </p>
           {/* Navigation, not an action: a Link carrying the button styling
           (the shadcn "As Link" pattern — never a `<Button>` inside a link). */}
