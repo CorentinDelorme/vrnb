@@ -82,8 +82,7 @@ function MemberFieldSet({
         ].map((field) => {
           const error = errors[field.key];
           const showError =
-            error !== undefined &&
-            (error !== 'required' || touched[field.key] === true);
+            error !== undefined && (error !== 'required' || touched[field.key] === true);
           return (
             <Field key={field.id} data-invalid={showError || undefined}>
               <FieldLabel htmlFor={field.id} className="text-sm">
@@ -491,12 +490,8 @@ export function RegisterBinomeModal({
                   keyPrefix="1"
                   errors={errors}
                   touched={touched}
-                  onBlur={(key) =>
-                    setTouched((current) => ({ ...current, [key]: true }))
-                  }
-                  onChange={(key, value) =>
-                    setValues((current) => ({ ...current, [key]: value }))
-                  }
+                  onBlur={(key) => setTouched((current) => ({ ...current, [key]: true }))}
+                  onChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))}
                   values={values}
                   windowNotOpen={windowNotOpen}
                 />
@@ -505,12 +500,8 @@ export function RegisterBinomeModal({
                   keyPrefix="2"
                   errors={errors}
                   touched={touched}
-                  onBlur={(key) =>
-                    setTouched((current) => ({ ...current, [key]: true }))
-                  }
-                  onChange={(key, value) =>
-                    setValues((current) => ({ ...current, [key]: value }))
-                  }
+                  onBlur={(key) => setTouched((current) => ({ ...current, [key]: true }))}
+                  onChange={(key, value) => setValues((current) => ({ ...current, [key]: value }))}
                   values={values}
                   windowNotOpen={windowNotOpen}
                 />

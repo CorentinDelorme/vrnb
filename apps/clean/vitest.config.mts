@@ -10,6 +10,12 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     include: ['**/*.spec.{ts,tsx}'],
-    exclude: [...configDefaults.exclude, 'node_modules', 'out-tsc', 'e2e'],
+    exclude: [
+      ...configDefaults.exclude,
+      'node_modules',
+      'out-tsc',
+      'e2e',
+      'scripts/capture-manual.spec.ts',
+    ],
   },
 });

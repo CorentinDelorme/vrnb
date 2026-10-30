@@ -42,9 +42,17 @@ async function openFiltersAccordion(page: Page) {
   // Wait for all 4 sliders to be present
   await expect(page.getByRole('slider')).toHaveCount(4, { timeout: 15000 });
   // Wait for filter state to be applied
-  await expect(page.getByRole('button', { name: 'Tous', exact: true })).toHaveAttribute('aria-pressed', 'true', { timeout: 15000 });
-  await expect(page.getByRole('button', { name: 'À pied', exact: true })).toBeVisible({ timeout: 15000 });
-  await expect(page.getByRole('button', { name: 'À vélo', exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByRole('button', { name: 'Tous', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+    { timeout: 15000 },
+  );
+  await expect(page.getByRole('button', { name: 'À pied', exact: true })).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(page.getByRole('button', { name: 'À vélo', exact: true })).toBeVisible({
+    timeout: 15000,
+  });
   // Small delay to let any sticky positioning settle
   await page.waitForTimeout(300);
 }
@@ -52,9 +60,10 @@ async function openFiltersAccordion(page: Page) {
 /** Click a filter toggle button using JavaScript to bypass sticky card interception. */
 async function clickFilterToggle(page: Page, label: string) {
   await page.evaluate((btnLabel) => {
-    const btn = Array.from(document.querySelectorAll('button[data-slot="toggle-group-item"]'))
-      .find(b => b.textContent?.trim() === btnLabel);
-    if (btn) btn.click();
+    const btn = Array.from(document.querySelectorAll('button[data-slot="toggle-group-item"]')).find(
+      (b) => b.textContent?.trim() === btnLabel,
+    );
+    if (btn instanceof HTMLElement) btn.click();
   }, label);
 }
 

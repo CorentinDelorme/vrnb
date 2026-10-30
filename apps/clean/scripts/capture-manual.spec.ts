@@ -1,4 +1,4 @@
-import { test, Page } from '@playwright/test';
+import { Page, test } from '@playwright/test';
 
 /**
  * Régénère tous les screenshots du mode d'emploi (/manual) en mode mobile

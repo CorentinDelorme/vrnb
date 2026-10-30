@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { Footer } from '../components/footer';
 import { InscriptionsOpeningAnnouncement } from '../components/inscriptions-opening-announcement';
 import { InscriptionsStatusProvider } from '../components/inscriptions-status-provider';
 import { ResumeTourBanner } from '../components/resume-tour-banner';
 import { buttonVariants } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { ZoneList } from '../components/zone-list';
-import { Footer } from '../components/footer';
 
 /**
  * Home page `/` — port of the legacy Angular `tours-list` component
