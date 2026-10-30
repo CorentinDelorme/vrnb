@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+import { cn } from 'cn';
 
 import type { DistanceInterval, TourFilterType } from '../src/app/tours-filter';
 import { DistanceRangeSlider } from './distance-range-slider';
@@ -100,9 +102,48 @@ export function FilterBar({
     return () => media.removeEventListener('change', update);
   }, []);
 
+  /** Whether the card is currently pinned by its sticky position.
+      jsdom reports zero-size rects, which would read as "stuck", so they are
+      treated as not stuck (the styling only matters in a real browser). */
+  const [pinned, setPinned] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card) {
+      return undefined;
+    }
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const rect = card.getBoundingClientRect();
+      setPinned(rect.width > 0 && rect.top <= 1);
+    };
+    const schedule = () => {
+      if (frame === 0) frame = window.requestAnimationFrame(update);
+      return undefined;
+    };
+    update();
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    return () => {
+      if (frame !== 0) window.cancelAnimationFrame(frame);
+      window.removeEventListener('scroll', schedule);
+      window.removeEventListener('resize', schedule);
+    };
+  }, []);
+
+  // While pinned the card spans the full viewport width, cancelling the root
+  // `<main>` padding (p-4 sm:p-8) with matching negative margins; the corner
+  // radii go away and the content padding mirrors `<main>`'s so the inner
+  // controls keep aligning with the rest of the page.
   return (
-    <Card className="sticky top-0 z-10" aria-label="Filtres de parcours">
-      <CardContent>
+    <Card
+      ref={cardRef}
+      className={cn('sticky top-0 z-10', pinned && '-mx-4 rounded-none sm:-mx-8')}
+      aria-label="Filtres de parcours"
+    >
+      <CardContent className={pinned ? 'sm:px-8' : undefined}>
         {/* Visually hidden heading to maintain proper heading hierarchy (h1 -> h2 -> h3).
             The accordion trigger renders as h3, so we need an h2 in between. */}
         <h2 className="sr-only">Filtres de parcours</h2>

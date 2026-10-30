@@ -24,7 +24,8 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
  * families (Distance de nettoyage, Distance totale). It computes the filtered
  * tours per zone and passes them to the `TourListSection`s.
  *
- * - The filter bar card sticks to the top of the viewport once scrolled to.
+ * - The filter bar card sticks to the top of the viewport once scrolled to;
+ * while pinned it spans the full viewport width (edge to edge).
  * - A zone disappears entirely once all its tours are filtered out.
  * - Within a zone, an empty "à vélo" / "à pied" block is not rendered.
  * - Section titles and "N parcours" badges follow the filtered counts.
