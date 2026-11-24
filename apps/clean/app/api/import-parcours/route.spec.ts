@@ -176,7 +176,7 @@ describe('POST /api/import-parcours', () => {
     expect(await response.json()).toMatchObject({ ids: ['P14'] });
   });
 
-  it('does not reassign P1 to another zone: bruz-vau-gaillard vélo starts at V106', async () => {
+  it('does not reassign P1 to another zone: bruz-vau-gaillard vélo starts at V100', async () => {
     const response = await withNodeEnv('development', () =>
       callPost(
         postRequest(
@@ -189,7 +189,7 @@ describe('POST /api/import-parcours', () => {
       ),
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ids: ['V106'] });
+    expect(await response.json()).toMatchObject({ ids: ['V100'] });
   });
 
   it('assigns sequential ids to multiple uploaded files', async () => {

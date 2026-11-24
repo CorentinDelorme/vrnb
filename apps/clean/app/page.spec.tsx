@@ -202,7 +202,7 @@ describe('Home page', () => {
     const velo = typeButton('À vélo');
     fireEvent.click(velo);
     expect(isTypeActive('À vélo')).toBe(true);
-    expect(screen.getByText('34 parcours affichés')).toBeDefined();
+    expect(screen.getByText('28 parcours affichés')).toBeDefined();
   });
 
   it('shows a singular counter when exactly one tour matches', async () => {

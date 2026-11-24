@@ -45,12 +45,13 @@ describe('zoneMapTours', () => {
     expect(names.every((name) => name.startsWith('P'))).toBe(true);
   });
 
-  it('returns the bike tour names of another zone', () => {
+  it('returns no bike tours for bruz-vau-gaillard (now only walking tours)', () => {
     const names = zoneMapTours('bruz-vau-gaillard', 'V');
-    expect(names).toEqual(['V100', 'V101', 'V102', 'V103', 'V104', 'V105']);
+    expect(names).toEqual([]);
   });
 
-  it('returns no names for a zone without tours of that type', () => {
-    expect(zoneMapTours('bruz-vau-gaillard', 'P')).toEqual([]);
+  it('returns the walking tour names for bruz-vau-gaillard', () => {
+    const names = zoneMapTours('bruz-vau-gaillard', 'P');
+    expect(names).toEqual(['P100', 'P101', 'P102', 'P103', 'P104', 'P105']);
   });
 });

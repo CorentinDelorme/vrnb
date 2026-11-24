@@ -92,8 +92,8 @@ describe('ZoneList', () => {
     expect(zone('Bruz Vau Gaillard')).toBeDefined();
     expect(zone('Bruz Ker Lann')).toBeDefined();
 
-    expect(screen.getAllByText('Parcours à vélo')).toHaveLength(3);
-    expect(screen.getAllByText('Parcours à pied')).toHaveLength(1);
+    expect(screen.getAllByText('Parcours à vélo')).toHaveLength(2);
+    expect(screen.getAllByText('Parcours à pied')).toHaveLength(2);
 
     expect(summaryText('Bruz Sud')).toContain('28 parcours');
     expect(summaryText('Bruz Vau Gaillard')).toContain('6 parcours');
@@ -115,8 +115,10 @@ describe('ZoneList', () => {
       'Parcours à vélo',
     );
 
-    // The other zones are bike-only and are untouched.
-    expect(summaryText('Bruz Vau Gaillard')).toContain('6 parcours');
+    // Bruz Vau Gaillard has no bike tours anymore (converted to walking), so it disappears.
+    expect(zone('Bruz Vau Gaillard')).toBeNull();
+
+    // Bruz Ker Lann is bike-only and untouched.
     expect(summaryText('Bruz Ker Lann')).toContain('13 parcours');
   });
 
@@ -126,21 +128,22 @@ describe('ZoneList', () => {
     fireEvent.click(typeButton('À pied'));
     expect(isTypeActive('À pied')).toBe(true);
 
-    // Bruz Sud (13 walking) stays; Bruz Ker Lann now has no walking tour (P200/P201 removed) and vanishes, like Bruz Vau Gaillard.
+    // Bruz Sud (13 walking) and Bruz Vau Gaillard (6 walking) stay; Bruz Ker Lann has no walking tours and vanishes.
     expect(zone('Bruz Sud')).toBeDefined();
     expect(summaryText('Bruz Sud')).toContain('13 parcours');
-    expect(zone('Bruz Vau Gaillard')).toBeNull();
+    expect(zone('Bruz Vau Gaillard')).toBeDefined();
+    expect(summaryText('Bruz Vau Gaillard')).toContain('6 parcours');
     expect(zone('Bruz Ker Lann')).toBeNull();
 
-    // A single walking heading remains (Bruz Sud).
-    expect(screen.getAllByText('Parcours à pied')).toHaveLength(1);
+    // Two walking headings remain (Bruz Sud and Bruz Vau Gaillard).
+    expect(screen.getAllByText('Parcours à pied')).toHaveLength(2);
   });
 
   it('comes back to every zone when switching back to "Tous"', () => {
     renderWithFiltersOpen();
 
     fireEvent.click(typeButton('À pied'));
-    expect(zone('Bruz Vau Gaillard')).toBeNull();
+    expect(zone('Bruz Vau Gaillard')).toBeDefined();
 
     fireEvent.click(typeButton('Tous'));
     expect(isTypeActive('Tous')).toBe(true);
@@ -161,7 +164,7 @@ describe('ZoneList', () => {
 
     fireEvent.click(typeButton('À vélo'));
     expect(isTypeActive('À vélo')).toBe(true);
-    expect(screen.getByText('34 parcours affichés')).toBeDefined();
+    expect(screen.getByText('28 parcours affichés')).toBeDefined();
   });
 
   it('shows a singular counter when exactly one tour matches', () => {

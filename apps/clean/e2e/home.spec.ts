@@ -269,13 +269,15 @@ test.describe('Home page', () => {
           hasText: 'Parcours à vélo',
         }),
       ).toBeVisible();
-      await expect(zoneCard(page, 'Bruz Vau Gaillard')).toBeVisible();
+
+      // Bruz Vau Gaillard has no bike tours (converted to walking), so it disappears.
+      await expect(zoneCard(page, 'Bruz Vau Gaillard')).not.toBeVisible();
       await expect(zoneCard(page, 'Bruz Ker Lann')).toBeVisible();
 
-      // Only the bike tours remain: 15 + 6 + 13 = 34 tours → 68 play buttons
+      // Only the bike tours remain: 15 + 13 = 28 tours → 56 play buttons
       // (both breakpoint variants are attached to the DOM).
       await expect(page.locator('li.list-row button[aria-label="Lancer le parcours"]')).toHaveCount(
-        68,
+        56,
       );
       await expect(zoneCard(page, 'Bruz Sud')).toContainText('15 parcours');
 
@@ -356,7 +358,7 @@ test.describe('Home page', () => {
         'aria-pressed',
         'true',
       );
-      await expect(page.getByText('34 parcours affichés')).toBeVisible();
+      await expect(page.getByText('28 parcours affichés')).toBeVisible();
 
       // Restoring "Tous" removes the counter.
       await typeChoiceClick(page, 'Tous');
