@@ -94,3 +94,15 @@ export const REUSED_FICHE_SUBJECT: PerfSubject = {
   changed: { singular: 'réutilisée', plural: 'réutilisées' },
   unchanged: { singular: 'réutilisée', plural: 'réutilisées' },
 };
+
+/**
+ * The global overview map: what the run regenerated, and what it left alone.
+ */
+export const GLOBAL_MAP_SUBJECT: PerfSubject = {
+  id: 'carte globale',
+  label: 'Carte globale',
+  plural: 'cartes globales',
+  unit: { singular: 'carte', plural: 'cartes' },
+  changed: { singular: 'regénérée', plural: 'regénérées' },
+  unchanged: { singular: 'ignorée', plural: 'ignorées' },
+};

@@ -377,6 +377,16 @@ export function zoneMapPdfPath(rootDir: string, zoneId: string, kind: 'V' | 'P')
   return join(zonePdfDir(rootDir, zoneId), zoneMapPdfName(kind));
 }
 
+/** Global overview map PDF: `public/pdf/Carte_tous_les_parcours.pdf`. */
+export function globalMapPdfPath(rootDir: string): string {
+  return join(pdfRootDir(rootDir), 'Carte_tous_les_parcours.pdf');
+}
+
+/** Key of the global overview map in the generation state. */
+export function globalMapKey(): string {
+  return 'global';
+}
+
 /**
  * Pattern of the Fiche PDFs of a Zone: a practice type letter followed by
  * the number of the Parcours (`V1.pdf`, `P13.pdf`).

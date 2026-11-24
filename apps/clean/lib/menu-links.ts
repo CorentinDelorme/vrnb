@@ -12,7 +12,7 @@ import { matchZoneMapPath } from './route-paths';
  */
 
 /** Which drawer download a link points to. */
-export type MenuLinkKind = 'pdf-carte';
+export type MenuLinkKind = 'pdf-carte' | 'global-map' | 'import-parcours';
 
 export interface MenuLink {
   readonly kind: MenuLinkKind;
@@ -43,8 +43,30 @@ export function toursMenuLinks(zoneId: string, type: string): readonly MenuLink[
   return [{ kind: 'pdf-carte', href: `/pdf/${zoneId}/${files.carte}`, label: CARTE_LABEL }];
 }
 
-/** Drawer links for a pathname; empty outside the zone-map routes. */
+/** Global map PDF link for the `/tours` page. */
+export function globalMapMenuLinks(): readonly MenuLink[] {
+  return [{ kind: 'pdf-carte', href: '/pdf/Carte_tous_les_parcours.pdf', label: CARTE_LABEL }];
+}
+
+/** Home page menu links: "Voir tous les parcours" and dev-only "Importer des parcours". */
+export function homeMenuLinks(): readonly MenuLink[] {
+  const links: MenuLink[] = [
+    { kind: 'global-map', href: '/tours', label: 'Voir tous les parcours' },
+  ];
+  if (process.env.NODE_ENV === 'development') {
+    links.push({ kind: 'import-parcours', href: '/admin/import-parcours', label: 'Importer des parcours' });
+  }
+  return links;
+}
+
+/** Drawer links for a pathname; empty outside the known routes. */
 export function menuLinks(pathname: string): readonly MenuLink[] {
+  if (pathname === '/') {
+    return homeMenuLinks();
+  }
+  if (pathname === '/tours') {
+    return globalMapMenuLinks();
+  }
   const zoneMap = matchZoneMapPath(pathname);
   if (!zoneMap) return [];
   return toursMenuLinks(zoneMap.zoneId, zoneMap.type);

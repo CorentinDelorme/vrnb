@@ -7,6 +7,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   forEachConcurrently,
   geoJsonAssetPath,
+  globalMapKey,
+  globalMapPdfPath,
   gpxTracePath,
   isFilterActive,
   isRecord,
@@ -563,5 +565,17 @@ describe('forEachConcurrently', () => {
     };
 
     await expect(forEachConcurrently([], 3, worker)).resolves.toBeUndefined();
+  });
+});
+
+describe('globalMapPdfPath', () => {
+  it('should point to the global overview map PDF', () => {
+    expect(globalMapPdfPath('/app')).toBe(join('/app', 'public/pdf/Carte_tous_les_parcours.pdf'));
+  });
+});
+
+describe('globalMapKey', () => {
+  it('should return the global map key', () => {
+    expect(globalMapKey()).toBe('global');
   });
 });

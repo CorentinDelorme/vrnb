@@ -43,8 +43,21 @@ describe('menuLinks', () => {
     expect(menuLinks('/tours/bruz-sud/V/')).toEqual(toursMenuLinks('bruz-sud', 'V'));
   });
 
-  it('returns no links outside the zone-map routes', () => {
-    expect(menuLinks('/')).toEqual([]);
+  it('returns home menu links on home page', () => {
+    const links = menuLinks('/');
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    expect(links.map((link) => link.href)).toContain('/tours');
+    expect(links.find((link) => link.href === '/tours')?.label).toBe('Voir tous les parcours');
+  });
+
+  it('returns global map PDF link on /tours', () => {
+    const links = menuLinks('/tours');
+    expect(links).toHaveLength(1);
+    expect(links[0].href).toBe('/pdf/Carte_tous_les_parcours.pdf');
+    expect(links[0].label).toBe('Télécharger le PDF de la carte');
+  });
+
+  it('returns no links on manual or tour routes', () => {
     expect(menuLinks('/manual')).toEqual([]);
     expect(menuLinks('/tour/bruz-sud/V1')).toEqual([]);
   });
