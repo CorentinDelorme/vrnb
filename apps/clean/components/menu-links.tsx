@@ -22,9 +22,11 @@ interface MenuLinksProps {
  * renders inside the client `AppHeader` boundary.
  */
 export function MenuLinks({ pathname }: MenuLinksProps) {
+  const links = menuLinks(pathname);
+
   return (
-    <>
-      {menuLinks(pathname).map((link) => (
+    <ul className="flex flex-col gap-3">
+      {links.map((link) => (
         <li key={`${link.kind}-${link.href}`}>
           <a
             href={link.href}
@@ -33,11 +35,11 @@ export function MenuLinks({ pathname }: MenuLinksProps) {
             rel={link.kind === 'pdf-carte' ? 'noopener noreferrer' : undefined}
             className="flex items-center gap-2"
           >
-            <HugeiconsIcon icon={LINK_ICONS[link.kind]} strokeWidth={1.5} />
+            <HugeiconsIcon icon={LINK_ICONS[link.kind]} strokeWidth={1.5} size={20} />
             {link.label}
           </a>
         </li>
       ))}
-    </>
+    </ul>
   );
 }
