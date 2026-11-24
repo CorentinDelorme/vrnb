@@ -96,6 +96,29 @@ export type ZoneReason =
   /** The overview map is up to date: nothing to render. */
   | 'up-to-date';
 
+/** Why the plan decided to render the global overview map again. */
+export type GlobalReason =
+  /** The run was forced: everything the filters select is regenerated. */
+  | 'forced'
+  /** At least one Parcours in the run has changed segments or Fiche. */
+  | 'parcours-changed'
+  /** The global overview map is missing, empty or unreadable on disk. */
+  | 'missing-global-map'
+  /** The state records no fingerprint for the global overview map. */
+  | 'no-global-map-state'
+  /** The global overview map on the disk differs from the one the state recorded. */
+  | 'global-map-changed'
+  /** The global overview map is up to date: nothing to render. */
+  | 'up-to-date';
+
+/** What the plan decided for the global overview map. */
+export interface GlobalDecision {
+  /** Whether the global overview map must be rendered again. */
+  readonly regenerateGlobalMap: boolean;
+  /** Why the plan decided this. */
+  readonly reason: GlobalReason;
+}
+
 /** The fingerprints of the files of a Parcours, as found on the disk. */
 export type { ParcoursFingerprints } from './generation-state';
 
@@ -128,6 +151,11 @@ export interface PlanGenerationInput {
    * fingerprint.
    */
   readonly zoneMapFingerprints?: Readonly<Record<string, string | undefined>>;
+  /**
+   * The fingerprint of the global overview map, keyed by `globalMapKey`.
+   * A map that is missing, empty or unreadable has no fingerprint.
+   */
+  readonly globalMapFingerprint?: string | undefined;
   /** The `--tour` and `--zone` filters of the run. */
   readonly filters?: GenerationFilters;
   /** Whether the run is forced. */
@@ -168,6 +196,8 @@ export interface GenerationPlan {
   readonly decisions: readonly ParcoursDecision[];
   /** One decision per overview map of the run, in the order of the run. */
   readonly zoneDecisions: readonly ZoneDecision[];
+  /** The decision for the global overview map. */
+  readonly globalDecision: GlobalDecision;
 }
 
 /**
@@ -193,7 +223,49 @@ export function planGeneration(input: PlanGenerationInput): GenerationPlan {
       input.zoneMapFingerprints ?? {},
       input.force ?? false,
     ),
+    globalDecision: decideGlobalMap(
+      decisions,
+      input.state,
+      input.globalMapFingerprint,
+      input.force ?? false,
+    ),
   };
+}
+
+/** Whether any Parcours in the decisions requires the global map to regenerate. */
+function anyParcoursChanged(decisions: readonly ParcoursDecision[]): boolean {
+  return decisions.some((decision) => decision.rerouteSegments || decision.regenerateFiche);
+}
+
+/** Decide the global overview map: always part of the run (not filterable). */
+function decideGlobalMap(
+  decisions: readonly ParcoursDecision[],
+  state: GenerationState | undefined,
+  onDisk: string | undefined,
+  force: boolean,
+): GlobalDecision {
+  const decision = (regenerateGlobalMap: boolean, reason: GlobalReason): GlobalDecision => ({
+    regenerateGlobalMap,
+    reason,
+  });
+
+  if (force) {
+    return decision(true, 'forced');
+  }
+  if (anyParcoursChanged(decisions)) {
+    return decision(true, 'parcours-changed');
+  }
+  if (!onDisk) {
+    return decision(true, 'missing-global-map');
+  }
+  if (!state?.globalMap) {
+    return decision(true, 'no-global-map-state');
+  }
+  if (state.globalMap !== onDisk) {
+    return decision(true, 'global-map-changed');
+  }
+
+  return decision(false, 'up-to-date');
 }
 
 function decideParcours(

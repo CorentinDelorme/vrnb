@@ -24,6 +24,8 @@ import { dirname, join } from 'path';
 
 import type { ParcoursEntry } from './generation-helpers';
 import {
+  globalMapKey,
+  globalMapPdfPath,
   isRecord,
   parseParcoursStateKey,
   resolveGpxTracePath,
@@ -36,7 +38,7 @@ import {
  * Parcours or an overview map everywhere they are counted. They are
  * re-exported here: the state is where they are used.
  */
-export { parcoursStateKey, parseParcoursStateKey, zoneMapKey } from './generation-helpers';
+export { parcoursStateKey, parseParcoursStateKey, zoneMapKey, globalMapKey } from './generation-helpers';
 
 /**
  * Version of the generation state: the single source of truth of what the
@@ -84,6 +86,10 @@ export interface GenerationState {
    * `<zone>/<kind>`.
    */
   readonly zoneMaps: Readonly<Record<string, string | undefined>>;
+  /**
+   * The fingerprint of the global overview map, keyed by `globalMapKey()`.
+   */
+  readonly globalMap: string | undefined;
 }
 
 /** The fingerprints of the trace and of the segments of a Parcours. */
@@ -123,6 +129,17 @@ export interface ZoneMapStateUpdate {
   /**
    * The new fingerprint of the overview map, `undefined` when the render
    * failed: an overview map that failed is not marked as up to date.
+   */
+  readonly fingerprint: string | undefined;
+}
+
+/** What the pipeline produced for the global overview map during a run. */
+export interface GlobalMapStateUpdate {
+  /** Key of the global overview map (`globalMapKey()`). */
+  readonly key: string;
+  /**
+   * The new fingerprint of the global overview map, `undefined` when the render
+   * failed: a global overview map that failed is not marked as up to date.
    */
   readonly fingerprint: string | undefined;
 }
@@ -227,12 +244,13 @@ export function fingerprintParcoursArtefacts(
  * (so the next run tries them again), and the records of the other
  * Parcours are left untouched. The same goes for the overview maps: the
  * ones the run rendered hold their new fingerprint, the ones it failed to
- * render hold none.
+ * render hold none. The global overview map follows the same pattern.
  */
 export function nextGenerationState(
   state: GenerationState | undefined,
   updates: readonly ParcoursStateUpdate[],
   zoneMapUpdates: readonly ZoneMapStateUpdate[] = [],
+  globalMapUpdate?: GlobalMapStateUpdate,
 ): GenerationState {
   const records: Record<string, ParcoursGenerationRecord> = { ...state?.parcours };
 
@@ -254,7 +272,16 @@ export function nextGenerationState(
     zoneMaps[update.key] = update.fingerprint;
   }
 
-  return { version: GENERATION_STATE_VERSION, parcours: records, zoneMaps };
+  let globalMap = state?.globalMap;
+  if (globalMapUpdate) {
+    if (!globalMapUpdate.fingerprint) {
+      globalMap = undefined;
+    } else {
+      globalMap = globalMapUpdate.fingerprint;
+    }
+  }
+
+  return { version: GENERATION_STATE_VERSION, parcours: records, zoneMaps, globalMap };
 }
 
 /**
@@ -354,6 +381,24 @@ export function withMissingZoneMapFingerprints(
 }
 
 /**
+ * The state with the fingerprint of the global overview map it knows nothing
+ * about yet.
+ *
+ * The fingerprint is keyed by `globalMapKey()`. The one already recorded
+ * is never overwritten, and the unknown one (the map was never rendered)
+ * is left out of the state.
+ */
+export function withMissingGlobalMapFingerprint(
+  state: GenerationState,
+  fingerprint: string | undefined,
+): GenerationState {
+  if (!fingerprint || state.globalMap) {
+    return state;
+  }
+  return { version: state.version, parcours: state.parcours, zoneMaps: state.zoneMaps, globalMap: fingerprint };
+}
+
+/**
  * Read the generation state.
  *
  * The result tells why the state could not be read: a missing state file
@@ -400,7 +445,9 @@ export function readGenerationState(path: string): GenerationStateRead {
     }
   }
 
-  return { status: 'read', state: { version: parsed.version, parcours, zoneMaps } };
+  const globalMap = isRecord(parsed.globalMap) ? undefined : (typeof parsed.globalMap === 'string' ? parsed.globalMap : undefined);
+
+  return { status: 'read', state: { version: parsed.version, parcours, zoneMaps, globalMap } };
 }
 
 /**
