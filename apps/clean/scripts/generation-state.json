@@ -312,14 +312,30 @@
     "bruz-vau-gaillard/P105": {
       "fiche": "3422f893d3e25c18ad117f3b215f49c068f6507b973eaf55cd82c1c6bbbacf4e",
       "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
+    },
+    "bruz-sud/P14": {
+      "trace": "78f0ce0dd2cfb9fa54e9b699682a170323b141014273501f02e57a6f2397b69c",
+      "startSegment": "509ee9383e0feced07758b1aefad58f33d8ef79649d48f363be63193dacbaabf",
+      "endSegment": "f5d27ff64adacfdfccd53a822601bc4c5e8a85323820eb4a12f07f4b1001ec86",
+      "fiche": "96c243f553b325fbef8c1b96402c1b5fbec0deaa30ec061417b78afc77809c27",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c",
+      "layout": "single"
+    },
+    "bruz-sud/P15": {
+      "trace": "22337808038340d1cc59663451deec4a3a4812687ac8f5f9f7a4613cf348131e",
+      "startSegment": "65a95641c711e72b85f7e511d82c91fba4ee044a9840e966231b5085211cca4d",
+      "endSegment": "e3697053054cd79bce04efe4e652804180c715d533a3856f59137f86f703eeb7",
+      "fiche": "0b4d0154956e4b5837ef252a08b405f385523f7e6d2e3c6b68da4de83e46dd12",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c",
+      "layout": "single"
     }
   },
   "zoneMaps": {
     "bruz-ker-lann/V": "d71ffaa388fe3f1707fdc1fef6fb505b1fd4455ae652ac00ebac72e45aa28eb1",
     "bruz-sud/V": "799bb1f5d06146593d448cc4e9c203345e8c4a13ba0fb2c34dc454d07acd62b6",
-    "bruz-sud/P": "639d055e9fa13dbeb36a26996aa42f0f30160528d663bf9a9c5ff821f80f02e7",
+    "bruz-sud/P": "dd3c32ac9357e6bc513baaf923ab79547458878ac85b1d4dcfa8ae6d64ca4dbe",
     "bruz-vau-gaillard/V": "229beafb9a7f891a741850f3377922305fc12c8d4027df8951ab8de2b667186c",
     "bruz-vau-gaillard/P": "1d7b09bf9f2f4ce47397d640276646845c69c46fbc3c63125ad6fcf83e0e1f10"
   },
-  "globalMap": "ae4f700d45bc7e14ce99e9ed234aa66865ca277ac0e8c69a6ddd640e3fbb239c"
+  "globalMap": "abebfafec0edbf7f609fb135b674c11ad51d91b1febe5a0530d34d1888e88d7b"
 }

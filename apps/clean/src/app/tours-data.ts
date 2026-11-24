@@ -332,6 +332,22 @@ export const toursData = {
       zoneId: 'bruz-sud',
     },
     {
+      name: 'P14',
+      distance: 0.9,
+      startDistance: 0,
+      endDistance: 0,
+      totalDistance: 0.9,
+      zoneId: 'bruz-sud',
+    },
+    {
+      name: 'P15',
+      distance: 1.3,
+      startDistance: 0.1,
+      endDistance: 0.3,
+      totalDistance: 1.7,
+      zoneId: 'bruz-sud',
+    },
+    {
       name: 'P100',
       distance: 0.9,
       startDistance: 1,

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (Valhalla)">
+  <metadata>
+    <link href="https://router.project-osrm.org">
+      <text>OSRM</text>
+    </link>
+  </metadata>
+  <trk>
+    <type>walking</type>
+    <name>Place du Dr Joly vers le parcours P14</name>
+    <trkseg>
+      <trkpt lat="48.024457" lon="-1.746876">
+      </trkpt>
+      <trkpt lat="48.024399" lon="-1.746850">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>

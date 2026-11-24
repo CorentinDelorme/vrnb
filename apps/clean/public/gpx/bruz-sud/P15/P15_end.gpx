@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd" version="1.1" creator="clean generate-start-end-gpx (Valhalla)">
+  <metadata>
+    <link href="https://router.project-osrm.org">
+      <text>OSRM</text>
+    </link>
+  </metadata>
+  <trk>
+    <type>walking</type>
+    <name>Fin du parcours P15 vers Place du Dr Joly</name>
+    <trkseg>
+      <trkpt lat="48.023712" lon="-1.749963">
+      </trkpt>
+      <trkpt lat="48.023862" lon="-1.749831">
+      </trkpt>
+      <trkpt lat="48.023962" lon="-1.749722">
+      </trkpt>
+      <trkpt lat="48.024085" lon="-1.749588">
+      </trkpt>
+      <trkpt lat="48.024106" lon="-1.749533">
+      </trkpt>
+      <trkpt lat="48.024123" lon="-1.749469">
+      </trkpt>
+      <trkpt lat="48.024152" lon="-1.749268">
+      </trkpt>
+      <trkpt lat="48.024220" lon="-1.748805">
+      </trkpt>
+      <trkpt lat="48.024298" lon="-1.748154">
+      </trkpt>
+      <trkpt lat="48.024311" lon="-1.748047">
+      </trkpt>
+      <trkpt lat="48.024294" lon="-1.747978">
+      </trkpt>
+      <trkpt lat="48.024154" lon="-1.747943">
+      </trkpt>
+      <trkpt lat="48.024269" lon="-1.747303">
+      </trkpt>
+      <trkpt lat="48.024062" lon="-1.747207">
+      </trkpt>
+      <trkpt lat="48.024122" lon="-1.746885">
+      </trkpt>
+      <trkpt lat="48.024177" lon="-1.746584">
+      </trkpt>
+      <trkpt lat="48.024229" lon="-1.746669">
+      </trkpt>
+      <trkpt lat="48.024248" lon="-1.746699">
+      </trkpt>
+      <trkpt lat="48.024305" lon="-1.746772">
+      </trkpt>
+      <trkpt lat="48.024322" lon="-1.746795">
+      </trkpt>
+      <trkpt lat="48.024348" lon="-1.746829">
+      </trkpt>
+      <trkpt lat="48.024369" lon="-1.746837">
+      </trkpt>
+      <trkpt lat="48.024457" lon="-1.746876">
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
