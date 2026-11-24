@@ -18,8 +18,6 @@ La génération des fiches PDF accepte un drapeau `--layout` :
 ```sh
 bun run generate:pdfs -- --layout=single   # 1 page (défaut, identique à l'actuel)
 bun run generate:pdfs -- --layout=double   # 2 pages : cartes plus grandes
-bun run generate:pdfs -- --layout=2page    # Alias pour double
-bun run generate:pdfs -- --layout=two-page # Alias pour double
 ```
 
 **Disposition 1 page (par défaut, inchangée)** : en-tête + tableau des distances + carte principale (~132 mm) + cartes de début/fin côte à côte (~70 mm chacune).
