@@ -91,7 +91,7 @@ export type LayoutType = 'single' | 'double';
 /**
  * Parse the `--layout` flag from the command line arguments.
  *
- * Accepts: `single`, `double`, `2page`, `two-page` (case-insensitive).
+ * Accepts: `single`, `double` (case-insensitive).
  * Defaults to `'single'` when absent or invalid.
  */
 export function parseLayoutFlag(argv: readonly string[]): LayoutType {
@@ -102,8 +102,6 @@ export function parseLayoutFlag(argv: readonly string[]): LayoutType {
   const value = arg.slice('--layout='.length).trim().toLowerCase();
   switch (value) {
     case 'double':
-    case '2page':
-    case 'two-page':
       return 'double';
     case 'single':
       return 'single';

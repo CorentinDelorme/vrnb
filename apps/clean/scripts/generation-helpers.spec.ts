@@ -139,17 +139,9 @@ describe('parseLayoutFlag', () => {
     expect(parseLayoutFlag(['--layout=double'])).toBe('double');
   });
 
-  it('should parse 2page alias for double', () => {
-    expect(parseLayoutFlag(['--layout=2page'])).toBe('double');
-  });
-
-  it('should parse two-page alias for double', () => {
-    expect(parseLayoutFlag(['--layout=two-page'])).toBe('double');
-  });
-
   it('should be case-insensitive', () => {
     expect(parseLayoutFlag(['--layout=DOUBLE'])).toBe('double');
-    expect(parseLayoutFlag(['--layout=Two-Page'])).toBe('double');
+    expect(parseLayoutFlag(['--layout=SINGLE'])).toBe('single');
   });
 
   it('should default to single for invalid values', () => {

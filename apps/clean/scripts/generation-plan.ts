@@ -446,7 +446,7 @@ function decideZoneMaps(
     const kind = practiceTypeOf(decision.tourId);
     const key = zoneMapKey(decision.zoneId, kind);
     const zone = zones.get(key);
-    // layout-changed ne change pas les traces affichées sur la carte de zone
+    // layout-changed does not change the tracks displayed on the zone map
     const affectsZoneMap =
       decision.rerouteSegments ||
       (decision.regenerateFiche && decision.ficheReason !== 'layout-changed');
