@@ -45,7 +45,8 @@ describe('menuLinks', () => {
 
   it('returns home menu links on home page', () => {
     const links = menuLinks('/');
-    expect(links.length).toBeGreaterThanOrEqual(1);
+    // In test env NODE_ENV is not 'development', so only 1 link
+    expect(links.length).toBe(1);
     expect(links.map((link) => link.href)).toContain('/tours');
     expect(links.find((link) => link.href === '/tours')?.label).toBe('Voir tous les parcours');
   });

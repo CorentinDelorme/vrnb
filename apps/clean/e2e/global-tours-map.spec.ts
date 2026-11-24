@@ -74,4 +74,12 @@ test.describe('Home page — Menu links', () => {
     await page.getByRole('link', { name: 'Voir tous les parcours' }).click();
     await expect(page).toHaveURL('/tours');
   });
+
+  test('should show "Importer des parcours" link in home menu (dev mode)', async ({ page }) => {
+    await page.goto('/');
+    await page.getByText('Menu', { exact: true }).click();
+    const drawer = page.locator('[data-slot="drawer-content"]');
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole('link', { name: 'Importer des parcours' })).toBeVisible();
+  });
 });
