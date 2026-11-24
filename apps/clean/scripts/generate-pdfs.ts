@@ -13,7 +13,7 @@ import { createNetworkScheduler } from './network-scheduler';
 import { createTileFetcher } from './tile-fetcher';
 
 import { getTrackColorTuple } from '../lib/map-colors';
-import type { GpxSegmentSuffix } from './generation-helpers';
+import type { GpxSegmentSuffix, LayoutType } from './generation-helpers';
 import {
   errorMessage,
   forEachConcurrently,
@@ -22,6 +22,7 @@ import {
   matchesFilters,
   parseForceFlag,
   parseGenerationFilters,
+  parseLayoutFlag,
   pdfRootDir,
   perfReportPath,
   practiceLabel,
@@ -87,6 +88,24 @@ const TILE_JPEG_QUALITY = 85;
 const MAP_JPEG_QUALITY = 88;
 /** Max width/height in pixels of the exact map view (before tiling). */
 const MAX_VIEW_PIXELS = 1536;
+
+/** A4 page width in mm (jsPDF default). */
+const A4_WIDTH_MM = 210;
+/** Page margin in mm. */
+const MARGIN_MM = 10;
+/** Content width in mm (page width minus margins). */
+const CONTENT_WIDTH_MM = A4_WIDTH_MM - MARGIN_MM * 2;
+
+/** Single-page layout constants. */
+const SINGLE_MAIN_MAP_HEIGHT_MM = 132;
+const SINGLE_SMALL_MAP_HEIGHT_MM = 70;
+const SINGLE_SMALL_MAP_GAP_MM = 4;
+
+/** Double-page layout constants. */
+const DOUBLE_MAIN_MAP_HEIGHT_MM = 190;
+const DOUBLE_START_END_MAP_HEIGHT_MM = 110;
+const DOUBLE_PAGE2_START_CAPTION_Y_MM = 34;
+const DOUBLE_LEGEND_BASELINE_Y_MM = 282;
 
 /** Public base URL of the deployed app; tour pages live at `tour/<zoneId>/<tour>`. */
 const TOUR_URL_PREFIX = 'https://clean.velorandonaturebruz.fr/';
@@ -427,6 +446,7 @@ async function renderMapPanel(
   style: PanelStyle,
   emptyLabel: string,
   mapKey: string,
+  maxPixels = MAX_VIEW_PIXELS,
 ): Promise<void> {
   if (!coords || coords.length === 0) {
     doc.setFillColor(235, 235, 232);
@@ -438,7 +458,7 @@ async function renderMapPanel(
     return;
   }
 
-  const view = planView(coords, rect.w / rect.h);
+  const view = planView(coords, rect.w / rect.h, maxPixels);
   if (!view) {
     return;
   }
@@ -521,11 +541,24 @@ function tourGpxPath(tour: TourDistances, suffix: GpxSegmentSuffix): string {
   return resolveGpxTracePath(rootDir, tour.zoneId, tour.name, suffix);
 }
 
-async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined): Promise<void> {
+/** Shared setup for both layouts: document, geometry, coordinates, QR code. */
+interface PdfSetup {
+  readonly doc: jsPDF;
+  readonly margin: number;
+  readonly contentWidth: number;
+  readonly meetingPoint: { name: string };
+  readonly zoneName: string;
+  readonly startCoords: LonLat[] | undefined;
+  readonly tourCoords: LonLat[] | undefined;
+  readonly endCoords: LonLat[] | undefined;
+  readonly tourUrlStr: string;
+  readonly qrImage: Buffer | undefined;
+}
+
+async function createPdfSetup(tour: TourDistances): Promise<PdfSetup> {
   const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 10;
-  const contentWidth = pageWidth - margin * 2;
+  const margin = MARGIN_MM;
+  const contentWidth = CONTENT_WIDTH_MM;
   const meetingPoint = getZone(tour.zoneId).meetingPoint;
   const zoneName = getZone(tour.zoneId).name;
 
@@ -533,17 +566,56 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
   const tourCoords = parseGpxCoords(tourGpxPath(tour, ''));
   const endCoords = parseGpxCoords(tourGpxPath(tour, '_end'));
 
+  const tourUrlStr = tourUrl(tour);
+  const qrImage = await buildQrCodeImage(tourUrlStr);
+
+  return {
+    doc,
+    margin,
+    contentWidth,
+    meetingPoint,
+    zoneName,
+    startCoords,
+    tourCoords,
+    endCoords,
+    tourUrlStr,
+    qrImage,
+  };
+}
+
+async function generateTourPdf(
+  tour: TourDistances,
+  logo: LogoImage | undefined,
+  layout: LayoutType,
+): Promise<void> {
+  if (layout === 'double') {
+    await generateTourPdfTwoPage(tour, logo);
+  } else {
+    await generateTourPdfSinglePage(tour, logo);
+  }
+}
+
+/** Shared header for both layouts: logo, title, QR code, contact. */
+function renderHeader(
+  doc: jsPDF,
+  zoneName: string,
+  tourName: string,
+  qrImage: Buffer | undefined,
+  tourUrlStr: string,
+  logo: LogoImage | undefined,
+): void {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 10;
+  const logoHeight = 12;
+
   if (logo) {
-    const logoHeight = 12;
     const dataUrl = `data:image/jpeg;base64,${logo.buffer.toString('base64')}`;
     doc.addImage(dataUrl, 'JPEG', margin, 6, logoHeight * logo.aspect, logoHeight, 'vrnb-logo');
   }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.text(`${zoneName} - Parcours ${tour.name}`, pageWidth / 2, 16, { align: 'center' });
-
-  const qrImage = await buildQrCodeImage(tourUrl(tour));
+  doc.text(`${zoneName} - Parcours ${tourName}`, pageWidth / 2, 16, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -560,17 +632,18 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
     const qrX = pageWidth - margin - QR_PDF_SIZE_MM;
     const qrY = 4;
     const qrDataUrl = `data:image/png;base64,${qrImage.toString('base64')}`;
-    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, `${tour.name}-qr`);
-    doc.link(qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, { url: tourUrl(tour) });
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, `${tourName}-qr`);
+    doc.link(qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, { url: tourUrlStr });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    // The address is wider than the QR code: right-align it on the page
-    // margin so the whole line stays inside the printable area.
     doc.text(SITE_HOST, pageWidth - margin, qrY + QR_PDF_SIZE_MM + 3.5, { align: 'right' });
     doc.setTextColor(0, 0, 0);
   }
+}
 
+/** Shared distance table for both layouts. */
+function renderDistanceTable(doc: jsPDF, tour: TourDistances, margin: number): number {
   autoTable(doc, {
     startY: 29,
     margin: { left: margin, right: margin },
@@ -588,12 +661,52 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
     bodyStyles: { halign: 'center' },
   });
 
-  const tableEndY = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+  return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+}
+
+/** Shared legend and OSM credits at bottom of page. */
+function renderLegendAndCredits(doc: jsPDF, margin: number, baselineY: number): void {
+  drawLegend(doc, margin, baselineY);
+  const pageWidth = doc.internal.pageSize.getWidth();
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Cartes © OpenStreetMap', pageWidth - margin, baselineY, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+}
+
+/** Single-page layout (existing behavior, extracted). */
+async function generateTourPdfSinglePage(
+  tour: TourDistances,
+  logo: LogoImage | undefined,
+): Promise<void> {
+  const setup = await createPdfSetup(tour);
+  const {
+    doc,
+    margin,
+    contentWidth,
+    meetingPoint,
+    zoneName,
+    startCoords,
+    tourCoords,
+    endCoords,
+    tourUrlStr,
+    qrImage,
+  } = setup;
+
+  renderHeader(doc, zoneName, tour.name, qrImage, tourUrlStr, logo);
+
+  const tableEndY = renderDistanceTable(doc, tour, margin);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.text('Zone de nettoyage', margin, tableEndY + 7);
-  const mainRect: PdfRect = { x: margin, y: tableEndY + 10, w: contentWidth, h: 132 };
+  const mainRect: PdfRect = {
+    x: margin,
+    y: tableEndY + 10,
+    w: contentWidth,
+    h: SINGLE_MAIN_MAP_HEIGHT_MM,
+  };
   await renderMapPanel(
     doc,
     tourCoords,
@@ -603,11 +716,11 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
     `${tour.name}-main`,
   );
 
-  const gap = 4;
+  const gap = SINGLE_SMALL_MAP_GAP_MM;
   const smallWidth = (contentWidth - gap) / 2;
   const smallCaptionY = mainRect.y + mainRect.h + 7;
   const smallMapY = smallCaptionY + 4;
-  const smallH = 70;
+  const smallH = SINGLE_SMALL_MAP_HEIGHT_MM;
   doc.setFontSize(10);
   doc.text(`${meetingPoint.name} vers le début du parcours`, margin, smallCaptionY);
   doc.text(
@@ -632,12 +745,113 @@ async function generateTourPdf(tour: TourDistances, logo: LogoImage | undefined)
     `${tour.name}-end`,
   );
 
-  drawLegend(doc, margin, 282);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Cartes © OpenStreetMap', pageWidth - margin, 282, { align: 'right' });
-  doc.setTextColor(0, 0, 0);
+  renderLegendAndCredits(doc, margin, DOUBLE_LEGEND_BASELINE_Y_MM);
+
+  const zoneFolder = zonePdfDir(rootDir, tour.zoneId);
+  mkdirSync(zoneFolder, { recursive: true });
+  const outputPath = tourPdfPath(rootDir, tour.zoneId, tour.name);
+  ensureWritable(outputPath);
+  try {
+    doc.save(outputPath);
+  } catch (error) {
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
+  }
+  console.log(`Généré : ${outputPath}`);
+}
+
+/** Two-page layout: page 1 = header + table + enlarged main map + legend; page 2 = header + start map + end map + legend. */
+async function generateTourPdfTwoPage(
+  tour: TourDistances,
+  logo: LogoImage | undefined,
+): Promise<void> {
+  const setup = await createPdfSetup(tour);
+  const {
+    doc,
+    margin,
+    contentWidth,
+    meetingPoint,
+    zoneName,
+    startCoords,
+    tourCoords,
+    endCoords,
+    tourUrlStr,
+    qrImage,
+  } = setup;
+
+  // --- Page 1: Header + Distance table + Enlarged main map + Legend ---
+  renderHeader(doc, zoneName, tour.name, qrImage, tourUrlStr, logo);
+
+  const tableEndY = renderDistanceTable(doc, tour, margin);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text('Zone de nettoyage', margin, tableEndY + 7);
+  // Enlarged main map: ~190mm tall (was 132mm) — use higher resolution (3072px) for print quality
+  const mainRect: PdfRect = {
+    x: margin,
+    y: tableEndY + 10,
+    w: contentWidth,
+    h: DOUBLE_MAIN_MAP_HEIGHT_MM,
+  };
+  await renderMapPanel(
+    doc,
+    tourCoords,
+    mainRect,
+    MAIN_STYLE,
+    'Trace principal introuvable',
+    `${tour.name}-main`,
+    3072,
+  );
+
+  renderLegendAndCredits(doc, margin, DOUBLE_LEGEND_BASELINE_Y_MM);
+
+  // --- Page 2: Header + Start map (full-width) + End map (full-width) + Legend ---
+  doc.addPage();
+  renderHeader(doc, zoneName, tour.name, qrImage, tourUrlStr, logo);
+
+  // Start map: full-width, ~110mm tall — higher resolution for print quality
+  const startCaptionY = DOUBLE_PAGE2_START_CAPTION_Y_MM;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(`${meetingPoint.name} vers le début du parcours`, margin, startCaptionY);
+  const startRect: PdfRect = {
+    x: margin,
+    y: startCaptionY + 4,
+    w: contentWidth,
+    h: DOUBLE_START_END_MAP_HEIGHT_MM,
+  };
+  await renderMapPanel(
+    doc,
+    startCoords,
+    startRect,
+    MAIN_STYLE,
+    'Trace aller introuvable',
+    `${tour.name}-start`,
+    3072,
+  );
+
+  // End map: full-width, ~110mm tall — higher resolution for print quality
+  const endCaptionY = startRect.y + startRect.h + 7;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.text(`Fin du parcours vers la ${decapitalize(meetingPoint.name)}`, margin, endCaptionY);
+  const endRect: PdfRect = {
+    x: margin,
+    y: endCaptionY + 4,
+    w: contentWidth,
+    h: DOUBLE_START_END_MAP_HEIGHT_MM,
+  };
+  await renderMapPanel(
+    doc,
+    endCoords,
+    endRect,
+    MAIN_STYLE,
+    'Trace retour introuvable',
+    `${tour.name}-end`,
+    3072,
+  );
+
+  renderLegendAndCredits(doc, margin, DOUBLE_LEGEND_BASELINE_Y_MM);
 
   const zoneFolder = zonePdfDir(rootDir, tour.zoneId);
   mkdirSync(zoneFolder, { recursive: true });
@@ -1032,8 +1246,12 @@ async function main(): Promise<void> {
 
     const filters = parseGenerationFilters(process.argv);
     const force = parseForceFlag(process.argv);
+    const layout = parseLayoutFlag(process.argv);
     if (force) {
       console.log('Mode forcé demandé : toutes les Fiches de la sélection sont régénérées.');
+    }
+    if (layout === 'double') {
+      console.log('Disposition 2 pages demandée : les Fiches seront générées sur 2 pages.');
     }
     const allTours: TourDistances[] = [...toursData.vTours, ...toursData.pTours].filter((tour) =>
       matchesFilters(filters, tour.zoneId, tour.name),
@@ -1060,6 +1278,7 @@ async function main(): Promise<void> {
       globalMapFingerprint,
       filters,
       force,
+      desiredLayout: layout,
     });
     plan = runPlan;
 
@@ -1080,7 +1299,7 @@ async function main(): Promise<void> {
             return;
           }
           try {
-            await generateTourPdf(tour, logo);
+            await generateTourPdf(tour, logo, layout);
             rendered.add(parcoursStateKey(tour.zoneId, tour.name));
           } catch (error) {
             failures += 1;
@@ -1146,7 +1365,7 @@ async function main(): Promise<void> {
       const fiche = rendered.has(key)
         ? fingerprintDocument(tourPdfPath(rootDir, decision.zoneId, decision.tourId))
         : undefined;
-      updates.push({ key, record: withFicheFingerprint(state?.parcours[key], fiche) });
+      updates.push({ key, record: withFicheFingerprint(state?.parcours[key], fiche, layout) });
     }
 
     // The state remembers the overview maps that were rendered: the next run
@@ -1165,10 +1384,10 @@ async function main(): Promise<void> {
     }
 
     // The state remembers the global overview map that was rendered.
-    const globalMapUpdate: GlobalMapStateUpdate = {
-      key: globalMapKey(),
-      fingerprint: renderedGlobalMap ? fingerprintDocument(globalMapPdfPath(rootDir)) : undefined,
-    };
+    // Only include the update if we actually rendered it; otherwise keep the existing fingerprint.
+    const globalMapUpdate: GlobalMapStateUpdate | undefined = renderedGlobalMap
+      ? { key: globalMapKey(), fingerprint: fingerprintDocument(globalMapPdfPath(rootDir)) }
+      : undefined;
 
     writeGenerationStateOrFail(
       statePath,

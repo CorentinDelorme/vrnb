@@ -745,6 +745,7 @@ const PLAN_REASON_LABELS: Record<PlanReason, string> = {
   'missing-fiche': 'fiche absente',
   'no-fiche-state': "inconnue de l'état",
   'fiche-changed': 'fiche modifiée',
+  'layout-changed': 'disposition modifiée',
   'up-to-date': 'à jour',
   'missing-zone-map': 'carte absente',
   'no-zone-map-state': "inconnue de l'état",

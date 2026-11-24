@@ -96,8 +96,9 @@
       "trace": "15fa82373143e33dcb2c6acb258cbbde45ecab1453d01107f5d10416c7a79b20",
       "startSegment": "591d6c0ca09eafa2b1bc1aeb1e1313469c5de11e832f45eacdca0676273524df",
       "endSegment": "899bbc6f07293003a2188d901b2c0d007c0fff5806f32f451a5d55aeddd25927",
-      "fiche": "d88280551935179550860761aad540b25446c27cce6980674c501d194136f403",
-      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c"
+      "fiche": "5c90a8b28dccfa364cdae030e0b893ac05a670c3616a156dc146f890cf324231",
+      "meetingPoint": "1e5cf341778155bd7660b2b36edcbee1e8ba775305ba2051050babe1db34008c",
+      "layout": "single"
     },
     "bruz-sud/V2": {
       "trace": "c47533768ebd21d60ac502670baae4af5c0d156c8a47a91394aabeb38c397fc1",
@@ -315,10 +316,10 @@
   },
   "zoneMaps": {
     "bruz-ker-lann/V": "d71ffaa388fe3f1707fdc1fef6fb505b1fd4455ae652ac00ebac72e45aa28eb1",
-    "bruz-sud/V": "3d8140aa81c73437c98e2868118aa27402d03f5ce2981423fa7cdf308947d133",
+    "bruz-sud/V": "799bb1f5d06146593d448cc4e9c203345e8c4a13ba0fb2c34dc454d07acd62b6",
     "bruz-sud/P": "639d055e9fa13dbeb36a26996aa42f0f30160528d663bf9a9c5ff821f80f02e7",
     "bruz-vau-gaillard/V": "229beafb9a7f891a741850f3377922305fc12c8d4027df8951ab8de2b667186c",
     "bruz-vau-gaillard/P": "1d7b09bf9f2f4ce47397d640276646845c69c46fbc3c63125ad6fcf83e0e1f10"
   },
-  "globalMap": "0d48a937d19e10d1ebc282c68951e2382573bc695e55a23c5369897798a2c56c"
+  "globalMap": "ae4f700d45bc7e14ce99e9ed234aa66865ca277ac0e8c69a6ddd640e3fbb239c"
 }

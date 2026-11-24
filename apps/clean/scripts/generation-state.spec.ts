@@ -69,6 +69,7 @@ function record(overrides: Partial<ParcoursGenerationRecord> = {}): ParcoursGene
     endSegment: undefined,
     fiche: undefined,
     meetingPoint: undefined,
+    layout: undefined,
     ...overrides,
   };
 }
@@ -212,12 +213,13 @@ describe('withFicheFingerprint', () => {
   it('should record the Fiche of a Parcours, keeping the other fingerprints', () => {
     const known = record({ trace: 'trace', startSegment: 'start', endSegment: 'end' });
 
-    expect(withFicheFingerprint(known, 'fiche')).toEqual({
+    expect(withFicheFingerprint(known, 'fiche', 'single')).toEqual({
       trace: 'trace',
       startSegment: 'start',
       endSegment: 'end',
       fiche: 'fiche',
       meetingPoint: undefined,
+      layout: 'single',
     });
   });
 
@@ -229,36 +231,39 @@ describe('withFicheFingerprint', () => {
       fiche: 'old',
     });
 
-    expect(withFicheFingerprint(known, undefined)).toEqual({
+    expect(withFicheFingerprint(known, undefined, 'single')).toEqual({
       trace: 'trace',
       startSegment: 'start',
       endSegment: 'end',
       fiche: undefined,
       meetingPoint: undefined,
+      layout: 'single',
     });
   });
 
   it('should record the Fiche of a Parcours the state knows nothing about', () => {
-    expect(withFicheFingerprint(undefined, 'fiche')).toEqual({
+    expect(withFicheFingerprint(undefined, 'fiche', 'single')).toEqual({
       trace: undefined,
       startSegment: undefined,
       endSegment: undefined,
       fiche: 'fiche',
       meetingPoint: undefined,
+      layout: 'single',
     });
   });
 });
 
 describe('withMissingFicheFingerprints', () => {
-  it('should record the Fiche of the Parcours the state knows nothing about', () => {
+  it('should record the Fiche of the Parcours the state knows nothing about (legacy = single)', () => {
     const known = state({ parcours: { 'bruz-sud/V1': record({ trace: 'trace' }) } });
 
     expect(withMissingFicheFingerprints(known, { 'bruz-sud/V1': 'fiche' })).toEqual({
       version: GENERATION_STATE_VERSION,
       parcours: {
-        'bruz-sud/V1': record({ trace: 'trace', fiche: 'fiche' }),
+        'bruz-sud/V1': record({ trace: 'trace', fiche: 'fiche', layout: 'single' }),
       },
       zoneMaps: {},
+      globalMap: undefined,
     });
   });
 

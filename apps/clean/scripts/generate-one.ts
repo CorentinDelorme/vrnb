@@ -14,7 +14,7 @@ function hasFlag(flag: string): boolean {
 }
 
 function printUsage(): void {
-  console.log(`Utilisation : bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours] [--force]
+  console.log(`Utilisation : bun tsx scripts/generate-one.ts --tour=V1[,V2] [--zone=bruz-sud] [--skip-routes] [--skip-tours] [--force] [--layout=single|double]
 
 Régénérer un seul Parcours ou une seule Zone sans tout reconstruire :
   segments (OSRM/Valhalla) -> données des Parcours -> Fiches PDF.
@@ -25,6 +25,7 @@ Options :
   --skip-routes   Ne pas re-router les GPX de début et de fin (appels réseau).
   --skip-tours    Ne pas recalculer les distances (données des Parcours).
   --force         Tout régénérer, quels que soient les filtres et l'état.
+  --layout=single|double  Disposition des Fiches : 1 page (défaut) ou 2 pages.
 `);
 }
 
@@ -53,6 +54,8 @@ async function main(): Promise<void> {
   if (tours.length > 0) filterArgs.push(`--tour=${tours.join(',')}`);
   if (zones.length > 0) filterArgs.push(`--zone=${zones.join(',')}`);
   if (hasFlag('--force')) filterArgs.push('--force');
+  const layoutArg = process.argv.find((arg) => arg.startsWith('--layout='));
+  if (layoutArg) filterArgs.push(layoutArg);
 
   const steps = selectedSteps();
   const perf = createPerfRecorder();

@@ -46,6 +46,7 @@ function record(overrides: Partial<ParcoursGenerationRecord> = {}): ParcoursGene
     endSegment: undefined,
     fiche: undefined,
     meetingPoint: undefined,
+    layout: undefined,
     ...overrides,
   };
 }
@@ -65,6 +66,7 @@ const UP_TO_DATE_RECORD = record({
   endSegment: 'end',
   fiche: 'fiche',
   meetingPoint: MEETING_POINT,
+  layout: 'single',
 });
 
 describe('planGeneration', () => {
@@ -356,6 +358,50 @@ describe('planGeneration — the Fiche of a Parcours', () => {
 
     expect(plan.decisions[0]?.regenerateFiche).toBe(true);
     expect(plan.decisions[0]?.ficheReason).toBe('fiche-changed');
+  });
+
+  it('should render the Fiche when the desired layout differs from the recorded layout', () => {
+    const plan = planGeneration({
+      state: stateWith(UP_TO_DATE_RECORD),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      desiredLayout: 'double',
+    });
+
+    expect(plan.decisions[0]?.regenerateFiche).toBe(true);
+    expect(plan.decisions[0]?.ficheReason).toBe('layout-changed');
+  });
+
+  it('should not render the Fiche when the desired layout matches the recorded layout', () => {
+    const plan = planGeneration({
+      state: stateWith(UP_TO_DATE_RECORD),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      desiredLayout: 'single',
+    });
+
+    expect(plan.decisions[0]?.regenerateFiche).toBe(false);
+    expect(plan.decisions[0]?.ficheReason).toBe('up-to-date');
+  });
+
+  it('should treat missing layout in state as single (legacy)', () => {
+    const legacyRecord = record({
+      trace: 'trace',
+      startSegment: 'start',
+      endSegment: 'end',
+      fiche: 'fiche',
+      meetingPoint: MEETING_POINT,
+      layout: undefined, // Legacy state without layout
+    });
+    const plan = planGeneration({
+      state: stateWith(legacyRecord),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      desiredLayout: 'double',
+    });
+
+    expect(plan.decisions[0]?.regenerateFiche).toBe(true);
+    expect(plan.decisions[0]?.ficheReason).toBe('layout-changed');
   });
 
   it('should render every Fiche of the selection when the run is forced', () => {
