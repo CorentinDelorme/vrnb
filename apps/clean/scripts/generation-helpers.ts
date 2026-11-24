@@ -164,6 +164,7 @@ export function readPerfReport(path: string): PerfReport | undefined {
     subjects: readSubjects(raw.subjects),
     parcours: readCounters(raw.parcours),
     zoneMaps: readCounters(raw.zoneMaps),
+    globalMap: readCounters(raw.globalMap),
     packs: readPacks(raw.packs),
   };
 }
@@ -375,6 +376,16 @@ export function zoneMapPdfName(kind: 'V' | 'P'): string {
 /** Overview map of a Zone: `public/pdf/<zone>/Carte_parcours_a_velo.pdf` (or `..._pied.pdf`). */
 export function zoneMapPdfPath(rootDir: string, zoneId: string, kind: 'V' | 'P'): string {
   return join(zonePdfDir(rootDir, zoneId), zoneMapPdfName(kind));
+}
+
+/** Global overview map PDF: `public/pdf/Carte_tous_les_parcours.pdf`. */
+export function globalMapPdfPath(rootDir: string): string {
+  return join(pdfRootDir(rootDir), 'Carte_tous_les_parcours.pdf');
+}
+
+/** Key of the global overview map in the generation state. */
+export function globalMapKey(): string {
+  return 'global';
 }
 
 /**

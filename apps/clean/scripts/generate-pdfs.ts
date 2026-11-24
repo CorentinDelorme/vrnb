@@ -8,14 +8,16 @@ import { toBuffer as qrCodeToBuffer } from 'qrcode';
 import sharp from 'sharp';
 
 import { toursData } from '../src/app/tours-data';
-import { getZone } from '../src/app/zones';
+import { getZone, ZONES } from '../src/app/zones';
 import { createNetworkScheduler } from './network-scheduler';
 import { createTileFetcher } from './tile-fetcher';
 
+import { getTrackColorTuple } from '../lib/map-colors';
 import type { GpxSegmentSuffix } from './generation-helpers';
 import {
   errorMessage,
   forEachConcurrently,
+  globalMapPdfPath,
   isFilterActive,
   matchesFilters,
   parseForceFlag,
@@ -39,12 +41,17 @@ import {
 } from './generation-perf';
 import type { GenerationPlan, PlanCandidate } from './generation-plan';
 import { planGeneration } from './generation-plan';
-import type { ParcoursStateUpdate, ZoneMapStateUpdate } from './generation-state';
+import type {
+  GlobalMapStateUpdate,
+  ParcoursStateUpdate,
+  ZoneMapStateUpdate,
+} from './generation-state';
 import {
-  GENERATION_STATE_VERSION,
   fingerprintDocument,
   fingerprintParcoursArtefacts,
+  GENERATION_STATE_VERSION,
   generationStatePath,
+  globalMapKey,
   meetingPointFingerprint,
   nextGenerationState,
   parcoursStateKey,
@@ -52,7 +59,7 @@ import {
   zoneMapKey,
 } from './generation-state';
 import { readGenerationStateOrWarn, writeGenerationStateOrFail } from './generation-steps';
-import { FICHE_SUBJECT, ZONE_MAP_SUBJECT } from './generation-subjects';
+import { FICHE_SUBJECT, GLOBAL_MAP_SUBJECT, ZONE_MAP_SUBJECT } from './generation-subjects';
 
 const rootDir = join(import.meta.dirname, '..');
 const logoPath = join(rootDir, 'public/icons/vrnb.png');
@@ -507,29 +514,7 @@ function drawLegend(doc: jsPDF, x: number, baselineY: number): void {
   doc.text('Arrivée', cursorX, baselineY);
 }
 
-/** Same hues as the overview map, one color per tour (in tour order). */
-const MAP_COLORS: [number, number, number][] = [
-  [239, 68, 68], // warm - red
-  [59, 130, 246], // cool - blue
-  [249, 115, 22], // warm - orange
-  [20, 184, 184], // cool - teal
-  [245, 158, 11], // warm - amber
-  [67, 56, 202], // cool - indigo
-  [234, 179, 8], // warm - yellow
-  [16, 185, 129], // cool - emerald
-  [236, 72, 153], // warm - pink
-  [14, 165, 233], // cool - sky
-  [219, 39, 119], // warm - rose
-  [6, 182, 212], // cool - cyan
-  [250, 204, 21], // warm - gold
-  [34, 197, 94], // cool - green
-  [244, 114, 182], // warm - coral
-  [168, 85, 247], // cool - violet
-  [153, 101, 21], // warm - brown
-  [126, 34, 206], // cool - fuchsia
-  [255, 99, 71], // warm - tomato
-  [132, 204, 22], // cool/warm - lime
-];
+/** Colors provided by shared palette in `lib/map-colors.ts`. */
 
 /** GPX path for a tour file, with fallback to the legacy flat layout (pre-zone files). */
 function tourGpxPath(tour: TourDistances, suffix: GpxSegmentSuffix): string {
@@ -750,7 +735,7 @@ async function generateZoneMapPdf(
   const labelMids: { x: number; y: number }[] = [];
   for (let i = 0; i < tracks.length; i++) {
     const track = tracks[i];
-    const color = MAP_COLORS[i % MAP_COLORS.length];
+    const color = getTrackColorTuple(i);
     const points = track.coords.map(([lon, lat]) => projectToPanel(lon, lat, view, rect));
 
     doc.setDrawColor(255, 255, 255);
@@ -781,7 +766,7 @@ async function generateZoneMapPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   for (let i = 0; i < tracks.length; i++) {
-    const color = MAP_COLORS[i % MAP_COLORS.length];
+    const color = getTrackColorTuple(i);
     const mid = labelMids[i];
     const labelWidth = doc.getTextWidth(tracks[i].name);
     doc.setFillColor(color[0], color[1], color[2]);
@@ -801,6 +786,173 @@ async function generateZoneMapPdf(
   const zoneFolder = zonePdfDir(rootDir, zoneId);
   mkdirSync(zoneFolder, { recursive: true });
   const outputPath = zoneMapPdfPath(rootDir, zoneId, kind);
+  ensureWritable(outputPath);
+  try {
+    doc.save(outputPath);
+  } catch (error) {
+    throw new Error(`impossible d'écrire ${outputPath} : ${errorMessage(error)}`);
+  }
+  console.log(`Généré : ${outputPath}`);
+  return true;
+}
+
+// --- Global overview map: one landscape PDF with all tours ---
+
+interface GlobalTrack {
+  readonly name: string;
+  readonly coords: LonLat[];
+  readonly zoneLocalIndex: number; // index within its zone for its type (for color)
+}
+
+/**
+ * Render the global overview map with all tours from all zones.
+ *
+ * Returns whether the document was written.
+ */
+async function generateGlobalMapPdf(
+  allTours: TourDistances[],
+  logo: LogoImage | undefined,
+): Promise<boolean> {
+  // Build tracks with zone-local index for color assignment
+  const tracks: GlobalTrack[] = [];
+
+  // Group tours by zone and type, preserving order from ZONES array
+  const zoneIds = ZONES.map((z) => z.id).filter((zoneId) =>
+    allTours.some((tour) => tour.zoneId === zoneId),
+  );
+  for (const zoneId of zoneIds) {
+    // Bike tours for this zone
+    const bikeTours = allTours.filter(
+      (tour) => tour.zoneId === zoneId && tour.name.startsWith('V'),
+    );
+    for (const [index, tour] of bikeTours.entries()) {
+      const coords = parseGpxCoords(tourGpxPath(tour, ''));
+      if (coords && coords.length > 0) {
+        tracks.push({ name: tour.name, coords, zoneLocalIndex: index });
+      }
+    }
+
+    // Walking tours for this zone
+    const walkingTours = allTours.filter(
+      (tour) => tour.zoneId === zoneId && tour.name.startsWith('P'),
+    );
+    for (const [index, tour] of walkingTours.entries()) {
+      const coords = parseGpxCoords(tourGpxPath(tour, ''));
+      if (coords && coords.length > 0) {
+        tracks.push({ name: tour.name, coords, zoneLocalIndex: index });
+      }
+    }
+  }
+
+  if (tracks.length === 0) {
+    return false;
+  }
+
+  const doc = new jsPDF({ orientation: 'landscape' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 10;
+  const contentWidth = pageWidth - margin * 2;
+
+  if (logo) {
+    const logoHeight = 12;
+    const dataUrl = `data:image/jpeg;base64,${logo.buffer.toString('base64')}`;
+    doc.addImage(dataUrl, 'JPEG', margin, 6, logoHeight * logo.aspect, logoHeight, 'vrnb-logo');
+  }
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.text('Toutes les zones - Tous les parcours', pageWidth / 2, 16, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Contact', pageWidth - margin, 7, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('06 23 13 56 48', pageWidth - margin, 12, { align: 'right' });
+
+  const mapY = 24;
+  const footerY = pageHeight - 6;
+  const rect: PdfRect = { x: margin, y: mapY, w: contentWidth, h: footerY - mapY - 6 };
+
+  const allCoords = tracks.flatMap((track) => track.coords);
+  // High resolution for the full-page map (print quality).
+  const view = planView(allCoords, rect.w / rect.h, 3072);
+  if (!view) {
+    console.warn('  aucune vue de carte pour la carte globale');
+    return false;
+  }
+
+  const background = await buildMapBackground(view, 92);
+  if (background) {
+    const dataUrl = `data:image/jpeg;base64,${background.toString('base64')}`;
+    try {
+      doc.addImage(dataUrl, 'JPEG', rect.x, rect.y, rect.w, rect.h, 'global-map');
+    } catch (error) {
+      console.warn(`  échec de addImage : ${error instanceof Error ? error.message : error}`);
+    }
+  } else {
+    doc.setFillColor(235, 235, 232);
+    doc.rect(rect.x, rect.y, rect.w, rect.h, 'F');
+  }
+
+  doc.setLineCap(1);
+  doc.setLineJoin(1);
+  const labelMids: { x: number; y: number }[] = [];
+  for (let i = 0; i < tracks.length; i++) {
+    const track = tracks[i];
+    const color = getTrackColorTuple(track.zoneLocalIndex);
+    const points = track.coords.map(([lon, lat]) => projectToPanel(lon, lat, view, rect));
+
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(1.7);
+    for (let j = 1; j < points.length; j++) {
+      doc.line(points[j - 1].x, points[j - 1].y, points[j].x, points[j].y);
+    }
+    doc.setDrawColor(color[0], color[1], color[2]);
+    doc.setLineWidth(0.9);
+    for (let j = 1; j < points.length; j++) {
+      doc.line(points[j - 1].x, points[j - 1].y, points[j].x, points[j].y);
+    }
+
+    const start = points[0];
+    const end = points[points.length - 1];
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.4);
+    doc.setFillColor(22, 163, 74);
+    doc.circle(start.x, start.y, 1.2, 'FD');
+    doc.setFillColor(225, 29, 72);
+    doc.circle(end.x, end.y, 1.2, 'FD');
+
+    labelMids.push(points[Math.floor(points.length / 2)]);
+  }
+
+  // Labels last (same style as the web map: track color pill, white bold text),
+  // so no route line ever crosses a label.
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  for (let i = 0; i < tracks.length; i++) {
+    const track = tracks[i];
+    const color = getTrackColorTuple(track.zoneLocalIndex);
+    const mid = labelMids[i];
+    const labelWidth = doc.getTextWidth(track.name);
+    doc.setFillColor(color[0], color[1], color[2]);
+    doc.roundedRect(mid.x - labelWidth / 2 - 2, mid.y - 4.5, labelWidth + 4, 6.5, 1.5, 1.5, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.text(track.name, mid.x, mid.y, { align: 'center' });
+  }
+
+  doc.setTextColor(0, 0, 0);
+  drawLegend(doc, margin, footerY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Cartes © OpenStreetMap', pageWidth - margin, footerY, { align: 'right' });
+  doc.setTextColor(0, 0, 0);
+
+  const outputPath = globalMapPdfPath(rootDir);
   ensureWritable(outputPath);
   try {
     doc.save(outputPath);
@@ -868,6 +1020,7 @@ async function main(): Promise<void> {
   /** The Parcours whose Fiche was rendered, and the overview maps written. */
   const rendered = new Set<string>();
   const renderedZoneMaps = new Set<string>();
+  let renderedGlobalMap = false;
 
   try {
     try {
@@ -894,14 +1047,17 @@ async function main(): Promise<void> {
     }
 
     // The plan decides what the run must render: the Fiche of the Parcours
-    // that changed, and the overview map of the Zones that changed.
+    // that changed, the overview map of the Zones that changed, and the
+    // global overview map.
     const statePath = generationStatePath(rootDir);
     const state = readGenerationStateOrWarn(statePath);
+    const globalMapFingerprint = fingerprintDocument(globalMapPdfPath(rootDir));
     const runPlan = planGeneration({
       state,
       currentVersion: GENERATION_STATE_VERSION,
       candidates: allTours.map(toCandidate),
       zoneMapFingerprints: zoneMapFingerprintsOf(allTours),
+      globalMapFingerprint,
       filters,
       force,
     });
@@ -959,6 +1115,25 @@ async function main(): Promise<void> {
       );
     });
 
+    // Render the global overview map if the plan says to.
+    if (runPlan.globalDecision.regenerateGlobalMap) {
+      await perf.measure('Carte globale', async () => {
+        try {
+          // Use ALL tours (not filtered) for the global map
+          const allToursForGlobalMap: TourDistances[] = [...toursData.vTours, ...toursData.pTours];
+          const written = await generateGlobalMapPdf(allToursForGlobalMap, logo);
+          if (written) {
+            renderedGlobalMap = true;
+          }
+        } catch (error) {
+          failures += 1;
+          console.error(
+            `échec de la carte globale : ${error instanceof Error ? error.message : error}`,
+          );
+        }
+      });
+    }
+
     // The state remembers the Fiches that were rendered: the next run knows
     // they are up to date. A Fiche that failed keeps no fingerprint, so the
     // next run renders it again.
@@ -989,13 +1164,22 @@ async function main(): Promise<void> {
       zoneMapUpdates.push({ key, fingerprint });
     }
 
-    writeGenerationStateOrFail(statePath, nextGenerationState(state, updates, zoneMapUpdates));
+    // The state remembers the global overview map that was rendered.
+    const globalMapUpdate: GlobalMapStateUpdate = {
+      key: globalMapKey(),
+      fingerprint: renderedGlobalMap ? fingerprintDocument(globalMapPdfPath(rootDir)) : undefined,
+    };
+
+    writeGenerationStateOrFail(
+      statePath,
+      nextGenerationState(state, updates, zoneMapUpdates, globalMapUpdate),
+    );
 
     if (failures > 0) {
       throw new Error(`${failures} Fiche(s) en échec.`);
     }
   } finally {
-    reportRun(perf, plan, rendered, renderedZoneMaps);
+    reportRun(perf, plan, rendered, renderedZoneMaps, renderedGlobalMap);
   }
 }
 
@@ -1010,6 +1194,7 @@ function reportRun(
   plan: GenerationPlan | undefined,
   rendered: ReadonlySet<string>,
   renderedZoneMaps: ReadonlySet<string>,
+  renderedGlobalMap: boolean,
 ): void {
   const stats = tileFetcher.stats;
   const report = buildPerfReport({
@@ -1017,7 +1202,7 @@ function reportRun(
     totalMs: perf.totalMs(),
     steps: perf.steps,
     tiles: { fromCache: stats.cacheHits, downloaded: stats.downloads },
-    subjects: [FICHE_SUBJECT, ZONE_MAP_SUBJECT],
+    subjects: [FICHE_SUBJECT, ZONE_MAP_SUBJECT, GLOBAL_MAP_SUBJECT],
     parcours: plan
       ? countersFromDecisions(plan.decisions, {
           subject: FICHE_SUBJECT.id,
@@ -1038,6 +1223,27 @@ function reportRun(
             renderedZoneMaps.has(zoneMapKey(decision.zoneId, decision.kind)),
         })
       : { changed: [], unchanged: [] },
+    // Global map counters: one entry for the global map
+    // The generation-perf module doesn't have a specific helper for global map,
+    // so we use a simple object structure that matches PerfCounters
+    packs:
+      plan && plan.globalDecision
+        ? {
+            written:
+              plan.globalDecision.regenerateGlobalMap && renderedGlobalMap
+                ? [
+                    {
+                      id: 'global-map',
+                      subject: GLOBAL_MAP_SUBJECT.id,
+                      zoneId: '',
+                      label: 'globale',
+                      reason: plan.globalDecision.reason,
+                    },
+                  ]
+                : [],
+            documents: plan.globalDecision.regenerateGlobalMap && renderedGlobalMap ? 1 : 0,
+          }
+        : undefined,
   });
 
   console.log(formatPerfReport(report).join('\n'));

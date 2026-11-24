@@ -14,11 +14,13 @@ import { Drawer, DrawerClose, DrawerContent, DrawerTitle, DrawerTrigger } from '
 const DRAWER_IDS: Record<MenuVariant, string> = {
   tour: 'my-drawer-1',
   tours: 'tours-drawer',
+  home: 'home-drawer',
 };
 
 const MENU_CLASSES: Record<MenuVariant, string> = {
   tour: 'min-h-full w-60 gap-3 p-4 sm:w-80',
   tours: 'min-h-full w-80 gap-3 p-4',
+  home: 'min-h-full w-80 gap-3 p-4',
 };
 
 interface MenuDrawerProps {

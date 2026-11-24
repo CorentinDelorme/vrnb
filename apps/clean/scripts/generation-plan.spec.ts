@@ -51,7 +51,12 @@ function record(overrides: Partial<ParcoursGenerationRecord> = {}): ParcoursGene
 }
 
 function stateWith(record: GenerationState['parcours'][string]): GenerationState {
-  return { version: VERSION, parcours: { 'bruz-sud/V1': record }, zoneMaps: {} };
+  return {
+    version: VERSION,
+    parcours: { 'bruz-sud/V1': record },
+    zoneMaps: {},
+    globalMap: undefined,
+  };
 }
 
 const UP_TO_DATE_RECORD = record({
@@ -101,7 +106,7 @@ describe('planGeneration', () => {
 
   it('should re-route a Parcours the state does not know', () => {
     const plan = planGeneration({
-      state: { version: VERSION, parcours: {}, zoneMaps: {} },
+      state: { version: VERSION, parcours: {}, zoneMaps: {}, globalMap: undefined },
       currentVersion: VERSION,
       candidates: [candidate('V1')],
     });
@@ -488,5 +493,126 @@ describe('planGeneration — the overview map of a Zone', () => {
     });
 
     expect(plan.zoneDecisions.map((decision) => decision.zoneId)).toEqual(['bruz-sud']);
+  });
+});
+
+describe('planGeneration — the global overview map', () => {
+  const globalFingerprint = 'global-map';
+  const zoneFingerprints = {
+    [zoneMapKey('bruz-sud', 'V')]: 'zone-map',
+    [zoneMapKey('bruz-sud', 'P')]: 'zone-map-p',
+  };
+
+  /** A state that knows the overview maps of the Zone. */
+  function stateWithZoneMaps(): GenerationState {
+    return { ...stateWith(UP_TO_DATE_RECORD), zoneMaps: zoneFingerprints };
+  }
+
+  /** A state that knows the global overview map. */
+  function stateWithGlobalMap(): GenerationState {
+    return { ...stateWithZoneMaps(), globalMap: globalFingerprint };
+  }
+
+  it('should not regenerate the global map when no Parcours changed', () => {
+    const plan = planGeneration({
+      state: stateWithGlobalMap(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      globalMapFingerprint: globalFingerprint,
+    });
+
+    expect(plan.globalDecision).toEqual({
+      regenerateGlobalMap: false,
+      reason: 'up-to-date',
+    });
+  });
+
+  it('should regenerate the global map when a Parcours trace changed', () => {
+    const plan = planGeneration({
+      state: stateWithGlobalMap(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1', { trace: 'new-trace' })],
+      globalMapFingerprint: globalFingerprint,
+    });
+
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('parcours-changed');
+  });
+
+  it('should regenerate the global map when a Parcours Fiche is rendered again', () => {
+    const plan = planGeneration({
+      state: stateWithGlobalMap(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1', { fiche: undefined })],
+      globalMapFingerprint: globalFingerprint,
+    });
+
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('parcours-changed');
+  });
+
+  it('should regenerate the global map when the map file is missing on disk', () => {
+    const plan = planGeneration({
+      state: stateWithGlobalMap(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      globalMapFingerprint: undefined,
+    });
+
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('missing-global-map');
+  });
+
+  it('should regenerate the global map when the state records no fingerprint', () => {
+    const plan = planGeneration({
+      state: stateWithZoneMaps(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      globalMapFingerprint: globalFingerprint,
+    });
+
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('no-global-map-state');
+  });
+
+  it('should regenerate the global map when the map on disk differs from state', () => {
+    const plan = planGeneration({
+      state: stateWithGlobalMap(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1')],
+      globalMapFingerprint: 'other-map',
+    });
+
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('global-map-changed');
+  });
+
+  it('should regenerate the global map when the run is forced', () => {
+    const plan = planGeneration({
+      state: stateWithGlobalMap(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1'), candidate('P1')],
+      globalMapFingerprint: globalFingerprint,
+      force: true,
+    });
+
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('forced');
+  });
+
+  it('should regenerate the global map when a filtered-out Parcours changes', () => {
+    const plan = planGeneration({
+      state: stateWithGlobalMap(),
+      currentVersion: VERSION,
+      candidates: [candidate('V1'), candidate('V30', {}, 'bruz-ker-lann')],
+      globalMapFingerprint: globalFingerprint,
+      filters: parseGenerationFilters(['--zone=bruz-sud']),
+    });
+
+    // V30 in bruz-ker-lann is filtered out by --zone=bruz-sud, but it has changed
+    // (empty fingerprints = new/changed). The global map is NOT filterable:
+    // it represents the full catalogue, so ANY changed tour triggers regeneration.
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('parcours-changed');
   });
 });

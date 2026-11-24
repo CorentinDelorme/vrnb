@@ -50,12 +50,20 @@ describe('pageTitle', () => {
  * every non-home URL, VRNB logo on home and on /manual, Menu drawer on /tour/ and /tours/.
  */
 describe('headerFlags', () => {
-  it('shows only the logo on home', () => {
-    expect(headerFlags('/')).toEqual({ showBack: false, showLogo: true, menu: null });
+  it('shows the logo and home menu on home', () => {
+    expect(headerFlags('/')).toEqual({ showBack: false, showLogo: true, menu: 'home' });
   });
 
   it('shows the back button and the logo on the manual page', () => {
     expect(headerFlags('/manual')).toEqual({ showBack: true, showLogo: true, menu: null });
+  });
+
+  it('shows the back button and the tours menu on the global tours map', () => {
+    expect(headerFlags('/tours')).toEqual({
+      showBack: true,
+      showLogo: false,
+      menu: 'tours',
+    });
   });
 
   it('shows the back button and the tours menu on a zone map', () => {

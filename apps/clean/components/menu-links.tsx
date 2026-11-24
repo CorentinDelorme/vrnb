@@ -1,4 +1,4 @@
-import { MapsLocationIcon } from '@hugeicons/core-free-icons';
+import { MapsLocationIcon, UploadIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 
 import type { MenuLinkKind } from '../lib/menu-links';
@@ -7,6 +7,8 @@ import { menuLinks } from '../lib/menu-links';
 /** Icon per drawer link kind, matching the legacy drawer templates. */
 const LINK_ICONS: Record<MenuLinkKind, typeof MapsLocationIcon> = {
   'pdf-carte': MapsLocationIcon,
+  'global-map': MapsLocationIcon,
+  'import-parcours': UploadIcon,
 };
 
 interface MenuLinksProps {
@@ -20,22 +22,27 @@ interface MenuLinksProps {
  * renders inside the client `AppHeader` boundary.
  */
 export function MenuLinks({ pathname }: MenuLinksProps) {
+  const links = menuLinks(pathname);
+
   return (
-    <>
-      {menuLinks(pathname).map((link) => (
-        <li key={link.kind}>
-          <a
-            href={link.href}
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2"
-          >
-            <HugeiconsIcon icon={LINK_ICONS[link.kind]} strokeWidth={1.5} />
-            {link.label}
-          </a>
-        </li>
-      ))}
-    </>
+    <ul className="flex flex-col gap-3">
+      {links.map((link) => {
+        const isPdf = link.kind === 'pdf-carte';
+        return (
+          <li key={`${link.kind}-${link.href}`}>
+            <a
+              href={link.href}
+              download={isPdf ? '' : undefined}
+              target={isPdf ? '_blank' : undefined}
+              rel={isPdf ? 'noopener noreferrer' : undefined}
+              className="flex items-center gap-2"
+            >
+              <HugeiconsIcon icon={LINK_ICONS[link.kind]} strokeWidth={1.5} size={20} />
+              {link.label}
+            </a>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

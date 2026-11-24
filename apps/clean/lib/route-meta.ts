@@ -24,7 +24,7 @@ const PRACTICE_LABELS: Record<TourType, string> = {
 };
 
 /** Which Menu drawer a route opens. */
-export type MenuVariant = 'tour' | 'tours';
+export type MenuVariant = 'tour' | 'tours' | 'home';
 
 export interface HeaderFlags {
   /** Back button, shown on every URL except home (legacy `router.url !== '/'`). */
@@ -39,6 +39,7 @@ export interface HeaderFlags {
  * Title for a pathname, mirroring the route titles of the Angular router:
  * - `/` → `Action ramassage des déchets`
  * - `/manual` → `Action ramassage des déchets - Mode d'emploi`
+ * - `/tours` → `Action ramassage des déchets - Tous les parcours`
  * - `/tours/<zone>/<P|V>` → `<Zone> - Parcours à pied|à vélo`
  * - `/tour/<zone>/<id>` → `<Zone> - Parcours <id>`
  *
@@ -51,6 +52,9 @@ export function pageTitle(pathname: string): string {
   }
   if (pathname === '/manual') {
     return MANUAL_TITLE;
+  }
+  if (pathname === '/tours') {
+    return `${HOME_TITLE} - Tous les parcours`;
   }
 
   const zoneMap = matchZoneMapPath(pathname);
@@ -81,6 +85,15 @@ export function headerFlags(pathname: string): HeaderFlags {
   return {
     showBack: !isHome,
     showLogo: isHome || pathname.startsWith('/manual'),
-    menu: pathname.startsWith('/tours/') ? 'tours' : pathname.startsWith('/tour/') ? 'tour' : null,
+    menu:
+      pathname === '/'
+        ? 'home'
+        : pathname === '/tours'
+          ? 'tours'
+          : pathname.startsWith('/tours/')
+            ? 'tours'
+            : pathname.startsWith('/tour/')
+              ? 'tour'
+              : null,
   };
 }
