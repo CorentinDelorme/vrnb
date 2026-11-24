@@ -22,7 +22,7 @@ import { createHash } from 'crypto';
 import { mkdirSync, readFileSync, statSync } from 'fs';
 import { dirname, join } from 'path';
 
-import type { ParcoursEntry } from './generation-helpers';
+import type { LayoutType, ParcoursEntry } from './generation-helpers';
 import {
   isRecord,
   parseParcoursStateKey,
@@ -76,6 +76,8 @@ export interface ParcoursGenerationRecord {
   readonly fiche: string | undefined;
   /** Fingerprint of the Point de rendez-vous of the Zone of the Parcours. */
   readonly meetingPoint: string | undefined;
+  /** Layout used to generate the Fiche: `'single'` or `'double'`. */
+  readonly layout: LayoutType | undefined;
 }
 
 /** The generation state, as it is written in the repository. */
@@ -283,6 +285,8 @@ export function nextGenerationState(
       globalMap = globalMapUpdate.fingerprint;
     }
   }
+  // If globalMapUpdate is undefined, we didn't render the global map this run:
+  // keep the existing fingerprint from the state.
 
   return { version: GENERATION_STATE_VERSION, parcours: records, zoneMaps, globalMap };
 }
@@ -297,6 +301,7 @@ export function nextGenerationState(
 export function withFicheFingerprint(
   record: ParcoursGenerationRecord | undefined,
   fiche: string | undefined,
+  layout: LayoutType,
 ): ParcoursGenerationRecord {
   return {
     trace: record?.trace,
@@ -304,6 +309,7 @@ export function withFicheFingerprint(
     endSegment: record?.endSegment,
     fiche,
     meetingPoint: record?.meetingPoint,
+    layout,
   };
 }
 
@@ -323,7 +329,12 @@ export function withMissingFicheFingerprints(
   const parcours: Record<string, ParcoursGenerationRecord> = {};
 
   for (const [key, record] of Object.entries(state.parcours)) {
-    parcours[key] = record.fiche ? record : withFicheFingerprint(record, fingerprints[key]);
+    if (record.fiche) {
+      parcours[key] = record;
+    } else {
+      const ficheOnDisk = fingerprints[key];
+      parcours[key] = ficheOnDisk ? withFicheFingerprint(record, ficheOnDisk, 'single') : record;
+    }
   }
 
   return { version: state.version, parcours, zoneMaps: state.zoneMaps, globalMap: state.globalMap };
@@ -482,7 +493,13 @@ function readRecord(record: Record<string, unknown>): ParcoursGenerationRecord {
     endSegment: readFingerprint(record, 'endSegment'),
     fiche: readFingerprint(record, 'fiche'),
     meetingPoint: readFingerprint(record, 'meetingPoint'),
+    layout: readLayout(record),
   };
+}
+
+function readLayout(record: Record<string, unknown>): LayoutType | undefined {
+  const value = record['layout'];
+  return value === 'single' || value === 'double' ? value : undefined;
 }
 
 function readFingerprint(record: Record<string, unknown>, key: string): string | undefined {

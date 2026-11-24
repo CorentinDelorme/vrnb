@@ -357,6 +357,7 @@ function stateUpdates(
         ...fingerprintParcoursFiles(entry),
         fiche: undefined,
         meetingPoint: meetingPoints.get(entry.zoneId),
+        layout: undefined, // Layout will be recorded by the PDF generation step
       },
     };
   });

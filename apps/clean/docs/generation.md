@@ -11,6 +11,35 @@ bun run generate:all    # Les trois étapes : routes -> données -> fiches
 bun run generate:state  # Compléter l'état de génération avec les fiches présentes
 ```
 
+### Disposition des fiches (1 page / 2 pages)
+
+La génération des fiches PDF accepte un drapeau `--layout` :
+
+```sh
+bun run generate:pdfs -- --layout=single   # 1 page (défaut, identique à l'actuel)
+bun run generate:pdfs -- --layout=double   # 2 pages : cartes plus grandes
+bun run generate:pdfs -- --layout=2page    # Alias pour double
+bun run generate:pdfs -- --layout=two-page # Alias pour double
+```
+
+**Disposition 1 page (par défaut, inchangée)** : en-tête + tableau des distances + carte principale (~132 mm) + cartes de début/fin côte à côte (~70 mm chacune).
+
+**Disposition 2 pages** :
+
+- Page 1 : en-tête + tableau des distances + **carte principale agrandie (~190 mm)** + légende
+- Page 2 : en-tête + **carte de début pleine largeur (~110 mm)** + **carte de fin pleine largeur (~110 mm)** empilées + légende
+- Les deux pages portent l'en-tête, le QR code, le lien profond vers la page du parcours et la légende.
+
+Le drapeau est accepté par toutes les commandes qui génèrent des fiches (`generate:pdfs`, `generate:one`, `generate:all`). Le choix de la disposition est **traqué dans l'état de génération par parcours** : quand on change `--layout`, seuls les parcours dont la disposition diffère de celle de la fiche actuelle sont régénérés automatiquement (raison `disposition modifiée` dans le bloc `[perf]`). Pas besoin de `--force`.
+
+Exemples :
+
+```sh
+bun run generate:all -- --layout=double          # Tout régénérer en 2 pages
+bun run generate:one -- --tour=V1 --layout=double # Un parcours en 2 pages
+bun run generate:pdfs -- --layout=single         # Revenir en 1 page (régénère seulement ceux qui étaient en 2 pages)
+```
+
 `bun run generate:all` enchaîne les trois étapes de la pipeline, dans cet ordre :
 
 1. **les segments de début et de fin** — le routage entre le Point de rendez-vous et les
@@ -218,6 +247,7 @@ Pour éviter de tout régénérer à chaque essai (mise en page PDF, QR code...)
 bun run generate:one -- --tour=V1 --zone=bruz-sud   # Un seul parcours (routes -> données -> PDF)
 bun run generate:one -- --zone=bruz-sud             # Tous les parcours d'une zone
 bun run generate:one -- --tour=V1 --zone=bruz-sud --skip-routes --skip-tours  # PDF seul, sans appels réseau
+bun run generate:one -- --tour=V1 --zone=bruz-sud --layout=double  # 2 pages, cartes plus grandes
 ```
 
 `generate:one` suit exactement la même logique incrémentale qu'une génération complète :

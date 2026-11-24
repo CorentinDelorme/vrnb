@@ -84,6 +84,35 @@ export function parseForceFlag(argv: readonly string[]): boolean {
 }
 
 /**
+ * Layout type for the Fiche PDF: single-page (default) or double-page.
+ */
+export type LayoutType = 'single' | 'double';
+
+/**
+ * Parse the `--layout` flag from the command line arguments.
+ *
+ * Accepts: `single`, `double`, `2page`, `two-page` (case-insensitive).
+ * Defaults to `'single'` when absent or invalid.
+ */
+export function parseLayoutFlag(argv: readonly string[]): LayoutType {
+  const arg = argv.find((candidate) => candidate.startsWith('--layout='));
+  if (!arg) {
+    return 'single';
+  }
+  const value = arg.slice('--layout='.length).trim().toLowerCase();
+  switch (value) {
+    case 'double':
+    case '2page':
+    case 'two-page':
+      return 'double';
+    case 'single':
+      return 'single';
+    default:
+      return 'single';
+  }
+}
+
+/**
  * Write a file only when its content changes.
  *
  * The generated files (the catalogue of the Parcours, the precomputed

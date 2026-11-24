@@ -36,7 +36,7 @@
  * regenerated and what it left alone, and why.
  */
 
-import type { GenerationFilters, PracticeType } from './generation-helpers';
+import type { GenerationFilters, LayoutType, PracticeType } from './generation-helpers';
 import { matchesFilters, practiceTypeOf } from './generation-helpers';
 import type {
   GenerationState,
@@ -78,6 +78,8 @@ export type FicheReason =
   | 'no-fiche-state'
   /** The Fiche on the disk differs from the one the state recorded. */
   | 'fiche-changed'
+  /** The layout of the Fiche changed (single <-> double). */
+  | 'layout-changed'
   /** The Fiche is up to date: nothing to render. */
   | 'up-to-date';
 
@@ -160,6 +162,8 @@ export interface PlanGenerationInput {
   readonly filters?: GenerationFilters;
   /** Whether the run is forced. */
   readonly force?: boolean;
+  /** Desired layout for the Fiche PDFs: `'single'` (default) or `'double'`. */
+  readonly desiredLayout?: LayoutType;
 }
 
 /** What the plan decided for one Parcours. */
@@ -211,18 +215,31 @@ export interface GenerationPlan {
  * not just the filtered ones.
  */
 export function planGeneration(input: PlanGenerationInput): GenerationPlan {
+  const desiredLayout = input.desiredLayout ?? 'single';
   const candidates = input.candidates.filter((candidate) =>
     matchesFilters(input.filters, candidate.zoneId, candidate.tourId),
   );
 
   const decisions = candidates.map((candidate) =>
-    decideParcours(candidate, input.state, input.currentVersion, input.force ?? false),
+    decideParcours(
+      candidate,
+      input.state,
+      input.currentVersion,
+      input.force ?? false,
+      desiredLayout,
+    ),
   );
 
   // Global map decision uses ALL candidates (unfiltered) per spec:
   // "global map is considered part of every run (not filterable)"
   const allDecisions = input.candidates.map((candidate) =>
-    decideParcours(candidate, input.state, input.currentVersion, input.force ?? false),
+    decideParcours(
+      candidate,
+      input.state,
+      input.currentVersion,
+      input.force ?? false,
+      desiredLayout,
+    ),
   );
 
   return {
@@ -244,7 +261,11 @@ export function planGeneration(input: PlanGenerationInput): GenerationPlan {
 
 /** Whether any Parcours in the decisions requires the global map to regenerate. */
 function anyParcoursChanged(decisions: readonly ParcoursDecision[]): boolean {
-  return decisions.some((decision) => decision.rerouteSegments || decision.regenerateFiche);
+  return decisions.some(
+    (decision) =>
+      decision.rerouteSegments ||
+      (decision.regenerateFiche && decision.ficheReason !== 'layout-changed'),
+  );
 }
 
 /** Decide the global overview map: always part of the run (not filterable). */
@@ -283,9 +304,10 @@ function decideParcours(
   state: GenerationState | undefined,
   currentVersion: number,
   force: boolean,
+  desiredLayout: LayoutType,
 ): ParcoursDecision {
   const routing = decideRouting(candidate, state, currentVersion, force);
-  const fiche = decideFiche(candidate, routing, state, force);
+  const fiche = decideFiche(candidate, routing, state, force, desiredLayout);
 
   return {
     zoneId: candidate.zoneId,
@@ -345,6 +367,7 @@ function decideFiche(
   routing: { readonly rerouteSegments: boolean },
   state: GenerationState | undefined,
   force: boolean,
+  desiredLayout: LayoutType,
 ): { readonly regenerateFiche: boolean; readonly ficheReason: FicheReason } {
   if (force) {
     return { regenerateFiche: true, ficheReason: 'forced' };
@@ -367,6 +390,12 @@ function decideFiche(
   }
   if (record.fiche !== candidate.fingerprints.fiche) {
     return { regenerateFiche: true, ficheReason: 'fiche-changed' };
+  }
+  // The Fiche on disk matches the state, but the desired layout differs
+  // from the one that produced it: regenerate with the new layout.
+  const recordedLayout = record.layout ?? 'single'; // legacy Fiches are 'single'
+  if (recordedLayout !== desiredLayout) {
+    return { regenerateFiche: true, ficheReason: 'layout-changed' };
   }
 
   return { regenerateFiche: false, ficheReason: 'up-to-date' };
@@ -417,14 +446,18 @@ function decideZoneMaps(
     const kind = practiceTypeOf(decision.tourId);
     const key = zoneMapKey(decision.zoneId, kind);
     const zone = zones.get(key);
+    // layout-changed ne change pas les traces affichées sur la carte de zone
+    const affectsZoneMap =
+      decision.rerouteSegments ||
+      (decision.regenerateFiche && decision.ficheReason !== 'layout-changed');
     if (zone) {
-      zone.changed = zone.changed || decision.rerouteSegments || decision.regenerateFiche;
+      zone.changed = zone.changed || affectsZoneMap;
       continue;
     }
     zones.set(key, {
       zoneId: decision.zoneId,
       kind,
-      changed: decision.rerouteSegments || decision.regenerateFiche,
+      changed: affectsZoneMap,
     });
   }
 

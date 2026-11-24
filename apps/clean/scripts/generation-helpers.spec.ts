@@ -19,6 +19,7 @@ import {
   parseFilterValues,
   parseForceFlag,
   parseGenerationFilters,
+  parseLayoutFlag,
   parseParcoursStateKey,
   perfReportPath,
   practiceLabel,
@@ -121,6 +122,39 @@ describe('parseForceFlag', () => {
   it('should tell a forced run from a regular one', () => {
     expect(parseForceFlag(['--tour=V1', '--force'])).toBe(true);
     expect(parseForceFlag(['--tour=V1'])).toBe(false);
+  });
+});
+
+describe('parseLayoutFlag', () => {
+  it('should default to single when the flag is absent', () => {
+    expect(parseLayoutFlag(['--tour=V1'])).toBe('single');
+    expect(parseLayoutFlag([])).toBe('single');
+  });
+
+  it('should parse single explicitly', () => {
+    expect(parseLayoutFlag(['--layout=single'])).toBe('single');
+  });
+
+  it('should parse double explicitly', () => {
+    expect(parseLayoutFlag(['--layout=double'])).toBe('double');
+  });
+
+  it('should parse 2page alias for double', () => {
+    expect(parseLayoutFlag(['--layout=2page'])).toBe('double');
+  });
+
+  it('should parse two-page alias for double', () => {
+    expect(parseLayoutFlag(['--layout=two-page'])).toBe('double');
+  });
+
+  it('should be case-insensitive', () => {
+    expect(parseLayoutFlag(['--layout=DOUBLE'])).toBe('double');
+    expect(parseLayoutFlag(['--layout=Two-Page'])).toBe('double');
+  });
+
+  it('should default to single for invalid values', () => {
+    expect(parseLayoutFlag(['--layout=invalid'])).toBe('single');
+    expect(parseLayoutFlag(['--layout='])).toBe('single');
   });
 });
 
