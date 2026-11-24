@@ -428,6 +428,7 @@ async function renderMapPanel(
   style: PanelStyle,
   emptyLabel: string,
   mapKey: string,
+  maxPixels = MAX_VIEW_PIXELS,
 ): Promise<void> {
   if (!coords || coords.length === 0) {
     doc.setFillColor(235, 235, 232);
@@ -439,7 +440,7 @@ async function renderMapPanel(
     return;
   }
 
-  const view = planView(coords, rect.w / rect.h);
+  const view = planView(coords, rect.w / rect.h, maxPixels);
   if (!view) {
     return;
   }
@@ -719,7 +720,7 @@ async function generateTourPdfTwoPage(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.text('Zone de nettoyage', margin, tableEndY + 7);
-  // Enlarged main map: ~190mm tall (was 132mm)
+  // Enlarged main map: ~190mm tall (was 132mm) — use higher resolution (3072px) for print quality
   const mainRect: PdfRect = { x: margin, y: tableEndY + 10, w: contentWidth, h: 190 };
   await renderMapPanel(
     doc,
@@ -728,6 +729,7 @@ async function generateTourPdfTwoPage(
     MAIN_STYLE,
     'Trace principal introuvable',
     `${tour.name}-main`,
+    3072,
   );
 
   renderLegendAndCredits(doc, margin, 282);
@@ -736,7 +738,7 @@ async function generateTourPdfTwoPage(
   doc.addPage();
   renderHeader(doc, zoneName, tour.name, qrImage, tourUrlStr, logo);
 
-  // Start map: full-width, ~110mm tall
+  // Start map: full-width, ~110mm tall — higher resolution for print quality
   const startCaptionY = 34;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
@@ -746,12 +748,13 @@ async function generateTourPdfTwoPage(
     doc,
     startCoords,
     startRect,
-    MAIN_STYLE, // Use MAIN_STYLE for larger maps
+    MAIN_STYLE,
     'Trace aller introuvable',
     `${tour.name}-start`,
+    3072,
   );
 
-  // End map: full-width, ~110mm tall
+  // End map: full-width, ~110mm tall — higher resolution for print quality
   const endCaptionY = startRect.y + startRect.h + 7;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
@@ -764,6 +767,7 @@ async function generateTourPdfTwoPage(
     MAIN_STYLE,
     'Trace retour introuvable',
     `${tour.name}-end`,
+    3072,
   );
 
   renderLegendAndCredits(doc, margin, 282);
