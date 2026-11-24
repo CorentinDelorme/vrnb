@@ -24,8 +24,6 @@ import { dirname, join } from 'path';
 
 import type { ParcoursEntry } from './generation-helpers';
 import {
-  globalMapKey,
-  globalMapPdfPath,
   isRecord,
   parseParcoursStateKey,
   resolveGpxTracePath,
@@ -38,7 +36,12 @@ import {
  * Parcours or an overview map everywhere they are counted. They are
  * re-exported here: the state is where they are used.
  */
-export { parcoursStateKey, parseParcoursStateKey, zoneMapKey, globalMapKey } from './generation-helpers';
+export {
+  globalMapKey,
+  parcoursStateKey,
+  parseParcoursStateKey,
+  zoneMapKey,
+} from './generation-helpers';
 
 /**
  * Version of the generation state: the single source of truth of what the
@@ -323,7 +326,7 @@ export function withMissingFicheFingerprints(
     parcours[key] = record.fiche ? record : withFicheFingerprint(record, fingerprints[key]);
   }
 
-  return { version: state.version, parcours, zoneMaps: state.zoneMaps };
+  return { version: state.version, parcours, zoneMaps: state.zoneMaps, globalMap: state.globalMap };
 }
 
 /**
@@ -353,7 +356,7 @@ export function withMissingMeetingPointFingerprints(
     };
   }
 
-  return { version: state.version, parcours, zoneMaps: state.zoneMaps };
+  return { version: state.version, parcours, zoneMaps: state.zoneMaps, globalMap: state.globalMap };
 }
 
 /**
@@ -377,7 +380,7 @@ export function withMissingZoneMapFingerprints(
     zoneMaps[key] = fingerprint;
   }
 
-  return { version: state.version, parcours: state.parcours, zoneMaps };
+  return { version: state.version, parcours: state.parcours, zoneMaps, globalMap: state.globalMap };
 }
 
 /**
@@ -395,7 +398,12 @@ export function withMissingGlobalMapFingerprint(
   if (!fingerprint || state.globalMap) {
     return state;
   }
-  return { version: state.version, parcours: state.parcours, zoneMaps: state.zoneMaps, globalMap: fingerprint };
+  return {
+    version: state.version,
+    parcours: state.parcours,
+    zoneMaps: state.zoneMaps,
+    globalMap: fingerprint,
+  };
 }
 
 /**
@@ -445,7 +453,11 @@ export function readGenerationState(path: string): GenerationStateRead {
     }
   }
 
-  const globalMap = isRecord(parsed.globalMap) ? undefined : (typeof parsed.globalMap === 'string' ? parsed.globalMap : undefined);
+  const globalMap = isRecord(parsed.globalMap)
+    ? undefined
+    : typeof parsed.globalMap === 'string'
+      ? parsed.globalMap
+      : undefined;
 
   return { status: 'read', state: { version: parsed.version, parcours, zoneMaps, globalMap } };
 }

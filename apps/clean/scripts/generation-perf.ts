@@ -124,6 +124,11 @@ export type ParcoursCounters = PerfCounters;
 export type ZoneMapCounters = PerfCounters;
 
 /**
+ * The global overview map: the one the run rendered again, or left alone.
+ */
+export type GlobalMapCounters = PerfCounters;
+
+/**
  * The packs of a run: the ones it wrote, and the documents they hold.
  *
  * The pack script merges the published documents of a Zone: it renders
@@ -154,6 +159,8 @@ export interface PerfReport {
   readonly parcours: ParcoursCounters;
   /** The overview maps of the run. */
   readonly zoneMaps: ZoneMapCounters;
+  /** The global overview map of the run. */
+  readonly globalMap: GlobalMapCounters;
   /** The packs of the run, `undefined` when the run wrote none. */
   readonly packs: PackCounters | undefined;
 }
@@ -174,6 +181,8 @@ export interface PerfReportInput {
   readonly parcours: ParcoursCounters;
   /** The overview maps of the run, empty when the run holds none. */
   readonly zoneMaps?: ZoneMapCounters;
+  /** The global overview map of the run, empty when the run holds none. */
+  readonly globalMap?: GlobalMapCounters;
   /** The packs of the run, absent when the run wrote none. */
   readonly packs?: PackCounters;
 }
@@ -365,6 +374,7 @@ export function aggregatePerfReports(input: PerfAggregateInput): PerfReport {
       .flatMap((report) => [
         ...report.parcours.changed,
         ...report.zoneMaps.changed,
+        ...report.globalMap.changed,
         ...(report.packs?.written ?? []),
       ])
       .map((element) => element.id),
@@ -393,18 +403,33 @@ export function aggregatePerfReports(input: PerfAggregateInput): PerfReport {
         (element) => !changedIds.has(element.id),
       ),
     },
+    globalMap: {
+      changed: mergeElements(input.reports.flatMap((report) => report.globalMap.changed)),
+      unchanged: mergeElements(
+        input.reports.flatMap((report) => report.globalMap.unchanged),
+      ).filter((element) => !changedIds.has(element.id)),
+    },
     packs: packs.length > 0 ? mergePackCounters(packs) : undefined,
   });
 }
 
 /** The elements the run changed, whatever the counter they come from. */
 function changedElements(report: PerfReport): readonly PerfElement[] {
-  return [...report.parcours.changed, ...report.zoneMaps.changed, ...(report.packs?.written ?? [])];
+  return [
+    ...report.parcours.changed,
+    ...report.zoneMaps.changed,
+    ...report.globalMap.changed,
+    ...(report.packs?.written ?? []),
+  ];
 }
 
 /** The elements the run left alone, whatever the counter they come from. */
 function unchangedElements(report: PerfReport): readonly PerfElement[] {
-  return [...report.parcours.unchanged, ...report.zoneMaps.unchanged];
+  return [
+    ...report.parcours.unchanged,
+    ...report.zoneMaps.unchanged,
+    ...report.globalMap.unchanged,
+  ];
 }
 
 /** Merge the packs of the steps of a run: the packs are unique, the documents add up. */
@@ -460,6 +485,7 @@ export function buildPerfReport(input: PerfReportInput): PerfReport {
     subjects: input.subjects,
     parcours: input.parcours,
     zoneMaps: input.zoneMaps ?? EMPTY_ZONE_MAPS,
+    globalMap: input.globalMap ?? { changed: [], unchanged: [] },
     packs: input.packs,
   };
 }

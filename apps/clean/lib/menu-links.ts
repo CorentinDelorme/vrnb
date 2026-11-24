@@ -54,7 +54,11 @@ export function homeMenuLinks(): readonly MenuLink[] {
     { kind: 'global-map', href: '/tours', label: 'Voir tous les parcours' },
   ];
   if (process.env.NODE_ENV === 'development') {
-    links.push({ kind: 'import-parcours', href: '/admin/import-parcours', label: 'Importer des parcours' });
+    links.push({
+      kind: 'import-parcours',
+      href: '/admin/import-parcours',
+      label: 'Importer des parcours',
+    });
   }
   return links;
 }

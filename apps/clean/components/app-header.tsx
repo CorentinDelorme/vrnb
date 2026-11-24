@@ -85,7 +85,9 @@ export function AppHeader() {
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
         >
-          {flags.menu === 'tours' || flags.menu === 'home' ? <MenuLinks pathname={pathname} /> : null}
+          {flags.menu === 'tours' || flags.menu === 'home' ? (
+            <MenuLinks pathname={pathname} />
+          ) : null}
           {flags.menu === 'tour' ? <TourDrawerLinks /> : null}
         </MenuDrawer>
       ) : null}

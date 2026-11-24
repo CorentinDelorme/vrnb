@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
-import { GlobalToursMap } from '../../../../components/global-tours-map';
-import { pageTitle } from '../../../../lib/route-meta';
+import { GlobalToursMap } from '../../components/global-tours-map';
+import { pageTitle } from '../../lib/route-meta';
 
 /**
  * Global tours map route `/tours` — all tours from all zones and types

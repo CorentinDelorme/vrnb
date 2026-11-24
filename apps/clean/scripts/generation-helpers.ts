@@ -164,6 +164,7 @@ export function readPerfReport(path: string): PerfReport | undefined {
     subjects: readSubjects(raw.subjects),
     parcours: readCounters(raw.parcours),
     zoneMaps: readCounters(raw.zoneMaps),
+    globalMap: readCounters(raw.globalMap),
     packs: readPacks(raw.packs),
   };
 }

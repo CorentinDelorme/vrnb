@@ -1,4 +1,4 @@
-import { MapsLocationIcon, ViewListIcon, UploadIcon } from '@hugeicons/core-free-icons';
+import { ListViewIcon, MapsLocationIcon, UploadIcon } from '@hugeicons/core-free-icons';
 import { HugeiconsIcon } from '@hugeicons/react';
 
 import type { MenuLinkKind } from '../lib/menu-links';
@@ -7,7 +7,7 @@ import { menuLinks } from '../lib/menu-links';
 /** Icon per drawer link kind, matching the legacy drawer templates. */
 const LINK_ICONS: Record<MenuLinkKind, typeof MapsLocationIcon> = {
   'pdf-carte': MapsLocationIcon,
-  'global-map': ViewListIcon,
+  'global-map': ListViewIcon,
   'import-parcours': UploadIcon,
 };
 

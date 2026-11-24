@@ -7,9 +7,9 @@ import { loadTourRouteGeoJson } from '../src/app/shared/gpx/tour-geometry';
 import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
 import { addLabelMarker, addStartEndMarkers } from '../src/app/shared/map/map-marker';
 import { drawGeoJsonRoute } from '../src/app/shared/map/map-route';
-import { LeafletMap } from './leaflet-map';
 import { findZoneTours, type Tour } from '../src/app/tours-queries';
 import { ZONES } from '../src/app/zones';
+import { LeafletMap } from './leaflet-map';
 
 /**
  * Global overview map of `/tours` — all tours from all zones and types
@@ -71,7 +71,10 @@ export function GlobalToursMap() {
 
     for (const entry of allTours) {
       const color = TOUR_COLORS[entry.zoneIndex % TOUR_COLORS.length];
-      const geoJson = await loadTourRouteGeoJson({ zoneId: entry.tour.zoneId, tourId: entry.tour.name });
+      const geoJson = await loadTourRouteGeoJson({
+        zoneId: entry.tour.zoneId,
+        tourId: entry.tour.name,
+      });
       if (!geoJson) continue;
 
       try {
