@@ -205,6 +205,10 @@ export interface GenerationPlan {
  *
  * The Parcours the filters leave out get no decision at all: they are not
  * part of the run.
+ *
+ * The global overview map is an exception: it always represents the full
+ * catalogue, so it regenerates if ANY tour in the entire catalogue changed,
+ * not just the filtered ones.
  */
 export function planGeneration(input: PlanGenerationInput): GenerationPlan {
   const candidates = input.candidates.filter((candidate) =>
@@ -212,6 +216,12 @@ export function planGeneration(input: PlanGenerationInput): GenerationPlan {
   );
 
   const decisions = candidates.map((candidate) =>
+    decideParcours(candidate, input.state, input.currentVersion, input.force ?? false),
+  );
+
+  // Global map decision uses ALL candidates (unfiltered) per spec:
+  // "global map is considered part of every run (not filterable)"
+  const allDecisions = input.candidates.map((candidate) =>
     decideParcours(candidate, input.state, input.currentVersion, input.force ?? false),
   );
 
@@ -224,7 +234,7 @@ export function planGeneration(input: PlanGenerationInput): GenerationPlan {
       input.force ?? false,
     ),
     globalDecision: decideGlobalMap(
-      decisions,
+      allDecisions,
       input.state,
       input.globalMapFingerprint,
       input.force ?? false,

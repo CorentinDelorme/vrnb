@@ -75,7 +75,13 @@ function record(overrides: Partial<ParcoursGenerationRecord> = {}): ParcoursGene
 
 /** A state, with the records and the zone maps the test does not care about. */
 function state(overrides: Partial<GenerationState> = {}): GenerationState {
-  return { version: GENERATION_STATE_VERSION, parcours: {}, zoneMaps: {}, ...overrides };
+  return {
+    version: GENERATION_STATE_VERSION,
+    parcours: {},
+    zoneMaps: {},
+    globalMap: undefined,
+    ...overrides,
+  };
 }
 
 describe('fingerprintFile', () => {
@@ -425,6 +431,7 @@ describe('writeGenerationState', () => {
         }),
       },
       zoneMaps: {},
+      globalMap: undefined,
     });
 
     expect(JSON.parse(readFileSync(statePath, 'utf-8'))).toEqual({
@@ -444,6 +451,7 @@ describe('writeGenerationState', () => {
       version: GENERATION_STATE_VERSION,
       parcours: { 'bruz-sud/V1': record({ trace: 'trace-v1' }) },
       zoneMaps: {},
+      globalMap: undefined,
     });
 
     expect(JSON.parse(readFileSync(statePath, 'utf-8')).parcours['bruz-sud/V1']).toEqual({
@@ -458,6 +466,7 @@ describe('writeGenerationState', () => {
       version: GENERATION_STATE_VERSION,
       parcours: { 'bruz-sud/V1': record({ trace: 'trace-v1' }) },
       zoneMaps: {},
+      globalMap: undefined,
     };
 
     writeGenerationState(statePath, known);
@@ -474,11 +483,13 @@ describe('writeGenerationState', () => {
       version: GENERATION_STATE_VERSION,
       parcours: { 'bruz-sud/V1': record({ trace: 'trace-v1' }) },
       zoneMaps: {},
+      globalMap: undefined,
     });
     const written = writeGenerationState(statePath, {
       version: GENERATION_STATE_VERSION,
       parcours: { 'bruz-sud/V1': record({ trace: 'trace-v2' }) },
       zoneMaps: {},
+      globalMap: undefined,
     });
 
     expect(written).toBe(true);
@@ -500,6 +511,7 @@ describe('readGenerationState', () => {
         'bruz-ker-lann/V30': record({ trace: 'trace-v30' }),
       },
       zoneMaps: { 'bruz-sud/V': 'zone-map' },
+      globalMap: undefined,
     };
 
     writeGenerationState(statePath, known);

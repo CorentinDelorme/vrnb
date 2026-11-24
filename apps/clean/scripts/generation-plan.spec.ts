@@ -51,7 +51,12 @@ function record(overrides: Partial<ParcoursGenerationRecord> = {}): ParcoursGene
 }
 
 function stateWith(record: GenerationState['parcours'][string]): GenerationState {
-  return { version: VERSION, parcours: { 'bruz-sud/V1': record }, zoneMaps: {} };
+  return {
+    version: VERSION,
+    parcours: { 'bruz-sud/V1': record },
+    zoneMaps: {},
+    globalMap: undefined,
+  };
 }
 
 const UP_TO_DATE_RECORD = record({
@@ -101,7 +106,7 @@ describe('planGeneration', () => {
 
   it('should re-route a Parcours the state does not know', () => {
     const plan = planGeneration({
-      state: { version: VERSION, parcours: {}, zoneMaps: {} },
+      state: { version: VERSION, parcours: {}, zoneMaps: {}, globalMap: undefined },
       currentVersion: VERSION,
       candidates: [candidate('V1')],
     });
@@ -595,7 +600,7 @@ describe('planGeneration — the global overview map', () => {
     expect(plan.globalDecision.reason).toBe('forced');
   });
 
-  it('should regenerate the global map even when a filtered Parcours changes', () => {
+  it('should regenerate the global map when a filtered-out Parcours changes', () => {
     const plan = planGeneration({
       state: stateWithGlobalMap(),
       currentVersion: VERSION,
@@ -604,11 +609,10 @@ describe('planGeneration — the global overview map', () => {
       filters: parseGenerationFilters(['--zone=bruz-sud']),
     });
 
-    // V1 is in bruz-sud and is up to date, but V30 in bruz-ker-lann is not in the filter
-    // Wait, the filter excludes V30, so it shouldn't trigger global map regeneration
-    // But the global map is NOT filterable - if any Parcours IN THE RUN changed, it regenerates
-    // Since V1 is up-to-date and V30 is filtered out, it should be up-to-date
-    expect(plan.globalDecision.regenerateGlobalMap).toBe(false);
-    expect(plan.globalDecision.reason).toBe('up-to-date');
+    // V30 in bruz-ker-lann is filtered out by --zone=bruz-sud, but it has changed
+    // (empty fingerprints = new/changed). The global map is NOT filterable:
+    // it represents the full catalogue, so ANY changed tour triggers regeneration.
+    expect(plan.globalDecision.regenerateGlobalMap).toBe(true);
+    expect(plan.globalDecision.reason).toBe('parcours-changed');
   });
 });

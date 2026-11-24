@@ -8,10 +8,11 @@ import { toBuffer as qrCodeToBuffer } from 'qrcode';
 import sharp from 'sharp';
 
 import { toursData } from '../src/app/tours-data';
-import { getZone } from '../src/app/zones';
+import { getZone, ZONES } from '../src/app/zones';
 import { createNetworkScheduler } from './network-scheduler';
 import { createTileFetcher } from './tile-fetcher';
 
+import { getTrackColorTuple } from '../lib/map-colors';
 import type { GpxSegmentSuffix } from './generation-helpers';
 import {
   errorMessage,
@@ -46,9 +47,9 @@ import type {
   ZoneMapStateUpdate,
 } from './generation-state';
 import {
-  GENERATION_STATE_VERSION,
   fingerprintDocument,
   fingerprintParcoursArtefacts,
+  GENERATION_STATE_VERSION,
   generationStatePath,
   globalMapKey,
   meetingPointFingerprint,
@@ -513,29 +514,7 @@ function drawLegend(doc: jsPDF, x: number, baselineY: number): void {
   doc.text('Arrivée', cursorX, baselineY);
 }
 
-/** Same hues as the overview map, one color per tour (in tour order). */
-const MAP_COLORS: [number, number, number][] = [
-  [239, 68, 68], // warm - red
-  [59, 130, 246], // cool - blue
-  [249, 115, 22], // warm - orange
-  [20, 184, 184], // cool - teal
-  [245, 158, 11], // warm - amber
-  [67, 56, 202], // cool - indigo
-  [234, 179, 8], // warm - yellow
-  [16, 185, 129], // cool - emerald
-  [236, 72, 153], // warm - pink
-  [14, 165, 233], // cool - sky
-  [219, 39, 119], // warm - rose
-  [6, 182, 212], // cool - cyan
-  [250, 204, 21], // warm - gold
-  [34, 197, 94], // cool - green
-  [244, 114, 182], // warm - coral
-  [168, 85, 247], // cool - violet
-  [153, 101, 21], // warm - brown
-  [126, 34, 206], // cool - fuchsia
-  [255, 99, 71], // warm - tomato
-  [132, 204, 22], // cool/warm - lime
-];
+/** Colors provided by shared palette in `lib/map-colors.ts`. */
 
 /** GPX path for a tour file, with fallback to the legacy flat layout (pre-zone files). */
 function tourGpxPath(tour: TourDistances, suffix: GpxSegmentSuffix): string {
@@ -756,7 +735,7 @@ async function generateZoneMapPdf(
   const labelMids: { x: number; y: number }[] = [];
   for (let i = 0; i < tracks.length; i++) {
     const track = tracks[i];
-    const color = MAP_COLORS[i % MAP_COLORS.length];
+    const color = getTrackColorTuple(i);
     const points = track.coords.map(([lon, lat]) => projectToPanel(lon, lat, view, rect));
 
     doc.setDrawColor(255, 255, 255);
@@ -787,7 +766,7 @@ async function generateZoneMapPdf(
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   for (let i = 0; i < tracks.length; i++) {
-    const color = MAP_COLORS[i % MAP_COLORS.length];
+    const color = getTrackColorTuple(i);
     const mid = labelMids[i];
     const labelWidth = doc.getTextWidth(tracks[i].name);
     doc.setFillColor(color[0], color[1], color[2]);
@@ -837,9 +816,11 @@ async function generateGlobalMapPdf(
   // Build tracks with zone-local index for color assignment
   const tracks: GlobalTrack[] = [];
 
-  // Group tours by zone and type, preserving order
-  const zones = [...new Set(allTours.map((tour) => tour.zoneId))].sort();
-  for (const zoneId of zones) {
+  // Group tours by zone and type, preserving order from ZONES array
+  const zoneIds = ZONES.map((z) => z.id).filter((zoneId) =>
+    allTours.some((tour) => tour.zoneId === zoneId),
+  );
+  for (const zoneId of zoneIds) {
     // Bike tours for this zone
     const bikeTours = allTours.filter(
       (tour) => tour.zoneId === zoneId && tour.name.startsWith('V'),
@@ -922,7 +903,7 @@ async function generateGlobalMapPdf(
   const labelMids: { x: number; y: number }[] = [];
   for (let i = 0; i < tracks.length; i++) {
     const track = tracks[i];
-    const color = MAP_COLORS[track.zoneLocalIndex % MAP_COLORS.length];
+    const color = getTrackColorTuple(track.zoneLocalIndex);
     const points = track.coords.map(([lon, lat]) => projectToPanel(lon, lat, view, rect));
 
     doc.setDrawColor(255, 255, 255);
@@ -954,7 +935,7 @@ async function generateGlobalMapPdf(
   doc.setFontSize(9);
   for (let i = 0; i < tracks.length; i++) {
     const track = tracks[i];
-    const color = MAP_COLORS[track.zoneLocalIndex % MAP_COLORS.length];
+    const color = getTrackColorTuple(track.zoneLocalIndex);
     const mid = labelMids[i];
     const labelWidth = doc.getTextWidth(track.name);
     doc.setFillColor(color[0], color[1], color[2]);
