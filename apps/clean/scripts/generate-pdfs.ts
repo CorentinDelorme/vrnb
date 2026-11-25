@@ -88,6 +88,12 @@ const TILE_JPEG_QUALITY = 85;
 const MAP_JPEG_QUALITY = 88;
 /** Max width/height in pixels of the exact map view (before tiling). */
 const MAX_VIEW_PIXELS = 1536;
+const MM_PER_INCH = 25.4;
+/** Target resolution of a rendered map panel, in dots per inch: a small
+ *  Parcours must not be stretched into a blurry image, so the view is
+ *  enlarged (more context around the track) until the source image holds
+ *  enough pixels to fill the panel at this resolution. */
+const TARGET_MAP_DPI = 150;
 
 /** A4 page width in mm (jsPDF default). */
 const A4_WIDTH_MM = 210;
@@ -273,15 +279,27 @@ interface PlannedView {
   readonly maxY: number;
 }
 
+/** Minimum source size (pixels) of a map view so its panel is filled at
+ *  `TARGET_MAP_DPI`: `smallerDimMm * TARGET_MAP_DPI / 25.4`. */
+function minViewPixels(smallerDimMm: number): number {
+  return Math.round((smallerDimMm * TARGET_MAP_DPI) / MM_PER_INCH);
+}
+
 /**
  * Pick a zoom level so the track (with a small margin) fits the panel aspect.
  * The view bounds are exact (no tile snapping): the background image is
  * cropped precisely to these bounds, so the map stays zoomed on the route.
+ *
+ * When the track is small, the track-fitting view would be too small and
+ * get stretched into a blurry image: the view is then enlarged (more
+ * context around the track) until both dimensions reach `minPixels`,
+ * preserving the panel aspect, without ever exceeding `maxPixels`.
  */
 function planView(
   coords: LonLat[],
   aspect: number,
   maxPixels = MAX_VIEW_PIXELS,
+  minPixels = 0,
 ): PlannedView | undefined {
   if (coords.length === 0) {
     return undefined;
@@ -298,6 +316,13 @@ function planView(
       halfW = halfH * aspect;
     } else {
       halfH = halfW / aspect;
+    }
+    // Enlarge the view so the source image has enough pixels to fill the
+    // panel sharply (a small Parcours must not be stretched into blur).
+    if (minPixels > 0) {
+      const factor = Math.max(1, minPixels / (halfW * 2), minPixels / (halfH * 2));
+      halfW *= factor;
+      halfH *= factor;
     }
     if (halfW * 2 > maxPixels || halfH * 2 > maxPixels) continue;
     const minX = cx - halfW;
@@ -458,7 +483,12 @@ async function renderMapPanel(
     return;
   }
 
-  const view = planView(coords, rect.w / rect.h, maxPixels);
+  const view = planView(
+    coords,
+    rect.w / rect.h,
+    maxPixels,
+    minViewPixels(Math.min(rect.w, rect.h)),
+  );
   if (!view) {
     return;
   }
@@ -924,8 +954,9 @@ async function generateZoneMapPdf(
   const rect: PdfRect = { x: margin, y: mapY, w: contentWidth, h: footerY - mapY - 6 };
 
   const allCoords = tracks.flatMap((track) => track.coords);
-  // High resolution for the full-page map (print quality).
-  const view = planView(allCoords, rect.w / rect.h, 3072);
+  // High resolution for the full-page map (print quality), large enough to
+  // stay sharp even when the Zone holds only small Parcours.
+  const view = planView(allCoords, rect.w / rect.h, 3072, minViewPixels(Math.min(rect.w, rect.h)));
   if (!view) {
     console.warn(`  aucune vue de carte pour ${zoneId} ${kind}`);
     return false;
@@ -1092,8 +1123,9 @@ async function generateGlobalMapPdf(
   const rect: PdfRect = { x: margin, y: mapY, w: contentWidth, h: footerY - mapY - 6 };
 
   const allCoords = tracks.flatMap((track) => track.coords);
-  // High resolution for the full-page map (print quality).
-  const view = planView(allCoords, rect.w / rect.h, 3072);
+  // High resolution for the full-page map (print quality), large enough to
+  // stay sharp even when the catalogue holds only small Parcours.
+  const view = planView(allCoords, rect.w / rect.h, 3072, minViewPixels(Math.min(rect.w, rect.h)));
   if (!view) {
     console.warn('  aucune vue de carte pour la carte globale');
     return false;
