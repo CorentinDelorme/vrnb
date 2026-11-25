@@ -39,7 +39,7 @@ describe('isTourMapParams', () => {
 describe('zoneMapTours', () => {
   it('returns the walking tour names of a zone', () => {
     const names = zoneMapTours('bruz-sud', 'P');
-    expect(names).toHaveLength(13);
+    expect(names).toHaveLength(15);
     expect(names).toContain('P1');
     expect(names).toContain('P13');
     expect(names.every((name) => name.startsWith('P'))).toBe(true);

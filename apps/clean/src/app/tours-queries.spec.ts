@@ -24,10 +24,10 @@ describe('findZoneTours', () => {
     expect(tours.every((tour) => tour.zoneId === 'bruz-sud')).toBe(true);
   });
 
-  it('should return the 13 walking tours of Bruz Sud', () => {
+  it('should return the 15 walking tours of Bruz Sud', () => {
     const tours = findZoneTours('bruz-sud', 'P');
 
-    expect(tours).toHaveLength(13);
+    expect(tours).toHaveLength(15);
     expect(tours.every((tour) => tour.zoneId === 'bruz-sud')).toBe(true);
   });
 

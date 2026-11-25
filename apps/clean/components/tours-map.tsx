@@ -85,6 +85,12 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
     }
 
     if (allBounds.isValid()) {
+      // Clamp panning to this zone's traces plus a small margin all around,
+      // so a visitor on one zone's map can't pan into a neighboring zone
+      // (e.g. bruz-sud reaching ker-lann). fitBounds centers the view on the
+      // traces; setMaxBounds keeps the map inside them with padding.
+      const zoneBounds = allBounds.pad(0.15);
+      map.setMaxBounds(zoneBounds);
       map.fitBounds(allBounds);
     }
   };

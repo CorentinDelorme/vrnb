@@ -43,10 +43,10 @@ function typeButton(label: string): HTMLElement {
 
 /**
  * jsdom applies no CSS media queries: both the mobile and the desktop play
- * variants of every Parcours row render, so the page's 47 tours carry 94
+ * variants of every Parcours row render, so the page's 49 tours carry 98
  * play buttons.
  */
-const PLAY_BUTTON_COUNT = 94;
+const PLAY_BUTTON_COUNT = 98;
 
 function isTypeActive(label: string): boolean {
   return typeButton(label).getAttribute('aria-pressed') === 'true';
@@ -84,7 +84,7 @@ describe('Home page', () => {
     expect(zoneTitle?.textContent).toBe('Bruz Sud');
     const zoneCard = zoneTitle?.closest('[data-slot="card"]');
     expect(zoneCard).not.toBeNull();
-    expect(zoneCard?.textContent).toContain('28 parcours');
+    expect(zoneCard?.textContent).toContain('30 parcours');
   });
 
   it('lists all Bruz Sud bike and walking tours in their sections', async () => {
@@ -100,7 +100,7 @@ describe('Home page', () => {
     expect(sections[0]?.textContent).toContain('V15');
 
     const walkingRows = sections[1]?.querySelectorAll('[data-testid="tour-row"]') ?? [];
-    expect(walkingRows).toHaveLength(13);
+    expect(walkingRows).toHaveLength(15);
     expect(sections[1]?.textContent).toContain('Parcours à pied');
     expect(sections[1]?.textContent).toContain('P13');
   });
@@ -166,7 +166,7 @@ describe('Home page', () => {
     const cleaningMin = sliders[0];
     expect(cleaningMin.getAttribute('aria-valuenow')).toBe('0.5');
 
-    // Invariant without filter: every section and all 47 play buttons.
+    // Invariant without filter: every section and all 49 play buttons.
     expect(screen.getAllByRole('button', { name: 'Lancer le parcours' })).toHaveLength(
       PLAY_BUTTON_COUNT,
     );

@@ -1,5 +1,8 @@
 import type * as L from 'leaflet';
 
+import { findZoneTours } from '../../tours-queries';
+import { getLineCoordinates } from '../gpx/tour-geojson';
+import { loadTourRouteGeoJson } from '../gpx/tour-geometry';
 import { loadLeaflet } from './leaflet-loader';
 import type { MapInitOptions } from './map.types';
 
@@ -43,4 +46,26 @@ export async function createLayerGroup(map: L.Map): Promise<L.LayerGroup> {
 export async function clearLayers(map: L.Map, layerGroup: L.LayerGroup): Promise<L.LayerGroup> {
   map.removeLayer(layerGroup);
   return createLayerGroup(map);
+}
+
+/**
+ * Bounds covering every trace of a zone (both practice types), without padding.
+ * Resolved by loading each tour's precomputed GeoJSON, so it reflects the
+ * actual drawn routes rather than a hardcoded rectangle.
+ */
+export async function getZoneBounds(zoneId: string): Promise<L.LatLngBounds | null> {
+  const leaflet = await loadLeaflet();
+  const allBounds = leaflet.latLngBounds([]);
+
+  for (const type of ['P', 'V'] as const) {
+    for (const tour of findZoneTours(zoneId, type)) {
+      const geoJson = await loadTourRouteGeoJson({ zoneId, tourId: tour.name });
+      if (!geoJson) continue;
+      for (const c of getLineCoordinates(geoJson)) {
+        allBounds.extend([c[1], c[0]] as [number, number]);
+      }
+    }
+  }
+
+  return allBounds.isValid() ? allBounds : null;
 }

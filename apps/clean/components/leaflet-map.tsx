@@ -26,11 +26,18 @@ interface LeafletMapProps {
   /** Element class of the `#map` container (defaults to the zone map height). */
   readonly className?: string;
   readonly minZoom?: number;
+  /** Optional per-map max bounds; defaults to the whole-Bruz `MAX_BOUNDS`. */
+  readonly maxBounds?: L.LatLngBoundsExpression;
   /** Invoked once with the ready map; draw routes/markers here. */
   readonly onReady: (map: L.Map) => void | Promise<void>;
 }
 
-export function LeafletMap({ className = ZONE_MAP_CLASS, minZoom = 12, onReady }: LeafletMapProps) {
+export function LeafletMap({
+  className = ZONE_MAP_CLASS,
+  minZoom = 12,
+  maxBounds = MAX_BOUNDS,
+  onReady,
+}: LeafletMapProps) {
   const onReadyRef = useRef(onReady);
   onReadyRef.current = onReady;
 
@@ -49,7 +56,7 @@ export function LeafletMap({ className = ZONE_MAP_CLASS, minZoom = 12, onReady }
       const created = await createMap({
         elementId: 'map',
         minZoom,
-        maxBounds: MAX_BOUNDS,
+        maxBounds,
         fullscreen: true,
       });
 
@@ -74,7 +81,7 @@ export function LeafletMap({ className = ZONE_MAP_CLASS, minZoom = 12, onReady }
         map = null;
       }
     };
-  }, [minZoom]);
+  }, [minZoom, maxBounds]);
 
   return <div className={className} id="map" />;
 }

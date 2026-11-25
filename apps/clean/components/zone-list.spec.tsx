@@ -95,7 +95,7 @@ describe('ZoneList', () => {
     expect(screen.getAllByText('Parcours à vélo')).toHaveLength(2);
     expect(screen.getAllByText('Parcours à pied')).toHaveLength(2);
 
-    expect(summaryText('Bruz Sud')).toContain('28 parcours');
+    expect(summaryText('Bruz Sud')).toContain('30 parcours');
     expect(summaryText('Bruz Vau Gaillard')).toContain('6 parcours');
     expect(summaryText('Bruz Ker Lann')).toContain('13 parcours');
   });
@@ -130,7 +130,7 @@ describe('ZoneList', () => {
 
     // Bruz Sud (13 walking) and Bruz Vau Gaillard (6 walking) stay; Bruz Ker Lann has no walking tours and vanishes.
     expect(zone('Bruz Sud')).toBeDefined();
-    expect(summaryText('Bruz Sud')).toContain('13 parcours');
+    expect(summaryText('Bruz Sud')).toContain('15 parcours');
     expect(zone('Bruz Vau Gaillard')).toBeDefined();
     expect(summaryText('Bruz Vau Gaillard')).toContain('6 parcours');
     expect(zone('Bruz Ker Lann')).toBeNull();
@@ -149,7 +149,7 @@ describe('ZoneList', () => {
     expect(isTypeActive('Tous')).toBe(true);
     expect(zone('Bruz Vau Gaillard')).toBeDefined();
     expect(zone('Bruz Ker Lann')).toBeDefined();
-    expect(summaryText('Bruz Sud')).toContain('28 parcours');
+    expect(summaryText('Bruz Sud')).toContain('30 parcours');
   });
 
   it('shows no counter when no filter is active', () => {
@@ -214,9 +214,9 @@ describe('ZoneList', () => {
     expect(screen.getAllByText('Tout')).toHaveLength(2);
     expect(screen.queryByText('Aucun parcours ne correspond à ces filtres')).toBeNull();
     expect(screen.queryByText(/parcours affich/)).toBeNull();
-    // Every zone and all play buttons are back (94: both the mobile and the
+    // Every zone and all play buttons are back (98: both the mobile and the
     // desktop variants render in jsdom).
     expect(zone('Bruz Vau Gaillard')).toBeDefined();
-    expect(screen.getAllByRole('button', { name: /Lancer le parcours/ })).toHaveLength(94);
+    expect(screen.getAllByRole('button', { name: /Lancer le parcours/ })).toHaveLength(98);
   });
 });

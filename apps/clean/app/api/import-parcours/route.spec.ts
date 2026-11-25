@@ -160,7 +160,7 @@ describe('POST /api/import-parcours', () => {
     expect(mockedSpawnSync).not.toHaveBeenCalled();
   });
 
-  it('assigns the next free P id (bruz-sud → P14)', async () => {
+  it('assigns the next free P id (bruz-sud → P16)', async () => {
     const response = await withNodeEnv('development', () =>
       callPost(
         postRequest(
@@ -173,7 +173,7 @@ describe('POST /api/import-parcours', () => {
       ),
     );
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ ids: ['P14'] });
+    expect(await response.json()).toMatchObject({ ids: ['P16'] });
   });
 
   it('does not reassign P1 to another zone: bruz-vau-gaillard vélo starts at V100', async () => {
