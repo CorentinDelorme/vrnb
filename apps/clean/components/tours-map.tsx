@@ -5,6 +5,7 @@ import type * as L from 'leaflet';
 import { getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
 import { loadTourRouteGeoJson } from '../src/app/shared/gpx/tour-geometry';
 import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
+import { zoneMinZoom } from '../src/app/shared/map/map';
 import { addLabelMarker, addStartEndMarkers } from '../src/app/shared/map/map-marker';
 import { drawGeoJsonRoute } from '../src/app/shared/map/map-route';
 import { LeafletMap } from './leaflet-map';
@@ -91,6 +92,9 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
       // traces; setMaxBounds keeps the map inside them with padding.
       const zoneBounds = allBounds.pad(0.15);
       map.setMaxBounds(zoneBounds);
+      // Empêcher de dézoomer au-delà de la zone (un niveau de slack pour
+      // qu'elle ne colle pas aux bords de l'écran).
+      map.setMinZoom(zoneMinZoom(map, zoneBounds));
       map.fitBounds(allBounds);
     }
   };

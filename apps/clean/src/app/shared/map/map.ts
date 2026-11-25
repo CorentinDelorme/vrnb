@@ -69,3 +69,13 @@ export async function getZoneBounds(zoneId: string): Promise<L.LatLngBounds | nu
 
   return allBounds.isValid() ? allBounds : null;
 }
+
+/**
+ * Min zoom pour que la zone remplisse encore la vue (un niveau de slack
+ * pour qu'elle ne colle pas aux bords). Dépend de la taille du conteneur,
+ * donc à résoudre après création de la carte.
+ */
+export function zoneMinZoom(map: L.Map, bounds: L.LatLngBounds): number {
+  const fit = map.getBoundsZoom(bounds);
+  return Math.max(map.getMinZoom(), fit - 1);
+}

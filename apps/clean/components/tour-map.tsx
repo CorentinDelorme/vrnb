@@ -14,7 +14,7 @@ import { getStartAndEndPointsFromGeoJson } from '../src/app/shared/gpx/gpx';
 import { getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
 import { loadTourGeoJsonSet } from '../src/app/shared/gpx/tour-geometry';
 import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
-import { createLayerGroup, getZoneBounds } from '../src/app/shared/map/map';
+import { createLayerGroup, getZoneBounds, zoneMinZoom } from '../src/app/shared/map/map';
 import { addArrows } from '../src/app/shared/map/map-arrow';
 import type { LocationTracker } from '../src/app/shared/map/map-location';
 import { createLocationTracker } from '../src/app/shared/map/map-location';
@@ -175,7 +175,11 @@ export function TourMap({ zoneId, tourId, step }: TourMapProps) {
     void (async () => {
       const bounds = await getZoneBounds(zoneId);
       if (cancelled || !bounds || !map) return;
-      map.setMaxBounds(bounds.pad(0.15));
+      const zoneBounds = bounds.pad(0.15);
+      map.setMaxBounds(zoneBounds);
+      // Empêcher de dézoomer au-delà de la zone (un niveau de slack pour
+      // qu'elle ne colle pas aux bords de l'écran).
+      map.setMinZoom(zoneMinZoom(map, zoneBounds));
     })();
 
     return () => {
