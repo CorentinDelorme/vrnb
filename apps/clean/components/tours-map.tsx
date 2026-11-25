@@ -97,7 +97,7 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
       // so a visitor on one zone's map can't pan into a neighboring zone
       // (e.g. bruz-sud reaching ker-lann). fitBounds centers the view on the
       // traces; setMaxBounds keeps the map inside them with padding.
-      const zoneBounds = allBounds.pad(0.15);
+      const zoneBounds = allBounds.pad(0.2);
       map.setMaxBounds(zoneBounds);
       // Empêcher de dézoomer au-delà de la zone (un niveau de slack pour
       // qu'elle ne colle pas aux bords de l'écran).

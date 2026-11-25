@@ -175,7 +175,7 @@ export function TourMap({ zoneId, tourId, step }: TourMapProps) {
     void (async () => {
       const bounds = await getZoneBounds(zoneId);
       if (cancelled || !bounds || !map) return;
-      const zoneBounds = bounds.pad(0.15);
+      const zoneBounds = bounds.pad(0.2);
       map.setMaxBounds(zoneBounds);
       // Empêcher de dézoomer au-delà de la zone (un niveau de slack pour
       // qu'elle ne colle pas aux bords de l'écran).
