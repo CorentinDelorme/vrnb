@@ -5,10 +5,9 @@ import type * as L from 'leaflet';
 import { getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
 import { loadTourRouteGeoJson } from '../src/app/shared/gpx/tour-geometry';
 import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
-import { zoneMinZoom } from '../src/app/shared/map/map';
+import { getZoneBounds, zoneMinZoom } from '../src/app/shared/map/map';
 import { addLabelMarker, addStartEndMarkers } from '../src/app/shared/map/map-marker';
 import { drawGeoJsonRoute } from '../src/app/shared/map/map-route';
-import { getZone } from '../src/app/zones';
 import { LeafletMap } from './leaflet-map';
 
 /**
@@ -53,13 +52,11 @@ interface ToursMapProps {
 export function ToursMap({ zoneId, tours }: ToursMapProps) {
   const drawTours = async (map: L.Map): Promise<void> => {
     const leaflet = await loadLeaflet();
-    const allBounds = leaflet.latLngBounds([]);
 
-    // Le point de rendez-vous de la zone peut être éloigné des traces (ex. hors
-    // de la zone). Il doit être inclus : l'étape 1 (Départ) y mène.
-    const zone = getZone(zoneId);
-    const [mlng, mlat] = zone.meetingPoint.coordinates;
-    allBounds.extend([mlat, mlng]);
+    // The zone's bounds (meeting point + all traces) are resolved by the shared
+    // helper, so the map is clamped to the whole zone with a margin.
+    const zoneBounds = await getZoneBounds(zoneId);
+    if (!zoneBounds) return;
 
     for (const [index, tourId] of tours.entries()) {
       const color = TOUR_COLORS[index % TOUR_COLORS.length];
@@ -68,7 +65,7 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
 
       try {
         // 1. Draw the colored route.
-        const geojsonLayer = await drawGeoJsonRoute(geoJson, map, { color, weight: 4 });
+        await drawGeoJsonRoute(geoJson, map, { color, weight: 4 });
 
         // 2. Start/end markers (small size for the overview map).
         const coords = getLineCoordinates(geoJson);
@@ -84,26 +81,21 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
             map,
           );
         }
-
-        // 4. Grow the bounds of every trace, fitted once all tours are drawn.
-        allBounds.extend(geojsonLayer.getBounds());
       } catch (err) {
         console.error(`Error processing GPX for ${tourId}:`, err);
       }
     }
 
-    if (allBounds.isValid()) {
-      // Clamp panning to this zone's traces plus a small margin all around,
-      // so a visitor on one zone's map can't pan into a neighboring zone
-      // (e.g. bruz-sud reaching ker-lann). fitBounds centers the view on the
-      // traces; setMaxBounds keeps the map inside them with padding.
-      const zoneBounds = allBounds.pad(0.2);
-      map.setMaxBounds(zoneBounds);
-      // Empêcher de dézoomer au-delà de la zone (un niveau de slack pour
-      // qu'elle ne colle pas aux bords de l'écran).
-      map.setMinZoom(zoneMinZoom(map, zoneBounds));
-      map.fitBounds(allBounds);
-    }
+    // Clamp panning to this zone's traces plus a margin all around, so a
+    // visitor on one zone's map can't pan into a neighboring zone
+    // (e.g. bruz-sud reaching ker-lann). fitBounds centers the view on the
+    // traces; setMaxBounds keeps the map inside them with padding.
+    const padded = zoneBounds.pad(0.2);
+    map.setMaxBounds(padded);
+    // Prevent zooming out beyond the zone (a slack level so it doesn't stick
+    // to the screen edges).
+    map.setMinZoom(zoneMinZoom(map, padded));
+    map.fitBounds(zoneBounds);
   };
 
   return <LeafletMap onReady={drawTours} />;

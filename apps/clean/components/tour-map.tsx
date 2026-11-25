@@ -177,8 +177,8 @@ export function TourMap({ zoneId, tourId, step }: TourMapProps) {
       if (cancelled || !bounds || !map) return;
       const zoneBounds = bounds.pad(0.2);
       map.setMaxBounds(zoneBounds);
-      // Empêcher de dézoomer au-delà de la zone (un niveau de slack pour
-      // qu'elle ne colle pas aux bords de l'écran).
+      // Prevent zooming out beyond the zone (a slack level so it doesn't
+      // stick to the screen edges).
       map.setMinZoom(zoneMinZoom(map, zoneBounds));
     })();
 

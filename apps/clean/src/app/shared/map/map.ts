@@ -58,9 +58,9 @@ export async function getZoneBounds(zoneId: string): Promise<L.LatLngBounds | nu
   const leaflet = await loadLeaflet();
   const allBounds = leaflet.latLngBounds([]);
 
-  // Le point de rendez-vous de la zone peut être éloigné des traces (ex. hors
-  // de la zone). Il doit être inclus : l'étape 1 (Départ) y mène, et le
-  // visiteur doit pouvoir le voir sans être bloqué par maxBounds.
+  // The zone's meeting point may be far from the traces (e.g. outside the
+  // zone). It must be included: step 1 (Départ) leads there, and the visitor
+  // must be able to see it without being blocked by maxBounds.
   const zone = getZone(zoneId);
   const [mlng, mlat] = zone.meetingPoint.coordinates;
   allBounds.extend([mlat, mlng]);
@@ -79,9 +79,9 @@ export async function getZoneBounds(zoneId: string): Promise<L.LatLngBounds | nu
 }
 
 /**
- * Min zoom pour que la zone remplisse encore la vue (un niveau de slack
- * pour qu'elle ne colle pas aux bords). Dépend de la taille du conteneur,
- * donc à résoudre après création de la carte.
+ * Min zoom so the zone still fills the view (a slack level so it doesn't
+ * stick to the edges). Depends on container size, so resolved after map
+ * creation.
  */
 export function zoneMinZoom(map: L.Map, bounds: L.LatLngBounds): number {
   const fit = map.getBoundsZoom(bounds);
