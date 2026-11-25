@@ -5,7 +5,7 @@ import { getZone } from '../../zones';
 import { getLineCoordinates } from '../gpx/tour-geojson';
 import { loadTourRouteGeoJson } from '../gpx/tour-geometry';
 import { loadLeaflet } from './leaflet-loader';
-import type { MapInitOptions } from './map.types';
+import type { MapInitOptions, TourGeoJsonSet } from './map.types';
 
 /** Map bounds covering the whole Bruz area. */
 export const MAX_BOUNDS: L.LatLngBoundsExpression = [
@@ -47,6 +47,26 @@ export async function createLayerGroup(map: L.Map): Promise<L.LayerGroup> {
 export async function clearLayers(map: L.Map, layerGroup: L.LayerGroup): Promise<L.LayerGroup> {
   map.removeLayer(layerGroup);
   return createLayerGroup(map);
+}
+
+/**
+ * Bounds of a single parcours, built from its own start / tour / end segments
+ * (not the whole zone). Resolved from the loaded GeoJSON segment set, so it
+ * reflects the actual drawn geometry rather than a hardcoded rectangle.
+ */
+export async function getTourBounds(
+  geoJsonSet: TourGeoJsonSet,
+): Promise<L.LatLngBounds | null> {
+  const leaflet = await loadLeaflet();
+  const allBounds = leaflet.latLngBounds([]);
+
+  for (const segment of [geoJsonSet.start, geoJsonSet.tour, geoJsonSet.end]) {
+    for (const c of getLineCoordinates(segment)) {
+      allBounds.extend([c[1], c[0]] as [number, number]);
+    }
+  }
+
+  return allBounds.isValid() ? allBounds : null;
 }
 
 /**

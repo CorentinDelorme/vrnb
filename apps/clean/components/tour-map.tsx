@@ -14,7 +14,7 @@ import { getStartAndEndPointsFromGeoJson } from '../src/app/shared/gpx/gpx';
 import { getLineCoordinates } from '../src/app/shared/gpx/tour-geojson';
 import { loadTourGeoJsonSet } from '../src/app/shared/gpx/tour-geometry';
 import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
-import { createLayerGroup, getZoneBounds, zoneMinZoom } from '../src/app/shared/map/map';
+import { createLayerGroup, getTourBounds, zoneMinZoom } from '../src/app/shared/map/map';
 import { addArrows } from '../src/app/shared/map/map-arrow';
 import type { LocationTracker } from '../src/app/shared/map/map-location';
 import { createLocationTracker } from '../src/app/shared/map/map-location';
@@ -165,27 +165,29 @@ export function TourMap({ zoneId, tourId, step }: TourMapProps) {
     };
   }, [map, geoJsonSet, step, tracker, zoneId, tourId]);
 
-  // Clamp panning to the whole zone (with a small margin all around) so a
-  // visitor on one parcours can't pan into a neighboring zone
-  // (e.g. bruz-sud reaching ker-lann). Resolved once per zone/map.
+  // Clamp panning to the parcours's own extent (start + trace + end, with a
+  // small margin all around) so a visitor on one parcours can't pan far away
+  // from it. Computed from the loaded geometry of this parcours only, not
+  // from the whole zone (e.g. bruz-vau-gaillard/P102 is clamped to P102's
+  // start, trace and end rather than to every parcours of the zone).
   useEffect(() => {
-    if (!map) return;
+    if (!map || !geoJsonSet) return;
     let cancelled = false;
 
     void (async () => {
-      const bounds = await getZoneBounds(zoneId);
+      const bounds = await getTourBounds(geoJsonSet);
       if (cancelled || !bounds || !map) return;
-      const zoneBounds = bounds.pad(0.2);
-      map.setMaxBounds(zoneBounds);
-      // Prevent zooming out beyond the zone (a slack level so it doesn't
+      const tourBounds = bounds.pad(0.3);
+      map.setMaxBounds(tourBounds);
+      // Prevent zooming out beyond the parcours (a slack level so it doesn't
       // stick to the screen edges).
-      map.setMinZoom(zoneMinZoom(map, zoneBounds));
+      map.setMinZoom(zoneMinZoom(map, tourBounds));
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [map, zoneId]);
+  }, [map, geoJsonSet]);
 
   return <LeafletMap className={TOUR_MAP_CLASS} minZoom={13} onReady={setMap} />;
 }
