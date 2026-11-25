@@ -1,6 +1,7 @@
 import type * as L from 'leaflet';
 
 import { findZoneTours } from '../../tours-queries';
+import { getZone } from '../../zones';
 import { getLineCoordinates } from '../gpx/tour-geojson';
 import { loadTourRouteGeoJson } from '../gpx/tour-geometry';
 import { loadLeaflet } from './leaflet-loader';
@@ -56,6 +57,13 @@ export async function clearLayers(map: L.Map, layerGroup: L.LayerGroup): Promise
 export async function getZoneBounds(zoneId: string): Promise<L.LatLngBounds | null> {
   const leaflet = await loadLeaflet();
   const allBounds = leaflet.latLngBounds([]);
+
+  // Le point de rendez-vous de la zone peut être éloigné des traces (ex. hors
+  // de la zone). Il doit être inclus : l'étape 1 (Départ) y mène, et le
+  // visiteur doit pouvoir le voir sans être bloqué par maxBounds.
+  const zone = getZone(zoneId);
+  const [mlng, mlat] = zone.meetingPoint.coordinates;
+  allBounds.extend([mlat, mlng]);
 
   for (const type of ['P', 'V'] as const) {
     for (const tour of findZoneTours(zoneId, type)) {

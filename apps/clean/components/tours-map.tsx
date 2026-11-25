@@ -8,6 +8,7 @@ import { loadLeaflet } from '../src/app/shared/map/leaflet-loader';
 import { zoneMinZoom } from '../src/app/shared/map/map';
 import { addLabelMarker, addStartEndMarkers } from '../src/app/shared/map/map-marker';
 import { drawGeoJsonRoute } from '../src/app/shared/map/map-route';
+import { getZone } from '../src/app/zones';
 import { LeafletMap } from './leaflet-map';
 
 /**
@@ -53,6 +54,12 @@ export function ToursMap({ zoneId, tours }: ToursMapProps) {
   const drawTours = async (map: L.Map): Promise<void> => {
     const leaflet = await loadLeaflet();
     const allBounds = leaflet.latLngBounds([]);
+
+    // Le point de rendez-vous de la zone peut être éloigné des traces (ex. hors
+    // de la zone). Il doit être inclus : l'étape 1 (Départ) y mène.
+    const zone = getZone(zoneId);
+    const [mlng, mlat] = zone.meetingPoint.coordinates;
+    allBounds.extend([mlat, mlng]);
 
     for (const [index, tourId] of tours.entries()) {
       const color = TOUR_COLORS[index % TOUR_COLORS.length];
