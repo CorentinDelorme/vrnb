@@ -121,6 +121,11 @@ const SITE_HOST = new URL(TOUR_URL_PREFIX).host;
 const QR_IMAGE_PX = 512;
 const QR_PDF_SIZE_MM = 18;
 
+/** Deep link to the zone map page of a Zone and practice type. */
+function zoneMapUrl(zoneId: string, kind: 'V' | 'P'): string {
+  return `${TOUR_URL_PREFIX}tours/${zoneId}/${kind}`;
+}
+
 type LonLat = [number, number];
 
 interface TourDistances {
@@ -625,13 +630,12 @@ async function generateTourPdf(
   }
 }
 
-/** Shared header for both layouts: logo, title, QR code, contact. */
+/** Shared header for every PDF: logo, centered title, contact, QR code. */
 function renderHeader(
   doc: jsPDF,
-  zoneName: string,
-  tourName: string,
+  title: string,
   qrImage: Buffer | undefined,
-  tourUrlStr: string,
+  qrUrl: string,
   logo: LogoImage | undefined,
 ): void {
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -645,7 +649,7 @@ function renderHeader(
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
-  doc.text(`${zoneName} - Parcours ${tourName}`, pageWidth / 2, 16, { align: 'center' });
+  doc.text(title, pageWidth / 2, 16, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -662,8 +666,8 @@ function renderHeader(
     const qrX = pageWidth - margin - QR_PDF_SIZE_MM;
     const qrY = 4;
     const qrDataUrl = `data:image/png;base64,${qrImage.toString('base64')}`;
-    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, `${tourName}-qr`);
-    doc.link(qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, { url: tourUrlStr });
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, 'qr');
+    doc.link(qrX, qrY, QR_PDF_SIZE_MM, QR_PDF_SIZE_MM, { url: qrUrl });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
@@ -724,7 +728,7 @@ async function generateTourPdfSinglePage(
     qrImage,
   } = setup;
 
-  renderHeader(doc, zoneName, tour.name, qrImage, tourUrlStr, logo);
+  renderHeader(doc, `${zoneName} - Parcours ${tour.name}`, qrImage, tourUrlStr, logo);
 
   const tableEndY = renderDistanceTable(doc, tour, margin);
 
@@ -809,7 +813,7 @@ async function generateTourPdfTwoPage(
   } = setup;
 
   // --- Page 1: Header + Distance table + Enlarged main map + Legend ---
-  renderHeader(doc, zoneName, tour.name, qrImage, tourUrlStr, logo);
+  renderHeader(doc, `${zoneName} - Parcours ${tour.name}`, qrImage, tourUrlStr, logo);
 
   const tableEndY = renderDistanceTable(doc, tour, margin);
 
@@ -837,7 +841,7 @@ async function generateTourPdfTwoPage(
 
   // --- Page 2: Header + Start map (full-width) + End map (full-width) + Legend ---
   doc.addPage();
-  renderHeader(doc, zoneName, tour.name, qrImage, tourUrlStr, logo);
+  renderHeader(doc, `${zoneName} - Parcours ${tour.name}`, qrImage, tourUrlStr, logo);
 
   // Start map: full-width, ~110mm tall — higher resolution for print quality
   const startCaptionY = DOUBLE_PAGE2_START_CAPTION_Y_MM;
@@ -930,26 +934,11 @@ async function generateZoneMapPdf(
   const margin = 10;
   const contentWidth = pageWidth - margin * 2;
 
-  if (logo) {
-    const logoHeight = 12;
-    const dataUrl = `data:image/jpeg;base64,${logo.buffer.toString('base64')}`;
-    doc.addImage(dataUrl, 'JPEG', margin, 6, logoHeight * logo.aspect, logoHeight, 'vrnb-logo');
-  }
+  const qrImage = await buildQrCodeImage(zoneMapUrl(zoneId, kind));
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text(`${zoneName} - ${typeLabel}`, pageWidth / 2, 16, { align: 'center' });
+  renderHeader(doc, `${zoneName} - ${typeLabel}`, qrImage, zoneMapUrl(zoneId, kind), logo);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Contact', pageWidth - margin, 7, { align: 'right' });
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('06 23 13 56 48', pageWidth - margin, 12, { align: 'right' });
-
-  const mapY = 24;
+  const mapY = 28;
   const footerY = pageHeight - 6;
   const rect: PdfRect = { x: margin, y: mapY, w: contentWidth, h: footerY - mapY - 6 };
 
@@ -1099,26 +1088,11 @@ async function generateGlobalMapPdf(
   const margin = 10;
   const contentWidth = pageWidth - margin * 2;
 
-  if (logo) {
-    const logoHeight = 12;
-    const dataUrl = `data:image/jpeg;base64,${logo.buffer.toString('base64')}`;
-    doc.addImage(dataUrl, 'JPEG', margin, 6, logoHeight * logo.aspect, logoHeight, 'vrnb-logo');
-  }
+  const qrImage = await buildQrCodeImage(TOUR_URL_PREFIX);
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(22);
-  doc.text('Toutes les zones - Tous les parcours', pageWidth / 2, 16, { align: 'center' });
+  renderHeader(doc, 'Toutes les zones - Tous les parcours', qrImage, TOUR_URL_PREFIX, logo);
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Contact', pageWidth - margin, 7, { align: 'right' });
-  doc.setTextColor(0, 0, 0);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('06 23 13 56 48', pageWidth - margin, 12, { align: 'right' });
-
-  const mapY = 24;
+  const mapY = 28;
   const footerY = pageHeight - 6;
   const rect: PdfRect = { x: margin, y: mapY, w: contentWidth, h: footerY - mapY - 6 };
 
