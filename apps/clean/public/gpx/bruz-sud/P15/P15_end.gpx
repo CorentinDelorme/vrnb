@@ -9,12 +9,6 @@
     <type>walking</type>
     <name>Fin du parcours P15 vers Place du Dr Joly</name>
     <trkseg>
-      <trkpt lat="48.023712" lon="-1.749963">
-      </trkpt>
-      <trkpt lat="48.023862" lon="-1.749831">
-      </trkpt>
-      <trkpt lat="48.023962" lon="-1.749722">
-      </trkpt>
       <trkpt lat="48.024085" lon="-1.749588">
       </trkpt>
       <trkpt lat="48.024106" lon="-1.749533">
