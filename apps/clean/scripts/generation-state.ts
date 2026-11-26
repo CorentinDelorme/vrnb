@@ -51,7 +51,7 @@ export {
  * invalidates every Parcours: the plan then asks for a full regeneration,
  * whatever the recorded fingerprints are.
  */
-export const GENERATION_STATE_VERSION = 1;
+export const GENERATION_STATE_VERSION = 2;
 
 /** Name of the state file, inside the `scripts` folder of the app. */
 export const GENERATION_STATE_FILENAME = 'generation-state.json';

@@ -13,7 +13,7 @@ import { nextGenerationState, zoneMapKey } from './generation-state';
  * caller and passed in, so the plan is checked here with fake inputs.
  */
 
-const VERSION = 1;
+const VERSION = 2;
 
 /** The fingerprint of the Point de rendez-vous the Parcours were routed from. */
 const MEETING_POINT = 'meeting-point';

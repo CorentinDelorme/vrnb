@@ -260,7 +260,11 @@ donc rien à reformater après un run, et `bun run format:check` reste vert.
 
 Chaque fiche PDF de parcours affiche en haut un QR code cliquable vers
 `https://clean.velorandonaturebruz.fr/tour/<zone>/<parcours>` (logo VRNB au centre,
-domaine `clean.velorandonaturebruz.fr` affiché sous le QR code).
+domaine `clean.velorandonaturebruz.fr` affiché sous le QR code). Les cartes de zone
+(`Carte_parcours_a_velo.pdf` / `Carte_parcours_a_pied.pdf`) et la carte globale
+(`Carte_tous_les_parcours.pdf`) portent le même en-tête avec un QR code vers leur
+page correspondante (`/tours/<zone>/<V|P>` pour les cartes de zone, l'accueil pour
+la carte globale).
 
 ## Pack PDF par zone
 
